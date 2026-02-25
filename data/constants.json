@@ -1,0 +1,37 @@
+{
+  "_comment": "Shared game constants for Overload Party. Single source of truth for server (Go) and client (TypeScript).",
+  "phases": ["draw", "dv_gen", "main", "battle", "end"],
+  "zones": ["frontend", "backend", "support"],
+  "ranks": ["small", "medium", "large"],
+  "instance_families": ["M", "C", "R"],
+  "factions": ["SWS", "Aozora", "Guruguru", "Miracle", "Neutral"],
+  "selectable_factions": ["SWS", "Aozora", "Guruguru", "Miracle"],
+  "card_types": {
+    "compute": ["Compute", "Container", "Orchestrator", "Serverless", "AI/ML"],
+    "data": ["Database", "NoSQL", "ObjectStorage", "CacheDB", "Datawarehouse"],
+    "support": ["Platform", "Attachment", "Strategy", "Reactive", "Incident"]
+  },
+  "scalability_values": ["R", "E", "RE", "none"],
+  "restriction_values": ["unlimited", "limited", "semi_limited"],
+  "game_status": ["waiting", "selecting", "playing", "finished"],
+  "win_reasons": ["budget_zero", "system_down", "repository_out", "timeout", "disconnect", "turn_limit", "draw"],
+  "action_types": ["play_card", "attack", "scale_up", "distribute_dv", "discard_hand", "activate_effect", "end_phase"],
+  "effect_durations": ["this_turn", "until_next_turn_end"],
+  "initial_values": {
+    "budget": 5000,
+    "dv_pool": 0,
+    "hand_size": 5,
+    "hand_limit": 6,
+    "time_bank": 480,
+    "deck_size": 30,
+    "max_attachments": 2,
+    "per_turn_budget": 500,
+    "slots_per_zone": 3
+  },
+  "level": {
+    "exp_formula": "60 * n^2",
+    "exp_win": 40,
+    "exp_loss": 20,
+    "exp_draw": 30
+  }
+}

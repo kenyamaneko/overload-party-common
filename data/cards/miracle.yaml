@@ -1,0 +1,308 @@
+faction: Miracle
+display_name: "Miracle"
+cards:
+  # === Compute-type Resources (2 cards) ===
+
+  - card_no: 70
+    card_name: "Miracle Compute - カンタータ"
+    const_name: MiracleComputeKantata
+    card_type: Compute
+    scalability: R
+    origin: "OCI Compute"
+    restriction: unlimited
+    is_active: true
+    stats:
+      throughput: 600
+      availability: 1500
+      deploy_cost: 300
+      sla_penalty: 400
+      maintenance_cost: 100
+    effect_text: ""
+
+  - card_no: 72
+    card_name: "Miracle Bare Metal - ベア・ベル太"
+    const_name: MiracleBareMetal
+    card_type: Compute
+    scalability: R
+    origin: "OCI Bare Metal"
+    restriction: unlimited
+    is_active: true
+    stats:
+      throughput: 1300
+      availability: 1000
+      deploy_cost: 600
+      sla_penalty: 500
+      maintenance_cost: 200
+    effect_text: "**No Virtualization:** 攻撃時、このカードに 300 ダメージを与える"
+
+  # === Container (1 card) ===
+
+  - card_no: 73
+    card_name: "Miracle Container - テナ"
+    const_name: MiracleContainerTena
+    card_type: Container
+    scalability: E
+    origin: "OCI Container"
+    restriction: unlimited
+    is_active: true
+    stats:
+      throughput: 700
+      availability: 1400
+      deploy_cost: 300
+      sla_penalty: 400
+      maintenance_cost: 50
+    tp_max: 1300
+    effect_text: ""
+
+  # === Orchestrator (1 card) ===
+
+  - card_no: 74
+    card_name: "Miracle Orchestrator - コンダクティス"
+    const_name: MiracleOrchestratorConductis
+    card_type: Orchestrator
+    scalability: RE
+    origin: "OKE"
+    restriction: unlimited
+    is_active: true
+    stats:
+      throughput: 600
+      availability: 1600
+      deploy_cost: 600
+      sla_penalty: 500
+      maintenance_cost: 100
+    tp_max: 1000
+    effect_text: "**Always Free:** small → medium の Scale Cost 0"
+    passive_effects:
+      - type: scale_cost_free
+        params: {}
+
+  # === Serverless (2 cards) ===
+
+  - card_no: 75
+    card_name: "Miracle Functions - ファンファーレクション"
+    const_name: MiracleFunctionsFanfare
+    card_type: Serverless
+    scalability: E
+    origin: "OCI Functions"
+    restriction: unlimited
+    is_active: true
+    stats:
+      throughput: 500
+      availability: 1200
+      deploy_cost: 100
+      sla_penalty: 200
+      maintenance_cost: 0
+    tp_max: 900
+    effect_text: ""
+
+  - card_no: 76
+    card_name: "Miracle Low-Code - アピエッタ"
+    const_name: MiracleLowCodeApietta
+    card_type: Serverless
+    scalability: E
+    origin: "Oracle APEX"
+    restriction: semi_limited
+    restriction_reason: "Dep 0 / RC 0 の完全無料フロントエンド"
+    is_active: true
+    stats:
+      throughput: 300
+      availability: 1400
+      deploy_cost: 0
+      sla_penalty: 200
+      maintenance_cost: 0
+    tp_max: 600
+    effect_text: "**Low-Code:** 自分のフィールドに Miracle DB がある時、このカードのスループットを +400 する。"
+    passive_effects:
+      - type: tp_if_card_type_on_field
+        params:
+          faction: Miracle
+          card_types:
+            - Database
+            - NoSQL
+            - CacheDB
+          flat_bonus: 400
+
+  # === DB-type Resources (2 cards) ===
+
+  - card_no: 77
+    card_name: "Miracle DB - 音の魔術師"
+    const_name: MiracleDBOtonmajutsushi
+    card_type: Database
+    scalability: E
+    origin: "Autonomous DB"
+    restriction: unlimited
+    is_active: true
+    stats:
+      dv_gen: 500
+      availability: 1500
+      deploy_cost: 400
+      sla_penalty: 700
+      maintenance_cost: 50
+    dv_max: 700
+    effect_text: ""
+
+  - card_no: 78
+    card_name: "Miracle DB - エクサノーツ"
+    const_name: MiracleDBExanotes
+    card_type: Database
+    scalability: R
+    origin: "Exadata Cloud"
+    restriction: unlimited
+    is_active: true
+    stats:
+      dv_gen: 900
+      availability: 1200
+      deploy_cost: 800
+      sla_penalty: 1000
+      maintenance_cost: 300
+    effect_text: ""
+
+  # === Object Storage (1 card) ===
+
+  - card_no: 79
+    card_name: "Miracle Storage - スコアージ"
+    const_name: MiracleStorageScourge
+    card_type: ObjectStorage
+    scalability: none
+    origin: "OCI Object Storage"
+    restriction: unlimited
+    is_active: true
+    stats:
+      dv_gen: 200
+      availability: 1500
+      deploy_cost: 100
+      sla_penalty: 200
+      maintenance_cost: 50
+    effect_text: ""
+
+  # === Cache DB (1 card) ===
+
+  - card_no: 81
+    card_name: "Miracle Cache - カプリッシュ"
+    const_name: MiracleCacheCaprish
+    card_type: CacheDB
+    scalability: R
+    origin: "OCI Cache with Redis"
+    restriction: unlimited
+    is_active: true
+    stats:
+      dv_gen: 200
+      availability: 1300
+      deploy_cost: 200
+      sla_penalty: 300
+      maintenance_cost: 100
+    effect_text: ""
+
+  # === Platform (3 cards) ===
+
+  - card_no: 82
+    card_name: "Miracle DevOps"
+    const_name: MiracleDevOps
+    card_type: Platform
+    scalability: none
+    origin: "OCI DevOps"
+    restriction: unlimited
+    is_active: true
+    stats:
+      deploy_cost: 0
+    effect_text: "自分のフィールドの Miracle リソースのスケールアップコストを -300 する。"
+    platform_effects:
+      - type: scale_cost_reduction
+        params:
+          target_faction: Miracle
+          reduction: 300
+
+  - card_no: 83
+    card_name: "Miracle Guard"
+    const_name: MiracleGuard
+    card_type: Platform
+    scalability: none
+    origin: "Cloud Guard"
+    restriction: unlimited
+    is_active: true
+    stats:
+      deploy_cost: 0
+    effect_text: "インシデントカードによる自分の Miracle リソースへのダメージを -200 する。"
+
+  - card_no: 84
+    card_name: "Miracle WAF"
+    const_name: MiracleWAF
+    card_type: Platform
+    scalability: none
+    origin: "OCI WAF"
+    restriction: unlimited
+    is_active: true
+    stats:
+      deploy_cost: 0
+    effect_text: "自分のフィールドの Miracle リソースは相手の「DDoS攻撃」と「データ流出」の効果を受けない。"
+
+  # === Attachment (3 cards) ===
+
+  - card_no: 85
+    card_name: "Miracle ノーツガード"
+    const_name: MiracleNotesGuard
+    card_type: Attachment
+    scalability: none
+    origin: "Oracle Data Guard"
+    restriction: unlimited
+    is_active: true
+    stats:
+      deploy_cost: 100
+    effect_text: "自分の Miracle DB系リソースに装備できる。装備先が破壊された時に発動できる。リポジトリから Miracle DB系リソース1枚をデプロイコストなしでデプロイする。この効果は1ゲーム中に1回のみ使用できる。"
+
+  - card_no: 86
+    card_name: "Miracle リアル・アンサンブル・クラスター"
+    const_name: MiracleRAC
+    card_type: Attachment
+    scalability: none
+    origin: "Oracle RAC"
+    restriction: unlimited
+    is_active: true
+    stats:
+      deploy_cost: 100
+    effect_text: "自分の Miracle DB系リソースに装備できる。装備先の可用性を +400 する。装備先へのインシデントカードによるダメージを -200 する。"
+    attachment_effects:
+      - type: stat_bonus
+        params:
+          stat_type: av
+          bonus: 400
+
+  - card_no: 134
+    card_name: "Miracle Block Volume"
+    const_name: MiracleBlockVolume
+    card_type: Attachment
+    scalability: none
+    origin: "OCI Block Volume"
+    restriction: unlimited
+    is_active: true
+    stats:
+      deploy_cost: 100
+    effect_text: "自分の「Miracle Compute - カンタータ」または「Miracle Bare Metal - ベア・ベル太」にのみ装備できる。装備先の可用性を +800 する。装備先へのインシデントカードによるダメージを -100 する。"
+
+  # === Strategy (1 card) ===
+
+  - card_no: 89
+    card_name: "Miracle License"
+    const_name: MiracleLicense
+    card_type: Strategy
+    scalability: none
+    origin: "Oracle License"
+    restriction: unlimited
+    is_active: true
+    stats:
+      deploy_cost: 100
+    effect_text: "Budget 100 を払って発動できる。自分の Miracle DB系リソース1体の可用性を最大値まで回復する。"
+
+  # === Reactive (1 card) ===
+
+  - card_no: 90
+    card_name: "Miracle Failback"
+    const_name: MiracleFailback
+    card_type: Reactive
+    scalability: none
+    origin: "Data Guard Failback"
+    restriction: unlimited
+    is_active: true
+    stats:
+      deploy_cost: 0
+    effect_text: "自分の Miracle DB系リソースが破壊された時に発動できる。手札から Miracle DB系リソース1枚をデプロイコストなしでデプロイする。"
