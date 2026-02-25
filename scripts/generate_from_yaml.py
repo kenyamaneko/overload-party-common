@@ -2,8 +2,8 @@
 """Generate cards.json, cardno_gen.go, constants Go/TS, and CARDS.md from YAML card definitions.
 
 This script lives in overload-party-common and generates outputs for:
-  - common: data/cards.json, docs/CARDS.md
-  - server: internal/cardno/cardno_gen.go, internal/model/constants_gen.go
+  - common: docs/CARDS.md
+  - server: internal/cache/cards_gen.json, internal/cardno/cardno_gen.go, internal/model/constants_gen.go
   - client: src/generated/constants.ts
 
 Usage:
@@ -33,7 +33,6 @@ YAML_DIR = COMMON_ROOT / "data" / "cards"
 CONSTANTS_JSON = COMMON_ROOT / "data" / "constants.json"
 
 # Common outputs
-JSON_OUT = COMMON_ROOT / "data" / "cards.json"
 MD_OUT = COMMON_ROOT / "docs" / "CARDS.md"
 
 # ─── Constants ──────────────────────────────────────────
@@ -174,8 +173,9 @@ def validate(cards):
 
 
 # ─── Generate JSON ─────────────────────────────────────
-def generate_json(cards):
-    """Generate data/cards.json."""
+def generate_json(cards, server_dir):
+    """Generate internal/cache/cards_gen.json in server."""
+    json_out = server_dir / "internal" / "cache" / "cards_gen.json"
     output = []
     for card in sorted(cards, key=lambda c: c["card_no"]):
         entry = {
@@ -198,7 +198,8 @@ def generate_json(cards):
             entry["attachment_effects"] = card["attachment_effects"]
         output.append(entry)
 
-    with open(JSON_OUT, "w", encoding="utf-8") as f:
+    json_out.parent.mkdir(parents=True, exist_ok=True)
+    with open(json_out, "w", encoding="utf-8") as f:
         json.dump(output, f, ensure_ascii=False, indent=2)
         f.write("\n")
 
@@ -693,16 +694,16 @@ def main():
         constants = json.load(f)
 
     # Always generate common outputs
-    json_count = generate_json(cards)
     md_count = generate_md(cards, faction_data)
-    print(f"Generated {json_count} cards → {JSON_OUT.relative_to(COMMON_ROOT)}", file=sys.stderr)
     print(f"Generated {md_count} cards → {MD_OUT.relative_to(COMMON_ROOT)}", file=sys.stderr)
 
     # Server outputs
     server_dir = Path(args.server_dir) if args.server_dir else None
     if server_dir and server_dir.exists():
+        json_count = generate_json(cards, server_dir)
         go_count = generate_go_cardno(cards, faction_data, server_dir)
         go_const_path = generate_go_constants(constants, server_dir)
+        print(f"Generated {json_count} cards → {server_dir.name}/internal/cache/cards_gen.json", file=sys.stderr)
         print(f"Generated {go_count} constants → {server_dir.name}/internal/cardno/cardno_gen.go", file=sys.stderr)
         print(f"Generated constants → {server_dir.name}/{go_const_path}", file=sys.stderr)
     else:

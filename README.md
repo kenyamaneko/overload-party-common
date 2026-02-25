@@ -9,7 +9,6 @@ server / client リポジトリから **シンボリックリンク** または 
 ```
 data/
   cards/          # カード定義 YAML (Single Source of Truth)
-  cards.json      # 生成: カードの JSON データ (126 枚)
   constants.json  # ゲーム共通定数 (Phase, Zone, Rank, 初期値 等)
 docs/             # 全ドキュメント
 scripts/
@@ -22,8 +21,8 @@ scripts/
 
 | 入力 | 出力 | 出力先 |
 |------|------|--------|
-| `data/cards/*.yaml` | `data/cards.json` | common |
 | `data/cards/*.yaml` | `docs/CARDS.md` | common |
+| `data/cards/*.yaml` | `internal/cache/cards_gen.json` | server |
 | `data/cards/*.yaml` | `internal/cardno/cardno_gen.go` | server |
 | `data/constants.json` | `internal/model/constants_gen.go` | server |
 | `data/constants.json` | `src/generated/constants.ts` | client |
