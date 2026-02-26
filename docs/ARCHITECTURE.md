@@ -1,8 +1,8 @@
 # Overload Party - システムアーキテクチャ設計書
 
-**Version:** 1.0  
-**Last Updated:** 2026-02-18  
-**Status:** Design Phase
+**Version:** 2.0  
+**Last Updated:** 2026-02-26  
+**Status:** Implementation Phase
 
 ---
 
@@ -144,10 +144,11 @@ React + Capacitor (TypeScript)
 ### 3.2 バックエンド
 
 ```
-GKE Autopilot (Golang 1.21+)
-├── Web Framework (Gin / Fiber)
+GKE Autopilot (Golang 1.25+)
+├── Web Framework (Gin)
 ├── WebSocket (gorilla/websocket)
-├── Spanner Client (cloud.google.com/go/spanner)
+├── PostgreSQL Client (pgxpool)
+├── Cloud SQL Auth Proxy (サイドカー)
 └── Firebase Admin SDK
 ```
 
@@ -160,18 +161,19 @@ GKE Autopilot (Golang 1.21+)
 ### 3.3 データベース
 
 ```
-Cloud Spanner (Regional: asia-northeast1)
-├── 環境ごとに独立インスタンス (dev / staging / prod)
-├── Processing Units: dev/stg: 100 (最小値), prod: 200 (負荷に応じて増加)
-├── Replication: 3 zones
+Cloud SQL PostgreSQL 16 (Regional: asia-northeast1)
+├── 環境ごとに独立インスタンス (dev / stg / prod)
+├── マシンタイプ: dev/stg: db-g1-small, prod: TBD
+├── IAM DB 認証 (Cloud SQL Auth Proxy 経由)
+├── JSONB による複雑な状態管理
 └── Backup: Daily (prod)
 ```
 
 **選定理由:**
-- 強整合性（ACID保証）
-- グローバルトランザクション
-- 高スループット
-- 複雑なクエリ対応
+- ACID トランザクション + SELECT FOR UPDATE による行ロック
+- JSONB でゲーム状態を柔軟に格納
+- Cloud SQL Auth Proxy + IAM 認証でセキュアな接続
+- コスト効率 (Spanner 比 ~90% 削減)
 
 ### 3.4 認証
 
@@ -186,12 +188,11 @@ Firebase Authentication
 ```
 Google Cloud Platform (4プロジェクト構成)
 ├── overload-party-shared
-│   ├── GKE Autopilot (Game Server — 全環境共有)
+│   ├── GKE Autopilot (API + WebSocket サーバー — 全環境共有)
 │   ├── Artifact Registry (Docker イメージ)
-│   └── Cloud Load Balancing (External HTTP(S) LB)
+│   └── Ingress (GCE L7 LB, パスベースルーティング)
 ├── overload-party-{dev,stg,prod}
-│   ├── Cloud Spanner (Database — 環境ごと独立)
-│   ├── Cloud Run (Admin API / Payment Webhook)
+│   ├── Cloud SQL PostgreSQL (Database — 環境ごと独立)
 │   ├── Cloud Object Storage (Replays, Logs)
 │   └── Cloud Monitoring
 ```
@@ -236,42 +237,34 @@ CD: ArgoCD (on GKE)
                              │ HTTPS (REST API)
                              ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                      Application Layer                          │
-│  ┌──────────────────────────────────────────────────────────┐  │
-│  │         GKE Autopilot (Golang Pods)                     │  │
-│  │  ┌────────────────────────────────────────────────────┐  │  │
-│  │  │          WebSocket Handler                         │  │  │
-│  │  │  - Connection Management                           │  │  │
-│  │  │  - Message Routing                                 │  │  │
-│  │  │  - Event Broadcasting (Pod内完結)                   │  │  │
-│  │  └────────────────────────────────────────────────────┘  │  │
-│  │  ┌────────────────────────────────────────────────────┐  │  │
-│  │  │          Game Logic Engine                         │  │  │
-│  │  │  - Turn Management                                 │  │  │
-│  │  │  - Action Validation                               │  │  │
-│  │  │  - Chain Resolution                                │  │  │
-│  │  │  - Effect Calculation                              │  │  │
-│  │  └────────────────────────────────────────────────────┘  │  │
-│  │  ┌────────────────────────────────────────────────────┐  │  │
-│  │  │          State Manager (Stateless)                 │  │  │
-│  │  │  - Spanner 直接読み書き（毎アクション）             │  │  │
-│  │  │  - 楽観的ロック (version)                           │  │  │
-│  │  │  - Event Sourcing (GameEvents)                     │  │  │
-│  │  └────────────────────────────────────────────────────┘  │  │
-│  │  ┌────────────────────────────────────────────────────┐  │  │
-│  │  │          Matchmaking Service                       │  │  │
-│  │  │  - In-Memory Queue (Pod内)                         │  │  │
-│  │  │  - Random Matching                                 │  │  │
-│  │  │  - Pod Affinity Assignment                         │  │  │
-│  │  └────────────────────────────────────────────────────┘  │  │
-│  └──────────────────────────────────────────────────────────┘  │
+│                  GKE Autopilot (Application Layer)              │
+│  ┌───────────────────────┐  ┌───────────────────────┐          │
+│  │   api-server Pod      │  │   ws-server Pod       │          │
+│  │  ┌─────────────────┐  │  │  ┌─────────────────┐  │          │
+│  │  │  REST API       │  │  │  │  WebSocket      │  │          │
+│  │  │  (Gin)          │  │  │  │  Handler        │  │          │
+│  │  └─────────────────┘  │  │  └─────────────────┘  │          │
+│  │  ┌─────────────────┐  │  │  ┌─────────────────┐  │          │
+│  │  │  Game Logic     │  │  │  │  Game Logic     │  │          │
+│  │  │  Engine         │  │  │  │  Engine         │  │          │
+│  │  └─────────────────┘  │  │  └─────────────────┘  │          │
+│  │  ┌─────────────────┐  │  │  ┌─────────────────┐  │          │
+│  │  │  Cloud SQL      │  │  │  │  Matchmaking    │  │          │
+│  │  │  Auth Proxy     │  │  │  │  (In-Memory)    │  │          │
+│  │  │  (sidecar)      │  │  │  │                 │  │          │
+│  │  └─────────────────┘  │  │  ┌─────────────────┐  │          │
+│  └───────────────────────┘  │  │  Cloud SQL      │  │          │
+│                              │  │  Auth Proxy     │  │          │
+│                              │  │  (sidecar)      │  │          │
+│                              │  └─────────────────┘  │          │
+│                              └───────────────────────┘          │
 └───────────────────────────────┬────────────────────────────────┘
-                                │ gRPC / SQL
+                                │ PostgreSQL (localhost:5432)
                                 ▼
                   ┌────────────────────────────────────┐
                   │          Data Layer                │
                   │  ┌──────────────────────────────┐  │
-                  │  │        Cloud Spanner         │  │
+                  │  │   Cloud SQL PostgreSQL 16    │  │
                   │  │  ┌────────┐  ┌──────────┐   │  │
                   │  │  │ Games  │  │GameStates│   │  │
                   │  │  └────────┘  └──────────┘   │  │
@@ -296,7 +289,7 @@ CD: ArgoCD (on GKE)
 
 #### 4.2.1 選定結果: GKE Autopilot
 
-Cloud Run + Redis と GKE Autopilot を比較し、**GKE Autopilot を採用する。**
+Cloud Run + Redis と GKE Autopilot を比較検討し、**GKE Autopilot を採用した。**
 
 | 選定理由 | 概要 |
 |---------|------|
@@ -307,7 +300,7 @@ Cloud Run + Redis と GKE Autopilot を比較し、**GKE Autopilot を採用す�
 
 **クラスタ構成（1クラスタ・Namespace分離）:**
 
-GKE Autopilot クラスタは共有プロジェクト `overload-party-shared` に配置し、Namespace で環境を分離する。各環境の Spanner は環境別プロジェクト（`overload-party-dev` 等）に配置し、**Workload Identity** でクロスプロジェクトアクセスする。
+GKE Autopilot クラスタは共有プロジェクト `overload-party-shared` に配置し、Namespace で環境を分離する。各環境の Cloud SQL は環境別プロジェクト（`overload-party-dev` 等）に配置し、**Workload Identity + Cloud SQL Auth Proxy** でクロスプロジェクトアクセスする。
 
 ```
 [GKE Autopilot Cluster] overload-party-shared / asia-northeast1
@@ -327,16 +320,16 @@ GKE Autopilot クラスタは共有プロジェクト `overload-party-shared` �
   └── 各Namespaceに Deployment: matchmaker (Go)
 ```
 
-#### 4.2.2 状態管理方式: Spanner直接書き込み
+#### 4.2.2 状態管理方式: PostgreSQL 直接書き込み
 
-全アクションを Spanner に直接書き込む。Pod はステートレスとし、ゲーム状態は常に Spanner が正とする。
+全アクションを Cloud SQL PostgreSQL に直接書き込む。Pod はステートレスとし、ゲーム状態は常に DB が正とする。
 
-> インメモリ + チェックポイント方式との比較は [DESIGN_NOTES.md](DESIGN_NOTES.md#spanner書き込みコスト分析) を参照。
+> インメモリ + チェックポイント方式との比較は [DESIGN_NOTES.md](DESIGN_NOTES.md#db書き込みコスト分析) を参照。
 
 | 項目 | 内容 |
 |------|------|
-| 書き込み方式 | 毎アクション Spanner トランザクション（楽観的ロック） |
-| 必要PU (prod) | 200（同時1,000試合想定。負荷に応じて増加） |
+| 書き込み方式 | 毎アクション PostgreSQL トランザクション（SELECT FOR UPDATE） |
+| マシンタイプ (prod) | TBD（同時接続数に応じてスケール） |
 | 追加レイテンシ | ~5-10ms/アクション（カードゲームでは体感差なし） |
 | データ安全性 | **最高** — Pod障害時のデータロストゼロ |
 | Pod特性 | **完全ステートレス** — 任意のPodで任意のゲームを処理可能 |
@@ -344,8 +337,8 @@ GKE Autopilot クラスタは共有プロジェクト `overload-party-shared` �
 **データフロー:**
 
 ```
-[クライアント] → [GKE Pod] → [Cloud Spanner]
-                  ↑バリデーション   ↑毎アクション読み書き（トランザクション）
+[クライアント] → [GKE Pod] → [Cloud SQL PostgreSQL]
+                  ↑バリデーション   ↑毎アクション読み書き（SELECT FOR UPDATE）
                   ↑ブロードキャスト  ↑GameEvents追記（イベントソーシング）
 ```
 
@@ -354,7 +347,7 @@ GKE Autopilot クラスタは共有プロジェクト `overload-party-shared` �
 #### 4.3.1 ゲーム開始フロー
 
 ```
-Client                GKE Pod                 Spanner
+Client                GKE Pod              Cloud SQL
      │                          │                       │
      │  1. Connect WebSocket    │                       │
      ├─────────────────────────>│                       │
@@ -373,7 +366,7 @@ Client                GKE Pod                 Spanner
 #### 4.3.2 アクション実行フロー
 
 ```
-Player A (Client)        GKE Pod                 Spanner         Player B (Client)
+Player A (Client)        GKE Pod              Cloud SQL       Player B (Client)
      │                      │                       │                  │
      │  1. Play Card        │                       │                  │
      ├─────────────────────>│                       │                  │
@@ -398,7 +391,7 @@ Player A (Client)        GKE Pod                 Spanner         Player B (Clien
 ゲーム開始時に両プレイヤーが初期リソースを選出・同時公開するフロー。
 
 ```
-Player A (Client)        GKE Pod                 Spanner         Player B (Client)
+Player A (Client)        GKE Pod              Cloud SQL       Player B (Client)
      │                      │                       │                  │
      │  1. select_starting  │                       │                  │
      │     {frontId, backId}│                       │                  │
@@ -436,27 +429,29 @@ Player A (Client)        GKE Pod                 Spanner         Player B (Clien
 
 ## 5. データ設計 (Data Architecture)
 
+> **完全なスキーマ定義:** `db/schema_postgres.sql` を参照。以下は各テーブルの設計意図とカラム仕様の概要。
+
 ### 5.1 ゲーム管理 (Game Management)
 
 ゲームのライフサイクルを管理する基盤テーブル。
 
-#### 5.1.1 Spanner スキーマ (Games)
+#### 5.1.1 PostgreSQL スキーマ (games)
 
 **Games** (ゲームマスター)
 - **Primary Key:** `game_id`
 
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
-| `game_id` | STRING(36) | No | UUID |
-| `player1_id` | STRING(36) | No | プレイヤー1 ID |
-| `player2_id` | STRING(36) | No | プレイヤー2 ID |
-| `player1_deck_snapshot` | JSON | No | 使用デッキのスナップショット（カードIDリスト） |
-| `player2_deck_snapshot` | JSON | No | 使用デッキのスナップショット（カードIDリスト） |
-| `status` | STRING(20) | No | `'waiting'`, `'playing'`, `'finished'` |
-| `winner_id` | STRING(36) | Yes | 勝者 ID |
-| `created_at` | TIMESTAMP | No | 作成日時 (Commit Timestamp) |
-| `updated_at` | TIMESTAMP | No | 更新日時 (Commit Timestamp) |
-| `finished_at` | TIMESTAMP | Yes | 終了日時 |
+| `game_id` | UUID | No | UUID |
+| `player1_id` | UUID | No | プレイヤー1 ID |
+| `player2_id` | UUID | No | プレイヤー2 ID |
+| `player1_deck_snapshot` | JSONB | No | 使用デッキのスナップショット（カードIDリスト） |
+| `player2_deck_snapshot` | JSONB | No | 使用デッキのスナップショット（カードIDリスト） |
+| `status` | VARCHAR(20) | No | `'waiting'`, `'playing'`, `'finished'` |
+| `winner_id` | UUID | Yes | 勝者 ID |
+| `created_at` | TIMESTAMPTZ | No | 作成日時 (DEFAULT now()) |
+| `updated_at` | TIMESTAMPTZ | No | 更新日時 (DEFAULT now()) |
+| `finished_at` | TIMESTAMPTZ | Yes | 終了日時 |
 
 #### 5.1.2 JSONスキーマ (Deck Snapshot)
 
@@ -475,30 +470,30 @@ Player A (Client)        GKE Pod                 Spanner         Player B (Clien
 
 対戦中のリアルタイムな状態を管理する構造。
 
-#### 5.2.1 Spanner スキーマ (GameStates)
+#### 5.2.1 PostgreSQL スキーマ (game_states)
 
 **GameStates** (ゲーム状態・頻繁に更新)
 - **Primary Key:** `game_id`
-- **Interleave:** `IN PARENT Games ON DELETE CASCADE`
+- **Foreign Key:** `game_id REFERENCES games(game_id) ON DELETE CASCADE`
 
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
-| `game_id` | STRING(36) | No | 親テーブル参照 |
-| `version` | INT64 | No | 楽観的ロック用バージョン |
-| `current_turn` | INT64 | No | 現在ターン数 |
-| `current_phase` | STRING(20) | No | `'draw'`, `'dv_gen'`, `'main'`, `'battle'`, `'end'` |
-| `active_player` | INT64 | No | 現在のターンプレイヤー (1 or 2) |
-| `player1_budget` | INT64 | No | Player 1 Budget |
-| `player1_dv_pool` | INT64 | No | Player 1 DV Pool |
-| `player1_field` | JSON | No | Player 1 フィールド上のカード |
-| `player1_hand` | JSON | No | Player 1 手札 |
-| `player1_repository` | JSON | No | Player 1 リポジトリ（山札） |
-| `player1_trash` | JSON | No | Player 1 トラッシュ |
-| `player1_time_bank` | INT64 | No | Player 1 残り時間 |
+| `game_id` | UUID | No | 親テーブル参照 |
+| `version` | BIGINT | No | 楽観的ロック用バージョン |
+| `current_turn` | BIGINT | No | 現在ターン数 |
+| `current_phase` | VARCHAR(20) | No | `'draw'`, `'dv_gen'`, `'main'`, `'battle'`, `'end'` |
+| `active_player` | BIGINT | No | 現在のターンプレイヤー (1 or 2) |
+| `player1_budget` | BIGINT | No | Player 1 Budget |
+| `player1_dv_pool` | BIGINT | No | Player 1 DV Pool |
+| `player1_field` | JSONB | No | Player 1 フィールド上のカード |
+| `player1_hand` | JSONB | No | Player 1 手札 |
+| `player1_repository` | JSONB | No | Player 1 リポジトリ（山札） |
+| `player1_trash` | JSONB | No | Player 1 トラッシュ |
+| `player1_time_bank` | BIGINT | No | Player 1 残り時間 |
 | `player2_...` | ... | No | Player 2 各種ステータス（構成はPlayer1と同じ） |
-| `chain_stack` | JSON | Yes | 現在積まれているチェーンスタック |
-| `current_action_timer`| INT64 | Yes | アクションタイマー |
-| `updated_at` | TIMESTAMP | No | 更新日時 (Commit Timestamp) |
+| `chain_stack` | JSONB | Yes | 現在積まれているチェーンスタック |
+| `current_action_timer`| BIGINT | Yes | アクションタイマー |
+| `updated_at` | TIMESTAMPTZ | No | 更新日時 (DEFAULT now()) |
 
 #### 5.2.2 JSONスキーマ (State Details)
 
@@ -572,20 +567,20 @@ Player A (Client)        GKE Pod                 Spanner         Player B (Clien
 
 リプレイや監査のためのログデータ。
 
-#### 5.3.1 Spanner スキーマ (GameEvents)
+#### 5.3.1 PostgreSQL スキーマ (game_events)
 
 **GameEvents** (イベントログ・リプレイ用)
 - **Primary Key:** `game_id`, `sequence_number`
-- **Interleave:** `IN PARENT Games ON DELETE CASCADE`
+- **Foreign Key:** `game_id REFERENCES games(game_id) ON DELETE CASCADE`
 
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
-| `game_id` | STRING(36) | No | 親テーブル参照 |
-| `sequence_number` | INT64 | No | イベント連番 |
-| `event_type` | STRING(50) | No | イベント種別 |
-| `player_id` | STRING(36) | Yes | 行動プレイヤー |
-| `event_data` | JSON | No | イベント詳細データ（攻撃対象、使用カードID、ダメージ量など） |
-| `created_at` | TIMESTAMP | No | 発生日時 (Commit Timestamp) |
+| `game_id` | UUID | No | 親テーブル参照 |
+| `sequence_number` | BIGINT | No | イベント連番 |
+| `event_type` | VARCHAR(50) | No | イベント種別 |
+| `player_id` | UUID | Yes | 行動プレイヤー |
+| `event_data` | JSONB | No | イベント詳細データ（攻撃対象、使用カードID、ダメージ量など） |
+| `created_at` | TIMESTAMPTZ | No | 発生日時 (DEFAULT now()) |
 
 **イベントデータの例:**
 - `attack`: `{ "sourceId": "...", "targetId": "...", "damage": 500 }`
@@ -597,16 +592,16 @@ Player A (Client)        GKE Pod                 Spanner         Player B (Clien
 
 > **レーティング制は廃止。** 教育系カードゲームとしてデッキ構築と学習を楽しむことを重視し、勝敗ランキングは設けない。
 
-#### 5.4.1 Spanner スキーマ (Matches)
+#### 5.4.1 PostgreSQL スキーマ (matches)
 
 **Matches** (対戦履歴)
 - **Primary Key:** `match_id`
 
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
-| `match_id` | STRING(36) | No | UUID |
-| `game_id` | STRING(36) | No | 対応する `Games` レコード ID（`Games.player1_id/player2_id` を参照） |
-| `created_at` | TIMESTAMP | No | マッチ成立日時 |
+| `match_id` | UUID | No | UUID |
+| `game_id` | UUID | No | 対応する `Games` レコード ID（`Games.player1_id/player2_id` を参照） |
+| `created_at` | TIMESTAMPTZ | No | マッチ成立日時 |
 
 > **注:** プレイヤーIDは `Games` テーブルの `player1_id` / `player2_id` を正とする。`Matches` からプレイヤーを特定する場合は `game_id` を通じて `Games` テーブルを参照する。
 
@@ -618,34 +613,34 @@ Player A (Client)        GKE Pod                 Spanner         Player B (Clien
 
 ユーザーアカウントと基本情報。
 
-#### 5.5.1 Spanner スキーマ (Players & Stamina)
+#### 5.5.1 PostgreSQL スキーマ (players & player_daily_battle)
 
 **Players** (プレイヤーマスター)
 - **Primary Key:** `player_id`
 
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
-| `player_id` | STRING(36) | No | UUID |
-| `firebase_uid` | STRING(128)| No | Firebase Auth UID (Unique) |
-| `username` | STRING(50) | No | 表示名 |
-| `wins` | INT64 | Yes | 勝利数 (Default: 0) |
-| `losses` | INT64 | Yes | 敗北数 (Default: 0) |
-| `is_premium` | BOOL | No | 課金ステータス (Default: false) |
-| `equipped_icon_no` | INT64 | Yes | 装備中アイコン番号（`CosmeticItems` 参照。NULL: デフォルト） |
-| `premium_expires_at` | TIMESTAMP | Yes | サブスク有効期限 |
-| `created_at` | TIMESTAMP | No | 作成日時 |
-| `updated_at` | TIMESTAMP | No | 更新日時 |
+| `player_id` | UUID | No | UUID |
+| `firebase_uid` | VARCHAR(128)| No | Firebase Auth UID (Unique) |
+| `username` | VARCHAR(50) | No | 表示名 |
+| `wins` | BIGINT | Yes | 勝利数 (Default: 0) |
+| `losses` | BIGINT | Yes | 敗北数 (Default: 0) |
+| `is_premium` | BOOLEAN | No | 課金ステータス (Default: false) |
+| `equipped_icon_no` | BIGINT | Yes | 装備中アイコン番号（`CosmeticItems` 参照。NULL: デフォルト） |
+| `premium_expires_at` | TIMESTAMPTZ | Yes | サブスク有効期限 |
+| `created_at` | TIMESTAMPTZ | No | 作成日時 |
+| `updated_at` | TIMESTAMPTZ | No | 更新日時 |
 
-**PlayerStamina** (スタミナ管理)
+**player_daily_battle** (デイリーバトル管理)
 - **Primary Key:** `player_id`
-- **Interleave:** `IN PARENT Players ON DELETE CASCADE`
+- **Foreign Key:** `player_id REFERENCES players(player_id) ON DELETE CASCADE`
 
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
-| `player_id` | STRING(36) | No | 親テーブル参照 |
-| `current_stamina` | INT64 | No | 現在スタミナ (Default: 5) |
-| `max_stamina` | INT64 | No | 最大スタミナ (Default: 5) |
-| `last_recovery_at` | TIMESTAMP | No | 最終回復日時 (1スタミナ/30分) |
+| `player_id` | UUID | No | 親テーブル参照 |
+| `remaining_battles` | BIGINT | No | 残りバトル数 (Default: 5) |
+| `max_battles` | BIGINT | No | 最大バトル数 (Default: 5) |
+| `last_reset_date` | DATE | No | 最終リセット日 |
 
 #### 5.5.2 関連インデックス
 
@@ -655,25 +650,25 @@ Player A (Client)        GKE Pod                 Spanner         Player B (Clien
 
 カードのステータス・効果テキスト・コスト等の定義データ。`CARDS.md` の内容をDB上で管理する。
 
-#### 5.6.1 Spanner スキーマ (CardDefinitions)
+#### 5.6.1 PostgreSQL スキーマ (card_definitions)
 
 **CardDefinitions** (カード定義マスター)
 - **Primary Key:** `card_no`
 
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
-| `card_no` | INT64 | No | カード番号（`CARDS.md` の `#` に対応） |
-| `card_name` | STRING(100) | No | カード名 |
-| `faction` | STRING(20) | No | 陣営 (`SWS`, `Aozora`, `Guruguru`, `Miracle`, `Neutral`) |
-| `card_type` | STRING(30) | No | カードタイプ (`Compute`, `Container`, `Orchestrator`, `Serverless`, `AI_ML`, `Database`, `ObjectStorage`, `NoSQL`, `CacheDB`, `Platform`, `Attachment`, `Strategy`, `Incident`, `Reactive`) |
-| `scalability` | STRING(10) | No | 区分 (`R`, `E`, `RE`, `none`) |
-| `stats` | JSON | No | ステータス定義 |
-| `effect_text` | STRING(500) | Yes | 効果テキスト（表示用） |
-| `effect_id` | STRING(50) | Yes | 効果ロジックの識別子（サーバー側の効果処理にマッピング） |
-| `restriction` | STRING(20) | No | 制限区分 (`unlimited`, `semi_limited`, `limited`) |
-| `is_active` | BOOL | No | 有効フラグ（メンテ・バランス調整用） |
-| `created_at` | TIMESTAMP | No | 作成日時 |
-| `updated_at` | TIMESTAMP | No | 更新日時 |
+| `card_no` | BIGINT | No | カード番号（`CARDS.md` の `#` に対応） |
+| `card_name` | VARCHAR(100) | No | カード名 |
+| `faction` | VARCHAR(20) | No | 陣営 (`SWS`, `Aozora`, `Guruguru`, `Miracle`, `Neutral`) |
+| `card_type` | VARCHAR(30) | No | カードタイプ (`Compute`, `Container`, `Orchestrator`, `Serverless`, `AI_ML`, `Database`, `ObjectStorage`, `NoSQL`, `CacheDB`, `Platform`, `Attachment`, `Strategy`, `Incident`, `Reactive`) |
+| `scalability` | VARCHAR(10) | No | 区分 (`R`, `E`, `RE`, `none`) |
+| `stats` | JSONB | No | ステータス定義 |
+| `effect_text` | VARCHAR(500) | Yes | 効果テキスト（表示用） |
+| `effect_id` | VARCHAR(50) | Yes | 効果ロジックの識別子（サーバー側の効果処理にマッピング） |
+| `restriction` | VARCHAR(20) | No | 制限区分 (`unlimited`, `semi_limited`, `limited`) |
+| `is_active` | BOOLEAN | No | 有効フラグ（メンテ・バランス調整用） |
+| `created_at` | TIMESTAMPTZ | No | 作成日時 |
+| `updated_at` | TIMESTAMPTZ | No | 更新日時 |
 
 #### 5.6.2 JSONスキーマ (stats)
 
@@ -722,71 +717,64 @@ Player A (Client)        GKE Pod                 Spanner         Player B (Clien
 
 | タイミング | 方式 | 説明 |
 |-----------|------|------|
-| Pod 起動時 | 全件ロード | Spanner から `CardDefinitions` を全件取得し `sync.Map` にキャッシュ |
+| Pod 起動時 | 全件ロード | Cloud SQL から `card_definitions` を全件取得し `sync.Map` にキャッシュ |
 | 定期更新 | ポーリング | 各 Pod が **5分間隔**で `CardDefinitions` の `updated_at` を確認し、更新があれば差分リフレッシュ |
-| 管理者操作時 | Admin API → Pub/Sub | Admin Dashboard でカード定義を更新すると、Cloud Pub/Sub にメッセージを発行。各 Pod が Subscribe して即座にキャッシュをリフレッシュ |
+| 管理者操作時 | ポーリングで反映 | Admin API でカード定義を更新すると、次回ポーリング（最大5分）で各 Pod がキャッシュをリフレッシュ |
 
 ```
-[Admin Dashboard]
+[Admin Dashboard / API]
      │
      │ POST/PUT /admin/cards
      ▼
-[Cloud Run (Admin API)]
+[api-server Pod]
      │
-     ├── Spanner に書き込み
-     │
-     └── Pub/Sub トピック "card-definition-updated" にメッセージ発行
-                │
-                ▼
-     [GKE Pods (各 game-server)]
-          │ Subscription で受信
-          └── CardDefinitions をSpannerから再取得 → メモリキャッシュ更新
+     └── Cloud SQL に書き込み → 定期ポーリングで各 Pod がキャッシュ更新
 ```
 
-> **設計判断:** Pub/Sub による即時通知を主とし、5分ポーリングをフォールバックとする。Pub/Sub メッセージの取りこぼし（Pod再起動等）があっても、ポーリングで最大5分以内に整合性が回復する。カード定義の更新頻度が低い（月数回程度）ため、この遅延は許容範囲。
+> **設計判断:** カード定義の更新頻度は低い（月数回程度）ため、5分間隔ポーリングで十分。最大5分の遅延は許容範囲。
 
 ### 5.7 カード・デッキ管理 (Card & Deck Management)
 
 所持カードとデッキ構築。
 
-#### 5.7.1 Spanner スキーマ (PlayerCards, Decks)
+#### 5.7.1 PostgreSQL スキーマ (player_cards, decks, deck_cards)
 
 **PlayerCards** (所持カード)
 - **Primary Key:** `player_id`, `player_card_id`
-- **Interleave:** `IN PARENT Players ON DELETE CASCADE`
+- **Foreign Key:** `player_id REFERENCES players(player_id) ON DELETE CASCADE`
 
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
-| `player_id` | STRING(36) | No | 親テーブル参照 |
-| `player_card_id` | STRING(36) | No | カード所持ユニークID |
-| `card_no` | INT64 | No | `CARDS.md` のカード番号 |
-| `illustration_variant`| INT64 | No | イラスト違いID (0:通常) |
-| `acquired_at` | TIMESTAMP | No | 獲得日時 |
+| `player_id` | UUID | No | 親テーブル参照 |
+| `player_card_id` | UUID | No | カード所持ユニークID |
+| `card_no` | BIGINT | No | `CARDS.md` のカード番号 |
+| `illustration_variant`| BIGINT | No | イラスト違いID (0:通常) |
+| `acquired_at` | TIMESTAMPTZ | No | 獲得日時 |
 
 **Decks** (デッキ定義)
 - **Primary Key:** `player_id`, `deck_id`
-- **Interleave:** `IN PARENT Players ON DELETE CASCADE`
+- **Foreign Key:** `player_id REFERENCES players(player_id) ON DELETE CASCADE`
 
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
-| `player_id` | STRING(36) | No | 親テーブル参照 |
-| `deck_id` | STRING(36) | No | デッキID |
-| `deck_name` | STRING(50) | No | デッキ名 |
-| `is_valid` | BOOL | No | 有効デッキフラグ (30枚ルール適合) |
-| `playmat_no` | INT64 | Yes | プレイマット番号（`CosmeticItems` 参照。NULL: デフォルト） |
-| `sleeve_no` | INT64 | Yes | スリーブ番号（`CosmeticItems` 参照。NULL: デフォルト） |
-| `created_at` | TIMESTAMP | No | 作成日時 |
-| `updated_at` | TIMESTAMP | No | 更新日時 |
+| `player_id` | UUID | No | 親テーブル参照 |
+| `deck_id` | UUID | No | デッキID |
+| `deck_name` | VARCHAR(50) | No | デッキ名 |
+| `is_valid` | BOOLEAN | No | 有効デッキフラグ (30枚ルール適合) |
+| `playmat_no` | BIGINT | Yes | プレイマット番号（`CosmeticItems` 参照。NULL: デフォルト） |
+| `sleeve_no` | BIGINT | Yes | スリーブ番号（`CosmeticItems` 参照。NULL: デフォルト） |
+| `created_at` | TIMESTAMPTZ | No | 作成日時 |
+| `updated_at` | TIMESTAMPTZ | No | 更新日時 |
 
 **DeckCards** (デッキ内カード)
 - **Primary Key:** `player_id`, `deck_id`, `player_card_id`
-- **Interleave:** `IN PARENT Decks ON DELETE CASCADE`
+- **Foreign Key:** `deck_id REFERENCES decks(deck_id) ON DELETE CASCADE`
 
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
-| `player_id` | STRING(36) | No | ルート親参照 |
-| `deck_id` | STRING(36) | No | 親テーブル参照 |
-| `player_card_id` | STRING(36) | No | `PlayerCards` 参照 |
+| `player_id` | UUID | No | ルート親参照 |
+| `deck_id` | UUID | No | 親テーブル参照 |
+| `player_card_id` | UUID | No | `PlayerCards` 参照 |
 
 #### 5.7.2 関連インデックス
 
@@ -797,91 +785,91 @@ Player A (Client)        GKE Pod                 Spanner         Player B (Clien
 
 アプリ内課金とユーザー設定。
 
-#### 5.8.1 Spanner スキーマ (Shop & Settings)
+#### 5.8.1 PostgreSQL スキーマ (products, subscriptions, etc.)
 
 **Products** (商品マスター)
 - **Primary Key:** `product_id`
 
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
-| `product_id` | STRING(50) | No | 商品ID (e.g. `theme_aws`) |
-| `name` | STRING(100) | No | 商品名 |
-| `type` | STRING(20) | No | `card_pack` / `subscription` |
-| `price` | INT64 | No | 価格 (JPY) |
-| `content` | JSON | No | 商品内容 (カードIDリスト等) |
-| `is_active` | BOOL | No | 販売中フラグ |
+| `product_id` | VARCHAR(50) | No | 商品ID (e.g. `theme_aws`) |
+| `name` | VARCHAR(100) | No | 商品名 |
+| `type` | VARCHAR(20) | No | `card_pack` / `subscription` |
+| `price` | BIGINT | No | 価格 (JPY) |
+| `content` | JSONB | No | 商品内容 (カードIDリスト等) |
+| `is_active` | BOOLEAN | No | 販売中フラグ |
 
 **Subscriptions** (サブスクリプション管理)
 - **Primary Key:** `player_id`, `subscription_id`
-- **Interleave:** `IN PARENT Players ON DELETE CASCADE`
+- **Foreign Key:** `player_id REFERENCES players(player_id) ON DELETE CASCADE`
 
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
-| `player_id` | STRING(36) | No | 親テーブル参照 |
-| `subscription_id` | STRING(36) | No | UUID |
-| `product_id` | STRING(50) | No | 商品ID（`premium_monthly` 等） |
-| `platform` | STRING(10) | No | `apple` / `google` |
-| `purchase_token` | STRING(256) | No | Apple: `originalTransactionId` / Google: `purchaseToken`（UNIQUE） |
-| `status` | STRING(20) | No | `active` / `grace_period` / `expired` / `refunded` |
-| `current_period_start` | TIMESTAMP | No | 現在の課金期間開始日時 |
-| `current_period_end` | TIMESTAMP | No | 現在の課金期間終了日時 |
-| `created_at` | TIMESTAMP | No | 初回購入日時 |
-| `updated_at` | TIMESTAMP | No | 更新日時 |
+| `player_id` | UUID | No | 親テーブル参照 |
+| `subscription_id` | UUID | No | UUID |
+| `product_id` | VARCHAR(50) | No | 商品ID（`premium_monthly` 等） |
+| `platform` | VARCHAR(10) | No | `apple` / `google` |
+| `purchase_token` | VARCHAR(256) | No | Apple: `originalTransactionId` / Google: `purchaseToken`（UNIQUE） |
+| `status` | VARCHAR(20) | No | `active` / `grace_period` / `expired` / `refunded` |
+| `current_period_start` | TIMESTAMPTZ | No | 現在の課金期間開始日時 |
+| `current_period_end` | TIMESTAMPTZ | No | 現在の課金期間終了日時 |
+| `created_at` | TIMESTAMPTZ | No | 初回購入日時 |
+| `updated_at` | TIMESTAMPTZ | No | 更新日時 |
 
 **OneTimePurchases** (買い切り購入履歴)
 - **Primary Key:** `player_id`, `purchase_id`
-- **Interleave:** `IN PARENT Players ON DELETE CASCADE`
+- **Foreign Key:** `player_id REFERENCES players(player_id) ON DELETE CASCADE`
 
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
-| `player_id` | STRING(36) | No | 親テーブル参照 |
-| `purchase_id` | STRING(36) | No | UUID |
-| `product_id` | STRING(50) | No | 商品ID（`faction_sws` 等） |
-| `platform` | STRING(10) | No | `apple` / `google` |
-| `purchase_token` | STRING(256) | No | Apple: `transactionId` / Google: `purchaseToken`（UNIQUE） |
-| `purchased_at` | TIMESTAMP | No | 購入日時 |
+| `player_id` | UUID | No | 親テーブル参照 |
+| `purchase_id` | UUID | No | UUID |
+| `product_id` | VARCHAR(50) | No | 商品ID（`faction_sws` 等） |
+| `platform` | VARCHAR(10) | No | `apple` / `google` |
+| `purchase_token` | VARCHAR(256) | No | Apple: `transactionId` / Google: `purchaseToken`（UNIQUE） |
+| `purchased_at` | TIMESTAMPTZ | No | 購入日時 |
 
 **UserSettings** (ユーザー設定)
 - **Primary Key:** `player_id`
-- **Interleave:** `IN PARENT Players ON DELETE CASCADE`
+- **Foreign Key:** `player_id REFERENCES players(player_id) ON DELETE CASCADE`
 
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
-| `player_id` | STRING(36) | No | ユーザーID |
-| `language` | STRING(10) | No | 言語設定 (Default: `ja`) |
-| `bgm_volume` | INT64 | No | BGM音量 (0-100) |
-| `se_volume` | INT64 | No | SE音量 (0-100) |
-| `push_enabled` | BOOL | No | 通知許可 |
-| `updated_at` | TIMESTAMP | No | 更新日時 |
+| `player_id` | UUID | No | ユーザーID |
+| `language` | VARCHAR(10) | No | 言語設定 (Default: `ja`) |
+| `bgm_volume` | BIGINT | No | BGM音量 (0-100) |
+| `se_volume` | BIGINT | No | SE音量 (0-100) |
+| `push_enabled` | BOOLEAN | No | 通知許可 |
+| `updated_at` | TIMESTAMPTZ | No | 更新日時 |
 
 ### 5.9 コスメティクス管理 (Cosmetics)
 
 装飾アイテム（プレイマット・スリーブ等）の定義・所持・装備。
 
-#### 5.9.1 Spanner スキーマ (CosmeticItems, PlayerItems)
+#### 5.9.1 PostgreSQL スキーマ (cosmetic_items, player_items)
 
 **CosmeticItems** (装飾アイテムマスター)
 - **Primary Key:** `item_type`, `item_no`
 
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
-| `item_type` | STRING(20) | No | アイテム種別（`playmat` / `sleeve` / `icon` / `stamp`） |
-| `item_no` | INT64 | No | アイテム番号（種別内で一意） |
-| `item_name` | STRING(100) | No | アイテム名 |
-| `description` | STRING(500) | Yes | 説明文 |
-| `is_purchasable` | BOOL | No | 購入可能フラグ |
-| `is_active` | BOOL | No | 有効フラグ |
+| `item_type` | VARCHAR(20) | No | アイテム種別（`playmat` / `sleeve` / `icon` / `stamp`） |
+| `item_no` | BIGINT | No | アイテム番号（種別内で一意） |
+| `item_name` | VARCHAR(100) | No | アイテム名 |
+| `description` | VARCHAR(500) | Yes | 説明文 |
+| `is_purchasable` | BOOLEAN | No | 購入可能フラグ |
+| `is_active` | BOOLEAN | No | 有効フラグ |
 
 **PlayerItems** (プレイヤーの装飾アイテム所持)
 - **Primary Key:** `player_id`, `item_type`, `item_no`
-- **Interleave:** `IN PARENT Players ON DELETE CASCADE`
+- **Foreign Key:** `player_id REFERENCES players(player_id) ON DELETE CASCADE`
 
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
-| `player_id` | STRING(36) | No | 親テーブル参照 |
-| `item_type` | STRING(20) | No | アイテム種別 |
-| `item_no` | INT64 | No | アイテム番号 |
-| `acquired_at` | TIMESTAMP | No | 獲得日時 |
+| `player_id` | UUID | No | 親テーブル参照 |
+| `item_type` | VARCHAR(20) | No | アイテム種別 |
+| `item_no` | BIGINT | No | アイテム番号 |
+| `acquired_at` | TIMESTAMPTZ | No | 獲得日時 |
 
 #### 5.9.2 装備状態の管理
 
@@ -1067,7 +1055,7 @@ GET    /api/v1/rankings               # ランキング取得
 |------|------|
 | 方式 | Firebase Custom Claims (`admin: true`) |
 | 設定方法 | Firebase Admin SDK で `SetCustomUserClaims` を実行（CLIまたはスクリプト） |
-| 検証方法 | Cloud Run (Admin API) が ID Token をデコードし `admin` クレームを確認 |
+| 検証方法 | api-server が ID Token をデコードし `admin` クレームを確認 |
 | 未認可時 | HTTP 403 Forbidden |
 
 > Admin ユーザーの登録は Firebase Console または管理スクリプトで行い、アプリ上での自己昇格はできない設計とする。
@@ -1114,7 +1102,7 @@ Client                GKE Pod                   Apple / Google
      │                          │  GET purchases (Google)   │
      │                          ├─────────────────────────>│
      │                          │<─────────────────────────┤
-     │                          │  4. 検証OK → Spanner更新  │
+     │                          │  4. 検証OK → DB更新       │
      │                          │     (冪等: purchase_token │
      │                          │      で重複チェック)       │
      │                          │                          │
@@ -1140,40 +1128,39 @@ Client                GKE Pod                   Apple / Google
 
 > サブスクの状態変更（自動更新・解約・猶予期間等）はサーバー通知で受信し、`premium_expires_at` を更新する。クライアント起点のポーリングは行わない。
 
-### 8.6 Webhook 受信サービス（専用 Cloud Run）
+### 8.6 Webhook 受信（api-server 内）
 
-Apple / Google からのサーバー通知を受信する **専用の Cloud Run サービス** を設ける。ゲームサーバー（GKE）とは独立した責務分離とする。
+Apple / Google からのサーバー通知は GKE 上の **api-server** で受信する。
 
 ```
-Apple Server Notifications V2  ──>  Cloud Run (payment-webhook)  ──>  Spanner
-Google RTDN (Pub/Sub push)     ──>  Cloud Run (payment-webhook)  ──>  Spanner
+Apple Server Notifications V2  ──>  api-server (GKE)  ──>  Cloud SQL
+Google RTDN (Pub/Sub push)     ──>  api-server (GKE)  ──>  Cloud SQL
 ```
 
 | 項目 | 内容 |
 |------|------|
-| サービス名 | `payment-webhook` |
+| 受信先 | api-server Pod (GKE Autopilot) |
 | ランタイム | Go |
-| 責務 | サーバー通知の受信・署名検証・Spanner 更新のみ |
+| 責務 | サーバー通知の受信・署名検証・DB 更新 |
 | 認証 | Apple: JWS 署名検証 / Google: Pub/Sub push トークン検証 |
 | エンドポイント | `POST /webhooks/apple` / `POST /webhooks/google` |
-| スケーリング | min: 0, max: 10（通知頻度に応じた低コスト運用） |
 
 ### 8.7 冪等性と不正対策
 
 | 対策 | 実装方法 |
 |------|---------|
-| 重複購入防止 | `purchase_token`（Apple: `transactionId` / Google: `purchaseToken`）を Spanner に保存し、UNIQUE制約で重複INSERT を排除 |
+| 重複購入防止 | `purchase_token`（Apple: `transactionId` / Google: `purchaseToken`）を Cloud SQL に保存し、UNIQUE制約で重複INSERT を排除 |
 | レシート再利用防止 | 検証済みトークンをDBに記録。同一トークンでの再リクエストは既存結果を返却 |
 | クライアント改ざん防止 | 課金状態（`is_premium`、`PlayerCards`）はサーバーのみが更新。クライアントからの直接変更は不可 |
 
-### 8.8 購入処理の Spanner トランザクション
+### 8.8 購入処理のトランザクション
 
 **買い切り商品（カードセット・コレクション）:**
 
 ```
-BEGIN TRANSACTION
-  1. PurchaseRecords に purchase_token が存在しないことを確認
-  2. PurchaseRecords に INSERT (purchase_token, player_id, product_id, verified_at)
+BEGIN
+  1. one_time_purchases に purchase_token が存在しないことを確認
+  2. one_time_purchases に INSERT (purchase_token, player_id, product_id, verified_at)
   3. 商品種別に応じた処理:
      - カードセット → PlayerCards に対象カードを一括 INSERT
      - コレクション → 所持テーブルに INSERT
@@ -1222,7 +1209,7 @@ COMMIT
 再接続リクエスト
         │
         ▼
-Spannerから最新GameStateを取得
+Cloud SQL から最新 GameState を取得
         │
         ▼
 接続をConnectionManagerに再登録
@@ -1316,7 +1303,7 @@ Pong 応答なし（5秒）
 | キュー離脱 | 明示的な離脱 or 60秒の Heartbeat タイムアウト |
 | Pod再起動時 | キュー消失 → プレイヤーは再キュー（WebSocket切断検知で自動リトライ） |
 
-> **注:** マッチメイキングキューはPodインメモリで管理する。Spannerには書き込まない。マッチ成立後のゲーム作成のみSpannerに書き込む。
+> **注:** マッチメイキングキューはPodインメモリで管理する。DBには書き込まない。マッチ成立後のゲーム作成のみCloud SQLに書き込む。
 
 ### 9.5.2 WebSocket メッセージ（マッチメイキング）
 
@@ -1403,7 +1390,7 @@ draw → dv_gen → main → battle → end → (ActivePlayer切替) → draw ..
 |------|------|
 | メカニズム | `GameStates.version` フィールドで楽観的ロック |
 | 更新手順 | 読み取り→更新処理→version++→書き込み（トランザクション内） |
-| 競合時 | Spannerがトランザクションをabort→自動リトライ |
+| 競合時 | PostgreSQL の SELECT FOR UPDATE で排他制御。競合時は自動リトライ |
 | 利点 | デッドロックなし、コンフリクト時のみリトライ |
 
 ### 11.2 イベントソーシング
@@ -1417,7 +1404,7 @@ draw → dv_gen → main → battle → end → (ActivePlayer切替) → draw ..
 
 ### 11.3 トランザクション失敗時のフィードバック
 
-Spanner トランザクションが失敗した場合、クライアントに `action_rejected` メッセージを返す。
+PostgreSQL トランザクションが失敗した場合、クライアントに `action_rejected` メッセージを返す。
 
 **Server → Client メッセージ:**
 
@@ -1444,7 +1431,7 @@ Spanner トランザクションが失敗した場合、クライアントに `a
 
 | レイヤー | リトライ回数 | 説明 |
 |---------|------------|------|
-| サーバー側 | 最大3回 | Spanner クライアントライブラリの自動リトライ |
+| サーバー側 | 最大3回 | pgxpool によるトランザクション自動リトライ |
 | クライアント側 | 最大2回 | `retryable: true` の場合、指数バックオフで自動リトライ |
 
 > サーバー側で3回リトライしても失敗した場合にのみ `action_rejected` をクライアントに送信する。
@@ -1453,13 +1440,14 @@ Spanner トランザクションが失敗した場合、クライアントに `a
 
 ## 12. パフォーマンス最適化
 
-### 12.1 Cloud Spanner最適化
+### 12.1 Cloud SQL PostgreSQL 最適化
 
 | 最適化手法 | 内容 |
 |----------|------|
-| ホットスポット回避 | Primary KeyにUUIDv4を使用（ランダム分散） |
-| インターリーブテーブル | 親子関係のテーブルを同一ノードに配置（`Games` → `GameStates` → `GameEvents`） |
-| バッチ書き込み | `GameEvents`の追記は複数レコードを一括INSERT |
+| UUID 主キー | gen_random_uuid() でランダム分散 |
+| JSONB インデックス | GIN インデックスで JSONB 内検索を高速化（必要に応じて） |
+| Foreign Key + CASCADE | 親子関係のテーブルを外部キーで結合、CASCADE DELETE で整合性保証 |
+| 接続プーリング | pgxpool による接続プール管理 |
 
 ### 12.2 GKE Autopilot 最適化
 
@@ -1481,13 +1469,13 @@ Spanner トランザクションが失敗した場合、クライアントに `a
 | terminationGracePeriodSeconds | 15 |
 | sessionAffinity | ClientIP — 同じクライアントを同一Podにルーティング |
 
-### 12.3 接続プーリング
+### 12.3 接続プーリング (pgxpool)
 
 | パラメータ | 値 | 説明 |
 |----------|-----|------|
-| `MinOpened` | 10 | 常時開放する最小セッション数 |
-| `MaxOpened` | 100 | 最大セッション数 |
-| `WriteSessions` | 0.5 | 書き込み用セッションの割合（50%。毎アクション書き込みのため高めに設定） |
+| `MinConns` | 2 | 最小接続数 |
+| `MaxConns` | 10 | 最大接続数（Pod あたり） |
+| `MaxConnLifetime` | 30m | 接続の最大寿命 |
 
 ---
 
@@ -1547,9 +1535,9 @@ GCPリソースは **Terraform** で管理する。
 | プロジェクト | 用途 | 主なリソース |
 |-------------|------|------------|
 | `overload-party-shared` | 共有インフラ | GKE Autopilot, Artifact Registry, ArgoCD |
-| `overload-party-dev` | 開発環境 | Spanner, Cloud Run (Admin/Webhook), IAM |
-| `overload-party-stg` | ステージング環境 | 同上 |
-| `overload-party-prod` | 本番環境 | 同上 |
+| `overload-party-dev` | 開発環境 | Cloud SQL PostgreSQL, IAM |
+| `overload-party-stg` | ステージング環境 | Cloud SQL PostgreSQL, IAM |
+| `overload-party-prod` | 本番環境 | Cloud SQL PostgreSQL, IAM |
 
 **管理対象リソース:**
 
@@ -1557,10 +1545,8 @@ GCPリソースは **Terraform** で管理する。
 |---------|---------------------|------------------|
 | GKE Autopilot クラスタ | `google_container_cluster` | shared |
 | Artifact Registry リポジトリ | `google_artifact_registry_repository` | shared |
-| Cloud Spanner インスタンス・DB | `google_spanner_instance`, `google_spanner_database` | 各環境 |
-| Cloud Run サービス (Admin API) | `google_cloud_run_v2_service` | 各環境 |
-| Cloud Run サービス (Payment Webhook) | `google_cloud_run_v2_service` | 各環境 |
-| Cloud Pub/Sub (カード定義更新通知) | `google_pubsub_topic`, `google_pubsub_subscription` | 各環境 |
+| Cloud SQL インスタンス・DB | `google_sql_database_instance`, `google_sql_database` | 各環境 |
+| Cloud SQL IAM ユーザー | `google_sql_user` (CLOUD_IAM_SERVICE_ACCOUNT) | 各環境 |
 | External HTTP(S) LB | `google_compute_*` | shared |
 | Cloud Storage バケット | `google_storage_bucket` | 各環境 |
 | IAM / Service Account | `google_service_account`, `google_project_iam_*` | 各環境 |
@@ -1575,42 +1561,38 @@ GCPリソースは **Terraform** で管理する。
 | ArgoCD | Namespace: `argocd`（常時稼働） | — | — | — |
 | GKE Namespace | — | `dev` | `staging` | `prod` |
 | game-server Pods | — | 0（開発時のみ起動） | 0（開発時のみ起動） | 4〜8（常時稼働） |
-| Spanner インスタンス | — | `op-dev` | `op-staging` | `op-prod` |
-| Spanner PU | — | 100（不要時 destroy） | 100（不要時 destroy） | 200（負荷に応じて増加） |
+| Cloud SQL インスタンス | — | `overload-party-db` | `overload-party-db` | `overload-party-db` |
+| Cloud SQL tier | — | db-g1-small | db-g1-small | TBD |
 | Workload Identity | — | KSA `game-server` → GSA `game-server-dev@..dev` | 同パターン | 同パターン |
-| Cloud Run (Admin API) | — | `admin-api-dev` | `admin-api-staging` | `admin-api-prod` |
-| Cloud Run (Payment Webhook) | — | `payment-webhook-dev` | `payment-webhook-staging` | `payment-webhook-prod` |
-| Cloud Pub/Sub | — | `card-updated-dev` 等 | 同パターン | 同パターン |
 
-> dev/staging は開発時以外 GKE Pod を replicas: 0 にスケールダウンし、Spanner は不要時に `terraform destroy` で破棄することでコストを最小化する。Spanner の最小 PU は **100**（プロビジョンドインスタンスの下限値）。
+
+> dev/stg は毎日 2:00 JST に自動停止（Ingress 削除 → Pod スケール 0 → Cloud SQL 停止）してコストを最小化する。起動は GitHub Actions workflow_dispatch またはローカルスクリプトで手動実行。
 
 **コスト管理スクリプト:**
 
-| スクリプト | 内容 |
-|-----------|------|
-| `scripts/dev-up.sh` | dev Pod を replicas: 1 に起動 |
-| `scripts/dev-down.sh` | dev Pod を replicas: 0 に停止 |
-| `scripts/infra-up.sh` | dev Terraform apply + Spanner スキーマ適用 |
-| `scripts/infra-destroy.sh` | dev Terraform destroy（Spanner + IAM 破棄） |
+| スクリプト / ワークフロー | 内容 |
+|--------------------------|------|
+| `scripts/env-up.sh <dev\|stg>` | Cloud SQL 起動 → Pod スケール 1 → Ingress 適用 |
+| `scripts/env-down.sh <dev\|stg>` | Ingress 削除 → Pod スケール 0 → Cloud SQL 停止 |
+| `.github/workflows/nightly-shutdown.yaml` | 毎日 2:00 JST に dev/stg を自動停止 |
+| `.github/workflows/startup.yaml` | 手動起動 (workflow_dispatch) |
 
 **ディレクトリ構成:**
 
 ```
-terraform/
+terraform/  (overload-party-server リポジトリ)
 ├── environments/
-│   ├── shared/       # GKE, Artifact Registry
-│   ├── dev/          # Spanner, IAM (Workload Identity)
-│   ├── staging/      # 同上
-│   └── prod/         # 同上
+│   └── dev/          # Cloud SQL, IAM (Workload Identity)
+├── modules/
+│   ├── cloudsql/     # Cloud SQL PostgreSQL インスタンス + DB
+│   └── iam/          # GSA + Cloud SQL role + Workload Identity binding
+
+terraform/  (overload-party-k8s リポジトリ)
+├── environments/
+│   └── shared/       # GKE Autopilot, Artifact Registry
 ├── modules/
 │   ├── gke/          # GKE Autopilot クラスタ
-│   ├── artifact-registry/ # Docker リポジトリ
-│   ├── spanner/      # Spanner インスタンス + DB
-│   ├── iam/          # GSA + Spanner role + Workload Identity binding
-│   ├── cloud-run/    # Admin API / Payment Webhook サービス
-│   ├── pubsub/       # カード定義更新通知
-│   └── networking/   # LB 等
-└── (backend は各 environment 内に定義)
+│   └── artifact-registry/ # Docker リポジトリ
 ```
 
 **Terraform state:** `gs://overload-party-tf-state` に GCS backend で管理。prefix で `terraform/shared`, `terraform/dev` 等に分離。
@@ -1627,13 +1609,14 @@ terraform/
 | 4. プッシュ | Artifact Registry にプッシュ (`asia-northeast1-docker.pkg.dev/overload-party-shared/overload-party`) |
 | 5. マニフェスト更新 | K8s マニフェストリポジトリの image tag を更新（ArgoCD 連携） |
 
-**ワークフロー 2: Admin Dashboard (`admin/**` パス変更時)**
+**ワークフロー 2: DB マイグレーション (`main` マージ時)**
 
 | ステップ | 内容 |
 |------|------|
-| 1. Backend | Lint → テスト → Docker ビルド → Artifact Registry プッシュ |
-| 2. Frontend | `npm ci` → Lint → ビルド (`npm run build`) |
-| 3. デプロイ | `gcloud run deploy` で Cloud Run にデプロイ（静的ファイルも含む） |
+| 1. psqldef インストール | GitHub Releases から最新版を取得 |
+| 2. Cloud SQL Proxy 起動 | WIF 認証でプロキシを起動 |
+| 3. dry-run | `psqldef --dry-run` でスキーマ差分を確認 |
+| 4. apply | `psqldef` でスキーマを同期 |
 
 > Terraform の `plan` / `apply` も GitHub Actions で実行する（`prod` は手動承認ゲート付き）。
 
@@ -1742,8 +1725,8 @@ K8s マニフェストの適用は **ArgoCD** による GitOps で行う。
 
 ### Phase 1: 基盤構築（2-3週間）
 
-- [x] Terraform でGCPリソース構築（GKE, Spanner, LB, IAM）
-- [x] Cloud Spannerスキーマ作成
+- [x] Terraform でGCPリソース構築（GKE, Cloud SQL, IAM）
+- [x] Cloud SQL PostgreSQL スキーマ作成
 - [x] ArgoCD セットアップ・K8sマニフェストリポジトリ整備
 - [x] GitHub Actions CI パイプライン構築
 - [x] Firebase Authentication設定
@@ -1798,7 +1781,7 @@ K8s マニフェストの適用は **ArgoCD** による GitOps で行う。
 
 | 変数名 | 内容 |
 |--------|------|
-| `SPANNER_DATABASE` | `projects/PROJECT_ID/instances/INSTANCE_ID/databases/DATABASE_ID` |
+| `DATABASE_URL` | `postgresql://user:pass@host:5432/dbname` または IAM DSN |
 | `FIREBASE_CREDENTIALS_PATH` | Firebaseサービスアカウントキーのパス |
 | `PORT` | サーバーポート（デフォルト: 9001） |
 | `ENV` | `production` / `staging` / `development` |
@@ -1810,8 +1793,8 @@ K8s マニフェストの適用は **ArgoCD** による GitOps で行う。
 |------|--------|
 | Goインストール | `brew install go` |
 | 依存関係インストール | `go mod download` |
-| Spannerエミュレータ起動 | `gcloud emulators spanner start` |
-| ローカル実行 | `go run cmd/server/main.go` |
+| PostgreSQL 起動 | `make postgres-up` |
+| ローカル実行 (モック) | `make run-local` |
 
 ### C. テスト
 
@@ -1823,6 +1806,6 @@ K8s マニフェストの適用は **ArgoCD** による GitOps で行う。
 
 ---
 
-**Document Version:** 1.0  
-**Last Updated:** 2026-02-18  
-**Next Review:** 2026-03-01
+**Document Version:** 2.0  
+**Last Updated:** 2026-02-26  
+**Next Review:** 2026-03-15
