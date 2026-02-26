@@ -178,7 +178,7 @@ WS ハンドラは `FindByFirebaseUID` で PlayerID（UUID）に解決する。
 [
   {
     "player_id": "uuid",
-    "deck_id": "uuid",
+    "deck_id": 1,
     "deck_name": "My Deck",
     "is_valid": true,
     "playmat_no": 1,
@@ -202,7 +202,7 @@ WS ハンドラは `FindByFirebaseUID` で PlayerID（UUID）に解決する。
   "cards": [
     {
       "player_id": "uuid",
-      "deck_id": "uuid",
+      "deck_id": 1,
       "card_no": 1,
       "illustration_variant": 0,
       "count": 3
@@ -288,7 +288,7 @@ NPC 対戦開始。即座にゲームが作成される（マッチメイキン�
 **リクエスト:**
 ```json
 {
-  "deckId": "uuid",
+  "deckId": 1,
   "npcFaction": "sws|aozora|guruguru|miracle"
 }
 ```
@@ -296,7 +296,7 @@ NPC 対戦開始。即座にゲームが作成される（マッチメイキン�
 **レスポンス (200):**
 ```json
 {
-  "gameId": "uuid",
+  "gameId": "ULID",
   "player1Id": "uuid",
   "player2Id": "npc_...",
   "status": "selecting"
@@ -337,13 +337,13 @@ NPC 対戦開始。即座にゲームが作成される（マッチメイキン�
 
 | actionType | data |
 |---|---|
-| `play_card` | `{ "cardInstanceId": "uuid", "position": { "zone": "frontend\|backend\|support", "index": 0-2 }, "targetInstanceId": "uuid?" }` |
-| `attack` | `{ "attackerInstanceId": "uuid", "targetInstanceId": "uuid" }` |
-| `scale_up` | `{ "componentInstanceId": "uuid", "targetRank": "small\|medium\|large" }` |
-| `distribute_dv` | `{ "distribution": [{ "targetInstanceId": "uuid", "amount": 10 }] }` |
+| `play_card` | `{ "cardInstanceId": "i0001", "position": { "zone": "frontend\|backend\|support", "index": 0-2 }, "targetInstanceId": "i0002?" }` |
+| `attack` | `{ "attackerInstanceId": "i0001", "targetInstanceId": "i0002" }` |
+| `scale_up` | `{ "componentInstanceId": "i0001", "targetRank": "small\|medium\|large" }` |
+| `distribute_dv` | `{ "distribution": [{ "targetInstanceId": "i0001", "amount": 10 }] }` |
 | `end_phase` | `{}` |
-| `discard_hand` | `{ "selectedCardInstanceIds": ["uuid"] }` |
-| `activate_effect` | `{ "cardInstanceId": "uuid", "effectIndex": 0, "targetInstanceId": "uuid?" }` |
+| `discard_hand` | `{ "selectedCardInstanceIds": ["i0001"] }` |
+| `activate_effect` | `{ "cardInstanceId": "i0001", "effectIndex": 0, "targetInstanceId": "i0002?" }` |
 
 **レスポンス (200):** ゲーム状態オブジェクト
 
@@ -461,10 +461,10 @@ NPC 対戦開始。即座にゲームが作成される（マッチメイキン�
 **レスポンス (200):**
 ```json
 {
-  "game_id": "uuid",
+  "game_id": "ULID",
   "events": [
     {
-      "game_id": "uuid",
+      "game_id": "ULID",
       "sequence_number": 1,
       "event_type": "string",
       "player_id": "uuid",
@@ -548,7 +548,7 @@ GET /ws?token={token}
 ```json
 {
   "type": "matchmaking_start",
-  "data": { "deck_id": "uuid" }
+  "data": { "deck_id": 1 }
 }
 ```
 
@@ -573,7 +573,7 @@ GET /ws?token={token}
 ```json
 {
   "type": "game_enter",
-  "data": { "game_id": "uuid", "deck_id": "uuid" }
+  "data": { "game_id": "ULID", "deck_id": 1 }
 }
 ```
 
@@ -587,7 +587,7 @@ GET /ws?token={token}
 {
   "type": "select_starters",
   "data": {
-    "game_id": "uuid",
+    "game_id": "ULID",
     "frontend_card_no": 1,
     "backend_card_no": 2
   }
@@ -604,7 +604,7 @@ GET /ws?token={token}
 {
   "type": "game_action",
   "data": {
-    "game_id": "uuid",
+    "game_id": "ULID",
     "action_type": "play_card|attack|scale_up|...",
     "data": { /* アクション固有データ（NPC Battle セクション参照） */ }
   }
@@ -622,7 +622,7 @@ GET /ws?token={token}
 ```json
 {
   "type": "use_stamp",
-  "data": { "game_id": "uuid", "stamp_no": 1 }
+  "data": { "game_id": "ULID", "stamp_no": 1 }
 }
 ```
 
@@ -657,7 +657,7 @@ GET /ws?token={token}
 {
   "type": "match_found",
   "data": {
-    "game_id": "uuid",
+    "game_id": "ULID",
     "player1_id": "uuid",
     "player2_id": "uuid"
   }
@@ -668,7 +668,7 @@ GET /ws?token={token}
 ```json
 {
   "type": "game_entered",
-  "data": { "game_id": "uuid" }
+  "data": { "game_id": "ULID" }
 }
 ```
 
@@ -677,7 +677,7 @@ GET /ws?token={token}
 {
   "type": "game_state",
   "data": {
-    "gameId": "uuid",
+    "gameId": "ULID",
     "currentTurn": 1,
     "currentPhase": "selecting|draw|dv_gen|action|end",
     "activePlayer": 1,
@@ -692,7 +692,7 @@ GET /ws?token={token}
         "support": [null, null, null]
       },
       "hand": [
-        { "instanceId": "uuid", "cardId": 1, "cardNo": 1 }
+        { "instanceId": "i0001", "cardId": 1, "cardNo": 1 }
       ],
       "repoCount": 20,
       "trashCount": 0
@@ -715,7 +715,7 @@ GET /ws?token={token}
 {
   "type": "game_over",
   "data": {
-    "game_id": "uuid",
+    "game_id": "ULID",
     "winner_num": 1,
     "win_reason": "ko|deck_out|disconnect"
   }
@@ -727,7 +727,7 @@ GET /ws?token={token}
 {
   "type": "action_rejected",
   "data": {
-    "game_id": "uuid",
+    "game_id": "ULID",
     "action_type": "string",
     "reason": "error message"
   }
@@ -739,7 +739,7 @@ GET /ws?token={token}
 {
   "type": "stamp_used",
   "data": {
-    "game_id": "uuid",
+    "game_id": "ULID",
     "player_id": "uuid",
     "stamp_no": 1
   }
@@ -780,7 +780,7 @@ GET /ws?token={token}
   "firstPlayer": 1
 }
 // レスポンス
-{ "gameId": "uuid" }
+{ "gameId": "ULID" }
 ```
 
 #### POST `/api/dev/games/{gameId}/select` — 初期配置選択
