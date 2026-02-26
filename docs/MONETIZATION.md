@@ -306,7 +306,7 @@ is_valid = true で保存
      │                          │   RTDN)                   │
      │                          │  6. is_premium = true     │
      │                          │     premium_expires_at 更新│
-     │                          │     (Spanner更新)         │
+     │                          │     (PostgreSQL更新)       │
      │  7. プレミアム有効化完了  │                          │
      │<─────────────────────────┤                          │
 ```
@@ -323,7 +323,7 @@ is_valid = true で保存
 ### カードセット・コレクション購入（買い切り）
 
 ```
-ユーザー操作                  アプリ                    Spanner
+ユーザー操作                  アプリ                    PostgreSQL
      │                          │                          │
      │  1. 商品選択・購入        │                          │
      ├─────────────────────────>│                          │
@@ -349,7 +349,7 @@ is_valid = true で保存
 | Android | Google Play Billing | Real-time Developer Notifications (RTDN) |
 
 - レシート検証はサーバーサイドで実施（クライアント検証は不可）
-- 購入完了後、Spannerへの反映は冪等に実装（重複購入を防ぐ）
+- 購入完了後、PostgreSQLへの反映は冪等に実装（重複購入を防ぐ）
 - サブスクの状態変更（更新・解約・猶予期間等）はサーバー通知で受信
 
 ---
