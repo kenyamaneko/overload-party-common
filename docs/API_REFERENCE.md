@@ -1,7 +1,7 @@
 # Overload Party - API リファレンス
 
 **Version:** 1.0
-**Last Updated:** 2026-02-26
+**Last Updated:** 2026-02-27
 
 ---
 
@@ -59,7 +59,9 @@ GET /health
 - WebSocket: `GET /ws?token={Firebase ID Token}` クエリパラメータ
 
 ミドルウェアが Firebase Token を検証し、`firebase_uid` をコンテキストに設定。
-WS ハンドラは `FindByFirebaseUID` で PlayerID（UUID）に解決する。
+`PlayerResolve` ミドルウェアが `firebase_uid` → `player_id`（UUID）に解決し、コンテキストにセットする。
+認証エンドポイント（`/auth/register`, `/auth/login`）は `PlayerResolve` を経由しない（プレイヤー未作成の場合があるため）。
+WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解決する。
 
 ### ローカル開発
 
@@ -72,7 +74,73 @@ WS ハンドラは `FindByFirebaseUID` で PlayerID（UUID）に解決する。
 
 ## 3. REST API
 
-全エンドポイントに認証が必要（Webhook を除く）。
+### 3.0 Public（認証不要）
+
+スプラッシュ画面やバージョンチェックで使用。認証不要。
+
+#### GET `/health`
+
+ヘルスチェック。
+
+**レスポンス (200):**
+```json
+{ "status": "ok" }
+```
+
+---
+
+#### GET `/version`
+
+アプリバージョン確認。
+
+**レスポンス (200):**
+```json
+{
+  "minimumVersion": "1.0.0",
+  "latestVersion": "1.2.0",
+  "forceUpdate": false,
+  "storeUrl": "https://..."
+}
+```
+
+`forceUpdate` が `true` の場合、クライアントはストアへ誘導する。
+
+---
+
+#### GET `/announcements`
+
+お知らせ一覧取得。
+
+**レスポンス (200):**
+```json
+[
+  {
+    "id": "string",
+    "title": "string",
+    "body": "string",
+    "type": "info|event|maintenance",
+    "createdAt": "timestamp"
+  }
+]
+```
+
+---
+
+#### GET `/daily`
+
+デイリー Tips 取得。
+
+**レスポンス (200):**
+```json
+{
+  "id": "string",
+  "text": "string"
+}
+```
+
+---
+
+以下のエンドポイントは認証が必要（Webhook を除く）。
 
 ### 3.1 Auth
 
@@ -122,9 +190,9 @@ WS ハンドラは `FindByFirebaseUID` で PlayerID（UUID）に解決する。
 
 ### 3.2 Player
 
-#### GET `/players/{id}`
+#### GET `/player`
 
-プレイヤー情報取得。
+認証済みプレイヤーの情報取得。プレイヤーIDはミドルウェアが認証トークンから解決する。
 
 **レスポンス (200):** Player オブジェクト
 
@@ -132,7 +200,22 @@ WS ハンドラは `FindByFirebaseUID` で PlayerID（UUID）に解決する。
 
 ---
 
-#### GET `/players/{id}/battle-limit`
+#### PUT `/player/name`
+
+プレイヤー名変更。
+
+**リクエスト:**
+```json
+{
+  "name": "string"
+}
+```
+
+**レスポンス (200):** Player オブジェクト
+
+---
+
+#### GET `/player/battle-limit`
 
 デイリーバトル回数の確認。
 
@@ -149,18 +232,24 @@ WS ハンドラは `FindByFirebaseUID` で PlayerID（UUID）に解決する。
 
 ---
 
-#### GET `/players/{id}/cards`
+#### GET `/player/cards`
 
-所持カード一覧取得。`(card_no, illustration_variant)` ごとに count で管理。
+所持カード一覧取得。カード定義を含む enriched レスポンスを返す。
 
 **レスポンス (200):**
 ```json
 [
   {
-    "player_id": "uuid",
     "card_no": 1,
     "illustration_variant": 0,
-    "count": 3
+    "count": 3,
+    "card_name": "EC2 Instance",
+    "faction": "SWS",
+    "card_type": "resource",
+    "scalability": "scalable",
+    "stats": { "throughput": 3, "availability": 4, "maintenance_cost": 2, "deploy_cost": 3, "sla_penalty": 2 },
+    "effect_text": "デプロイ時: スループット+1",
+    "restriction": "unlimited"
   }
 ]
 ```
@@ -169,7 +258,7 @@ WS ハンドラは `FindByFirebaseUID` で PlayerID（UUID）に解決する。
 
 ### 3.3 Deck
 
-#### GET `/players/{id}/decks`
+#### GET `/player/decks`
 
 デッキ一覧取得。
 
@@ -183,15 +272,18 @@ WS ハンドラは `FindByFirebaseUID` で PlayerID（UUID）に解決する。
     "is_valid": true,
     "playmat_no": 1,
     "sleeve_no": 2,
+    "card_nos": [1, 1, 1, 2, 2, 3, 4, 4, 4],
     "created_at": "timestamp",
     "updated_at": "timestamp"
   }
 ]
 ```
 
+`card_nos` は DeckCards を card_no × count で展開した配列。
+
 ---
 
-#### GET `/players/{id}/decks/{deckId}`
+#### GET `/player/decks/{deckId}`
 
 デッキ詳細取得。
 
@@ -213,7 +305,7 @@ WS ハンドラは `FindByFirebaseUID` で PlayerID（UUID）に解決する。
 
 ---
 
-#### POST `/players/{id}/decks`
+#### POST `/player/decks`
 
 デッキ作成。
 
@@ -236,13 +328,13 @@ WS ハンドラは `FindByFirebaseUID` で PlayerID（UUID）に解決する。
 
 ---
 
-#### PUT `/players/{id}/decks/{deckId}`
+#### PUT `/player/decks/{deckId}`
 
 デッキ更新。リクエスト/レスポンスは POST と同じ。
 
 ---
 
-#### DELETE `/players/{id}/decks/{deckId}`
+#### DELETE `/player/decks/{deckId}`
 
 デッキ削除。
 
@@ -262,9 +354,9 @@ WS ハンドラは `FindByFirebaseUID` で PlayerID（UUID）に解決する。
   {
     "card_no": 1,
     "card_name": "string",
-    "faction": "sws|aozora|guruguru|miracle|neutral",
-    "card_type": "Compute|Support|Resource|Attachment",
-    "scalability": "R|RE|",
+    "faction": "SWS|Aozora|Guruguru|Miracle|Neutral",
+    "card_type": "resource|support|action",
+    "scalability": "scalable|non_scalable|none",
     "stats": {},
     "effect_text": "string",
     "effects": [],
@@ -289,7 +381,7 @@ NPC 対戦開始。即座にゲームが作成される（マッチメイキン�
 ```json
 {
   "deckId": 1,
-  "npcFaction": "sws|aozora|guruguru|miracle"
+  "npcFaction": "SWS|Aozora|Guruguru|Miracle"
 }
 ```
 
@@ -339,11 +431,11 @@ NPC 対戦開始。即座にゲームが作成される（マッチメイキン�
 |---|---|
 | `play_card` | `{ "cardInstanceId": "i0001", "position": { "zone": "frontend\|backend\|support", "index": 0-2 }, "targetInstanceId": "i0002?" }` |
 | `attack` | `{ "attackerInstanceId": "i0001", "targetInstanceId": "i0002" }` |
-| `scale_up` | `{ "componentInstanceId": "i0001", "targetRank": "small\|medium\|large" }` |
-| `distribute_dv` | `{ "distribution": [{ "targetInstanceId": "i0001", "amount": 10 }] }` |
+| `scale_up` | `{ "componentInstanceId": "i0001", "targetRank": "medium\|large", "instanceFamily": "string?" }` |
+| `distribute_dv` | `{ "distributions": [{ "componentInstanceId": "i0001", "amount": 10 }] }` |
 | `end_phase` | `{}` |
-| `discard_hand` | `{ "selectedCardInstanceIds": ["i0001"] }` |
-| `activate_effect` | `{ "cardInstanceId": "i0001", "effectIndex": 0, "targetInstanceId": "i0002?" }` |
+| `discard_hand` | `{ "cardInstanceIds": ["i0001"] }` |
+| `activate_effect` | `{ "instanceId": "i0001", "targetInstanceId": "i0002?" }` |
 
 **レスポンス (200):** ゲーム状態オブジェクト
 
@@ -359,14 +451,14 @@ NPC 対戦開始。即座にゲームが作成される（マッチメイキン�
 
 ### 3.6 Shop
 
-#### POST `/players/{id}/select-faction`
+#### POST `/player/select-faction`
 
 ファクション選択。対応する初期カードセットが付与される。
 
 **リクエスト:**
 ```json
 {
-  "faction": "sws|aozora|guruguru|miracle"
+  "faction": "SWS|Aozora|Guruguru|Miracle"
 }
 ```
 
@@ -374,7 +466,7 @@ NPC 対戦開始。即座にゲームが作成される（マッチメイキン�
 ```json
 {
   "message": "faction selected",
-  "faction": "sws",
+  "faction": "SWS",
   "cards_granted": 59
 }
 ```
@@ -383,9 +475,9 @@ NPC 対戦開始。即座にゲームが作成される（マッチメイキン�
 
 ---
 
-#### GET `/shop/products?player_id={playerId}`
+#### GET `/shop/products`
 
-商品一覧取得。
+商品一覧取得。プレイヤーIDは認証トークンから自動解決される。
 
 **レスポンス (200):**
 ```json
@@ -406,7 +498,7 @@ NPC 対戦開始。即座にゲームが作成される（マッチメイキン�
 
 ---
 
-#### POST `/shop/purchase?player_id={playerId}`
+#### POST `/shop/purchase`
 
 商品購入。
 
@@ -429,7 +521,7 @@ NPC 対戦開始。即座にゲームが作成される（マッチメイキン�
 
 ---
 
-#### POST `/shop/subscribe?player_id={playerId}`
+#### POST `/shop/subscribe`
 
 サブスクリプション登録。
 
@@ -679,7 +771,7 @@ GET /ws?token={token}
   "data": {
     "gameId": "ULID",
     "currentTurn": 1,
-    "currentPhase": "selecting|draw|dv_gen|action|end",
+    "currentPhase": "selecting|draw|dv_gen|main|battle|end",
     "activePlayer": 1,
     "isMyTurn": true,
     "my": {
@@ -692,7 +784,7 @@ GET /ws?token={token}
         "support": [null, null, null]
       },
       "hand": [
-        { "instanceId": "i0001", "cardId": 1, "cardNo": 1 }
+        { "instanceId": "i0001", "cardId": 1 }
       ],
       "repoCount": 20,
       "trashCount": 0
@@ -758,6 +850,18 @@ GET /ws?token={token}
 }
 ```
 
+#### `game_state_restore` — 再接続時のゲーム状態復元
+```json
+{
+  "type": "game_state_restore",
+  "data": { /* game_state と同じ構造 */ }
+}
+```
+
+再接続時にサーバーが最新のゲーム状態を送信する。`game_state` と同じ構造だがメッセージタイプで区別できる。
+
+---
+
 #### `pong`
 ```json
 { "type": "pong" }
@@ -792,29 +896,34 @@ GET /ws?token={token}
 
 ## 6. エンドポイント一覧
 
-| カテゴリ | メソッド | パス | 認証 | 用途 |
-|----------|----------|------|------|------|
-| **Auth** | POST | `/auth/register` | 要 | プレイヤー登録 |
-| | POST | `/auth/login` | 要 | ログイン |
-| **Player** | GET | `/players/{id}` | 要 | プロフィール取得 |
-| | GET | `/players/{id}/battle-limit` | 要 | バトル制限確認 |
-| | GET | `/players/{id}/cards` | 要 | 所持カード一覧 |
-| **Deck** | GET | `/players/{id}/decks` | 要 | デッキ一覧 |
-| | GET | `/players/{id}/decks/{deckId}` | 要 | デッキ詳細 |
-| | POST | `/players/{id}/decks` | 要 | デッキ作成 |
-| | PUT | `/players/{id}/decks/{deckId}` | 要 | デッキ更新 |
-| | DELETE | `/players/{id}/decks/{deckId}` | 要 | デッキ削除 |
-| **Card** | GET | `/cards` | 要 | 全カード定義 |
-| **NPC** | POST | `/npc/battle/start` | 要 | NPC 対戦開始 |
-| | POST | `/npc/battle/{gameId}/select` | 要 | 初期配置選択 |
-| | POST | `/npc/battle/{gameId}/action` | 要 | アクション実行 |
-| | GET | `/npc/battle/{gameId}/state` | 要 | 状態取得 |
-| **Shop** | POST | `/players/{id}/select-faction` | 要 | ファクション選択 |
-| | GET | `/shop/products` | 要 | 商品一覧 |
-| | POST | `/shop/purchase` | 要 | 商品購入 |
-| | POST | `/shop/subscribe` | 要 | サブスク登録 |
-| **Log** | GET | `/games/{gameId}/log` | 要 | ゲームログ (JSON) |
-| | GET | `/games/{gameId}/log/text` | 要 | ゲームログ (テキスト) |
-| **Webhook** | POST | `/shop/webhook/apple` | 不要 | Apple 通知 |
-| | POST | `/shop/webhook/google` | 不要 | Google 通知 |
-| **WS** | GET | `/ws?token={token}` | 接続時 | WebSocket 接続 |
+| カテゴリ | メソッド | パス | 認証 | PlayerResolve | 用途 |
+|----------|----------|------|------|---------------|------|
+| **Public** | GET | `/health` | 不要 | 不要 | ヘルスチェック |
+| | GET | `/version` | 不要 | 不要 | バージョン確認 |
+| | GET | `/announcements` | 不要 | 不要 | お知らせ一覧 |
+| | GET | `/daily` | 不要 | 不要 | デイリー Tips |
+| **Auth** | POST | `/auth/register` | 要 | 不要 | プレイヤー登録 |
+| | POST | `/auth/login` | 要 | 不要 | ログイン |
+| **Player** | GET | `/player` | 要 | 要 | プロフィール取得 |
+| | PUT | `/player/name` | 要 | 要 | プレイヤー名変更 |
+| | GET | `/player/battle-limit` | 要 | 要 | バトル制限確認 |
+| | GET | `/player/cards` | 要 | 要 | 所持カード一覧 |
+| **Deck** | GET | `/player/decks` | 要 | 要 | デッキ一覧 |
+| | GET | `/player/decks/{deckId}` | 要 | 要 | デッキ詳細 |
+| | POST | `/player/decks` | 要 | 要 | デッキ作成 |
+| | PUT | `/player/decks/{deckId}` | 要 | 要 | デッキ更新 |
+| | DELETE | `/player/decks/{deckId}` | 要 | 要 | デッキ削除 |
+| **Card** | GET | `/cards` | 要 | 要 | 全カード定義 |
+| **NPC** | POST | `/npc/battle/start` | 要 | 要 | NPC 対戦開始 |
+| | POST | `/npc/battle/{gameId}/select` | 要 | 要 | 初期配置選択 |
+| | POST | `/npc/battle/{gameId}/action` | 要 | 要 | アクション実行 |
+| | GET | `/npc/battle/{gameId}/state` | 要 | 要 | 状態取得 |
+| **Shop** | POST | `/player/select-faction` | 要 | 要 | ファクション選択 |
+| | GET | `/shop/products` | 要 | 要 | 商品一覧 |
+| | POST | `/shop/purchase` | 要 | 要 | 商品購入 |
+| | POST | `/shop/subscribe` | 要 | 要 | サブスク登録 |
+| **Log** | GET | `/games/{gameId}/log` | 要 | 要 | ゲームログ (JSON) |
+| | GET | `/games/{gameId}/log/text` | 要 | 要 | ゲームログ (テキスト) |
+| **Webhook** | POST | `/shop/webhook/apple` | 不要 | 不要 | Apple 通知 |
+| | POST | `/shop/webhook/google` | 不要 | 不要 | Google 通知 |
+| **WS** | GET | `/ws?token={token}` | 接続時 | 接続時 | WebSocket 接続 |
