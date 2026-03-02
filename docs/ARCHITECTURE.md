@@ -24,7 +24,6 @@
 14. [デプロイメント](#14-デプロイメント)
 15. [モニタリング](#15-モニタリング)
 16. [実装ロードマップ](#16-実装ロードマップ)
-17. [既知の懸念事項・TODO](#17-既知の懸念事項todo)
 
 ---
 
@@ -64,10 +63,10 @@ Overload Party は3つの独立した Git リポジトリで構成されます�
 overload-party-common/          # 共有データ・定義の Single Source of Truth
 ├── data/
 │   ├── cards/                  # カード定義 YAML (5 faction files)
-│   │   ├── sws.yaml
-│   │   ├── aozora.yaml
-│   │   ├── guruguru.yaml
-│   │   ├── miracle.yaml
+│   │   ├── sd.yaml
+│   │   ├── tenki.yaml
+│   │   ├── sugar.yaml
+│   │   ├── tuners.yaml
 │   │   └── neutral.yaml
 │   ├── cards.json              # 生成: 全カードの JSON データ
 │   └── constants.json          # ゲーム定数 (Phase, Zone, Rank, 初期値 等)
@@ -201,7 +200,7 @@ Google Cloud Platform (4プロジェクト構成)
 
 ```
 Infrastructure as Code
-└── Terraform (GCPリソース管理)
+└── Terraform (`overload-party-infra` リポで管理)
 
 CI: GitHub Actions
 ├── テスト・Lint
@@ -382,9 +381,17 @@ Player A (Client)        GKE Pod              Cloud SQL       Player B (Client)
      │                      │<──────────────────────┤                  │
      │                      │                       │                  │
      │  5. State Update     │  6. State Update       │                  │
+     │  + available_actions │  (actions なし)         │                  │
+     │  + turn_controls     │                        │                  │
      │<─────────────────────┤─────────────────────────────────────────>│
      │                      │  (WebSocket broadcast) │                  │
 ```
+
+> **Note:** `available_actions` は `my` の配下に含まれ、アクティブプレイヤーのみに送信される。
+> カードに紐付かないゲームフロー制御（フェーズ終了、手札破棄）は `turn_controls` として別メッセージで送信。
+> サーバーが毎状態更新時にフェーズごとの有効アクションを計算し送信することで、
+> クライアント側にゲームロジックを重複して持たせない設計（Master Duel 方式）。
+> 詳細は `API_REFERENCE.md` の `game_state` / `turn_controls` セクションを参照。
 
 #### 4.3.3 Starting Resource 選出フロー
 
@@ -429,589 +436,24 @@ Player A (Client)        GKE Pod              Cloud SQL       Player B (Client)
 
 ## 5. データ設計 (Data Architecture)
 
-> **完全なスキーマ定義:** `db/schema_postgres.sql` を参照。以下は各テーブルの設計意図とカラム仕様の概要。
-
-### 5.1 ゲーム管理 (Game Management)
-
-ゲームのライフサイクルを管理する基盤テーブル。
-
-#### 5.1.1 PostgreSQL スキーマ (games)
-
-**Games** (ゲームマスター)
-- **Primary Key:** `game_id`
-
-| カラム名 | 型 | Nullable | 説明 |
-|---|---|---|---|
-| `game_id` | UUID | No | UUID |
-| `player1_id` | UUID | No | プレイヤー1 ID |
-| `player2_id` | UUID | No | プレイヤー2 ID |
-| `player1_deck_snapshot` | JSONB | No | 使用デッキのスナップショット（カードIDリスト） |
-| `player2_deck_snapshot` | JSONB | No | 使用デッキのスナップショット（カードIDリスト） |
-| `status` | VARCHAR(20) | No | `'waiting'`, `'playing'`, `'finished'` |
-| `winner_id` | UUID | Yes | 勝者 ID |
-| `created_at` | TIMESTAMPTZ | No | 作成日時 (DEFAULT now()) |
-| `updated_at` | TIMESTAMPTZ | No | 更新日時 (DEFAULT now()) |
-| `finished_at` | TIMESTAMPTZ | Yes | 終了日時 |
-
-#### 5.1.2 JSONスキーマ (Deck Snapshot)
-
-`Games` テーブルの `player1_deck_snapshot`, `player2_deck_snapshot` カラムに格納されるデッキ情報。
-
-| フィールド | 型 | 説明 |
-|---|---|---|
-| `deckId` | string | 元になったデッキID |
-| `cards` | Array[string] | デッキに含まれる `player_card_id` のリスト（順序はシャッフル前） |
-
-#### 5.1.3 関連インデックス
-
-- `GamesByStatus`: `Games(status, created_at DESC)`
-
-### 5.2 ゲーム状態管理 (Game State Management)
-
-対戦中のリアルタイムな状態を管理する構造。
-
-#### 5.2.1 PostgreSQL スキーマ (game_states)
-
-**GameStates** (ゲーム状態・頻繁に更新)
-- **Primary Key:** `game_id`
-- **Foreign Key:** `game_id REFERENCES games(game_id) ON DELETE CASCADE`
-
-| カラム名 | 型 | Nullable | 説明 |
-|---|---|---|---|
-| `game_id` | UUID | No | 親テーブル参照 |
-| `version` | BIGINT | No | 楽観的ロック用バージョン |
-| `current_turn` | BIGINT | No | 現在ターン数 |
-| `current_phase` | VARCHAR(20) | No | `'draw'`, `'dv_gen'`, `'main'`, `'battle'`, `'end'` |
-| `active_player` | BIGINT | No | 現在のターンプレイヤー (1 or 2) |
-| `player1_budget` | BIGINT | No | Player 1 Budget |
-| `player1_dv_pool` | BIGINT | No | Player 1 DV Pool |
-| `player1_field` | JSONB | No | Player 1 フィールド上のカード |
-| `player1_hand` | JSONB | No | Player 1 手札 |
-| `player1_repository` | JSONB | No | Player 1 リポジトリ（山札） |
-| `player1_trash` | JSONB | No | Player 1 トラッシュ |
-| `player1_time_bank` | BIGINT | No | Player 1 残り時間 |
-| `player2_...` | ... | No | Player 2 各種ステータス（構成はPlayer1と同じ） |
-| `chain_stack` | JSONB | Yes | 現在積まれているチェーンスタック |
-| `current_action_timer`| BIGINT | Yes | アクションタイマー |
-| `updated_at` | TIMESTAMPTZ | No | 更新日時 (DEFAULT now()) |
-
-#### 5.2.2 JSONスキーマ (State Details)
-
-`GameStates` テーブルの JSON カラムに格納される詳細データ構造。
-
-**フィールド状態 (`GameStates.player1_field / player2_field`)**
-
-**対応カラム:** `GameStates` テーブルの `player1_field`, `player2_field`
-
-**フィールド全体レイアウト:** (JSON Root)
-
-| フィールド | 型 | 説明 |
-|---|---|---|
-| `frontend` | Array[3] | フロントエンドエリアのリソーススロット。固定長3。空きは `null`。<br>要素型: **Resource Object** |
-| `backend` | Array[3] | バックエンドエリアのリソーススロット。固定長3。空きは `null`。<br>要素型: **Resource Object** |
-| `support` | Array[3] | サポートゾーンのスロット。固定長3。空きは `null`。<br>要素型: **Support Object** |
-
-**フロントエンド・バックエンドリソースのフィールド (Resource Object):**
-
-| フィールド | 型 | 説明 |
-|--------|-----|------|
-| `instanceId` | string | フィールド上のインスタンス固有ID |
-| `cardId` | string | カード定義ID |
-| `rank` | string | `"small"` / `"medium"` / `"large"` |
-| `instanceFamily` | string等 | `"M"` / `"C"` / `"R"` / null |
-| `currentAV` | int | 現在耐久値 |
-| `maxAV` | int | AV最大値 |
-| `currentTP` | int? | 現在TP（DB系およびオブジェクトストレージは null） |
-| `maxTP` | int? | TP最大値（DB系およびオブジェクトストレージは null） |
-| `currentDVGen` | int? | 現在DV生成量（コンピュート系リソースは null） |
-| `maxDVGen` | int? | DV生成最大値（コンピュート系リソースは null） |
-| `damage` | int | 蔓積ダメージ量 |
-| `attachments` | array | アタッチメントリスト（instanceId + cardId） |
-| `temporaryEffects` | array | 一時効果リスト |
-| `monetizedAmount` | int | このターンに収益化済みのTP量（ターン終了時リセット） |
-| `hasAttacked` | bool | そのターン攻撃済みか |
-
-**一時効果のオブジェクト構造 (`temporaryEffects` 配列内):**
-
-| フィールド | 型 | 説明 |
-|---|---|---|
-| `effectType` | string | 効果種別 (`buff_tp`, `mod_av`, `disable_atk` 等) |
-| `value` | int | 変動値（加減算） |
-| `duration` | string | 持続期間 (`this_turn`, `until_next_turn_end`) |
-| `sourceId` | string | 発生源のカード/インスタンスID |
-
-**サポートゾーンカードのフィールド (Support Object):**
-
-| フィールド | 型 | 説明 |
-|--------|-----|------|
-| `instanceId` | string | インスタンス固有ID |
-| `cardId` | string | カード定義ID |
-| `faceDown` | bool | 裏向きか否か |
-
-**チェーンスタック (`GameStates.chain_stack`)**
-
-**対応カラム:** `GameStates` テーブルの `chain_stack` (配列)
-
-| フィールド | 型 | 説明 |
-|--------|-----|------|
-| `chainLevel` | int | チェーンの深さ（1から始まる） |
-| `actionType` | string | `"attack"` / `"component_effect"` / `"reactive"` |
-| `sourcePlayerId` | string | 発動プレイヤーID |
-| `sourceInstanceId` | string | 発動リソースのinstanceId |
-| `targetInstanceId` | string | 対象となるリソースのinstanceId |
-| `targetChainLevel` | int | 対象チェーンのレベル |
-| `effectData` | object | 発動する効果のパラメータ（変動値、対象種別など） |
-| `resolved` | bool | 解決済みか否か |
-
-### 5.3 ゲームイベント管理 (Game Event Management)
-
-リプレイや監査のためのログデータ。
-
-#### 5.3.1 PostgreSQL スキーマ (game_events)
-
-**GameEvents** (イベントログ・リプレイ用)
-- **Primary Key:** `game_id`, `sequence_number`
-- **Foreign Key:** `game_id REFERENCES games(game_id) ON DELETE CASCADE`
-
-| カラム名 | 型 | Nullable | 説明 |
-|---|---|---|---|
-| `game_id` | UUID | No | 親テーブル参照 |
-| `sequence_number` | BIGINT | No | イベント連番 |
-| `event_type` | VARCHAR(50) | No | イベント種別 |
-| `player_id` | UUID | Yes | 行動プレイヤー |
-| `event_data` | JSONB | No | イベント詳細データ（攻撃対象、使用カードID、ダメージ量など） |
-| `created_at` | TIMESTAMPTZ | No | 発生日時 (DEFAULT now()) |
-
-**イベントデータの例:**
-- `attack`: `{ "sourceId": "...", "targetId": "...", "damage": 500 }`
-- `deploy`: `{ "cardId": "...", "position": 0, "cost": 300 }`
-
-### 5.4 対戦履歴管理 (Match History)
-
-ユーザーの対戦結果の記録。
-
-> **レーティング制は廃止。** 教育系カードゲームとしてデッキ構築と学習を楽しむことを重視し、勝敗ランキングは設けない。
-
-#### 5.4.1 PostgreSQL スキーマ (matches)
-
-**Matches** (対戦履歴)
-- **Primary Key:** `match_id`
-
-| カラム名 | 型 | Nullable | 説明 |
-|---|---|---|---|
-| `match_id` | UUID | No | UUID |
-| `game_id` | UUID | No | 対応する `Games` レコード ID（`Games.player1_id/player2_id` を参照） |
-| `created_at` | TIMESTAMPTZ | No | マッチ成立日時 |
-
-> **注:** プレイヤーIDは `Games` テーブルの `player1_id` / `player2_id` を正とする。`Matches` からプレイヤーを特定する場合は `game_id` を通じて `Games` テーブルを参照する。
-
-#### 5.4.2 関連インデックス
-
-- `MatchesByGameId`: `Matches(game_id)`
-
-### 5.5 プレイヤー管理 (Player Management)
-
-ユーザーアカウントと基本情報。
-
-#### 5.5.1 PostgreSQL スキーマ (players & player_daily_battle)
-
-**Players** (プレイヤーマスター)
-- **Primary Key:** `player_id`
-
-| カラム名 | 型 | Nullable | 説明 |
-|---|---|---|---|
-| `player_id` | UUID | No | UUID |
-| `firebase_uid` | VARCHAR(128)| No | Firebase Auth UID (Unique) |
-| `username` | VARCHAR(50) | No | 表示名 |
-| `wins` | BIGINT | Yes | 勝利数 (Default: 0) |
-| `losses` | BIGINT | Yes | 敗北数 (Default: 0) |
-| `is_premium` | BOOLEAN | No | 課金ステータス (Default: false) |
-| `equipped_icon_no` | BIGINT | Yes | 装備中アイコン番号（`CosmeticItems` 参照。NULL: デフォルト） |
-| `premium_expires_at` | TIMESTAMPTZ | Yes | サブスク有効期限 |
-| `created_at` | TIMESTAMPTZ | No | 作成日時 |
-| `updated_at` | TIMESTAMPTZ | No | 更新日時 |
-
-**player_daily_battle** (デイリーバトル管理)
-- **Primary Key:** `player_id`
-- **Foreign Key:** `player_id REFERENCES players(player_id) ON DELETE CASCADE`
-
-| カラム名 | 型 | Nullable | 説明 |
-|---|---|---|---|
-| `player_id` | UUID | No | 親テーブル参照 |
-| `remaining_battles` | BIGINT | No | 残りバトル数 (Default: 5) |
-| `max_battles` | BIGINT | No | 最大バトル数 (Default: 5) |
-| `last_reset_date` | DATE | No | 最終リセット日 |
-
-#### 5.5.2 関連インデックス
-
-- `PlayersByFirebaseUID`: `Players(firebase_uid)` (UNIQUE)
-
-### 5.6 カード定義マスター (Card Definitions)
-
-カードのステータス・効果テキスト・コスト等の定義データ。`CARDS.md` の内容をDB上で管理する。
-
-#### 5.6.1 PostgreSQL スキーマ (card_definitions)
-
-**CardDefinitions** (カード定義マスター)
-- **Primary Key:** `card_no`
-
-| カラム名 | 型 | Nullable | 説明 |
-|---|---|---|---|
-| `card_no` | BIGINT | No | カード番号（`CARDS.md` の `#` に対応） |
-| `card_name` | VARCHAR(100) | No | カード名 |
-| `faction` | VARCHAR(20) | No | 陣営 (`SWS`, `Aozora`, `Guruguru`, `Miracle`, `Neutral`) |
-| `card_type` | VARCHAR(30) | No | カードタイプ (`Compute`, `Container`, `Orchestrator`, `Serverless`, `AI_ML`, `Database`, `ObjectStorage`, `NoSQL`, `CacheDB`, `Platform`, `Attachment`, `Strategy`, `Incident`, `Reactive`) |
-| `scalability` | VARCHAR(10) | No | 区分 (`R`, `E`, `RE`, `none`) |
-| `stats` | JSONB | No | ステータス定義 |
-| `effect_text` | VARCHAR(500) | Yes | 効果テキスト（表示用） |
-| `effect_id` | VARCHAR(50) | Yes | 効果ロジックの識別子（サーバー側の効果処理にマッピング） |
-| `restriction` | VARCHAR(20) | No | 制限区分 (`unlimited`, `semi_limited`, `limited`) |
-| `is_active` | BOOLEAN | No | 有効フラグ（メンテ・バランス調整用） |
-| `created_at` | TIMESTAMPTZ | No | 作成日時 |
-| `updated_at` | TIMESTAMPTZ | No | 更新日時 |
-
-#### 5.6.2 JSONスキーマ (stats)
-
-**コンピュート系リソースの場合:**
-
-| フィールド | 型 | 説明 |
-|---|---|---|
-| `throughput` | int | スループット（base値） |
-| `throughput_max` | int? | Elastic上限（Elastic以外は `null`） |
-| `availability` | int | 可用性 |
-| `maintenance_cost` | int | 維持コスト（毎ターン終了時に徴収） |
-| `deploy_cost` | int | 開発コスト |
-| `sla_penalty` | int | SLAペナルティ |
-
-**DB系リソースおよびオブジェクトストレージの場合:**
-
-| フィールド | 型 | 説明 |
-|---|---|---|
-| `dv_gen` | int | DV生成量（base値） |
-| `dv_gen_max` | int? | Elastic上限 |
-| `availability` | int | 可用性 |
-| `maintenance_cost` | int | 維持コスト（毎ターン終了時に徴収） |
-| `deploy_cost` | int | 開発コスト |
-| `sla_penalty` | int | SLAペナルティ |
-
-**その他のカードタイプ（Platform, Attachment, Strategy, Incident, Reactive）:**
-
-| フィールド | 型 | 説明 |
-|---|---|---|
-| `deploy_cost` | int | 使用コスト（0 の場合は無料） |
-
-#### 5.6.3 関連インデックス
-
-- `CardsByFaction`: `CardDefinitions(faction, card_type)`
-- `CardsByType`: `CardDefinitions(card_type)`
-
-#### 5.6.4 サーバー側のカード参照設計
-
-| 用途 | 参照方法 |
-|------|----------|
-| ゲーム中の効果計算 | サーバー起動時に `CardDefinitions` を全件メモリにキャッシュ。`card_no` → 定義データの `map` で O(1) 参照 |
-| デッキ構築画面 | REST API `GET /api/v1/cards` で全カード定義を返却。クライアントはローカルキャッシュ |
-| カードバランス更新 | Admin Dashboard からカード定義を更新後、キャッシュリフレッシュを実行 |
-
-**キャッシュリフレッシュ方式:**
-
-| タイミング | 方式 | 説明 |
-|-----------|------|------|
-| Pod 起動時 | 全件ロード | Cloud SQL から `card_definitions` を全件取得し `sync.Map` にキャッシュ |
-| 定期更新 | ポーリング | 各 Pod が **5分間隔**で `CardDefinitions` の `updated_at` を確認し、更新があれば差分リフレッシュ |
-| 管理者操作時 | ポーリングで反映 | Admin API でカード定義を更新すると、次回ポーリング（最大5分）で各 Pod がキャッシュをリフレッシュ |
-
-```
-[Admin Dashboard / API]
-     │
-     │ POST/PUT /admin/cards
-     ▼
-[api-server Pod]
-     │
-     └── Cloud SQL に書き込み → 定期ポーリングで各 Pod がキャッシュ更新
-```
-
-> **設計判断:** カード定義の更新頻度は低い（月数回程度）ため、5分間隔ポーリングで十分。最大5分の遅延は許容範囲。
-
-### 5.7 カード・デッキ管理 (Card & Deck Management)
-
-所持カードとデッキ構築。
-
-#### 5.7.1 PostgreSQL スキーマ (player_cards, decks, deck_cards)
-
-**PlayerCards** (所持カード)
-- **Primary Key:** `player_id`, `player_card_id`
-- **Foreign Key:** `player_id REFERENCES players(player_id) ON DELETE CASCADE`
-
-| カラム名 | 型 | Nullable | 説明 |
-|---|---|---|---|
-| `player_id` | UUID | No | 親テーブル参照 |
-| `player_card_id` | UUID | No | カード所持ユニークID |
-| `card_no` | BIGINT | No | `CARDS.md` のカード番号 |
-| `illustration_variant`| BIGINT | No | イラスト違いID (0:通常) |
-| `acquired_at` | TIMESTAMPTZ | No | 獲得日時 |
-
-**Decks** (デッキ定義)
-- **Primary Key:** `player_id`, `deck_id`
-- **Foreign Key:** `player_id REFERENCES players(player_id) ON DELETE CASCADE`
-
-| カラム名 | 型 | Nullable | 説明 |
-|---|---|---|---|
-| `player_id` | UUID | No | 親テーブル参照 |
-| `deck_id` | UUID | No | デッキID |
-| `deck_name` | VARCHAR(50) | No | デッキ名 |
-| `is_valid` | BOOLEAN | No | 有効デッキフラグ (30枚ルール適合) |
-| `playmat_no` | BIGINT | Yes | プレイマット番号（`CosmeticItems` 参照。NULL: デフォルト） |
-| `sleeve_no` | BIGINT | Yes | スリーブ番号（`CosmeticItems` 参照。NULL: デフォルト） |
-| `created_at` | TIMESTAMPTZ | No | 作成日時 |
-| `updated_at` | TIMESTAMPTZ | No | 更新日時 |
-
-**DeckCards** (デッキ内カード)
-- **Primary Key:** `player_id`, `deck_id`, `player_card_id`
-- **Foreign Key:** `deck_id REFERENCES decks(deck_id) ON DELETE CASCADE`
-
-| カラム名 | 型 | Nullable | 説明 |
-|---|---|---|---|
-| `player_id` | UUID | No | ルート親参照 |
-| `deck_id` | UUID | No | 親テーブル参照 |
-| `player_card_id` | UUID | No | `PlayerCards` 参照 |
-
-#### 5.7.2 関連インデックス
-
-- `PlayerCardsByCardNo`: `PlayerCards(player_id, card_no)`
-- `DecksByPlayer`: `Decks(player_id, updated_at DESC)`
-
-### 5.8 ショップ・設定管理 (Shop & Settings)
-
-アプリ内課金とユーザー設定。
-
-#### 5.8.1 PostgreSQL スキーマ (products, subscriptions, etc.)
-
-**Products** (商品マスター)
-- **Primary Key:** `product_id`
-
-| カラム名 | 型 | Nullable | 説明 |
-|---|---|---|---|
-| `product_id` | VARCHAR(50) | No | 商品ID (e.g. `theme_aws`) |
-| `name` | VARCHAR(100) | No | 商品名 |
-| `type` | VARCHAR(20) | No | `card_pack` / `subscription` |
-| `price` | BIGINT | No | 価格 (JPY) |
-| `content` | JSONB | No | 商品内容 (カードIDリスト等) |
-| `is_active` | BOOLEAN | No | 販売中フラグ |
-
-**Subscriptions** (サブスクリプション管理)
-- **Primary Key:** `player_id`, `subscription_id`
-- **Foreign Key:** `player_id REFERENCES players(player_id) ON DELETE CASCADE`
-
-| カラム名 | 型 | Nullable | 説明 |
-|---|---|---|---|
-| `player_id` | UUID | No | 親テーブル参照 |
-| `subscription_id` | UUID | No | UUID |
-| `product_id` | VARCHAR(50) | No | 商品ID（`premium_monthly` 等） |
-| `platform` | VARCHAR(10) | No | `apple` / `google` |
-| `purchase_token` | VARCHAR(256) | No | Apple: `originalTransactionId` / Google: `purchaseToken`（UNIQUE） |
-| `status` | VARCHAR(20) | No | `active` / `grace_period` / `expired` / `refunded` |
-| `current_period_start` | TIMESTAMPTZ | No | 現在の課金期間開始日時 |
-| `current_period_end` | TIMESTAMPTZ | No | 現在の課金期間終了日時 |
-| `created_at` | TIMESTAMPTZ | No | 初回購入日時 |
-| `updated_at` | TIMESTAMPTZ | No | 更新日時 |
-
-**OneTimePurchases** (買い切り購入履歴)
-- **Primary Key:** `player_id`, `purchase_id`
-- **Foreign Key:** `player_id REFERENCES players(player_id) ON DELETE CASCADE`
-
-| カラム名 | 型 | Nullable | 説明 |
-|---|---|---|---|
-| `player_id` | UUID | No | 親テーブル参照 |
-| `purchase_id` | UUID | No | UUID |
-| `product_id` | VARCHAR(50) | No | 商品ID（`faction_sws` 等） |
-| `platform` | VARCHAR(10) | No | `apple` / `google` |
-| `purchase_token` | VARCHAR(256) | No | Apple: `transactionId` / Google: `purchaseToken`（UNIQUE） |
-| `purchased_at` | TIMESTAMPTZ | No | 購入日時 |
-
-**UserSettings** (ユーザー設定)
-- **Primary Key:** `player_id`
-- **Foreign Key:** `player_id REFERENCES players(player_id) ON DELETE CASCADE`
-
-| カラム名 | 型 | Nullable | 説明 |
-|---|---|---|---|
-| `player_id` | UUID | No | ユーザーID |
-| `language` | VARCHAR(10) | No | 言語設定 (Default: `ja`) |
-| `bgm_volume` | BIGINT | No | BGM音量 (0-100) |
-| `se_volume` | BIGINT | No | SE音量 (0-100) |
-| `push_enabled` | BOOLEAN | No | 通知許可 |
-| `updated_at` | TIMESTAMPTZ | No | 更新日時 |
-
-### 5.9 コスメティクス管理 (Cosmetics)
-
-装飾アイテム（プレイマット・スリーブ等）の定義・所持・装備。
-
-#### 5.9.1 PostgreSQL スキーマ (cosmetic_items, player_items)
-
-**CosmeticItems** (装飾アイテムマスター)
-- **Primary Key:** `item_type`, `item_no`
-
-| カラム名 | 型 | Nullable | 説明 |
-|---|---|---|---|
-| `item_type` | VARCHAR(20) | No | アイテム種別（`playmat` / `sleeve` / `icon` / `stamp`） |
-| `item_no` | BIGINT | No | アイテム番号（種別内で一意） |
-| `item_name` | VARCHAR(100) | No | アイテム名 |
-| `description` | VARCHAR(500) | Yes | 説明文 |
-| `is_purchasable` | BOOLEAN | No | 購入可能フラグ |
-| `is_active` | BOOLEAN | No | 有効フラグ |
-
-**PlayerItems** (プレイヤーの装飾アイテム所持)
-- **Primary Key:** `player_id`, `item_type`, `item_no`
-- **Foreign Key:** `player_id REFERENCES players(player_id) ON DELETE CASCADE`
-
-| カラム名 | 型 | Nullable | 説明 |
-|---|---|---|---|
-| `player_id` | UUID | No | 親テーブル参照 |
-| `item_type` | VARCHAR(20) | No | アイテム種別 |
-| `item_no` | BIGINT | No | アイテム番号 |
-| `acquired_at` | TIMESTAMPTZ | No | 獲得日時 |
-
-#### 5.9.2 装備状態の管理
-
-装備中のアイテムは使用時に即座に参照できるよう、所持テーブルではなく **Players / Decks テーブルに直接保持** する。
-
-| アイテム種別 | 装備先テーブル | カラム |
-|-------------|-------------|--------|
-| アイコン | `Players` | `equipped_icon_no` |
-| プレイマット | `Decks` | `playmat_no` |
-| スリーブ | `Decks` | `sleeve_no` |
-
-> 対戦開始時にデッキ情報と合わせて取得できるため、追加クエリ不要。
+PostgreSQL をデータストアとして使用。テーブル構成、カラム仕様、JSONスキーマの詳細は **[DATA_DESIGN.md](DATA_DESIGN.md)** を参照。
+
+主要テーブル:
+- **games / game_states / game_events** — ゲームライフサイクル・状態・イベントログ
+- **players / player_daily_battle** — プレイヤー管理・デイリーバトル制限
+- **card_definitions** — カード定義マスター（起動時にメモリキャッシュ）
+- **player_cards / decks / deck_cards** — 所持カード・デッキ構築
+- **products / subscriptions / one_time_purchases** — ショップ・課金
+- **cosmetic_items / player_items** — コスメティクス
+
+---
 
 ## 6. API設計
 
-### 6.1 WebSocket API
+- **REST API**: プレイヤー管理、デッキ管理、NPC 対戦、ショップ、ゲームログなど
+- **WebSocket API**: PvP マッチメイキング、リアルタイム対戦、スタンプ送信など
 
-#### 6.1.1 メッセージタイプ一覧
-
-**Client → Server:**
-
-| タイプ | 説明 |
-|------|------|
-| `join_game` | ゲーム参加 |
-| `select_starting` | Starting Resource 選出（ゲーム開始時） |
-| `play_card` | カードプレイ |
-| `attack` | 攻撃 |
-| `activate_effect` | 効果発動 |
-| `end_phase` | フェーズ終了 |
-| `distribute_dv` | DV分配 |
-| `scale_up` | スケールアップ |
-| `set_reactive` | リアクティブセット |
-| `discard_hand` | 手札上限超過時のカード選択破棄 |
-| `use_stamp` | スタンプ（エモート）使用 |
-
-**Server → Client:**
-
-| タイプ | 説明 |
-|------|------|
-| `game_state` | ゲーム状態全体 |
-| `game_event` | 個別イベント通知 |
-| `error` | エラー通知 |
-| `timer_update` | タイマー更新 |
-| `chain_prompt` | チェーン応答要求 |
-| `waiting_opponent` | 相手の選出待ち通知（Starting Resource） |
-| `game_start` | ゲーム開始通知（初期状態 + 相手のStarting Resource公開） |
-| `discard_prompt` | 手札上限超過時の破棄要求 |
-| `stamp_used` | スタンプ使用通知（両プレイヤーに配信） |
-
-#### 6.1.2 ペイロード定義
-
-| メッセージタイプ | フィールド | 型 | 説明 |
-|------------|--------|-----|------|
-| `join_game` | `gameId` | string | ゲームID |
-| `join_game` | `playerId` | string | プレイヤーID |
-| `select_starting` | `frontendCardId` | string | フロントエンド用の `player_card_id` |
-| `select_starting` | `backendCardId` | string | バックエンド用の `player_card_id` |
-| `play_card` | `cardInstanceId` | string | 手札のインスタンスID |
-| `play_card` | `position.zone` | string | `"frontend"` / `"backend"` / `"support"` |
-| `play_card` | `position.index` | int | 0–2 |
-| `play_card` | `targetInstanceId` | string | 対象インスタンスID（任意） |
-| `attack` | `attackerInstanceId` | string | 攻撃側インスタンスID |
-| `attack` | `targetInstanceId` | string | 攻撃対象インスタンスID |
-| `scale_up` | `componentInstanceId` | string | 対象リソースID |
-| `scale_up` | `targetRank` | string | `"medium"` / `"large"` |
-| `scale_up` | `instanceFamily` | string | `"M"` / `"C"` / `"R"`（任意） |
-| `distribute_dv` | `distributions` | array | `[{componentInstanceId, amount}]` |
-| `game_state` | `gameId` | string | ゲームID |
-| `game_state` | `currentTurn` | int | 現在ターン数 |
-| `game_state` | `currentPhase` | string | 現在フェーズ |
-| `game_state` | `activePlayer` | int | アクティブプレイヤー（1 or 2） |
-| `game_state` | `myState` | object | 自分の状態 |
-| `game_state` | `opponentState` | object | 相手の状態（手札は枚数のみ） |
-| `game_state` | `chainStack` | array | チェーンスタック |
-| `game_state` | `timers` | object | タイマー情報 |
-| `game_start` | `initialState` | object | 初期ゲーム状態（`game_state` と同構造） |
-| `game_start` | `opponentStarters` | array | 相手の Starting Resource 公開情報 `[{cardId, zone, index}]` |
-| `discard_hand` | `cardInstanceIds` | array | 破棄するカードの `instanceId` リスト |
-| `discard_prompt` | `currentHandSize` | int | 現在の手札枚数 |
-| `use_stamp` | `game_id` | string | ゲームID |
-| `use_stamp` | `stamp_no` | int64 | スタンプ番号（`CosmeticItems.item_no`） |
-| `stamp_used` | `game_id` | string | ゲームID |
-| `stamp_used` | `player_id` | string | 使用プレイヤーID |
-| `stamp_used` | `stamp_no` | int64 | スタンプ番号 |
-| `discard_prompt` | `requiredDiscards` | int | 破棄すべき枚数 |
-
-### 6.2 REST API
-
-```
-# 認証
-POST   /api/v1/auth/register          # ユーザー登録
-POST   /api/v1/auth/login             # ログイン
-POST   /api/v1/auth/refresh           # トークンリフレッシュ
-
-# ゲーム
-POST   /api/v1/games                  # ゲーム作成
-GET    /api/v1/games/:id              # ゲーム情報取得
-POST   /api/v1/games/:id/join         # ゲーム参加
-GET    /api/v1/games/:id/events       # イベントログ取得
-GET    /api/v1/games/:id/replay       # リプレイデータ取得
-
-# マッチメイキング
-POST   /api/v1/matchmaking/queue      # キュー参加（スタミナ消費）
-DELETE /api/v1/matchmaking/queue      # キュー離脱
-GET    /api/v1/matchmaking/status     # キュー状態取得
-
-# プレイヤー
-GET    /api/v1/players/:id            # プレイヤー情報取得
-GET    /api/v1/players/:id/matches    # 対戦履歴取得
-PUT    /api/v1/players/:id/profile    # プロフィール更新
-GET    /api/v1/players/:id/stamina    # スタミナ状態取得
-
-# カード定義（マスターデータ）
-GET    /api/v1/cards                  # 全カード定義一覧（デッキ構築画面用）
-GET    /api/v1/cards/:card_no         # カード定義詳細
-
-# カード・デッキ
-GET    /api/v1/players/:id/cards      # 所持カード一覧
-GET    /api/v1/players/:id/decks      # デッキ一覧（最大10デッキ）
-POST   /api/v1/players/:id/decks      # デッキ作成
-GET    /api/v1/players/:id/decks/:deckId    # デッキ詳細取得
-PUT    /api/v1/players/:id/decks/:deckId    # デッキ更新
-DELETE /api/v1/players/:id/decks/:deckId    # デッキ削除
-
-# カード解放
-POST   /api/v1/tutorial/select-faction   # チュートリアル陣営選択（1陣営の全カード解放）
-POST   /api/v1/quests/:questId/claim     # クエスト報酬受取（条件を満たした場合に陣営カード解放）
-
-# 課金
-GET    /api/v1/shop/factions         # 購入可能陣営セット一覧
-POST   /api/v1/shop/purchase         # 商品購入（レシート検証 → カード/コスメ付与）
-GET    /api/v1/shop/premium          # プレミアムプラン情報
-POST   /api/v1/shop/premium/activate # プレミアム有効化（レシート検証 → サブスク開始）
-GET    /api/v1/shop/history          # 購入履歴取得
-
-# 設定
-GET    /api/v1/players/:id/settings   # 設定取得
-PUT    /api/v1/players/:id/settings   # 設定更新
-
-# ランキング
-GET    /api/v1/rankings               # ランキング取得
-```
+各エンドポイントの詳細（パス、リクエスト/レスポンス構造、認証方式）は **[API_REFERENCE.md](API_REFERENCE.md)** を参照。
 
 ---
 
@@ -1305,22 +747,37 @@ Pong 応答なし（5秒）
 
 > **注:** マッチメイキングキューはPodインメモリで管理する。DBには書き込まない。マッチ成立後のゲーム作成のみCloud SQLに書き込む。
 
-### 9.5.2 WebSocket メッセージ（マッチメイキング）
+### 9.5.2 WebSocket メッセージ
 
 **Client → Server:**
 
 | タイプ | 説明 |
 |------|------|
-| `queue_join` | マッチングキュー参加（`deckId` を含む） |
-| `queue_leave` | マッチングキュー離脱 |
-| `queue_heartbeat` | キュー内存在確認（30秒間隔） |
+| `game_enter` | ゲーム入室（`game_id`, `deck_id` を含む） |
+| `matchmaking_start` | マッチメイキング開始（`deck_id` を含む） |
+| `matchmaking_cancel` | マッチメイキングキャンセル |
+| `select_starters` | 初期リソース選択 |
+| `game_action` | ゲームアクション（`actionType`, `data` を含む） |
+| `use_stamp` | スタンプ使用 |
+| `ping` | ハートビート |
 
 **Server → Client:**
 
 | タイプ | 説明 |
 |------|------|
-| `queue_status` | キュー状態更新（待機時間、推定待ち人数） |
-| `game_matched` | マッチ成立通知（`gameId`, `opponentName`, `isFirst`） |
+| `game_state` | ゲーム状態更新 |
+| `game_over` | ゲーム終了通知 |
+| `error` | エラーメッセージ |
+| `game_entered` | ゲーム入室確認 |
+| `matchmaking_started` | マッチメイキング開始確認 |
+| `matchmaking_cancelled` | マッチメイキングキャンセル確認 |
+| `match_found` | マッチ成立通知（`gameId`, `opponentName`, `isFirst`） |
+| `action_rejected` | アクション拒否通知 |
+| `action_performed` | アクション実行通知（相手のアクション情報、`battle_start` / `turn_start` バナーイベント含む） |
+| `stamp_used` | スタンプ使用通知 |
+| `turn_controls` | ゲームフロー制御（フェーズ終了可否、手札破棄枚数） |
+| `game_state_restore` | ゲーム状態復元（再接続時） |
+| `pong` | ハートビート応答 |
 
 ---
 
@@ -1333,7 +790,7 @@ Pong 応答なし（5秒）
 | フェーズ | 内容 |
 |------|------|
 | `draw` | リポジトリから手札に1枚ドロー |
-| `dv_gen` | バックエンドリソースのDV生成処理 |
+| `yield` | バックエンドリソースのInsight生成処理 |
 | `main` | カードプレイ・スケールアップ・アタッチメント等 |
 | `battle` | 攻撃実行 |
 | `end` | エンドフェーズ処理、ターン切り替え |
@@ -1341,7 +798,7 @@ Pong 応答なし（5秒）
 **フェーズ進行フロー:**
 
 ```
-draw → dv_gen → main → battle → end → (ActivePlayer切替) → draw ...
+draw → yield → main → battle → end → (ActivePlayer切替) → draw ...
 ```
 
 **エンドフェーズの詳細手順:**
@@ -1349,8 +806,8 @@ draw → dv_gen → main → battle → end → (ActivePlayer切替) → draw ..
 | 手順 | 処理 | 備考 |
 |------|------|------|
 | 1 | 一時効果の終了 | `duration: "this_turn"` の `temporaryEffects` を除去 |
-| 2 | Elastic 値のリセット | Elastic カードのスループット / DV Gen を base 値に戻す |
-| 3 | DV 生成 | バックエンドの各DB系・ストレージ系リソースが DV を生成し、DV プールに加算 |
+| 2 | Elastic 値のリセット | Elastic カードのスループット / Yield を base 値に戻す |
+| 3 | Insight生成 | バックエンドの各DB系・ストレージ系リソースが Insight を生成し、Insightプールに加算 |
 | 4 | 手札上限チェック | 手札が **6枚** を超過している場合、サーバーが `discard_prompt` を送信 |
 | 5 | プレイヤーが破棄カードを選択 | クライアントが `discard_hand` で破棄するカードを送信（15秒タイムアウト） |
 | 6 | タイムアウト時の自動処理 | 手札の末尾から自動的に破棄（古い順） |
@@ -1379,6 +836,78 @@ draw → dv_gen → main → battle → end → (ActivePlayer切替) → draw ..
 | 5 | Attachmentの効果 |
 | 6 | 一時効果（そのターンのみ） |
 | 7 | 現在AV = MaxAV − ダメージ蔓積量 |
+
+### 10.4 Available Actions と NPC AI 統合
+
+**Available Actions（Master Duel 方式）:**
+
+サーバーが `ComputeAvailableActions()` でフェーズごとの有効アクションを計算し、クライアントとNPC AIの両方に提供する。
+
+| 項目 | 内容 |
+|------|------|
+| 計算タイミング | 状態更新ごと（`game_state_view.go`）、NPC ターン開始時（`game_service.go`） |
+| 関数 | `engine.ComputeAvailableActions(state, game, playerNum, ...)` |
+| 戻り値 | `[]engine.AvailableAction`（タイプ別 discriminated union） |
+| クライアント向け | `ClientGameState.my.available_actions` に含めて WebSocket 送信 |
+| NPC 向け | `runNPCTurnIfNeeded` 内で計算し Strategy に渡す |
+
+**AvailableAction のアクションタイプ:**
+
+| Type | 主要フィールド |
+|------|---------------|
+| `play_card` | `HandInstanceID`, `CardID`, `ValidZones`, `ValidTargets`, `Cost` |
+| `attack` | `SourceInstanceID`, `ValidTargets` |
+| `scale_up` | `SourceInstanceID`, `Cost`, `TargetRank`, `NeedsFamily` |
+| `distribute_yield` | `SourceInstanceID`, `RemainingCapacity` |
+| `activate_effect` | `SourceInstanceID`, `ValidTargets`, `EffectTargetType` |
+| `set_reactive` | `SourceInstanceID` |
+
+ゲームフロー制御（フェーズ終了、手札破棄）は `available_actions` に含めず、`turn_controls` メッセージとして別途送信される。
+
+**NPC AI アーキテクチャ:**
+
+```
+engine.ComputeAvailableActions()
+        │
+        ▼
+┌─────────────────────┐
+│  Strategy interface  │  DecideMainPhaseActions(state, game, playerNum, available)
+│                      │  DecideBattlePhaseActions(state, game, playerNum, available)
+│                      │  DecideDiscard(state, playerNum)
+│                      │  DecideStartingResources(deckCards)
+└────────┬────────────┘
+         │
+    ┌────┴────┐
+    ▼         ▼
+StandardAI   FactionAI (SD / Tenki / Sugar / Tuners)
+```
+
+NPC は `[]AvailableAction` から最適なアクションを選択するのみ。
+アクションの有効性判定はすべて engine 側が担当し、ロジック重複を排除。
+
+**NPC の決定フロー（Main Phase）:**
+
+| 順序 | 処理 | ヘルパー関数 |
+|------|------|-------------|
+| 1 | Strategy/Incident カードを使用 | `doImmediateActions()` — `evaluateCard` でスコアリング |
+| 2 | Resource カードをデプロイ | `doDeployActions()` — `pickBestZone` でゾーン選択 |
+| 3 | フィールドエフェクトを発動 | `decideActivateActions()` — `selectTargetFromValid` でターゲット制約 |
+| 4 | スケールアップ | `doScaleUpActions()` — `AvailableAction.Cost` / `TargetRank` を使用 |
+| 5 | Insight 配分 | `doDistributeYieldActions()` — `RemainingCapacity` で greedy 配分 |
+| 6 | フェーズ終了 | `makeEndPhaseAction()` |
+
+**ゾーン追跡:** `ComputeAvailableActions` は初期状態で計算されるため、`usedZones map[string]bool` を `DecideMainPhaseActions` 内で管理し、デプロイ済みスロットをフィルタする。
+
+**NPC 関連ファイル:**
+
+| ファイル | 役割 |
+|---------|------|
+| `internal/npc/ai.go` | Strategy インターフェース、StandardAI 実装 |
+| `internal/npc/faction_ai.go` | FactionAI（陣営別パラメータ・オーバーライド） |
+| `internal/npc/action_filter.go` | AvailableAction 用ヘルパー（`filterByType`, `pickBestZone`, `findBestTargetFromValid` 等） |
+| `internal/npc/evaluate.go` | カードスコアリング、ターゲット選択ヒューリスティクス |
+| `internal/npc/targeting.go` | ターゲット選択戦略（`weakestInZone`, `strongestInZone` 等） |
+| `internal/npc/decks.go` | 陣営別デッキ定義 |
 
 ---
 
@@ -1492,7 +1021,7 @@ PostgreSQL トランザクションが失敗した場合、クライアントに
 | 1 | **フェーズ確認** | 現在のフェーズでそのアクションが許可されているか |
 | 2 | **実行元カード確認** | 指定されたカードが手札またはフィールドに存在し、プレイヤーの所有か |
 | 3 | **対象確認** | 攻撃対象・効果対象が有効か（存在する、対象に取れる等） |
-| 4 | **コスト確認** | Budget・DV Pool 等のリソースが足りているか |
+| 4 | **コスト確認** | Budget・Insight Pool 等のリソースが足りているか |
 | 5 | **その他の条件** | 1ターン1回制限、Resizable属性、手札上限など個別ルール |
 
 **アクション別の検証項目:**
@@ -1500,9 +1029,9 @@ PostgreSQL トランザクションが失敗した場合、クライアントに
 | アクション | 1. フェーズ | 2. 実行元 | 3. 対象 | 4. コスト | 5. その他 |
 |-----------|-----------|----------|---------|----------|----------|
 | `play_card` | Main Phase | 手札に存在 | 配置先が空き | Budget ≥ 開発コスト | — |
-| `attack` | Battle Phase | フィールド上の自コンピュート | 相手フィールド上のリソース | Request Cost ≤ DV Pool | 攻撃済みでない |
+| `attack` | Battle Phase | フィールド上の自コンピュート | 相手フィールド上のリソース | — | 攻撃済みでない |
 | `scale_up` | Main Phase | フィールド上の自リソース | — | Budget ≥ スケールアップコスト | Resizable 属性、現在Rank < 対象Rank |
-| `distribute_dv` | Main Phase | バックエンドのコンピュート | — | — | DV Pool 残量 ≥ 分配量、TP上限 |
+| `distribute_yield` | Main Phase | バックエンドのコンピュート | — | — | Insight Pool 残量 ≥ 分配量、TP上限 |
 | `activate_effect` | Main/Battle Phase | 効果を持つカード | 効果の対象 | 効果コスト | 1ターン1回制限 |
 
 ### 13.2 レート制限
@@ -1515,12 +1044,44 @@ PostgreSQL トランザクションが失敗した場合、クライアントに
 
 ### 13.3 CORS設定
 
+環境変数 `ALLOWED_ORIGINS` で許可するオリジンを制御する。
+
+| 環境 | AllowOrigins |
+|------|-------------|
+| dev | 未設定（全オリジン許可） |
+| stg | `https://overloadparty-stg.keyandnotes.com`, `capacitor://localhost`, `http://localhost` |
+| prod | `https://overloadparty.keyandnotes.com`, `capacitor://localhost`, `http://localhost` |
+| ローカル | 全オリジン許可 |
+
+- REST: `middleware.CORS()` で HTTP レスポンスヘッダを設定
+- WebSocket: `websocket.Upgrader.CheckOrigin` でアップグレード時に Origin ヘッダを検証
+- `capacitor://localhost`, `http://localhost` は Capacitor (iOS/Android) ネイティブアプリ用
+
 | 項目 | 値 |
 |------|-----|
-| `AllowOrigins` | `https://overload-party.com` |
 | `AllowMethods` | GET, POST, PUT, DELETE |
 | `AllowHeaders` | Authorization, Content-Type |
 | `MaxAge` | 12時間 |
+
+### 13.4 ドメイン / DNS / TLS
+
+| 項目 | 値 |
+|------|-----|
+| ドメイン | `keyandnotes.com`（お名前.com + Cloudflare DNS） |
+| TLS 方式 | Cloudflare SSL Flexible（Cloudflare で TLS 終端 → GKE Ingress は HTTP） |
+
+**サブドメイン構成:**
+
+| 環境 | サブドメイン | 静的 IP |
+|------|------------|---------|
+| dev | `overloadparty-dev.keyandnotes.com` | `34.149.76.35`（`overload-party-dev-ip`） |
+| stg | `overloadparty-stg.keyandnotes.com` | なし（動的） |
+| prod | `overloadparty.keyandnotes.com` | 未定 |
+
+- Cloudflare Universal SSL は `*.keyandnotes.com` をカバー（1 階層のみ）
+- そのため `overloadparty-dev` 形式を採用（`dev.overloadparty.keyandnotes.com` は証明書対象外）
+- Cloudflare DNS で Proxied (orange cloud) モードを使用
+- dev 環境のみグローバル静的 IP を予約（DNS A レコードの安定化のため）
 
 ---
 
@@ -1566,33 +1127,42 @@ GCPリソースは **Terraform** で管理する。
 | Workload Identity | — | KSA `game-server` → GSA `game-server-dev@..dev` | 同パターン | 同パターン |
 
 
-> dev/stg は毎日 2:00 JST に自動停止（Ingress 削除 → Pod スケール 0 → Cloud SQL 停止）してコストを最小化する。起動は GitHub Actions workflow_dispatch またはローカルスクリプトで手動実行。
+> dev/stg は毎日 2:00 JST に自動停止してコストを最小化する。Cloud SQL 操作はインフラリポジトリ (Cloud Scheduler / Terraform)、K8s 操作は K8s リポジトリ (GitHub Actions) に責務を分離している。
 
-**コスト管理スクリプト:**
+**自動停止の仕組み (2:00 AM JST):**
 
-| スクリプト / ワークフロー | 内容 |
-|--------------------------|------|
-| `scripts/env-up.sh <dev\|stg>` | Cloud SQL 起動 → Pod スケール 1 → Ingress 適用 |
-| `scripts/env-down.sh <dev\|stg>` | Ingress 削除 → Pod スケール 0 → Cloud SQL 停止 |
-| `.github/workflows/nightly-shutdown.yaml` | 毎日 2:00 JST に dev/stg を自動停止 |
-| `.github/workflows/startup.yaml` | 手動起動 (workflow_dispatch) |
+| 対象 | 方式 | 管理場所 |
+|------|------|---------|
+| Cloud SQL | Cloud Scheduler → sqladmin API 直接呼び出し (OAuth) | infra: `modules/scheduler/` |
+| K8s (Ingress, Pod) | GitHub Actions cron | k8s: `.github/workflows/nightly-shutdown.yaml` |
+
+**手動操作:**
+
+| リポジトリ | スクリプト / ワークフロー | 内容 |
+|-----------|--------------------------|------|
+| infra | `scripts/cloudsql-start.sh <dev\|stg>` | Cloud SQL 起動 (RUNNABLE 待ち) |
+| infra | `scripts/cloudsql-stop.sh <dev\|stg>` | Cloud SQL 停止 |
+| k8s | `scripts/env-up.sh <dev\|stg>` | Pod スケール 1 → Ingress 適用 |
+| k8s | `scripts/env-down.sh <dev\|stg>` | Ingress 削除 → Pod スケール 0 |
+| k8s | `.github/workflows/startup.yaml` | K8s 手動起動 (workflow_dispatch) |
 
 **ディレクトリ構成:**
 
 ```
-terraform/  (overload-party-server リポジトリ)
+overload-party-infra/
 ├── environments/
-│   └── dev/          # Cloud SQL, IAM (Workload Identity)
+│   ├── dev/          # Cloud SQL, IAM (Workload Identity)
+│   ├── stg/
+│   └── prod/
 ├── modules/
 │   ├── cloudsql/     # Cloud SQL PostgreSQL インスタンス + DB
-│   └── iam/          # GSA + Cloud SQL role + Workload Identity binding
-
-terraform/  (overload-party-k8s リポジトリ)
-├── environments/
-│   └── shared/       # GKE Autopilot, Artifact Registry
-├── modules/
-│   ├── gke/          # GKE Autopilot クラスタ
-│   └── artifact-registry/ # Docker リポジトリ
+│   ├── iam/          # GSA + Cloud SQL role + Workload Identity binding
+│   └── scheduler/    # Cloud Scheduler: Cloud SQL 自動停止 (sqladmin API)
+└── scripts/
+    ├── cloudsql-start.sh
+    ├── cloudsql-stop.sh
+    ├── infra-up.sh
+    └── infra-destroy.sh
 ```
 
 **Terraform state:** `gs://overload-party-tf-state` に GCS backend で管理。prefix で `terraform/shared`, `terraform/dev` 等に分離。
@@ -1740,7 +1310,7 @@ K8s マニフェストの適用は **ArgoCD** による GitOps で行う。
 
 - [x] ターン進行システム
 - [x] カード配置・移動
-- [x] Budget/DV管理
+- [x] Budget/Insight管理
 - [x] 基本攻撃
 - [x] 勝利条件判定
 - [ ] React UI実装（フィールド、手札）
