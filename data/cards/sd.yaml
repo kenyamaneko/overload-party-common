@@ -1,11 +1,16 @@
-faction: SWS
-display_name: "SWS（Smile Web Services）"
+# NOTE: origin fields are for internal development reference only.
+# These values MUST NOT be displayed to end users.
+
+faction: SD
+display_name: "SD（Smile Delivery）"
 cards:
   - card_no: 1
-    card_name: "SWS Compute - えくぼ"
-    const_name: SWSComputeEkubo
+    card_name: "えくぼ"
+    resource_label: "Compute"
+    const_name: SDComputeEkubo
     card_type: Compute
-    scalability: R
+    resizable: true
+    elastic: false
     origin: "EC2"
     restriction: unlimited
     is_active: true
@@ -18,10 +23,12 @@ cards:
     effect_text: ""
 
   - card_no: 3
-    card_name: "SWS Container - ファーリゲーター"
-    const_name: SWSContainerFarligator
+    card_name: "アリゲーター"
+    resource_label: "Container"
+    const_name: SDContainerAlligator
     card_type: Container
-    scalability: E
+    resizable: false
+    elastic: true
     origin: "ECS/Fargate"
     restriction: unlimited
     is_active: true
@@ -35,10 +42,12 @@ cards:
     effect_text: ""
 
   - card_no: 4
-    card_name: "SWS Orchestrator - クジラの統率者<クジランティス>"
-    const_name: SWSOrchestratorKujirantis
+    card_name: "クジラの統率者<クジランティス>"
+    resource_label: "Orchestrator"
+    const_name: SDOrchestratorKujirantis
     card_type: Orchestrator
-    scalability: RE
+    resizable: true
+    elastic: true
     origin: "EKS"
     restriction: unlimited
     is_active: true
@@ -52,10 +61,12 @@ cards:
     effect_text: ""
 
   - card_no: 5
-    card_name: "SWS ML - ラフメイカー"
-    const_name: SWSMLRoughmaker
+    card_name: "ラフメイカー"
+    resource_label: "ML"
+    const_name: SDMLRoughmaker
     card_type: AI/ML
-    scalability: R
+    resizable: true
+    elastic: false
     origin: "SageMaker"
     restriction: unlimited
     is_active: true
@@ -68,10 +79,12 @@ cards:
     effect_text: ""
 
   - card_no: 6
-    card_name: "SWS Serverless - ラム"
-    const_name: SWSServerlessRam
+    card_name: "ラムネ"
+    resource_label: "Serverless"
+    const_name: SDServerlessRamune
     card_type: Serverless
-    scalability: E
+    resizable: false
+    elastic: true
     origin: "Lambda"
     restriction: unlimited
     is_active: true
@@ -82,85 +95,93 @@ cards:
       sla_penalty: 200
       maintenance_cost: 0
     tp_max: 1000
-    effect_text: "**えすす Trigger:** 自分のフィールドに「SWS Storage - えすす」がいる場合、このカードのスループットを +200 する"
+    effect_text: "**エリス Trigger:** 自分のフィールドに「SD Storage - エリス」がいる場合、このカードのスループットを +200 する"
     passive_effects:
       - type: tp_if_card_type_on_field
         params:
-          faction: SWS
+          faction: SD
           card_types:
             - ObjectStorage
           flat_bonus: 200
 
   - card_no: 7
-    card_name: "SWS RDB - アデリース"
-    const_name: SWSRDBAdeliece
+    card_name: "アデリース"
+    resource_label: "RDB"
+    const_name: SDRDBAdeliece
     card_type: Database
-    scalability: R
+    resizable: true
+    elastic: false
     origin: "RDS"
     restriction: unlimited
     is_active: true
     stats:
-      dv_gen: 500
+      yield: 500
       availability: 1300
       deploy_cost: 400
       sla_penalty: 500
       maintenance_cost: 150
-    effect_text: "**Reserved Instance:** このカードのデプロイ時に発動できる。デプロイ時のコストを -200 する。この効果を使用してデプロイした場合、他のリソースをデプロイするためにこのカードをトラッシュすることはできない。"
+    effect_text: "**予約契約:** このカードのデプロイ時に発動できる。デプロイ時のコストを -200 する。この効果を使用してデプロイした場合、他のリソースをデプロイするためにこのカードをトラッシュすることはできない。"
 
   - card_no: 8
-    card_name: "SWS DestributedDB - オオロバ"
-    const_name: SWSDistributedDBOoroba
+    card_name: "オオロバ"
+    resource_label: "DistributedDB"
+    const_name: SDDistributedDBOoroba
     card_type: Database
-    scalability: R
+    resizable: true
+    elastic: false
     origin: "Aurora"
     restriction: unlimited
     is_active: true
     stats:
-      dv_gen: 500
+      yield: 500
       availability: 1200
       deploy_cost: 600
       sla_penalty: 500
       maintenance_cost: 200
-    effect_text: "**Aurora Cluster:** 自分のバックエンドのこのカード以外の SWS のDB系リソース1体につき、このカードの DV Gen を +200 する"
+    effect_text: "**星の連鎖:** 自分のバックエンドのこのカード以外の SDのDB系リソース1体につき、このカードの Yield を +200 する"
     passive_effects:
       - type: dv_per_other_db
         params:
-          faction: SWS
+          faction: SD
           bonus_per_card: 200
           exclude_self: true
 
   - card_no: 9
-    card_name: "SWS Storage - えすす"
-    const_name: SWSStorageEsusu
+    card_name: "エリス"
+    resource_label: "Storage"
+    const_name: SDStorageEris
     card_type: ObjectStorage
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "S3"
     restriction: unlimited
     is_active: true
     stats:
-      dv_gen: 300
+      yield: 300
       availability: 1800
       deploy_cost: 100
       sla_penalty: 300
       maintenance_cost: 50
-    effect_text: "**Versioning:** 自分のフィールドの SWSのDB系リソース が破壊された時に発動できる。そのカードを自分の手札に戻す。"
+    effect_text: "**Versioning:** 自分のフィールドの SDのDB系リソース が破壊された時に発動できる。そのカードを自分の手札に戻す。"
 
   - card_no: 10
-    card_name: "SWS NoSQL - ダイナ"
-    const_name: SWSNoSQLDyna
+    card_name: "ダイナソー"
+    resource_label: "NoSQL"
+    const_name: SDNoSQLDinosaur
     card_type: NoSQL
-    scalability: E
+    resizable: false
+    elastic: true
     origin: "DynamoDB"
     restriction: unlimited
     is_active: true
     stats:
-      dv_gen: 300
+      yield: 300
       availability: 1600
       deploy_cost: 300
       sla_penalty: 400
       maintenance_cost: 50
-    dv_max: 800
-    effect_text: "**On-Demand:** Budget 400 を払って発動できる。このターン、このカードの DV Gen を2倍にする。この効果は1ターン中に1回のみ使用できる"
+    yield_max: 800
+    effect_text: "**On-Demand:** Budget 400 を払って発動できる。このターン、このカードの Yield を2倍にする。この効果は1ターン中に1回のみ使用できる"
     passive_effects:
       - type: dv_if_card_on_field
         params:
@@ -169,53 +190,57 @@ cards:
           flat_bonus: 200
 
   - card_no: 11
-    card_name: "SWS Cache - メリー"
-    const_name: SWSCacheMerry
+    card_name: "メリー"
+    resource_label: "Cache"
+    const_name: SDCacheMerry
     card_type: CacheDB
-    scalability: R
+    resizable: true
+    elastic: false
     origin: "ElastiCache"
     restriction: unlimited
     is_active: true
     stats:
-      dv_gen: 200
+      yield: 200
       availability: 1100
       deploy_cost: 200
       sla_penalty: 100
       maintenance_cost: 100
-    effect_text: "**Cache Engine:** デプロイ時に選択以下のいずれかの効果を選択する。**Memcached:** Budget を +400 する。**Redis:** このカードの DV Gen を +200 する"
+    effect_text: "**Cache Engine:** デプロイ時に選択以下のいずれかの効果を選択する。**Memcached:** Budget を +400 する。**Redis:** このカードの Yield を +200 する"
 
   - card_no: 12
-    card_name: "SWS Pipeline"
-    const_name: SWSPipeline
+    card_name: "SD Pipeline"
+    const_name: SDPipeline
     card_type: Platform
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "CodePipeline"
     restriction: unlimited
     is_active: true
     stats:
       deploy_cost: 0
-    effect_text: "自分のフィールドの SWS リソースのスケールアップのための開発コストを -200 する。"
+    effect_text: "自分のフィールドの SD リソースのスケールアップのための開発コストを -200 する。"
     platform_effects:
       - type: scale_cost_reduction
         params:
-          target_faction: SWS
+          target_faction: SD
           reduction: 200
 
   - card_no: 13
-    card_name: "SWS Front"
-    const_name: SWSFront
+    card_name: "SD Front"
+    const_name: SDFront
     card_type: Platform
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "CloudFront"
     restriction: unlimited
     is_active: true
     stats:
       deploy_cost: 0
-    effect_text: "自分のフィールドの全ての SWS コンピュート系リソースのスループットを +200 する。"
+    effect_text: "自分のフィールドの全ての SD コンピュート系リソースのスループットを +200 する。"
     platform_effects:
       - type: tp_bonus
         params:
-          target_faction: SWS
+          target_faction: SD
           target_card_types:
             - Compute
             - "AI/ML"
@@ -225,10 +250,11 @@ cards:
           bonus: 200
 
   - card_no: 14
-    card_name: "SWS Guard"
-    const_name: SWSGuard
+    card_name: "SD Guard"
+    const_name: SDGuard
     card_type: Platform
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "GuardDuty"
     restriction: unlimited
     is_active: true
@@ -237,10 +263,11 @@ cards:
     effect_text: "相手フィールドのサポートゾーンの裏側のカード 1枚を選択して確認する。"
 
   - card_no: 15
-    card_name: "SWS Firewall"
-    const_name: SWSFirewall
+    card_name: "SD Firewall"
+    const_name: SDFirewall
     card_type: Platform
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "WAF"
     restriction: unlimited
     is_active: true
@@ -249,10 +276,11 @@ cards:
     effect_text: "相手の DDoS Attack と Data Breach を無効化する。"
 
   - card_no: 16
-    card_name: "SWS Queue"
-    const_name: SWSQueue
+    card_name: "SD Queue"
+    const_name: SDQueue
     card_type: Attachment
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "SQS"
     restriction: unlimited
     is_active: true
@@ -261,10 +289,11 @@ cards:
     effect_text: "フロントエンドリソースに装備できる。装備したリソースのスループットをメインフェーズのみ +600 する。この効果は1ターン中に1回のみ使用できる"
 
   - card_no: 17
-    card_name: "SWS Gateway"
-    const_name: SWSGateway
+    card_name: "SD Gateway"
+    const_name: SDGateway
     card_type: Attachment
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "API Gateway"
     restriction: unlimited
     is_active: true
@@ -278,10 +307,11 @@ cards:
           bonus: 200
 
   - card_no: 18
-    card_name: "SWS Keys"
-    const_name: SWSKeys
+    card_name: "SD Keys"
+    const_name: SDKeys
     card_type: Attachment
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "KMS"
     restriction: unlimited
     is_active: true
@@ -290,101 +320,110 @@ cards:
     effect_text: "バックエンドリソースに装備できる。装備したリソースは「データ流出」の効果を受けない。"
 
   - card_no: 19
-    card_name: "SWS Formation"
-    const_name: SWSFormation
+    card_name: "SD Formation"
+    const_name: SDFormation
     card_type: Strategy
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "CloudFormation"
     restriction: unlimited
     is_active: true
     stats:
       deploy_cost: 200
-    effect_text: "Budget を 200 払って発動できる。リポジトリから SWS Resource カード1枚を選択して手札に加える。"
+    effect_text: "Budget を 200 払って発動できる。リポジトリから SD Resource カード1枚を選択して手札に加える。"
 
   - card_no: 20
-    card_name: "SWS Marketplace"
-    const_name: SWSMarketplace
+    card_name: "SD Marketplace"
+    const_name: SDMarketplace
     card_type: Strategy
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "AWS Marketplace"
     restriction: unlimited
     is_active: true
     stats:
       deploy_cost: 0
-    effect_text: "自分のフィールドに SWS カードが3枚以上ある時に発動できる。自分の Budget を +600 する。"
+    effect_text: "自分のフィールドに SD カードが3枚以上ある時に発動できる。自分の Budget を +600 する。"
 
   - card_no: 21
-    card_name: "SWS Cost Explorer"
-    const_name: SWSCostExplorer
+    card_name: "SD 料金見積もり"
+    const_name: SDRyoukinMitsumori
     card_type: Strategy
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "Cost Explorer"
     restriction: unlimited
     is_active: true
     stats:
       deploy_cost: 0
-    effect_text: "このターン、自分の全ての SWS カードの開発コストを -200 する。"
+    effect_text: "このターン、自分の全ての SD カードの開発コストを -200 する。"
 
   - card_no: 22
     card_name: "Smile Recovery"
     const_name: SmileRecovery
     card_type: Reactive
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "Auto Recovery"
     restriction: unlimited
     is_active: true
     stats:
       deploy_cost: 0
-    effect_text: "自分の SWS リソースの可用性が 400 以下になった時に発動できる。そのリソースの可用性を +500 する。"
+    effect_text: "自分の SD リソースの可用性が 400 以下になった時に発動できる。そのリソースの可用性を +500 する。"
 
   - card_no: 118
-    card_name: "SWS Ecosystem"
-    const_name: SWSEcosystem
+    card_name: "SD Ecosystem"
+    const_name: SDEcosystem
     card_type: Strategy
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "AWS Ecosystem"
     restriction: unlimited
     is_active: true
     stats:
       deploy_cost: 0
-    effect_text: "自分のフィールドに SWS カードが3枚以上ある時に使用できる。このターン、自分のフロントエンドの全ての SWS カードのスループットを +200 する。"
+    effect_text: "自分のフィールドに SD カードが3枚以上ある時に使用できる。このターン、自分のフロントエンドの全ての SD カードのスループットを +200 する。"
 
   - card_no: 121
-    card_name: "SWS Smile Delivery"
-    const_name: SWSSmileDelivery
+    card_name: "SD Smile Delivery"
+    const_name: SDSmileDelivery
     card_type: Strategy
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "Amazon Prime"
     restriction: unlimited
     is_active: true
     stats:
       deploy_cost: 200
-    effect_text: "Budget を 200 払って発動できる。手札の SWS リソースを1枚を選択し、デプロイコストを払わずにデプロイできる。"
+    effect_text: "Budget を 200 払って発動できる。手札の SD リソースを1枚を選択し、デプロイコストを払わずにデプロイできる。"
 
   - card_no: 124
-    card_name: "SWS Cache - だっくん"
-    const_name: SWSCacheDakkun
+    card_name: "だっくん"
+    resource_label: "Cache"
+    const_name: SDCacheDakkun
     card_type: CacheDB
-    scalability: R
+    resizable: true
+    elastic: false
     origin: "DAX"
     restriction: unlimited
     is_active: true
     stats:
-      dv_gen: 200
+      yield: 200
       availability: 1200
       deploy_cost: 200
       sla_penalty: 100
       maintenance_cost: 100
-    effect_text: "**DAX Accelerator:** 自分のフィールドの全ての SWS NoSQL - ダイナの DV Gen を +200 する。"
+    effect_text: "**キャッシュブースト:** 自分のフィールドの全ての SD NoSQL - ダイナソーの Yield を +200 する。"
 
   - card_no: 131
-    card_name: "SWS Block Storage"
-    const_name: SWSBlockStorage
+    card_name: "SD Block Storage"
+    const_name: SDBlockStorage
     card_type: Attachment
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "EBS"
     restriction: unlimited
     is_active: true
     stats:
       deploy_cost: 100
-    effect_text: "自分の「SWS Compute - えくぼ」にのみ装備できる。装備先の可用性を +500 する。"
+    effect_text: "自分の「SD Compute - えくぼ」にのみ装備できる。装備先の可用性を +500 する。"

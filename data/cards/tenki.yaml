@@ -1,13 +1,18 @@
-faction: Aozora
-display_name: "Aozora（Aozora Cloud）"
+# NOTE: origin fields are for internal development reference only.
+# These values MUST NOT be displayed to end users.
+
+faction: Tenki
+display_name: "天気使い"
 cards:
   # ── コンピュート系リソース (5枚) ──────────────────────────────
 
   - card_no: 23
-    card_name: "Aozora VM - ソラ"
-    const_name: AozoraVMSora
+    card_name: "ソラ"
+    resource_label: "VM"
+    const_name: TenkiVMSora
     card_type: Compute
-    scalability: R
+    resizable: true
+    elastic: false
     origin: "Azure VM"
     restriction: unlimited
     is_active: true
@@ -20,10 +25,12 @@ cards:
     effect_text: "—"
 
   - card_no: 24
-    card_name: "Aozora PaaS - アサギリ"
-    const_name: AozoraPaaSAsagiri
+    card_name: "アサギリ"
+    resource_label: "PaaS"
+    const_name: TenkiPaaSAsagiri
     card_type: Compute
-    scalability: R
+    resizable: true
+    elastic: false
     origin: "App Service"
     restriction: unlimited
     is_active: true
@@ -36,10 +43,12 @@ cards:
     effect_text: "**Auto Patch:** 相手がインシデントカードを使った時に発動できる。このカードが受けるダメージを半分にする。"
 
   - card_no: 25
-    card_name: "Aozora Container - コウテン"
-    const_name: AozoraContainerKouten
+    card_name: "コウテン"
+    resource_label: "Container"
+    const_name: TenkiContainerKouten
     card_type: Container
-    scalability: E
+    resizable: false
+    elastic: true
     origin: "ACI"
     restriction: unlimited
     is_active: true
@@ -53,10 +62,12 @@ cards:
     effect_text: "—"
 
   - card_no: 26
-    card_name: "Aozora Orchestrator - 空即蒼色"
-    const_name: AozoraOrchestratorKusoku
+    card_name: "空即蒼色"
+    resource_label: "Orchestrator"
+    const_name: TenkiOrchestratorKusoku
     card_type: Orchestrator
-    scalability: RE
+    resizable: true
+    elastic: true
     origin: "AKS"
     restriction: unlimited
     is_active: true
@@ -70,10 +81,12 @@ cards:
     effect_text: "—"
 
   - card_no: 27
-    card_name: "Aozora AI - 智の解放者<オープナー>"
-    const_name: AozoraAIOpener
+    card_name: "智の解放者<オープナー>"
+    resource_label: "AI"
+    const_name: TenkiAIOpener
     card_type: "AI/ML"
-    scalability: R
+    resizable: true
+    elastic: false
     origin: "Azure OpenAI"
     restriction: unlimited
     is_active: true
@@ -83,19 +96,21 @@ cards:
       deploy_cost: 700
       sla_penalty: 600
       maintenance_cost: 200
-    effect_text: "**On Your Data:** 自分のバックエンドの Aozora DB系リソースおよびオブジェクトストレージ1体につき、このカードのスループットを +200 する。"
+    effect_text: "**データの泉:** 自分のバックエンドの 天気使い DB系リソースおよびオブジェクトストレージ1体につき、このカードのスループットを +200 する。"
     passive_effects:
       - type: tp_per_backend_data
         params:
-          faction: Aozora
+          faction: Tenki
           bonus_per_card: 200
           multi_model_cards: [32]
 
   - card_no: 28
-    card_name: "Aozora Functions - ライ"
-    const_name: AozoraFunctionsRai
+    card_name: "ライ"
+    resource_label: "Functions"
+    const_name: TenkiFunctionsRai
     card_type: Serverless
-    scalability: E
+    resizable: false
+    elastic: true
     origin: "Azure Functions"
     restriction: unlimited
     is_active: true
@@ -114,15 +129,17 @@ cards:
   # ── DB系リソース (4枚) ───────────────────────────────────────
 
   - card_no: 29
-    card_name: "Aozora RDB - シグレ"
-    const_name: AozoraRDBShigure
+    card_name: "シグレ"
+    resource_label: "RDB"
+    const_name: TenkiRDBShigure
     card_type: Database
-    scalability: R
+    resizable: true
+    elastic: false
     origin: "Azure SQL"
     restriction: unlimited
     is_active: true
     stats:
-      dv_gen: 500
+      yield: 500
       availability: 1400
       deploy_cost: 400
       sla_penalty: 500
@@ -130,31 +147,35 @@ cards:
     effect_text: "—"
 
   - card_no: 30
-    card_name: "Aozora DB - ハヤテ"
-    const_name: AozoraDBHayate
+    card_name: "ハヤテ"
+    resource_label: "DB"
+    const_name: TenkiDBHayate
     card_type: Database
-    scalability: R
+    resizable: true
+    elastic: false
     origin: "SQL Hyperscale"
     restriction: unlimited
     is_active: true
     stats:
-      dv_gen: 500
+      yield: 500
       availability: 1400
       deploy_cost: 600
       sla_penalty: 500
       maintenance_cost: 200
-    effect_text: "**Failover Group:** 自分のバックエンドの他の Aozora DB系リソースが破壊された時、2ターンの間、このカードの DV Gen を +400 する。"
+    effect_text: "**嵐の後の虹:** 自分のバックエンドの他の 天気使い DB系リソースが破壊された時、2ターンの間、このカードの Yield を +400 する。"
 
   - card_no: 31
-    card_name: "Aozora Storage フブキ"
-    const_name: AozoraStorageFubuki
+    card_name: "フブキ"
+    resource_label: "Storage"
+    const_name: TenkiStorageFubuki
     card_type: ObjectStorage
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "Azure Blob"
     restriction: unlimited
     is_active: true
     stats:
-      dv_gen: 200
+      yield: 200
       availability: 2100
       deploy_cost: 100
       sla_penalty: 300
@@ -162,32 +183,36 @@ cards:
     effect_text: "—"
 
   - card_no: 32
-    card_name: "Aozora NoSQL - 百花の天穹<コスモ>"
-    const_name: AozoraNoSQLCosmo
+    card_name: "百花の天穹<コスモ>"
+    resource_label: "NoSQL"
+    const_name: TenkiNoSQLCosmo
     card_type: NoSQL
-    scalability: E
+    resizable: false
+    elastic: true
     origin: "CosmosDB"
     restriction: unlimited
     is_active: true
     stats:
-      dv_gen: 300
+      yield: 300
       availability: 1100
       deploy_cost: 400
       sla_penalty: 500
       maintenance_cost: 50
-    dv_max: 900
-    effect_text: "**Multi-Model:** このカードが Aozora DB系リソースとして効果の対象になる時、このカードは2枚分として数える。\n**Turnkey Global Distribution:** このカードをデプロイした時に発動できる。リポジトリから「Aozora NoSQL - 秩序の蒼<コスモ>」1枚をコストなしでデプロイする。この効果は1ターン中に1回のみ使用できる"
+    yield_max: 900
+    effect_text: "**百花の形:** このカードが 天気使い DB系リソースとして効果の対象になる時、このカードは2枚分として数える。\n**百花繚乱:** このカードをデプロイした時に発動できる。リポジトリから「天気使い NoSQL - 秩序の蒼<コスモ>」1枚をコストなしでデプロイする。この効果は1ターン中に1回のみ使用できる"
 
   - card_no: 33
-    card_name: "Aozora Cache - レイウ"
-    const_name: AozoraCacheReiu
+    card_name: "レイウ"
+    resource_label: "Cache"
+    const_name: TenkiCacheReiu
     card_type: CacheDB
-    scalability: R
+    resizable: true
+    elastic: false
     origin: "Azure Cache for Redis"
     restriction: unlimited
     is_active: true
     stats:
-      dv_gen: 200
+      yield: 200
       availability: 1500
       deploy_cost: 200
       sla_penalty: 100
@@ -197,45 +222,48 @@ cards:
   # ── プラットフォーム (3枚) ───────────────────────────────────
 
   - card_no: 34
-    card_name: "Aozora DevOps"
-    const_name: AozoraDevOps
+    card_name: "天気使い DevOps"
+    const_name: TenkiDevOps
     card_type: Platform
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "Azure DevOps"
     restriction: unlimited
     is_active: true
     stats:
       deploy_cost: 0
-    effect_text: "自分のフィールドの Aozora リソースのスケールアップのコストを -200 する。"
+    effect_text: "自分のフィールドの 天気使い リソースのスケールアップのコストを -200 する。"
     platform_effects:
       - type: scale_cost_reduction
         params:
-          target_faction: Aozora
+          target_faction: Tenki
           reduction: 200
 
   - card_no: 35
-    card_name: "Aozora CDN"
-    const_name: AozoraCDN
+    card_name: "天気使い CDN"
+    const_name: TenkiCDN
     card_type: Platform
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "Azure CDN"
     restriction: unlimited
     is_active: true
     stats:
       deploy_cost: 0
-    effect_text: "自分のフィールドの全ての Aozora コンピュート系リソースのスループットを +200 する。"
+    effect_text: "自分のフィールドの全ての 天気使い コンピュート系リソースのスループットを +200 する。"
     platform_effects:
       - type: tp_bonus
         params:
-          target_faction: Aozora
+          target_faction: Tenki
           target_card_types: [Compute, "AI/ML", Orchestrator, Container, Serverless]
           bonus: 200
 
   - card_no: 37
-    card_name: "Aozora Protection"
-    const_name: AozoraProtection
+    card_name: "天気使い Protection"
+    const_name: TenkiProtection
     card_type: Platform
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "Azure DDoS Protection"
     restriction: unlimited
     is_active: true
@@ -246,10 +274,11 @@ cards:
   # ── アタッチメント (5枚) ─────────────────────────────────────
 
   - card_no: 38
-    card_name: "Aozora Backup"
-    const_name: AozoraBackup
+    card_name: "天気使い Backup"
+    const_name: TenkiBackup
     card_type: Attachment
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "Azure Backup"
     restriction: unlimited
     is_active: true
@@ -258,10 +287,11 @@ cards:
     effect_text: "自分のリソースに装備できる。装備先が破壊された時に発動できる。次の自分のターンに、装備先のカードを可用性を半分にしてデプロイコストなしでデプロイする。この効果は1ゲーム中に1回のみ使用できる"
 
   - card_no: 39
-    card_name: "Aozora 空の入口"
-    const_name: AozoraEntra
+    card_name: "天気使い 空の入口"
+    const_name: TenkiEntra
     card_type: Attachment
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "Entra ID"
     restriction: unlimited
     is_active: true
@@ -270,10 +300,11 @@ cards:
     effect_text: "自分のリソースに装備できる。装備先へのインシデントカードによるダメージを -200 する。"
 
   - card_no: 40
-    card_name: "Aozora Vault"
-    const_name: AozoraVault
+    card_name: "天気使い Vault"
+    const_name: TenkiVault
     card_type: Attachment
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "Key Vault"
     restriction: unlimited
     is_active: true
@@ -282,10 +313,11 @@ cards:
     effect_text: "自分のバックエンドリソースに装備できる。装備先は「データ流出」の効果を受けない。"
 
   - card_no: 41
-    card_name: "Aozora Recovery"
-    const_name: AozoraRecovery
+    card_name: "天気使い Recovery"
+    const_name: TenkiRecovery
     card_type: Attachment
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "Site Recovery"
     restriction: unlimited
     is_active: true
@@ -294,48 +326,52 @@ cards:
     effect_text: "自分のリソースに装備できる。装備先が破壊された時に発動できる。リポジトリから装備先と同名のカードを可用性 200 でデプロイコストなしでデプロイする。この効果は1ゲーム中に1回のみ使用できる"
 
   - card_no: 132
-    card_name: "Aozora Managed Disks"
-    const_name: AozoraManagedDisks
+    card_name: "天気使い ブロックストレージ"
+    const_name: TenkiBlockStorage
     card_type: Attachment
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "Azure Managed Disks"
     restriction: unlimited
     is_active: true
     stats:
       deploy_cost: 100
-    effect_text: "自分の「Aozora VM - ソラ」にのみ装備できる。装備先の可用性を +300 し、スループットを +200 する。"
+    effect_text: "自分の「天気使い VM - ソラ」にのみ装備できる。装備先の可用性を +300 し、スループットを +200 する。"
 
   # ── ストラテジー (3枚) ───────────────────────────────────────
 
   - card_no: 42
-    card_name: "Aozora Template"
-    const_name: AozoraTemplate
+    card_name: "天気使い Template"
+    const_name: TenkiTemplate
     card_type: Strategy
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "ARM Templates"
     restriction: unlimited
     is_active: true
     stats:
       deploy_cost: 200
-    effect_text: "Budget 200 を払って発動できる。リポジトリから Aozora リソース1枚を選択して手札に加える。"
+    effect_text: "Budget 200 を払って発動できる。リポジトリから 天気使い リソース1枚を選択して手札に加える。"
 
   - card_no: 43
-    card_name: "Aozora Migration"
-    const_name: AozoraMigration
+    card_name: "天気使い Migration"
+    const_name: TenkiMigration
     card_type: Strategy
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "Azure Migrate"
     restriction: unlimited
     is_active: true
     stats:
       deploy_cost: 100
-    effect_text: "Budget 100 を払って発動できる。トラッシュから Aozora リソース1枚を選択して手札に加える。"
+    effect_text: "Budget 100 を払って発動できる。トラッシュから 天気使い リソース1枚を選択して手札に加える。"
 
   - card_no: 44
-    card_name: "Aozora Policy"
-    const_name: AozoraPolicy
+    card_name: "天気使い Policy"
+    const_name: TenkiPolicy
     card_type: Strategy
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "Azure Policy"
     restriction: unlimited
     is_active: true
@@ -346,10 +382,11 @@ cards:
   # ── リアクティブ (3枚) ───────────────────────────────────────
 
   - card_no: 45
-    card_name: "Aozora Defender"
-    const_name: AozoraDefender
+    card_name: "天気使い お守り傘"
+    const_name: TenkiOmamoriGasa
     card_type: Reactive
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "Microsoft Defender"
     restriction: unlimited
     is_active: true
@@ -358,22 +395,24 @@ cards:
     effect_text: "相手がインシデントカードを使用した時に発動できる。そのインシデントを無効化する。"
 
   - card_no: 46
-    card_name: "Aozora Traffic"
-    const_name: AozoraTraffic
+    card_name: "天気使い Traffic"
+    const_name: TenkiTraffic
     card_type: Reactive
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "Traffic Manager"
     restriction: unlimited
     is_active: true
     stats:
       deploy_cost: 0
-    effect_text: "自分の Aozora コンピュート系リソースが破壊された時に発動できる。手札から Aozora コンピュート系リソース1枚をデプロイコストなしでデプロイする。"
+    effect_text: "自分の 天気使い コンピュート系リソースが破壊された時に発動できる。手札から 天気使い コンピュート系リソース1枚をデプロイコストなしでデプロイする。"
 
   - card_no: 36
-    card_name: "Aozora Sentinel"
-    const_name: AozoraSentinel
+    card_name: "天気使い ファンネル"
+    const_name: TenkiFunnel
     card_type: Reactive
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "Microsoft Sentinel"
     restriction: unlimited
     is_active: true

@@ -41,16 +41,16 @@ DATA_TYPES = {"Database", "NoSQL", "ObjectStorage", "CacheDB", "Datawarehouse"}
 SUPPORT_TYPES = {"Platform", "Attachment", "Strategy", "Reactive", "Incident"}
 ALL_CARD_TYPES = COMPUTE_TYPES | DATA_TYPES | SUPPORT_TYPES
 
-VALID_SCALABILITY = {"R", "E", "RE", "none"}
+
 VALID_RESTRICTION = {"unlimited", "limited", "semi_limited"}
-VALID_FACTIONS = {"SWS", "Aozora", "Guruguru", "Miracle", "Neutral"}
+VALID_FACTIONS = {"SD", "Tenki", "Sugar", "Tuners", "Neutral"}
 
 COMPUTE_STAT_KEYS = {"throughput", "availability", "maintenance_cost", "deploy_cost", "sla_penalty"}
-DATA_STAT_KEYS = {"dv_gen", "availability", "maintenance_cost", "deploy_cost", "sla_penalty"}
+DATA_STAT_KEYS = {"yield", "availability", "maintenance_cost", "deploy_cost", "sla_penalty"}
 SUPPORT_STAT_KEYS = {"deploy_cost"}
 
 # Faction file order
-FACTION_ORDER = ["SWS", "Aozora", "Guruguru", "Miracle", "Neutral"]
+FACTION_ORDER = ["SD", "Tenki", "Sugar", "Tuners", "Neutral"]
 
 # Card category display order within each faction for CARDS.md
 CATEGORY_ORDER = [
@@ -113,7 +113,7 @@ def validate(cards):
         label = f"#{card_no} {card_name}"
 
         # Required fields
-        for field in ["card_no", "card_name", "const_name", "card_type", "scalability", "restriction", "is_active", "stats"]:
+        for field in ["card_no", "card_name", "const_name", "card_type", "resizable", "elastic", "restriction", "is_active", "stats"]:
             if field not in card:
                 errors.append(f"{label}: missing required field '{field}'")
 
@@ -143,10 +143,11 @@ def validate(cards):
         if card_type and card_type not in ALL_CARD_TYPES:
             errors.append(f"{label}: invalid card_type '{card_type}'")
 
-        # Scalability
-        scalability = card.get("scalability", "")
-        if scalability and scalability not in VALID_SCALABILITY:
-            errors.append(f"{label}: invalid scalability '{scalability}'")
+        # Resizable / Elastic
+        for bf in ("resizable", "elastic"):
+            val = card.get(bf)
+            if val is not None and not isinstance(val, bool):
+                errors.append(f"{label}: '{bf}' must be a boolean, got {type(val).__name__}")
 
         # Restriction
         restriction = card.get("restriction", "")
@@ -181,9 +182,11 @@ def generate_json(cards, server_dir):
         entry = {
             "card_no": card["card_no"],
             "card_name": card["card_name"],
+            "resource_label": card.get("resource_label", ""),
             "faction": card["faction"],
             "card_type": card["card_type"],
-            "scalability": card["scalability"],
+            "resizable": card["resizable"],
+            "elastic": card["elastic"],
             "stats": card["stats"],
             "restriction": card["restriction"],
             "is_active": card["is_active"],
@@ -265,12 +268,14 @@ def generate_go_constants(constants, server_dir):
         "",
         "package model",
         "",
+        'import "strings"',
+        "",
     ]
 
     # Phases
     lines.append("// Phase constants.")
     lines.append("const (")
-    phase_map = {"draw": "PhaseDraw", "dv_gen": "PhaseDVGen", "main": "PhaseMain", "battle": "PhaseBattle", "end": "PhaseEnd"}
+    phase_map = {"draw": "PhaseDraw", "yield": "PhaseYield", "main": "PhaseMain", "battle": "PhaseBattle", "end": "PhaseEnd"}
     for phase in constants["phases"]:
         go_name = phase_map.get(phase, f"Phase{phase.title()}")
         lines.append(f'\t{go_name} = "{phase}"')
@@ -305,7 +310,7 @@ def generate_go_constants(constants, server_dir):
     lines.append("// Initial game values.")
     lines.append("const (")
     lines.append(f"\tInitialBudget   = {iv['budget']}")
-    lines.append(f"\tInitialDVPool   = {iv['dv_pool']}")
+    lines.append(f"\tInitialInsightPool = {iv['insight_pool']}")
     lines.append(f"\tInitialHand     = {iv['hand_size']}")
     lines.append(f"\tHandLimit       = {iv['hand_limit']}")
     lines.append(f"\tInitialTimeBank = {iv['time_bank']} // seconds ({iv['time_bank'] // 60} minutes)")
@@ -365,6 +370,69 @@ def generate_go_constants(constants, server_dir):
     lines.append("}")
     lines.append("")
 
+    # Zones
+    lines.append("// Zone constants.")
+    lines.append("const (")
+    for zone in constants["zones"]:
+        go_name = f"Zone{''.join(w.title() for w in zone.split('_'))}"
+        lines.append(f'\t{go_name} = "{zone}"')
+    lines.append(")")
+    lines.append("")
+
+    # Action types
+    lines.append("// Action type constants.")
+    lines.append("const (")
+    for action in constants["action_types"]:
+        go_name = f"Action{''.join(w.title() for w in action.split('_'))}"
+        lines.append(f'\t{go_name} = "{action}"')
+    lines.append(")")
+    lines.append("")
+
+    # Event types
+    lines.append("// Event type constants.")
+    lines.append("const (")
+    for evt in constants["event_types"]:
+        go_name = f"Event{''.join(w.title() for w in evt.split('_'))}"
+        lines.append(f'\t{go_name} = "{evt}"')
+    lines.append(")")
+    lines.append("")
+
+    # WS message types
+    ws_types = constants["ws_message_types"]
+    lines.append("// WS message type constants (server → client).")
+    lines.append("const (")
+    for msg in ws_types["server"]:
+        go_name = f"WSMsg{''.join(w.title() for w in msg.split('_'))}"
+        lines.append(f'\t{go_name} = "{msg}"')
+    lines.append(")")
+    lines.append("")
+    lines.append("// WS message type constants (client → server).")
+    lines.append("const (")
+    for msg in ws_types["client"]:
+        go_name = f"WSMsg{''.join(w.title() for w in msg.split('_'))}"
+        lines.append(f'\t{go_name} = "{msg}"')
+    lines.append(")")
+    lines.append("")
+
+    # NormalizeFaction map (lowercase → canonical)
+    lines.append("// normalizeFactionMap maps lowercase faction names to canonical names.")
+    lines.append("var normalizeFactionMap = map[string]string{")
+    for faction in constants["factions"]:
+        lines.append(f'\t"{faction.lower()}": Faction{faction},')
+    lines.append("}")
+    lines.append("")
+
+    # NormalizeFaction function
+    lines.append("// NormalizeFaction converts a case-insensitive faction name to its canonical form.")
+    lines.append("// Returns the canonical name and true if found, or the original input and false otherwise.")
+    lines.append("func NormalizeFaction(s string) (string, bool) {")
+    lines.append('\tif v, ok := normalizeFactionMap[strings.ToLower(s)]; ok {')
+    lines.append("\t\treturn v, true")
+    lines.append("\t}")
+    lines.append("\treturn s, false")
+    lines.append("}")
+    lines.append("")
+
     go_out.parent.mkdir(parents=True, exist_ok=True)
     with open(go_out, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
@@ -407,10 +475,13 @@ def generate_ts_constants(constants, client_dir):
     lines.append("")
 
     # Factions
-    factions = [f.lower() for f in constants["selectable_factions"]]
     lines.append(f"export const FACTIONS = {json.dumps(constants['factions'])} as const;")
-    lines.append(f"export const SELECTABLE_FACTIONS = {json.dumps(factions)} as const;")
+    lines.append(f"export const SELECTABLE_FACTIONS = {json.dumps(constants['selectable_factions'])} as const;")
     lines.append(f"export type FactionId = (typeof SELECTABLE_FACTIONS)[number];")
+    # Display names: canonical → display
+    display_names = constants.get("faction_display_names", {})
+    display_entries = ", ".join(f'"{f}": "{display_names.get(f, f)}"' for f in constants["factions"])
+    lines.append(f"export const FACTION_DISPLAY_NAMES: Record<string, string> = {{ {display_entries} }};")
     lines.append("")
 
     # Game status
@@ -428,6 +499,64 @@ def generate_ts_constants(constants, client_dir):
     lines.append(f"export type GameActionType = (typeof ACTION_TYPES)[number];")
     lines.append("")
 
+    # Event types
+    lines.append(f"export const EVENT_TYPES = {json.dumps(constants['event_types'])} as const;")
+    lines.append(f"export type EventType = (typeof EVENT_TYPES)[number];")
+    lines.append("")
+
+    # Card types
+    ct = constants["card_types"]
+    all_card_types = ct["compute"] + ct["data"] + ct["support"]
+    lines.append(f"export const CARD_TYPES = {json.dumps(all_card_types)} as const;")
+    lines.append(f"export type CardType = (typeof CARD_TYPES)[number];")
+    lines.append("")
+
+    compute_set = json.dumps(ct["compute"])
+    data_set = json.dumps(ct["data"])
+    support_types = [t for t in ct["support"] if t not in ("Attachment",)]
+    lines.append(f"const COMPUTE_TYPES: ReadonlySet<string> = new Set({compute_set});")
+    lines.append(f"const DATA_TYPES: ReadonlySet<string> = new Set({data_set});")
+    lines.append("")
+
+    lines.append("/** Returns true if the card type is a deployable resource (compute, AI/ML, or data). */")
+    lines.append("export function isResourceType(cardType: string): boolean {")
+    lines.append("  return COMPUTE_TYPES.has(cardType) || DATA_TYPES.has(cardType);")
+    lines.append("}")
+    lines.append("")
+
+    lines.append("/** Returns true if the card can be placed in the frontend zone. */")
+    lines.append("export function isFrontendEligible(cardType: string): boolean {")
+    lines.append("  return COMPUTE_TYPES.has(cardType) || cardType === 'ObjectStorage';")
+    lines.append("}")
+    lines.append("")
+
+    lines.append("/** Returns true if the card can be placed in the backend zone. */")
+    lines.append("export function isBackendEligible(cardType: string): boolean {")
+    lines.append("  return DATA_TYPES.has(cardType) || COMPUTE_TYPES.has(cardType);")
+    lines.append("}")
+    lines.append("")
+
+    lines.append("/** Returns true if the card goes in the support zone (Platform, Strategy, Incident, Reactive). */")
+    lines.append("export function isSupportType(cardType: string): boolean {")
+    support_cases = " || ".join(f"cardType === '{t}'" for t in support_types)
+    lines.append(f"  return {support_cases};")
+    lines.append("}")
+    lines.append("")
+
+    lines.append("/** Returns true if the card is an Attachment (attaches to resources, not support zone). */")
+    lines.append("export function isAttachmentType(cardType: string): boolean {")
+    lines.append("  return cardType === 'Attachment';")
+    lines.append("}")
+    lines.append("")
+
+    # WS message types
+    ws_types = constants["ws_message_types"]
+    lines.append(f"export const WS_SERVER_MSG_TYPES = {json.dumps(ws_types['server'])} as const;")
+    lines.append(f"export type WSServerMsgType = (typeof WS_SERVER_MSG_TYPES)[number];")
+    lines.append(f"export const WS_CLIENT_MSG_TYPES = {json.dumps(ws_types['client'])} as const;")
+    lines.append(f"export type WSClientMsgType = (typeof WS_CLIENT_MSG_TYPES)[number];")
+    lines.append("")
+
     # Effect durations
     lines.append(f"export const EFFECT_DURATIONS = {json.dumps(constants['effect_durations'])} as const;")
     lines.append(f"export type EffectDuration = (typeof EFFECT_DURATIONS)[number];")
@@ -436,6 +565,18 @@ def generate_ts_constants(constants, client_dir):
     # Restriction values
     lines.append(f"export const RESTRICTION_VALUES = {json.dumps(constants['restriction_values'])} as const;")
     lines.append(f"export type Restriction = (typeof RESTRICTION_VALUES)[number];")
+    lines.append("")
+
+    # Restriction copy count utility
+    lines.append("/** Returns the maximum number of copies allowed in a deck for a given restriction. */")
+    lines.append("export function restrictionCopyCount(restriction: Restriction): number {")
+    lines.append("  switch (restriction) {")
+    lines.append("    case 'limited': return 1;")
+    lines.append("    case 'semi_limited': return 2;")
+    lines.append("    case 'unlimited': return 3;")
+    lines.append("    default: return 3;")
+    lines.append("  }")
+    lines.append("}")
     lines.append("")
 
     # Initial values
@@ -468,19 +609,19 @@ def generate_ts_constants(constants, client_dir):
 # ─── Generate CARDS.md ─────────────────────────────────
 def _scalability_display(card):
     """Return card_type with scalability suffix for display."""
-    s = card["scalability"]
     ct = card["card_type"]
-    # Map internal types to display types
     display_type = {
         "ObjectStorage": "Object Storage",
         "CacheDB": "Cache DB",
     }.get(ct, ct)
-    if s == "R":
-        return f"{display_type} (R)"
-    elif s == "E":
-        return f"{display_type} (E)"
-    elif s == "RE":
+    r = card.get("resizable", False)
+    e = card.get("elastic", False)
+    if r and e:
         return f"{display_type} (R+E)"
+    elif r:
+        return f"{display_type} (R)"
+    elif e:
+        return f"{display_type} (E)"
     return display_type
 
 
@@ -493,13 +634,13 @@ def _tp_display(card):
     return str(tp)
 
 
-def _dv_display(card):
-    """Format DV with optional max."""
-    dv = card["stats"].get("dv_gen", 0)
-    dv_max = card.get("dv_max")
-    if dv_max:
-        return f"{dv}→{dv_max}"
-    return str(dv)
+def _yield_display(card):
+    """Format Yield with optional max."""
+    y = card["stats"].get("yield", 0)
+    y_max = card.get("yield_max")
+    if y_max:
+        return f"{y}→{y_max}"
+    return str(y)
 
 
 def _effect_display(card):
@@ -606,13 +747,13 @@ def generate_md(cards, faction_data):
                         f"| {c['stats']['sla_penalty']} | {_effect_display(c)} | {origin} |"
                     )
             elif is_data:
-                lines.append("| # | カード名 | タイプ | DV | 可用性 | 維持コスト | 開発コスト | SLAペナルティ | 効果 | 元ネタ |")
+                lines.append("| # | カード名 | タイプ | Yield | 可用性 | 維持コスト | 開発コスト | SLAペナルティ | 効果 | 元ネタ |")
                 lines.append("|---|---------|-------|-----|-----|-----|-----|-----|------|----------|")
                 for c in cat_cards:
                     origin = c.get("origin", "")
                     lines.append(
                         f"| {c['card_no']} | {c['card_name']} | {_scalability_display(c)} "
-                        f"| {_dv_display(c)} | {c['stats']['availability']} "
+                        f"| {_yield_display(c)} | {c['stats']['availability']} "
                         f"| {c['stats']['maintenance_cost']} | {c['stats']['deploy_cost']} "
                         f"| {c['stats']['sla_penalty']} | {_effect_display(c)} | {origin} |"
                     )
@@ -631,8 +772,9 @@ def generate_md(cards, faction_data):
     # Summary table
     lines.append("## カード総数サマリ")
     lines.append("")
-    lines.append("| カテゴリ | SWS | Aozora | Guruguru | Miracle | Neutral | 合計 |")
-    lines.append("|---------|-----|--------|--------|-----|---------|------|")
+    header_names = [faction_data[f]["display_name"] if f in faction_data else f for f in FACTION_ORDER]
+    lines.append("| カテゴリ | " + " | ".join(header_names) + " | 合計 |")
+    lines.append("|---------|" + "|".join(["------" for _ in FACTION_ORDER]) + "|------|")
 
     grand_total = {f: 0 for f in FACTION_ORDER}
     for cat_name, _ in CATEGORY_ORDER:

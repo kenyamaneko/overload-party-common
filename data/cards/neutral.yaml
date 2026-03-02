@@ -1,3 +1,6 @@
+# NOTE: origin fields are for internal development reference only.
+# These values MUST NOT be displayed to end users.
+
 faction: Neutral
 display_name: "Neutral"
 cards:
@@ -7,7 +10,8 @@ cards:
     card_name: "ロードバランサー"
     const_name: NeutralLoadBalancer
     card_type: Attachment
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "Load Balancer"
     restriction: unlimited
     is_active: true
@@ -19,7 +23,8 @@ cards:
     card_name: "オートスケーラー"
     const_name: NeutralAutoScaler
     card_type: Attachment
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "Auto Scaling"
     restriction: unlimited
     is_active: true
@@ -31,7 +36,8 @@ cards:
     card_name: "プライベートサブネット"
     const_name: NeutralPrivateSubnet
     card_type: Attachment
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "VPC"
     restriction: unlimited
     is_active: true
@@ -43,7 +49,8 @@ cards:
     card_name: "マルチ AZ"
     const_name: NeutralMultiAZ
     card_type: Attachment
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "Multi-AZ"
     restriction: unlimited
     is_active: true
@@ -62,7 +69,8 @@ cards:
     card_name: "ISMS認証"
     const_name: NeutralISMS
     card_type: Platform
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "ISMS"
     restriction: unlimited
     is_active: true
@@ -74,7 +82,8 @@ cards:
     card_name: "SOC2認証"
     const_name: NeutralSOC2
     card_type: Platform
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "SOC 2"
     restriction: unlimited
     is_active: true
@@ -88,33 +97,36 @@ cards:
     card_name: "クラウドエンジニア"
     const_name: NeutralCloudEngineer
     card_type: Strategy
-    scalability: none
+    resizable: false
+    elastic: false
     origin: ""
     restriction: limited
     restriction_reason: "条件なしのドローソース"
     is_active: true
     stats:
       deploy_cost: 0
-    effect_text: "リポジトリから1枚ドローし手札に加える。ただし、引いたカードが Miracle カードならトラッシュに送る"
+    effect_text: "リポジトリから1枚ドローし手札に加える。ただし、引いたカードが 調律部 カードならトラッシュに送る"
 
   - card_no: 99
     card_name: "クラウドアーキテクト"
     const_name: NeutralCloudArchitect
     card_type: Strategy
-    scalability: none
+    resizable: false
+    elastic: false
     origin: ""
     restriction: limited
     restriction_reason: "条件なしのドローソース"
     is_active: true
     stats:
       deploy_cost: 0
-    effect_text: "リポジトリから2枚ドローし、選択した1枚を手札に加える。残り1枚はトラッシュに送る。ただし、引いた Miracle カードは全てトラッシュに送る"
+    effect_text: "リポジトリから2枚ドローし、選択した1枚を手札に加える。残り1枚はトラッシュに送る。ただし、引いた 調律部 カードは全てトラッシュに送る"
 
   - card_no: 100
     card_name: "寺リフォーム"
     const_name: NeutralTeraReform
     card_type: Strategy
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "Terraform"
     restriction: limited
     restriction_reason: "陣営不問のサーチは強力"
@@ -127,7 +139,8 @@ cards:
     card_name: "プロジェクトマネージャー"
     const_name: NeutralProjectManager
     card_type: Strategy
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "プロジェクトマネージャー試験"
     restriction: unlimited
     is_active: true
@@ -139,7 +152,8 @@ cards:
     card_name: "クラウドファンディング"
     const_name: NeutralCloudFunding
     card_type: Strategy
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "Crowd Funding"
     restriction: unlimited
     is_active: true
@@ -151,7 +165,8 @@ cards:
     card_name: "オープンソースマイグレーション"
     const_name: NeutralOSSMigration
     card_type: Strategy
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "OSS Migration"
     restriction: unlimited
     is_active: true
@@ -165,7 +180,8 @@ cards:
     card_name: "DDoS 攻撃"
     const_name: NeutralDDoSAttack
     card_type: Incident
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "DDoS"
     restriction: unlimited
     is_active: true
@@ -177,7 +193,8 @@ cards:
     card_name: "データ流出"
     const_name: NeutralDataBreach
     card_type: Incident
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "Data Breach"
     restriction: unlimited
     is_active: true
@@ -189,7 +206,8 @@ cards:
     card_name: "設定ミス"
     const_name: NeutralMisconfiguration
     card_type: Incident
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "Misconfiguration"
     restriction: unlimited
     is_active: true
@@ -201,31 +219,34 @@ cards:
     card_name: "データスクレイピング"
     const_name: NeutralDataScraping
     card_type: Incident
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "Web Scraping"
     restriction: unlimited
     is_active: true
     stats:
       deploy_cost: 300
-    effect_text: "Budget 300 を払って発動できる。相手の DV を 600 奪う。"
+    effect_text: "Budget 300 を払って発動できる。相手の Insight を 600 吸収する。"
 
   - card_no: 108
     card_name: "クローラーボット"
     const_name: NeutralCrawlerBot
     card_type: Incident
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "Bot Attack"
     restriction: unlimited
     is_active: true
     stats:
       deploy_cost: 100
-    effect_text: "Budget 100 を払って発動できる。相手の DV を 300 奪う。"
+    effect_text: "Budget 100 を払って発動できる。相手の Insight を 300 吸収する。"
 
   - card_no: 109
     card_name: "リージョン障害"
     const_name: NeutralRegionOutage
     card_type: Incident
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "Region Outage"
     restriction: unlimited
     is_active: true
@@ -237,7 +258,8 @@ cards:
     card_name: "クリプトマイニング"
     const_name: NeutralCryptoMining
     card_type: Incident
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "Cryptojacking"
     restriction: unlimited
     is_active: true
@@ -249,20 +271,22 @@ cards:
     card_name: "ランサムウェア"
     const_name: NeutralRansomware
     card_type: Incident
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "Ransomware"
     restriction: limited
     restriction_reason: "1ターン完全停止は壊滅的"
     is_active: true
     stats:
       deploy_cost: 800
-    effect_text: "Budget 800 を払って発動できる。相手の Resource 1体を選択。次の相手ターン終了まで機能停止（DV Gen 0, スループット 0, 攻撃不可）"
+    effect_text: "Budget 800 を払って発動できる。相手の Resource 1体を選択。次の相手ターン終了まで機能停止（Yield 0, スループット 0, 攻撃不可）"
 
   - card_no: 112
     card_name: "コンプライアンス監査"
     const_name: NeutralComplianceAudit
     card_type: Incident
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "Compliance Audit"
     restriction: unlimited
     is_active: true
@@ -276,7 +300,8 @@ cards:
     card_name: "レートリミット"
     const_name: NeutralRateLimit
     card_type: Reactive
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "Rate Limiting"
     restriction: unlimited
     is_active: true
@@ -288,7 +313,8 @@ cards:
     card_name: "フェイルオーバー"
     const_name: NeutralFailover
     card_type: Reactive
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "Failover"
     restriction: unlimited
     is_active: true
@@ -300,7 +326,8 @@ cards:
     card_name: "カオスエンジニアリング"
     const_name: NeutralChaosEngineering
     card_type: Reactive
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "Chaos Engineering"
     restriction: unlimited
     is_active: true
@@ -312,7 +339,8 @@ cards:
     card_name: "DB スナップショット"
     const_name: NeutralDBSnapshot
     card_type: Attachment
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "Automated Backup"
     restriction: unlimited
     is_active: true
@@ -324,7 +352,8 @@ cards:
     card_name: "ベンチャーキャピタル"
     const_name: NeutralVentureCapital
     card_type: Strategy
-    scalability: none
+    resizable: false
+    elastic: false
     origin: ""
     restriction: unlimited
     is_active: true
@@ -333,34 +362,37 @@ cards:
     effect_text: "自分の Budget が 1000 以下の時のみ使用できる。自分の Budget を +900 する。"
 
   - card_no: 122
-    card_name: "Windy 障害"
-    const_name: NeutralWindyOutage
+    card_name: "気象異変"
+    const_name: NeutralWeatherAnomaly
     card_type: Reactive
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "Windows Update"
     restriction: unlimited
     is_active: true
     stats:
       deploy_cost: 0
-    effect_text: "相手の Aozora リソースが攻撃した時に発動できる。その攻撃を無効にする。次の相手のターン終了まで、全ての Aozora リソースは攻撃できない。"
+    effect_text: "相手の 天気使い リソースが攻撃した時に発動できる。その攻撃を無効にする。次の相手のターン終了まで、全ての 天気使い リソースは攻撃できない。"
 
   - card_no: 123
-    card_name: "Windy Update"
-    const_name: NeutralWindyUpdate
+    card_name: "天気使いの更新"
+    const_name: NeutralTenkiUpdate
     card_type: Reactive
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "Windows Patch"
     restriction: unlimited
     is_active: true
     stats:
       deploy_cost: 0
-    effect_text: "相手が自分のリソースを攻撃した時に発動できる。フィールドの全ての Aozora リソースに 400 ダメージを与える。"
+    effect_text: "相手が自分のリソースを攻撃した時に発動できる。フィールドの全ての 天気使い リソースに 400 ダメージを与える。"
 
   - card_no: 126
     card_name: "ITストラテジスト"
     const_name: NeutralITStrategist
     card_type: Strategy
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "ITストラテジスト試験"
     restriction: unlimited
     is_active: true
@@ -371,10 +403,12 @@ cards:
   # === Compute-type Resources (2 cards) =============================
 
   - card_no: 127
-    card_name: "On-premises リラックスペンギン"
+    card_name: "リラックスペンギン"
+    resource_label: "On-premises"
     const_name: NeutralOnpremLinux
     card_type: Compute
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "Linux"
     restriction: unlimited
     is_active: true
@@ -389,15 +423,17 @@ cards:
   # === DB-type Resources (2 cards) ==================================
 
   - card_no: 128
-    card_name: "On-premises エレファントDB"
+    card_name: "エレファントDB"
+    resource_label: "On-premises"
     const_name: NeutralOnpremElephantDB
     card_type: Database
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "PostgreSQL"
     restriction: unlimited
     is_active: true
     stats:
-      dv_gen: 200
+      yield: 200
       availability: 700
       deploy_cost: 300
       sla_penalty: 500
@@ -405,10 +441,12 @@ cards:
     effect_text: "—"
 
   - card_no: 129
-    card_name: "On-premises Windy サーバー"
-    const_name: NeutralOnpremWindy
+    card_name: "天気使いサーバー"
+    resource_label: "On-premises"
+    const_name: NeutralOnpremTenki
     card_type: Compute
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "Windows Server"
     restriction: unlimited
     is_active: true
@@ -418,29 +456,32 @@ cards:
       deploy_cost: 200
       sla_penalty: 300
       maintenance_cost: 100
-    effect_text: "**Cloud First:** このカードはスターティングリソースとしてのみデプロイできる。\n**Cloud Shift:** 手札から Aozora コンピュート系リソースをデプロイコスト -500 でデプロイできる。その後、このカードをトラッシュに送る。"
+    effect_text: "**Cloud First:** このカードはスターティングリソースとしてのみデプロイできる。\n**Cloud Shift:** 手札から 天気使い コンピュート系リソースをデプロイコスト -500 でデプロイできる。その後、このカードをトラッシュに送る。"
 
   - card_no: 130
-    card_name: "On-premises Miracle DB"
-    const_name: NeutralOnpremMiracleDB
+    card_name: "調律部 DB"
+    resource_label: "On-premises"
+    const_name: NeutralOnpremTunersDB
     card_type: Database
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "Oracle Database"
     restriction: unlimited
     is_active: true
     stats:
-      dv_gen: 200
+      yield: 200
       availability: 700
       deploy_cost: 300
       sla_penalty: 500
       maintenance_cost: 100
-    effect_text: "**Cloud First:** このカードはスターティングリソースとしてのみデプロイできる。\n**Cloud Shift:** 手札から Miracle DB系リソースをデプロイコスト -500 でデプロイできる。その後、このカードをトラッシュに送る。"
+    effect_text: "**Cloud First:** このカードはスターティングリソースとしてのみデプロイできる。\n**Cloud Shift:** 手札から 調律部 DB系リソースをデプロイコスト -500 でデプロイできる。その後、このカードをトラッシュに送る。"
 
   - card_no: 135
     card_name: "スロットリング"
     const_name: NeutralThrottling
     card_type: Reactive
-    scalability: none
+    resizable: false
+    elastic: false
     origin: "Throttling"
     restriction: unlimited
     is_active: true

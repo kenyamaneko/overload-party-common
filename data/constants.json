@@ -1,25 +1,36 @@
 {
   "_comment": "Shared game constants for Overload Party. Single source of truth for server (Go) and client (TypeScript).",
-  "phases": ["draw", "dv_gen", "main", "battle", "end"],
+  "phases": ["draw", "main", "battle", "end"],
   "zones": ["frontend", "backend", "support"],
   "ranks": ["small", "medium", "large"],
   "instance_families": ["M", "C", "R"],
-  "factions": ["SWS", "Aozora", "Guruguru", "Miracle", "Neutral"],
-  "selectable_factions": ["SWS", "Aozora", "Guruguru", "Miracle"],
+  "factions": ["SD", "Tenki", "Sugar", "Tuners", "Neutral"],
+  "selectable_factions": ["SD", "Tenki", "Sugar", "Tuners"],
+  "faction_display_names": {
+    "SD": "SD（Smile Delivery）",
+    "Tenki": "天気使い",
+    "Sugar": "しゅがーLab",
+    "Tuners": "調律部（チューナーズ）",
+    "Neutral": "Neutral"
+  },
   "card_types": {
     "compute": ["Compute", "Container", "Orchestrator", "Serverless", "AI/ML"],
     "data": ["Database", "NoSQL", "ObjectStorage", "CacheDB", "Datawarehouse"],
     "support": ["Platform", "Attachment", "Strategy", "Reactive", "Incident"]
   },
-  "scalability_values": ["R", "E", "RE", "none"],
   "restriction_values": ["unlimited", "limited", "semi_limited"],
   "game_status": ["waiting", "selecting", "playing", "finished"],
   "win_reasons": ["budget_zero", "system_down", "repository_out", "timeout", "disconnect", "turn_limit", "draw"],
-  "action_types": ["play_card", "attack", "scale_up", "distribute_dv", "discard_hand", "activate_effect", "end_phase"],
+  "action_types": ["play_card", "attack", "scale_up", "distribute_yield", "discard_hand", "activate_effect", "set_reactive", "end_phase", "select_starter"],
+  "event_types": ["play_card", "attach_card", "attack", "scale_up", "distribute_yield", "discard_hand", "activate_effect", "trap_revealed", "phase_change", "phase_end", "turn_end", "game_over"],
+  "ws_message_types": {
+    "server": ["game_state", "game_over", "error", "game_entered", "matchmaking_started", "matchmaking_cancelled", "action_rejected", "stamp_used", "pong", "match_found", "game_state_restore", "action_performed", "turn_controls"],
+    "client": ["game_enter", "matchmaking_start", "matchmaking_cancel", "select_starters", "game_action", "use_stamp", "ping"]
+  },
   "effect_durations": ["this_turn", "until_next_turn_end"],
   "initial_values": {
     "budget": 5000,
-    "dv_pool": 0,
+    "insight_pool": 0,
     "hand_size": 5,
     "hand_limit": 6,
     "time_bank": 480,
