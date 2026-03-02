@@ -45,9 +45,8 @@ ALL_CARD_TYPES = COMPUTE_TYPES | DATA_TYPES | SUPPORT_TYPES
 VALID_RESTRICTION = {"unlimited", "limited", "semi_limited"}
 VALID_FACTIONS = {"SD", "Tenki", "Sugar", "Tuners", "Neutral"}
 
-COMPUTE_STAT_KEYS = {"throughput", "availability", "maintenance_cost", "deploy_cost", "sla_penalty"}
-DATA_STAT_KEYS = {"yield", "availability", "maintenance_cost", "deploy_cost", "sla_penalty"}
-SUPPORT_STAT_KEYS = {"deploy_cost"}
+COMPUTE_STAT_KEYS = {"throughput", "availability", "maintenance_cost", "sla_penalty"}
+DATA_STAT_KEYS = {"yield", "availability", "maintenance_cost", "sla_penalty"}
 
 # Faction file order
 FACTION_ORDER = ["SD", "Tenki", "Sugar", "Tuners", "Neutral"]
@@ -165,10 +164,6 @@ def validate(cards):
                 missing = DATA_STAT_KEYS - set(stats.keys())
                 if missing:
                     errors.append(f"{label}: data card missing stats: {missing}")
-            elif card_type in SUPPORT_TYPES:
-                missing = SUPPORT_STAT_KEYS - set(stats.keys())
-                if missing:
-                    errors.append(f"{label}: support card missing stats: {missing}")
 
     return errors
 
@@ -179,15 +174,19 @@ def generate_json(cards, server_dir):
     json_out = server_dir / "internal" / "cache" / "cards_gen.json"
     output = []
     for card in sorted(cards, key=lambda c: c["card_no"]):
+        # Strip deploy_cost from stats (deprecated)
+        stats = {k: v for k, v in card["stats"].items() if k != "deploy_cost"} if card.get("stats") else {}
+        deploy_turns = card.get("deploy_turns", 0)
         entry = {
             "card_no": card["card_no"],
             "card_name": card["card_name"],
             "resource_label": card.get("resource_label", ""),
             "faction": card["faction"],
             "card_type": card["card_type"],
+            "deploy_turns": deploy_turns,
             "resizable": card["resizable"],
             "elastic": card["elastic"],
-            "stats": card["stats"],
+            "stats": stats,
             "restriction": card["restriction"],
             "is_active": card["is_active"],
         }
@@ -736,25 +735,27 @@ def generate_md(cards, faction_data):
             is_support = cat_types & SUPPORT_TYPES
 
             if is_compute:
-                lines.append("| # | カード名 | タイプ | スループット | 可用性 | 維持コスト | 開発コスト | SLAペナルティ | 効果 | 元ネタ |")
+                lines.append("| # | カード名 | タイプ | スループット | 可用性 | 維持コスト | デプロイT | SLAペナルティ | 効果 | 元ネタ |")
                 lines.append("|---|---------|-------|-----|-----|-----|-----|-----|------|----------|")
                 for c in cat_cards:
                     origin = c.get("origin", "")
+                    dt = c.get("deploy_turns", 0)
                     lines.append(
                         f"| {c['card_no']} | {c['card_name']} | {_scalability_display(c)} "
                         f"| {_tp_display(c)} | {c['stats']['availability']} "
-                        f"| {c['stats']['maintenance_cost']} | {c['stats']['deploy_cost']} "
+                        f"| {c['stats']['maintenance_cost']} | {dt} "
                         f"| {c['stats']['sla_penalty']} | {_effect_display(c)} | {origin} |"
                     )
             elif is_data:
-                lines.append("| # | カード名 | タイプ | Yield | 可用性 | 維持コスト | 開発コスト | SLAペナルティ | 効果 | 元ネタ |")
+                lines.append("| # | カード名 | タイプ | Yield | 可用性 | 維持コスト | デプロイT | SLAペナルティ | 効果 | 元ネタ |")
                 lines.append("|---|---------|-------|-----|-----|-----|-----|-----|------|----------|")
                 for c in cat_cards:
                     origin = c.get("origin", "")
+                    dt = c.get("deploy_turns", 0)
                     lines.append(
                         f"| {c['card_no']} | {c['card_name']} | {_scalability_display(c)} "
                         f"| {_yield_display(c)} | {c['stats']['availability']} "
-                        f"| {c['stats']['maintenance_cost']} | {c['stats']['deploy_cost']} "
+                        f"| {c['stats']['maintenance_cost']} | {dt} "
                         f"| {c['stats']['sla_penalty']} | {_effect_display(c)} | {origin} |"
                     )
             elif is_support:
