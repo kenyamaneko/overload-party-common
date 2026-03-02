@@ -140,13 +140,40 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
 
 ---
 
+#### GET `/cloud-news`
+
+クラウドニュース一覧取得。ホーム画面のニュースセクション用。
+
+**レスポンス (200):**
+```json
+[
+  {
+    "id": "string",
+    "tag": "aws|gcp|azure|topic",
+    "headline": "string",
+    "meta": "string",
+    "url": "string (optional)"
+  }
+]
+```
+
+| フィールド | 型 | 説明 |
+|-----------|-----|------|
+| `id` | string | ニュース一意ID |
+| `tag` | string | カテゴリ。`aws` / `gcp` / `azure` / `topic` のいずれか |
+| `headline` | string | 見出しテキスト |
+| `meta` | string | 表示用の相対時間（例: "2時間前"） |
+| `url` | string? | 詳細リンク（任意） |
+
+---
+
 以下のエンドポイントは認証が必要（Webhook を除く）。
 
 ### 3.1 Auth
 
 #### POST `/auth/register`
 
-新規プレイヤー登録。スターターアイテム（スタンプ 1〜7）が付与される。
+新規プレイヤー登録。スターターアイテム（スタンプ 1〜7）とデフォルトユーザー設定（language: `ja`）が作成される。
 
 **リクエスト:**
 ```json
@@ -167,6 +194,8 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
   "losses": 0,
   "is_premium": false,
   "selected_faction": null,
+  "equipped_icon_no": null,
+  "premium_expires_at": null,
   "created_at": "timestamp",
   "updated_at": "timestamp"
 }
@@ -189,6 +218,42 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
 ---
 
 ### 3.2 Player
+
+#### GET `/player/settings`
+
+ユーザー設定取得。未作成の場合はデフォルト値を返す。
+
+**レスポンス (200):**
+```json
+{
+  "player_id": "uuid",
+  "language": "ja",
+  "bgm_volume": 50,
+  "se_volume": 50,
+  "push_enabled": true,
+  "updated_at": "timestamp"
+}
+```
+
+---
+
+#### PUT `/player/settings`
+
+ユーザー設定更新。
+
+**リクエスト:**
+```json
+{
+  "language": "ja|en",
+  "bgm_volume": 50,
+  "se_volume": 50,
+  "push_enabled": true
+}
+```
+
+**レスポンス (200):** UserSettings オブジェクト
+
+---
 
 #### GET `/player`
 
@@ -244,9 +309,10 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
     "illustration_variant": 0,
     "count": 3,
     "card_name": "EC2 Instance",
-    "faction": "SWS",
+    "faction": "SD",
     "card_type": "resource",
-    "scalability": "scalable",
+    "resizable": true,
+    "elastic": false,
     "stats": { "throughput": 3, "availability": 4, "maintenance_cost": 2, "deploy_cost": 3, "sla_penalty": 2 },
     "effect_text": "デプロイ時: スループット+1",
     "restriction": "unlimited"
@@ -354,9 +420,10 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
   {
     "card_no": 1,
     "card_name": "string",
-    "faction": "SWS|Aozora|Guruguru|Miracle|Neutral",
+    "faction": "SD|Tenki|Sugar|Tuners|Neutral",
     "card_type": "resource|support|action",
-    "scalability": "scalable|non_scalable|none",
+    "resizable": true,
+    "elastic": false,
     "stats": {},
     "effect_text": "string",
     "effects": [],
@@ -381,7 +448,7 @@ NPC 対戦開始。即座にゲームが作成される（マッチメイキン�
 ```json
 {
   "deckId": 1,
-  "npcFaction": "SWS|Aozora|Guruguru|Miracle"
+  "npcFaction": "SD|Tenki|Sugar|Tuners"
 }
 ```
 
@@ -420,7 +487,7 @@ NPC 対戦開始。即座にゲームが作成される（マッチメイキン�
 **リクエスト:**
 ```json
 {
-  "actionType": "play_card|attack|scale_up|distribute_dv|end_phase|discard_hand|activate_effect",
+  "actionType": "play_card|attack|scale_up|distribute_yield|end_phase|discard_hand|activate_effect",
   "data": { /* アクション固有のデータ */ }
 }
 ```
@@ -432,7 +499,7 @@ NPC 対戦開始。即座にゲームが作成される（マッチメイキン�
 | `play_card` | `{ "cardInstanceId": "i0001", "position": { "zone": "frontend\|backend\|support", "index": 0-2 }, "targetInstanceId": "i0002?" }` |
 | `attack` | `{ "attackerInstanceId": "i0001", "targetInstanceId": "i0002" }` |
 | `scale_up` | `{ "componentInstanceId": "i0001", "targetRank": "medium\|large", "instanceFamily": "string?" }` |
-| `distribute_dv` | `{ "distributions": [{ "componentInstanceId": "i0001", "amount": 10 }] }` |
+| `distribute_yield` | `{ "distributions": [{ "componentInstanceId": "i0001", "amount": 10 }] }` |
 | `end_phase` | `{}` |
 | `discard_hand` | `{ "cardInstanceIds": ["i0001"] }` |
 | `activate_effect` | `{ "instanceId": "i0001", "targetInstanceId": "i0002?" }` |
@@ -458,7 +525,7 @@ NPC 対戦開始。即座にゲームが作成される（マッチメイキン�
 **リクエスト:**
 ```json
 {
-  "faction": "SWS|Aozora|Guruguru|Miracle"
+  "faction": "SD|Tenki|Sugar|Tuners"
 }
 ```
 
@@ -466,7 +533,7 @@ NPC 対戦開始。即座にゲームが作成される（マッチメイキン�
 ```json
 {
   "message": "faction selected",
-  "faction": "SWS",
+  "faction": "SD",
   "cards_granted": 59
 }
 ```
@@ -697,7 +764,7 @@ GET /ws?token={token}
   "type": "game_action",
   "data": {
     "game_id": "ULID",
-    "action_type": "play_card|attack|scale_up|...",
+    "action_type": "play_card|attack|scale_up|distribute_yield|...",
     "data": { /* アクション固有データ（NPC Battle セクション参照） */ }
   }
 }
@@ -771,13 +838,13 @@ GET /ws?token={token}
   "data": {
     "gameId": "ULID",
     "currentTurn": 1,
-    "currentPhase": "selecting|draw|dv_gen|main|battle|end",
+    "currentPhase": "selecting|draw|yield|main|battle|end",
     "activePlayer": 1,
     "isMyTurn": true,
     "my": {
       "playerNum": 1,
       "budget": 5,
-      "dvPool": 0,
+      "insightPool": 0,
       "field": {
         "frontend": [null, null, null],
         "backend": [null, null, null],
@@ -792,15 +859,74 @@ GET /ws?token={token}
     "opponent": {
       "playerNum": 2,
       "budget": 5,
-      "dvPool": 0,
+      "insightPool": 0,
       "field": {},
       "handCount": 3,
       "repoCount": 20,
       "trashCount": 0
-    }
+    },
+    "my": {
+      "playerNum": 1,
+      "budget": 5,
+      "insightPool": 0,
+      "field": {
+        "frontend": [null, null, null],
+        "backend": [null, null, null],
+        "support": [null, null, null]
+      },
+      "hand": [
+        { "instanceId": "i0001", "cardId": 1 }
+      ],
+      "repoCount": 20,
+      "trashCount": 0,
+      "available_actions": [
+        { "type": "play_card", "hand_instance_id": "i0001", "card_id": 1, "valid_zones": ["frontend_0", "frontend_1", "frontend_2", "backend_0", "backend_1", "backend_2"] }
+      ]
+    },
+    "opponent": { ... }
   }
 }
 ```
+
+##### `available_actions` — 実行可能アクション一覧（カード操作のみ）
+
+`my` の配下に含まれる。サーバーが毎回の状態更新時にフェーズごとの有効アクションを計算し、クライアントはこれを元に操作可能なカードのハイライトやUI制御を行う（クライアント側にゲームロジックの重複を持たせない設計）。
+
+カードに紐付かないゲームフロー制御（フェーズ終了、手札破棄）は `turn_controls` メッセージで別途通知される。
+
+- **`playing` 状態**: アクティブプレイヤーのみに送信される。対戦相手の `game_state` にはこのフィールドは含まれない。
+- **`selecting` 状態**: 両プレイヤーそれぞれに送信される（スターター選択は独立操作のため）。選択済みの場合は空配列。
+- **`finished` 状態**: 省略される。
+
+| type | 追加フィールド | 説明 |
+|------|--------------|------|
+| `select_starter` | `card_id`, `valid_zones` | selecting フェーズ: デッキ内のリソースカード。`valid_zones` は `"frontend"` / `"backend"`（カードタイプで決定） |
+| `play_card` | `hand_instance_id`, `card_id`, `valid_zones?`, `valid_targets?` | 手札からカードをデプロイ。`valid_zones` はゾーン+スロット (例: `"frontend_0"`)。Attachment の場合は `valid_targets` にリソース ID |
+| `attack` | `source_instance_id`, `valid_targets` | フロントの Compute で攻撃。相手フロントあり→フロントのみ対象 |
+| `scale_up` | `source_instance_id`, `cost`, `target_rank`, `needs_family` | リソースをスケールアップ。`needs_family=true` なら S→M でファミリー選択が必要 |
+| `distribute_yield` | `source_instance_id`, `remaining_capacity` | バックエンド Compute に Insight を配分。`remaining_capacity` は残りスループット |
+| `activate_effect` | `source_instance_id`, `effect_target_type`, `valid_targets?` | アクティブ効果を発動。`effect_target_type`: `"none"`, `"choice"`, `"all_opp"`, `"self"` |
+
+#### `turn_controls` — ゲームフロー制御
+
+カードに紐付かないゲームフロー制御を通知する。`game_state` とは別メッセージとして、状態更新のたびにアクティブプレイヤーにのみ送信される。
+
+```json
+{
+  "type": "turn_controls",
+  "data": {
+    "can_end_phase": true,
+    "discard_required": 0
+  }
+}
+```
+
+| フィールド | 型 | 説明 |
+|-----------|-----|------|
+| `can_end_phase` | boolean | 現在のフェーズを終了できるか（main / battle フェーズで `true`） |
+| `discard_required` | int | 手札破棄が必要な枚数（end フェーズで手札 > 6 枚の場合のみ > 0） |
+
+---
 
 #### `game_over` — ゲーム終了
 ```json
@@ -858,7 +984,120 @@ GET /ws?token={token}
 }
 ```
 
-再接続時にサーバーが最新のゲーム状態を送信する。`game_state` と同じ構造だがメッセージタイプで区別できる。
+再接続時にサーバーが最新のゲーム状態を送信する。`game_state` と同じ構造だがメッセージタイプで区別できる。再接続時は `turn_controls` も併せて送信される。
+
+---
+
+#### `action_performed` — 対戦相手のアクション通知
+
+対戦相手（NPC または PvP 相手）が実行した個別アクションを通知する。クライアントはこのメッセージをキューに積み、順番にアニメーション再生する。
+
+```json
+{
+  "type": "action_performed",
+  "data": {
+    "action_type": "play_card",
+    "action_data": {
+      "cardInstanceId": "uuid",
+      "position": { "zone": "frontend", "index": 0 }
+    },
+    "state": { /* game_state と同じ構造 (per-player info-hidden) */ }
+  }
+}
+```
+
+| フィールド | 型 | 説明 |
+|-----------|-----|------|
+| `action_type` | string | 実行されたアクション種別 (`play_card`, `attack`, `scale_up`, `activate_effect`, `distribute_yield`, `end_phase`, `discard_hand`, `battle_start`, `turn_start`) |
+
+| `action_data` | object | アクションの詳細データ（アクション種別により構造が異なる） |
+| `state` | ClientGameState | アクション実行後のゲーム状態（情報隠蔽適用済み） |
+
+**送信タイミング:**
+- **NPC ターン**: `runNPCTurnIfNeeded` 内の各アクション実行後
+- **PvP**: 相手プレイヤーのアクション実行後（自分のアクションには送信されない）
+- **battle_start**: selecting 完了後、最初の `game_state` より前に送信
+- **turn_start**: 各ターン開始時、draw フェーズの `game_state` より前に送信
+
+**クライアント処理フロー:**
+1. `action_performed` 受信 → アニメーションキューに追加
+2. キューを順番に処理（各アクションにディレイを設けて再生）
+3. 最後の `game_state` を ground truth として適用
+
+##### `battle_start` — バトル開始バナー
+
+selecting フェーズ完了後、最初の game_state より前に送信される。各プレイヤーに自分視点の情報が届く。
+
+```json
+{
+  "type": "action_performed",
+  "data": {
+    "action_type": "battle_start",
+    "action_data": {
+      "my_name": "Ken",
+      "my_level": 24,
+      "opponent_name": "Smile Delivery",
+      "opponent_level": 50,
+      "match_type": "npc"
+    },
+    "state": { /* ClientGameState */ }
+  }
+}
+```
+
+| フィールド | 型 | 説明 |
+|-----------|-----|------|
+| `my_name` | string | 自分の表示名 |
+| `my_level` | int | 自分のレベル |
+| `opponent_name` | string | 対戦相手の表示名（NPC の場合は陣営日本語名） |
+| `opponent_level` | int | 対戦相手のレベル（NPC は固定 50） |
+| `match_type` | string | `"npc"` or `"pvp"` |
+
+NPC 表示名:
+| Faction ID | 表示名 |
+|------------|--------|
+| SD | Smile Delivery |
+| Tenki | 天気使い |
+| Sugar | しゅがーLab |
+| Tuners | 調律部 |
+
+##### `turn_start` — ターン開始バナー
+
+各ターン開始時に送信される。draw フェーズの `game_state` より前に届く。
+
+```json
+{
+  "type": "action_performed",
+  "data": {
+    "action_type": "turn_start",
+    "action_data": {
+      "turn": 1,
+      "is_my_turn": true
+    },
+    "state": { /* ClientGameState */ }
+  }
+}
+```
+
+| フィールド | 型 | 説明 |
+|-----------|-----|------|
+| `turn` | int | ターン番号 |
+| `is_my_turn` | bool | このプレイヤーのターンかどうか |
+
+**送信順序:**
+
+```
+[selecting 完了]
+  → action_performed (battle_start)
+  → action_performed (turn_start, turn=1)
+  → game_state
+  → turn_controls
+
+[ターン切り替わり時]
+  → action_performed (turn_start, turn=N)
+  → game_state
+  → turn_controls
+```
 
 ---
 
@@ -902,9 +1141,12 @@ GET /ws?token={token}
 | | GET | `/version` | 不要 | 不要 | バージョン確認 |
 | | GET | `/announcements` | 不要 | 不要 | お知らせ一覧 |
 | | GET | `/daily` | 不要 | 不要 | デイリー Tips |
+| | GET | `/cloud-news` | 不要 | 不要 | クラウドニュース一覧 |
 | **Auth** | POST | `/auth/register` | 要 | 不要 | プレイヤー登録 |
 | | POST | `/auth/login` | 要 | 不要 | ログイン |
-| **Player** | GET | `/player` | 要 | 要 | プロフィール取得 |
+| **Player** | GET | `/player/settings` | 要 | 要 | ユーザー設定取得 |
+| | PUT | `/player/settings` | 要 | 要 | ユーザー設定更新 |
+| | GET | `/player` | 要 | 要 | プロフィール取得 |
 | | PUT | `/player/name` | 要 | 要 | プレイヤー名変更 |
 | | GET | `/player/battle-limit` | 要 | 要 | バトル制限確認 |
 | | GET | `/player/cards` | 要 | 要 | 所持カード一覧 |
