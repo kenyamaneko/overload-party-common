@@ -10,6 +10,7 @@ cards:
     card_name: "ロードバランサー"
     const_name: NeutralLoadBalancer
     card_type: Attachment
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Load Balancer"
@@ -23,6 +24,7 @@ cards:
     card_name: "オートスケーラー"
     const_name: NeutralAutoScaler
     card_type: Attachment
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Auto Scaling"
@@ -36,6 +38,7 @@ cards:
     card_name: "プライベートサブネット"
     const_name: NeutralPrivateSubnet
     card_type: Attachment
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "VPC"
@@ -49,6 +52,7 @@ cards:
     card_name: "マルチ AZ"
     const_name: NeutralMultiAZ
     card_type: Attachment
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Multi-AZ"
@@ -69,6 +73,7 @@ cards:
     card_name: "ISMS認証"
     const_name: NeutralISMS
     card_type: Platform
+    deploy_turns: 2
     resizable: false
     elastic: false
     origin: "ISMS"
@@ -82,6 +87,7 @@ cards:
     card_name: "SOC2認証"
     const_name: NeutralSOC2
     card_type: Platform
+    deploy_turns: 2
     resizable: false
     elastic: false
     origin: "SOC 2"
@@ -97,6 +103,7 @@ cards:
     card_name: "クラウドエンジニア"
     const_name: NeutralCloudEngineer
     card_type: Strategy
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: ""
@@ -111,6 +118,7 @@ cards:
     card_name: "クラウドアーキテクト"
     const_name: NeutralCloudArchitect
     card_type: Strategy
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: ""
@@ -125,6 +133,7 @@ cards:
     card_name: "寺リフォーム"
     const_name: NeutralTeraReform
     card_type: Strategy
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Terraform"
@@ -139,6 +148,7 @@ cards:
     card_name: "プロジェクトマネージャー"
     const_name: NeutralProjectManager
     card_type: Strategy
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "プロジェクトマネージャー試験"
@@ -152,6 +162,7 @@ cards:
     card_name: "クラウドファンディング"
     const_name: NeutralCloudFunding
     card_type: Strategy
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Crowd Funding"
@@ -165,6 +176,7 @@ cards:
     card_name: "オープンソースマイグレーション"
     const_name: NeutralOSSMigration
     card_type: Strategy
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "OSS Migration"
@@ -180,6 +192,7 @@ cards:
     card_name: "DDoS 攻撃"
     const_name: NeutralDDoSAttack
     card_type: Incident
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "DDoS"
@@ -193,6 +206,7 @@ cards:
     card_name: "データ流出"
     const_name: NeutralDataBreach
     card_type: Incident
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Data Breach"
@@ -206,6 +220,7 @@ cards:
     card_name: "設定ミス"
     const_name: NeutralMisconfiguration
     card_type: Incident
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Misconfiguration"
@@ -219,6 +234,7 @@ cards:
     card_name: "データスクレイピング"
     const_name: NeutralDataScraping
     card_type: Incident
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Web Scraping"
@@ -232,6 +248,7 @@ cards:
     card_name: "クローラーボット"
     const_name: NeutralCrawlerBot
     card_type: Incident
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Bot Attack"
@@ -245,6 +262,7 @@ cards:
     card_name: "リージョン障害"
     const_name: NeutralRegionOutage
     card_type: Incident
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Region Outage"
@@ -258,6 +276,7 @@ cards:
     card_name: "クリプトマイニング"
     const_name: NeutralCryptoMining
     card_type: Incident
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Cryptojacking"
@@ -271,6 +290,7 @@ cards:
     card_name: "ランサムウェア"
     const_name: NeutralRansomware
     card_type: Incident
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Ransomware"
@@ -285,6 +305,7 @@ cards:
     card_name: "コンプライアンス監査"
     const_name: NeutralComplianceAudit
     card_type: Incident
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Compliance Audit"
@@ -300,6 +321,7 @@ cards:
     card_name: "レートリミット"
     const_name: NeutralRateLimit
     card_type: Reactive
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Rate Limiting"
@@ -313,6 +335,7 @@ cards:
     card_name: "フェイルオーバー"
     const_name: NeutralFailover
     card_type: Reactive
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Failover"
@@ -326,6 +349,7 @@ cards:
     card_name: "カオスエンジニアリング"
     const_name: NeutralChaosEngineering
     card_type: Reactive
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Chaos Engineering"
@@ -339,6 +363,7 @@ cards:
     card_name: "DB スナップショット"
     const_name: NeutralDBSnapshot
     card_type: Attachment
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Automated Backup"
@@ -352,6 +377,7 @@ cards:
     card_name: "ベンチャーキャピタル"
     const_name: NeutralVentureCapital
     card_type: Strategy
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: ""
@@ -365,6 +391,7 @@ cards:
     card_name: "気象異変"
     const_name: NeutralWeatherAnomaly
     card_type: Reactive
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Windows Update"
@@ -378,6 +405,7 @@ cards:
     card_name: "天気使いの更新"
     const_name: NeutralTenkiUpdate
     card_type: Reactive
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Windows Patch"
@@ -391,6 +419,7 @@ cards:
     card_name: "ITストラテジスト"
     const_name: NeutralITStrategist
     card_type: Strategy
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "ITストラテジスト試験"
@@ -407,6 +436,7 @@ cards:
     resource_label: "On-premises"
     const_name: NeutralOnpremLinux
     card_type: Compute
+    deploy_turns: 1
     resizable: false
     elastic: false
     origin: "Linux"
@@ -427,6 +457,7 @@ cards:
     resource_label: "On-premises"
     const_name: NeutralOnpremElephantDB
     card_type: Database
+    deploy_turns: 1
     resizable: false
     elastic: false
     origin: "PostgreSQL"
@@ -445,6 +476,7 @@ cards:
     resource_label: "On-premises"
     const_name: NeutralOnpremTenki
     card_type: Compute
+    deploy_turns: 1
     resizable: false
     elastic: false
     origin: "Windows Server"
@@ -463,6 +495,7 @@ cards:
     resource_label: "On-premises"
     const_name: NeutralOnpremTunersDB
     card_type: Database
+    deploy_turns: 1
     resizable: false
     elastic: false
     origin: "Oracle Database"
@@ -480,6 +513,7 @@ cards:
     card_name: "スロットリング"
     const_name: NeutralThrottling
     card_type: Reactive
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Throttling"

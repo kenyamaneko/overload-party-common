@@ -11,6 +11,7 @@ cards:
     resource_label: "Compute"
     const_name: TunersComputeKantata
     card_type: Compute
+    deploy_turns: 1
     resizable: true
     elastic: false
     origin: "OCI Compute"
@@ -29,6 +30,7 @@ cards:
     resource_label: "Bare Metal"
     const_name: TunersBareMetal
     card_type: Compute
+    deploy_turns: 1
     resizable: true
     elastic: false
     origin: "OCI Bare Metal"
@@ -49,6 +51,7 @@ cards:
     resource_label: "Container"
     const_name: TunersContainerTena
     card_type: Container
+    deploy_turns: 0
     resizable: false
     elastic: true
     origin: "OCI Container"
@@ -70,6 +73,7 @@ cards:
     resource_label: "Orchestrator"
     const_name: TunersOrchestratorConductis
     card_type: Orchestrator
+    deploy_turns: 2
     resizable: true
     elastic: true
     origin: "OKE"
@@ -94,6 +98,7 @@ cards:
     resource_label: "Functions"
     const_name: TunersFunctionsFanfare
     card_type: Serverless
+    deploy_turns: 0
     resizable: false
     elastic: true
     origin: "OCI Functions"
@@ -113,6 +118,7 @@ cards:
     resource_label: "Low-Code"
     const_name: TunersLowCodeApietta
     card_type: Serverless
+    deploy_turns: 0
     resizable: false
     elastic: true
     origin: "Oracle APEX"
@@ -144,6 +150,7 @@ cards:
     resource_label: "DB"
     const_name: TunersDBOtonmajutsushi
     card_type: Database
+    deploy_turns: 1
     resizable: false
     elastic: true
     origin: "Autonomous DB"
@@ -163,6 +170,7 @@ cards:
     resource_label: "DB"
     const_name: TunersDBExanotes
     card_type: Database
+    deploy_turns: 1
     resizable: true
     elastic: false
     origin: "Exadata Cloud"
@@ -183,6 +191,7 @@ cards:
     resource_label: "Storage"
     const_name: TunersStorageScourge
     card_type: ObjectStorage
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "OCI Object Storage"
@@ -203,6 +212,7 @@ cards:
     resource_label: "Cache"
     const_name: TunersCacheCaprish
     card_type: CacheDB
+    deploy_turns: 0
     resizable: true
     elastic: false
     origin: "OCI Cache with Redis"
@@ -222,6 +232,7 @@ cards:
     card_name: "調律部 DevOps"
     const_name: TunersDevOps
     card_type: Platform
+    deploy_turns: 2
     resizable: false
     elastic: false
     origin: "OCI DevOps"
@@ -240,6 +251,7 @@ cards:
     card_name: "調律部 Guard"
     const_name: TunersGuard
     card_type: Platform
+    deploy_turns: 2
     resizable: false
     elastic: false
     origin: "Cloud Guard"
@@ -253,6 +265,7 @@ cards:
     card_name: "調律部 WAF"
     const_name: TunersWAF
     card_type: Platform
+    deploy_turns: 2
     resizable: false
     elastic: false
     origin: "OCI WAF"
@@ -268,6 +281,7 @@ cards:
     card_name: "調律部 ノーツガード"
     const_name: TunersNotesGuard
     card_type: Attachment
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Oracle Data Guard"
@@ -281,6 +295,7 @@ cards:
     card_name: "調律部 リアル・アンサンブル・クラスター"
     const_name: TunersRAC
     card_type: Attachment
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Oracle RAC"
@@ -299,6 +314,7 @@ cards:
     card_name: "調律部 Block Volume"
     const_name: TunersBlockVolume
     card_type: Attachment
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "OCI Block Volume"
@@ -314,6 +330,7 @@ cards:
     card_name: "調律部 License"
     const_name: TunersLicense
     card_type: Strategy
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Oracle License"
@@ -329,6 +346,7 @@ cards:
     card_name: "調律部 Failback"
     const_name: TunersFailback
     card_type: Reactive
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Data Guard Failback"

@@ -9,6 +9,7 @@ cards:
     resource_label: "Compute"
     const_name: SDComputeEkubo
     card_type: Compute
+    deploy_turns: 1
     resizable: true
     elastic: false
     origin: "EC2"
@@ -27,6 +28,7 @@ cards:
     resource_label: "Container"
     const_name: SDContainerAlligator
     card_type: Container
+    deploy_turns: 0
     resizable: false
     elastic: true
     origin: "ECS/Fargate"
@@ -46,6 +48,7 @@ cards:
     resource_label: "Orchestrator"
     const_name: SDOrchestratorKujirantis
     card_type: Orchestrator
+    deploy_turns: 2
     resizable: true
     elastic: true
     origin: "EKS"
@@ -65,6 +68,7 @@ cards:
     resource_label: "ML"
     const_name: SDMLRoughmaker
     card_type: AI/ML
+    deploy_turns: 2
     resizable: true
     elastic: false
     origin: "SageMaker"
@@ -83,6 +87,7 @@ cards:
     resource_label: "Serverless"
     const_name: SDServerlessRamune
     card_type: Serverless
+    deploy_turns: 0
     resizable: false
     elastic: true
     origin: "Lambda"
@@ -109,6 +114,7 @@ cards:
     resource_label: "RDB"
     const_name: SDRDBAdeliece
     card_type: Database
+    deploy_turns: 1
     resizable: true
     elastic: false
     origin: "RDS"
@@ -127,6 +133,7 @@ cards:
     resource_label: "DistributedDB"
     const_name: SDDistributedDBOoroba
     card_type: Database
+    deploy_turns: 1
     resizable: true
     elastic: false
     origin: "Aurora"
@@ -151,6 +158,7 @@ cards:
     resource_label: "Storage"
     const_name: SDStorageEris
     card_type: ObjectStorage
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "S3"
@@ -169,6 +177,7 @@ cards:
     resource_label: "NoSQL"
     const_name: SDNoSQLDinosaur
     card_type: NoSQL
+    deploy_turns: 0
     resizable: false
     elastic: true
     origin: "DynamoDB"
@@ -194,6 +203,7 @@ cards:
     resource_label: "Cache"
     const_name: SDCacheMerry
     card_type: CacheDB
+    deploy_turns: 0
     resizable: true
     elastic: false
     origin: "ElastiCache"
@@ -211,6 +221,7 @@ cards:
     card_name: "SD Pipeline"
     const_name: SDPipeline
     card_type: Platform
+    deploy_turns: 2
     resizable: false
     elastic: false
     origin: "CodePipeline"
@@ -229,6 +240,7 @@ cards:
     card_name: "SD Front"
     const_name: SDFront
     card_type: Platform
+    deploy_turns: 2
     resizable: false
     elastic: false
     origin: "CloudFront"
@@ -253,6 +265,7 @@ cards:
     card_name: "SD Guard"
     const_name: SDGuard
     card_type: Platform
+    deploy_turns: 2
     resizable: false
     elastic: false
     origin: "GuardDuty"
@@ -266,6 +279,7 @@ cards:
     card_name: "SD Firewall"
     const_name: SDFirewall
     card_type: Platform
+    deploy_turns: 2
     resizable: false
     elastic: false
     origin: "WAF"
@@ -279,6 +293,7 @@ cards:
     card_name: "SD Queue"
     const_name: SDQueue
     card_type: Attachment
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "SQS"
@@ -292,6 +307,7 @@ cards:
     card_name: "SD Gateway"
     const_name: SDGateway
     card_type: Attachment
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "API Gateway"
@@ -310,6 +326,7 @@ cards:
     card_name: "SD Keys"
     const_name: SDKeys
     card_type: Attachment
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "KMS"
@@ -323,6 +340,7 @@ cards:
     card_name: "SD Formation"
     const_name: SDFormation
     card_type: Strategy
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "CloudFormation"
@@ -336,6 +354,7 @@ cards:
     card_name: "SD Marketplace"
     const_name: SDMarketplace
     card_type: Strategy
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "AWS Marketplace"
@@ -349,6 +368,7 @@ cards:
     card_name: "SD 料金見積もり"
     const_name: SDRyoukinMitsumori
     card_type: Strategy
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Cost Explorer"
@@ -362,6 +382,7 @@ cards:
     card_name: "Smile Recovery"
     const_name: SmileRecovery
     card_type: Reactive
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Auto Recovery"
@@ -375,6 +396,7 @@ cards:
     card_name: "SD Ecosystem"
     const_name: SDEcosystem
     card_type: Strategy
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "AWS Ecosystem"
@@ -388,6 +410,7 @@ cards:
     card_name: "SD Smile Delivery"
     const_name: SDSmileDelivery
     card_type: Strategy
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Amazon Prime"
@@ -402,6 +425,7 @@ cards:
     resource_label: "Cache"
     const_name: SDCacheDakkun
     card_type: CacheDB
+    deploy_turns: 0
     resizable: true
     elastic: false
     origin: "DAX"
@@ -419,6 +443,7 @@ cards:
     card_name: "SD Block Storage"
     const_name: SDBlockStorage
     card_type: Attachment
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "EBS"

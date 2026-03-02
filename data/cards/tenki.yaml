@@ -11,6 +11,7 @@ cards:
     resource_label: "VM"
     const_name: TenkiVMSora
     card_type: Compute
+    deploy_turns: 1
     resizable: true
     elastic: false
     origin: "Azure VM"
@@ -29,6 +30,7 @@ cards:
     resource_label: "PaaS"
     const_name: TenkiPaaSAsagiri
     card_type: Compute
+    deploy_turns: 1
     resizable: true
     elastic: false
     origin: "App Service"
@@ -47,6 +49,7 @@ cards:
     resource_label: "Container"
     const_name: TenkiContainerKouten
     card_type: Container
+    deploy_turns: 0
     resizable: false
     elastic: true
     origin: "ACI"
@@ -66,6 +69,7 @@ cards:
     resource_label: "Orchestrator"
     const_name: TenkiOrchestratorKusoku
     card_type: Orchestrator
+    deploy_turns: 2
     resizable: true
     elastic: true
     origin: "AKS"
@@ -85,6 +89,7 @@ cards:
     resource_label: "AI"
     const_name: TenkiAIOpener
     card_type: "AI/ML"
+    deploy_turns: 2
     resizable: true
     elastic: false
     origin: "Azure OpenAI"
@@ -109,6 +114,7 @@ cards:
     resource_label: "Functions"
     const_name: TenkiFunctionsRai
     card_type: Serverless
+    deploy_turns: 0
     resizable: false
     elastic: true
     origin: "Azure Functions"
@@ -133,6 +139,7 @@ cards:
     resource_label: "RDB"
     const_name: TenkiRDBShigure
     card_type: Database
+    deploy_turns: 1
     resizable: true
     elastic: false
     origin: "Azure SQL"
@@ -151,6 +158,7 @@ cards:
     resource_label: "DB"
     const_name: TenkiDBHayate
     card_type: Database
+    deploy_turns: 1
     resizable: true
     elastic: false
     origin: "SQL Hyperscale"
@@ -169,6 +177,7 @@ cards:
     resource_label: "Storage"
     const_name: TenkiStorageFubuki
     card_type: ObjectStorage
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Azure Blob"
@@ -187,6 +196,7 @@ cards:
     resource_label: "NoSQL"
     const_name: TenkiNoSQLCosmo
     card_type: NoSQL
+    deploy_turns: 0
     resizable: false
     elastic: true
     origin: "CosmosDB"
@@ -206,6 +216,7 @@ cards:
     resource_label: "Cache"
     const_name: TenkiCacheReiu
     card_type: CacheDB
+    deploy_turns: 0
     resizable: true
     elastic: false
     origin: "Azure Cache for Redis"
@@ -225,6 +236,7 @@ cards:
     card_name: "天気使い DevOps"
     const_name: TenkiDevOps
     card_type: Platform
+    deploy_turns: 2
     resizable: false
     elastic: false
     origin: "Azure DevOps"
@@ -243,6 +255,7 @@ cards:
     card_name: "天気使い CDN"
     const_name: TenkiCDN
     card_type: Platform
+    deploy_turns: 2
     resizable: false
     elastic: false
     origin: "Azure CDN"
@@ -262,6 +275,7 @@ cards:
     card_name: "天気使い Protection"
     const_name: TenkiProtection
     card_type: Platform
+    deploy_turns: 2
     resizable: false
     elastic: false
     origin: "Azure DDoS Protection"
@@ -277,6 +291,7 @@ cards:
     card_name: "天気使い Backup"
     const_name: TenkiBackup
     card_type: Attachment
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Azure Backup"
@@ -290,6 +305,7 @@ cards:
     card_name: "天気使い 空の入口"
     const_name: TenkiEntra
     card_type: Attachment
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Entra ID"
@@ -303,6 +319,7 @@ cards:
     card_name: "天気使い Vault"
     const_name: TenkiVault
     card_type: Attachment
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Key Vault"
@@ -316,6 +333,7 @@ cards:
     card_name: "天気使い Recovery"
     const_name: TenkiRecovery
     card_type: Attachment
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Site Recovery"
@@ -329,6 +347,7 @@ cards:
     card_name: "天気使い ブロックストレージ"
     const_name: TenkiBlockStorage
     card_type: Attachment
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Azure Managed Disks"
@@ -344,6 +363,7 @@ cards:
     card_name: "天気使い Template"
     const_name: TenkiTemplate
     card_type: Strategy
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "ARM Templates"
@@ -357,6 +377,7 @@ cards:
     card_name: "天気使い Migration"
     const_name: TenkiMigration
     card_type: Strategy
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Azure Migrate"
@@ -370,6 +391,7 @@ cards:
     card_name: "天気使い Policy"
     const_name: TenkiPolicy
     card_type: Strategy
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Azure Policy"
@@ -385,6 +407,7 @@ cards:
     card_name: "天気使い お守り傘"
     const_name: TenkiOmamoriGasa
     card_type: Reactive
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Microsoft Defender"
@@ -398,6 +421,7 @@ cards:
     card_name: "天気使い Traffic"
     const_name: TenkiTraffic
     card_type: Reactive
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Traffic Manager"
@@ -411,6 +435,7 @@ cards:
     card_name: "天気使い ファンネル"
     const_name: TenkiFunnel
     card_type: Reactive
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Microsoft Sentinel"

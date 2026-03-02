@@ -11,6 +11,7 @@ cards:
     resource_label: "Compute"
     const_name: SugarComputeConfettiito
     card_type: Compute
+    deploy_turns: 1
     resizable: true
     elastic: false
     origin: "GCE"
@@ -29,6 +30,7 @@ cards:
     resource_label: "Spot"
     const_name: SugarSpotSponjit
     card_type: Compute
+    deploy_turns: 1
     resizable: true
     elastic: false
     origin: "Spot VM"
@@ -47,6 +49,7 @@ cards:
     resource_label: "Container"
     const_name: SugarContainerClan
     card_type: Container
+    deploy_turns: 0
     resizable: false
     elastic: true
     origin: "Cloud Run"
@@ -66,6 +69,7 @@ cards:
     resource_label: "Orchestrator"
     const_name: SugarOrchestratorKuchen
     card_type: Orchestrator
+    deploy_turns: 2
     resizable: true
     elastic: true
     origin: "GKE"
@@ -85,6 +89,7 @@ cards:
     resource_label: "Functions"
     const_name: SugarFunctionsClan
     card_type: Serverless
+    deploy_turns: 0
     resizable: false
     elastic: true
     origin: "Cloud Functions"
@@ -106,6 +111,7 @@ cards:
     resource_label: "AI"
     const_name: SugarAIButterKun
     card_type: AI/ML
+    deploy_turns: 2
     resizable: true
     elastic: false
     origin: "Vertex AI"
@@ -124,6 +130,7 @@ cards:
     resource_label: "AI"
     const_name: SugarAIDrTensorbe
     card_type: AI/ML
+    deploy_turns: 2
     resizable: true
     elastic: false
     origin: "Cloud TPU"
@@ -144,6 +151,7 @@ cards:
     resource_label: "RDB"
     const_name: SugarRDBEclairL
     card_type: Database
+    deploy_turns: 1
     resizable: true
     elastic: false
     origin: "Cloud SQL"
@@ -162,6 +170,7 @@ cards:
     resource_label: "DistributedDB"
     const_name: SugarDistributedDBPinapo
     card_type: Database
+    deploy_turns: 1
     resizable: false
     elastic: true
     origin: "Cloud Spanner"
@@ -181,6 +190,7 @@ cards:
     resource_label: "NoSQL"
     const_name: SugarNoSQLToastoa
     card_type: NoSQL
+    deploy_turns: 0
     resizable: false
     elastic: true
     origin: "Firestore"
@@ -200,6 +210,7 @@ cards:
     resource_label: "Datawarehouse"
     const_name: SugarDWIcecream
     card_type: Database
+    deploy_turns: 1
     resizable: false
     elastic: false
     origin: "BigQuery"
@@ -219,6 +230,7 @@ cards:
     resource_label: "Cache"
     const_name: SugarCacheMeringue
     card_type: CacheDB
+    deploy_turns: 0
     resizable: true
     elastic: false
     origin: "Memorystore"
@@ -239,6 +251,7 @@ cards:
     resource_label: "Storage"
     const_name: SugarStorageSchtrenge
     card_type: ObjectStorage
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "GCS"
@@ -258,6 +271,7 @@ cards:
     card_name: "しゅがーLab Build"
     const_name: SugarBuild
     card_type: Platform
+    deploy_turns: 2
     resizable: false
     elastic: false
     origin: "Cloud Build"
@@ -276,6 +290,7 @@ cards:
     card_name: "しゅがーLab CDN"
     const_name: SugarCDN
     card_type: Platform
+    deploy_turns: 2
     resizable: false
     elastic: false
     origin: "Cloud CDN"
@@ -300,6 +315,7 @@ cards:
     card_name: "しゅがーLab アイスクエリム Analytics"
     const_name: SugarIcecreamAnalytics
     card_type: Platform
+    deploy_turns: 2
     resizable: false
     elastic: false
     origin: "BigQuery Analytics"
@@ -315,6 +331,7 @@ cards:
     card_name: "しゅがーLab Profiler"
     const_name: SugarProfiler
     card_type: Attachment
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Cloud Profiler"
@@ -333,6 +350,7 @@ cards:
     card_name: "しゅがーLab ぱくぱくサブレ"
     const_name: SugarPakupakuSable
     card_type: Attachment
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Pub/Sub"
@@ -346,6 +364,7 @@ cards:
     card_name: "しゅがーLab だんごフロー"
     const_name: SugarDangoFlow
     card_type: Attachment
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Dataflow"
@@ -368,6 +387,7 @@ cards:
     card_name: "しゅがーLab ブロックストレージ"
     const_name: SugarBlockStorage
     card_type: Attachment
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Persistent Disk"
@@ -383,6 +403,7 @@ cards:
     card_name: "しゅがーLab Deployment"
     const_name: SugarDeployment
     card_type: Strategy
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Deployment Manager"
@@ -396,6 +417,7 @@ cards:
     card_name: "しゅがーLab バター君 Batch"
     const_name: SugarButterKunBatch
     card_type: Strategy
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Vertex AI Batch"
@@ -409,6 +431,7 @@ cards:
     card_name: "しゅがーLab Knowledge"
     const_name: SugarKnowledge
     card_type: Strategy
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "Knowledge Graph"
@@ -424,6 +447,7 @@ cards:
     card_name: "しゅがーLab Error Budget"
     const_name: SugarErrorBudget
     card_type: Reactive
+    deploy_turns: 0
     resizable: false
     elastic: false
     origin: "SRE Error Budget"
