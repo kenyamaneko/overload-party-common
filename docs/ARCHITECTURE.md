@@ -393,44 +393,11 @@ Player A (Client)        GKE Pod              Cloud SQL       Player B (Client)
 > クライアント側にゲームロジックを重複して持たせない設計（Master Duel 方式）。
 > 詳細は `API_REFERENCE.md` の `game_state` / `turn_controls` セクションを参照。
 
-#### 4.3.3 Starting Resource 選出フロー
+#### 4.3.3 ゲーム開始フロー
 
-ゲーム開始時に両プレイヤーが初期リソースを選出・同時公開するフロー。
+マッチ成立後、スターター選出フェーズは存在しない。デッキ30枚をシャッフルし、初期手札5枚をドローして即座に T1 が開始される（フィールドは空の状態）。
 
-```
-Player A (Client)        GKE Pod              Cloud SQL       Player B (Client)
-     │                      │                       │                  │
-     │  1. select_starting  │                       │                  │
-     │     {frontId, backId}│                       │                  │
-     ├─────────────────────>│                       │                  │
-     │                      │  (Player A選出完了を記録)                 │
-     │                      │                       │                  │
-     │  2. waiting_opponent │                       │  3. select_starting
-     │<─────────────────────┤                       │     {frontId, backId}
-     │                      │<─────────────────────────────────────────┤
-     │                      │                       │                  │
-     │                      │  4. 両者揃った:       │                  │
-     │                      │     デッキ検証         │                  │
-     │                      │     コスト計算         │                  │
-     │                      │     初期状態構築       │                  │
-     │                      │                       │                  │
-     │                      │  5. Write GameState   │                  │
-     │                      ├──────────────────────>│                  │
-     │                      │<──────────────────────┤                  │
-     │                      │                       │                  │
-     │  6. game_start       │  7. game_start        │                  │
-     │  {initialState,      │  {initialState,       │                  │
-     │   opponentStarters}  │   opponentStarters}   │                  │
-     │<─────────────────────┤─────────────────────────────────────────>│
-```
-
-**サーバー側の検証:**
-- 選出されたカードがデッキに含まれているか
-- フロントエンド用カードがフロントエンド配置可能なタイプか（コンピュート系 / Object Storage）
-- バックエンド用カードがリソースカードか
-- 両カードのデプロイコスト合計が初期Budget（5,000）以下か
-
-**タイムアウト:** 選出に60秒の制限。タイムアウト時はデッキの先頭2枚を自動選出する。
+プレイヤーは手札からカードをデプロイして盤面を構築していく。デプロイターンが 0 のカード（Serverless 等）は即座に表向きで稼働し、1 以上のカードは裏向きで配置される。
 
 ---
 
@@ -733,7 +700,7 @@ Pong 応答なし（5秒）
    ├─ Gamesレコード作成
    ├─ 先攻/後攻をランダム決定
    ├─ 両プレイヤーにWebSocketで通知（game_matched）
-   └─ Starting Resource選出フェーズへ遷移
+   └─ デッキシャッフル・初期手札ドロー → T1 開始（フィールド空）
 ```
 
 **キューの実装方式:**
@@ -756,7 +723,6 @@ Pong 応答なし（5秒）
 | `game_enter` | ゲーム入室（`game_id`, `deck_id` を含む） |
 | `matchmaking_start` | マッチメイキング開始（`deck_id` を含む） |
 | `matchmaking_cancel` | マッチメイキングキャンセル |
-| `select_starters` | 初期リソース選択 |
 | `game_action` | ゲームアクション（`actionType`, `data` を含む） |
 | `use_stamp` | スタンプ使用 |
 | `ping` | ハートビート |
@@ -1028,9 +994,10 @@ PostgreSQL トランザクションが失敗した場合、クライアントに
 
 | アクション | 1. フェーズ | 2. 実行元 | 3. 対象 | 4. コスト | 5. その他 |
 |-----------|-----------|----------|---------|----------|----------|
-| `play_card` | Main Phase | 手札に存在 | 配置先が空き | Budget ≥ 開発コスト | — |
-| `attack` | Battle Phase | フィールド上の自コンピュート | 相手フィールド上のリソース | — | 攻撃済みでない |
-| `scale_up` | Main Phase | フィールド上の自リソース | — | Budget ≥ スケールアップコスト | Resizable 属性、現在Rank < 対象Rank |
+| `play_card` | Main Phase | 手札に存在 | 配置先が空き | — | デプロイターン 0 なら即表向き、1以上なら裏向き配置 |
+| `attack` | Battle Phase | フィールド上の自コンピュート（表向き） | 相手フィールド上の表向きリソース | — | 攻撃済みでない |
+| `scale_up` | Main Phase | フィールド上の自リソース（表向き） | — | — | Resizable 属性、現在Rank < 対象Rank |
+| `migrate` | Main Phase | フィールド上の表向き新リソース | 表向き旧リソース | — | 新.deploy_turns >= 旧.deploy_turns |
 | `distribute_yield` | Main Phase | バックエンドのコンピュート | — | — | Insight Pool 残量 ≥ 分配量、TP上限 |
 | `activate_effect` | Main/Battle Phase | 効果を持つカード | 効果の対象 | 効果コスト | 1ターン1回制限 |
 

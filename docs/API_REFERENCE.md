@@ -313,7 +313,7 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
     "card_type": "resource",
     "resizable": true,
     "elastic": false,
-    "stats": { "throughput": 3, "availability": 4, "maintenance_cost": 2, "deploy_cost": 3, "sla_penalty": 2 },
+    "stats": { "throughput": 3, "availability": 4, "maintenance_cost": 2, "sla_penalty": 2 },
     "effect_text": "デプロイ時: スループット+1",
     "restriction": "unlimited"
   }
@@ -740,23 +740,6 @@ GET /ws?token={token}
 
 ---
 
-#### `select_starters` — 初期配置カード選択
-
-```json
-{
-  "type": "select_starters",
-  "data": {
-    "game_id": "ULID",
-    "frontend_card_no": 1,
-    "backend_card_no": 2
-  }
-}
-```
-
-**応答:** `game_state`（両プレイヤーに送信）/ `error` (code: `select_error`)
-
----
-
 #### `game_action` — ゲームアクション実行
 
 ```json
@@ -895,15 +878,14 @@ GET /ws?token={token}
 カードに紐付かないゲームフロー制御（フェーズ終了、手札破棄）は `turn_controls` メッセージで別途通知される。
 
 - **`playing` 状態**: アクティブプレイヤーのみに送信される。対戦相手の `game_state` にはこのフィールドは含まれない。
-- **`selecting` 状態**: 両プレイヤーそれぞれに送信される（スターター選択は独立操作のため）。選択済みの場合は空配列。
 - **`finished` 状態**: 省略される。
 
 | type | 追加フィールド | 説明 |
 |------|--------------|------|
-| `select_starter` | `card_id`, `valid_zones` | selecting フェーズ: デッキ内のリソースカード。`valid_zones` は `"frontend"` / `"backend"`（カードタイプで決定） |
-| `play_card` | `hand_instance_id`, `card_id`, `valid_zones?`, `valid_targets?` | 手札からカードをデプロイ。`valid_zones` はゾーン+スロット (例: `"frontend_0"`)。Attachment の場合は `valid_targets` にリソース ID |
-| `attack` | `source_instance_id`, `valid_targets` | フロントの Compute で攻撃。相手フロントあり→フロントのみ対象 |
-| `scale_up` | `source_instance_id`, `cost`, `target_rank`, `needs_family` | リソースをスケールアップ。`needs_family=true` なら S→M でファミリー選択が必要 |
+| `play_card` | `hand_instance_id`, `card_id`, `valid_zones?`, `valid_targets?` | 手札からカードをデプロイ。デプロイターン 0 なら即表向き、1以上なら裏向き配置。`valid_zones` はゾーン+スロット (例: `"frontend_0"`)。Attachment の場合は `valid_targets` にリソース ID |
+| `attack` | `source_instance_id`, `valid_targets` | フロントの表向き Compute で攻撃。相手フロントに表向きリソースあり→フロントのみ対象 |
+| `scale_up` | `source_instance_id`, `target_rank`, `needs_family` | リソースをスケールアップ（無料）。`needs_family=true` なら S→M でファミリー選択が必要 |
+| `migrate` | `source_instance_id`, `target_instance_id` | 新リソース(source)から旧リソース(target)へマイグレーション開始。新.deploy_turns >= 旧.deploy_turns が必要 |
 | `distribute_yield` | `source_instance_id`, `remaining_capacity` | バックエンド Compute に Insight を配分。`remaining_capacity` は残りスループット |
 | `activate_effect` | `source_instance_id`, `effect_target_type`, `valid_targets?` | アクティブ効果を発動。`effect_target_type`: `"none"`, `"choice"`, `"all_opp"`, `"self"` |
 

@@ -29,7 +29,6 @@
 
 DevPage (`/dev`) から以下のモック状態を注入できる:
 
-- `selectingPhase()` — 初期カード選択フェーズ
 - `mainPhaseMyTurn()` — メインフェーズ（自分のターン）
 - `battlePhaseMyTurn()` — バトルフェーズ（自分のターン）
 

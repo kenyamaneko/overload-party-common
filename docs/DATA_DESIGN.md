@@ -279,7 +279,6 @@
 | `throughput_max` | int? | Elastic上限（Elastic以外は `null`） |
 | `availability` | int | 可用性 |
 | `maintenance_cost` | int | 維持コスト（毎ターン終了時に徴収） |
-| `deploy_cost` | int | 開発コスト |
 | `sla_penalty` | int | SLAペナルティ |
 
 **DB系リソースおよびオブジェクトストレージの場合:**
@@ -290,14 +289,13 @@
 | `yield_max` | int? | Elastic上限 |
 | `availability` | int | 可用性 |
 | `maintenance_cost` | int | 維持コスト（毎ターン終了時に徴収） |
-| `deploy_cost` | int | 開発コスト |
 | `sla_penalty` | int | SLAペナルティ |
 
 **その他のカードタイプ（Platform, Attachment, Strategy, Incident, Reactive）:**
 
-| フィールド | 型 | 説明 |
-|---|---|---|
-| `deploy_cost` | int | 使用コスト（0 の場合は無料） |
+stats フィールドなし（Platform の場合、`deploy_turns` はトップレベルで管理）。
+
+> `deploy_turns` は stats 内ではなく、カード定義のトップレベルフィールドとして管理する。カードタイプごとのデフォルト値は RULEBOOK.md を参照。
 
 ### 6.3 関連インデックス
 
