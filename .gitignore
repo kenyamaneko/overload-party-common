@@ -1,0 +1,25 @@
+# AI assistant configs
+.claude/
+.gemini/
+.aider*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
+
+# Secrets / env
+*.env
+.env*
+!.env.example
