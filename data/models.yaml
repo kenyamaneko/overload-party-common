@@ -1,0 +1,376 @@
+# Model definitions for Go struct generation.
+# generate_from_yaml.py reads this file and outputs *_gen.go into each repo's internal/model/.
+#
+# target: "both" = gateway + battle, "battle" = battle only, "gateway" = gateway only
+# Fields: name (Go name), type (Go type string), json (json tag), db (optional db tag)
+
+files:
+  # ─── Player ────────────────────────────────────────────
+  - name: player
+    target: both
+    imports:
+      - time
+      - cloud.google.com/go/civil
+    types:
+      - name: Player
+        fields:
+          - {name: PlayerID, type: string, json: "player_id", db: "player_id"}
+          - {name: FirebaseUID, type: string, json: "firebase_uid", db: "firebase_uid"}
+          - {name: Username, type: string, json: "username", db: "username"}
+          - {name: Level, type: int64, json: "level", db: "level"}
+          - {name: Exp, type: int64, json: "exp", db: "exp"}
+          - {name: Wins, type: int64, json: "wins", db: "wins"}
+          - {name: Losses, type: int64, json: "losses", db: "losses"}
+          - {name: IsPremium, type: bool, json: "is_premium", db: "is_premium"}
+          - {name: EquippedIconNo, type: "*int64", json: "equipped_icon_no,omitempty", db: "equipped_icon_no"}
+          - {name: SelectedFaction, type: "*string", json: "selected_faction,omitempty", db: "selected_faction"}
+          - {name: PremiumExpiresAt, type: "*time.Time", json: "premium_expires_at,omitempty", db: "premium_expires_at"}
+          - {name: CreatedAt, type: time.Time, json: "created_at", db: "created_at"}
+          - {name: UpdatedAt, type: time.Time, json: "updated_at", db: "updated_at"}
+
+      - name: PlayerDailyBattle
+        fields:
+          - {name: PlayerID, type: string, json: "player_id", db: "player_id"}
+          - {name: DailyBattleCount, type: int64, json: "daily_battle_count", db: "daily_battle_count"}
+          - {name: LastResetDate, type: civil.Date, json: "last_reset_date", db: "last_reset_date"}
+
+  # ─── Deck ──────────────────────────────────────────────
+  - name: deck
+    target: both
+    imports:
+      - encoding/json
+      - time
+    types:
+      - name: PlayerCard
+        fields:
+          - {name: PlayerID, type: string, json: "player_id"}
+          - {name: CardNo, type: int64, json: "card_no"}
+          - {name: IllustrationVariant, type: int64, json: "illustration_variant"}
+          - {name: Count, type: int, json: "count"}
+
+      - name: PlayerCardWithDef
+        comment: "PlayerCardWithDef is a PlayerCard enriched with card definition fields for API responses."
+        fields:
+          - {name: CardNo, type: int64, json: "card_no"}
+          - {name: IllustrationVariant, type: int64, json: "illustration_variant"}
+          - {name: Count, type: int, json: "count"}
+          - {name: CardName, type: string, json: "card_name"}
+          - {name: Faction, type: string, json: "faction"}
+          - {name: CardType, type: string, json: "card_type"}
+          - {name: Resizable, type: bool, json: "resizable"}
+          - {name: Elastic, type: bool, json: "elastic"}
+          - {name: Stats, type: json.RawMessage, json: "stats"}
+          - {name: EffectText, type: "*string", json: "effect_text,omitempty"}
+          - {name: Restriction, type: string, json: "restriction"}
+
+      - name: Deck
+        fields:
+          - {name: PlayerID, type: string, json: "player_id"}
+          - {name: DeckID, type: int64, json: "deck_id"}
+          - {name: DeckName, type: string, json: "deck_name"}
+          - {name: IsValid, type: bool, json: "is_valid"}
+          - {name: PlaymatNo, type: "*int64", json: "playmat_no,omitempty"}
+          - {name: SleeveNo, type: "*int64", json: "sleeve_no,omitempty"}
+          - {name: CreatedAt, type: time.Time, json: "created_at"}
+          - {name: UpdatedAt, type: time.Time, json: "updated_at"}
+          - {name: CardNos, type: "[]int64", json: "card_nos,omitempty", comment: "Populated by the service layer for API responses."}
+
+      - name: DeckCard
+        fields:
+          - {name: PlayerID, type: string, json: "player_id"}
+          - {name: DeckID, type: int64, json: "deck_id"}
+          - {name: CardNo, type: int64, json: "card_no"}
+          - {name: IllustrationVariant, type: int64, json: "illustration_variant"}
+          - {name: Count, type: int, json: "count"}
+
+  # ─── Card ──────────────────────────────────────────────
+  - name: card
+    target: both
+    imports:
+      - encoding/json
+      - time
+    types:
+      - name: CardDefinition
+        fields:
+          - {name: CardNo, type: int64, json: "card_no"}
+          - {name: CardName, type: string, json: "card_name"}
+          - {name: ResourceLabel, type: string, json: "resource_label"}
+          - {name: Faction, type: string, json: "faction"}
+          - {name: CardType, type: string, json: "card_type"}
+          - {name: DeployTurns, type: int64, json: "deploy_turns"}
+          - {name: Resizable, type: bool, json: "resizable"}
+          - {name: Elastic, type: bool, json: "elastic"}
+          - {name: ElasticIncrement, type: int64, json: "elastic_increment,omitempty"}
+          - {name: FreeTier, type: int64, json: "free_tier,omitempty"}
+          - {name: CostPerRequest, type: int64, json: "cost_per_request,omitempty"}
+          - {name: Stats, type: json.RawMessage, json: "stats"}
+          - {name: EffectText, type: "*string", json: "effect_text,omitempty"}
+          - {name: Effects, type: json.RawMessage, json: "effects,omitempty"}
+          - {name: PassiveEffects, type: "[]PassiveEffect", json: "passive_effects,omitempty"}
+          - {name: PlatformEffects, type: "[]PlatformEffect", json: "platform_effects,omitempty"}
+          - {name: AttachmentEffects, type: "[]AttachmentEffect", json: "attachment_effects,omitempty"}
+          - {name: Restriction, type: string, json: "restriction"}
+          - {name: IsActive, type: bool, json: "is_active"}
+          - {name: CreatedAt, type: time.Time, json: "created_at"}
+          - {name: UpdatedAt, type: time.Time, json: "updated_at"}
+
+  # ─── Card Stats ────────────────────────────────────────
+  - name: card_stats
+    target: both
+    types:
+      - name: ComputeStats
+        comment: "ComputeStats for Compute, Container, Orchestrator, Serverless, AI/ML card types."
+        fields:
+          - {name: Throughput, type: int64, json: "throughput"}
+          - {name: ThroughputMax, type: "*int64", json: "throughput_max,omitempty"}
+          - {name: Availability, type: int64, json: "availability"}
+          - {name: MaintenanceCost, type: int64, json: "maintenance_cost"}
+          - {name: SLAPenalty, type: int64, json: "sla_penalty"}
+
+      - name: DataStats
+        comment: "DataStats for Database, ObjectStorage, CacheDB card types."
+        fields:
+          - {name: Yield, type: int64, json: "yield"}
+          - {name: YieldMax, type: "*int64", json: "yield_max,omitempty"}
+          - {name: Availability, type: int64, json: "availability"}
+          - {name: MaintenanceCost, type: int64, json: "maintenance_cost"}
+          - {name: SLAPenalty, type: int64, json: "sla_penalty"}
+
+  # ─── Passive / Platform / Attachment Effects ───────────
+  - name: passive_effect
+    target: both
+    type_aliases:
+      - {name: PassiveEffectType, base: string}
+      - {name: PlatformEffectType, base: string}
+      - {name: AttachmentEffectType, base: string}
+    constants:
+      - type: PassiveEffectType
+        values:
+          - {name: PassiveTPPerBackendDB, value: "tp_per_backend_db"}
+          - {name: PassiveTPPerBackendData, value: "tp_per_backend_data"}
+          - {name: PassiveTPIfCardTypeOnField, value: "tp_if_card_type_on_field"}
+          - {name: PassiveYieldPerOtherDB, value: "dv_per_other_db"}
+          - {name: PassiveYieldIfCardOnField, value: "dv_if_card_on_field"}
+          - {name: PassiveAVBonus, value: "av_bonus"}
+          - {name: PassiveScaleCostFree, value: "scale_cost_free"}
+      - type: PlatformEffectType
+        values:
+          - {name: PlatformTPBonus, value: "tp_bonus"}
+          - {name: PlatformYieldBonus, value: "yield_bonus"}
+          - {name: PlatformAVBonus, value: "av_bonus"}
+      - type: AttachmentEffectType
+        values:
+          - {name: AttachmentStatBonus, value: "stat_bonus"}
+    types:
+      - name: PassiveEffect
+        fields:
+          - {name: Type, type: PassiveEffectType, json: "type"}
+          - {name: Params, type: "map[string]interface{}", json: "params"}
+
+      - name: PlatformEffect
+        fields:
+          - {name: Type, type: PlatformEffectType, json: "type"}
+          - {name: Params, type: "map[string]interface{}", json: "params"}
+
+      - name: AttachmentEffect
+        fields:
+          - {name: Type, type: AttachmentEffectType, json: "type"}
+          - {name: Params, type: "map[string]interface{}", json: "params"}
+
+      - name: PassiveEffectConfig
+        fields:
+          - {name: Faction, type: string, json: "faction,omitempty"}
+          - {name: CardTypes, type: "[]string", json: "card_types,omitempty"}
+          - {name: BonusPerCard, type: int64, json: "bonus_per_card,omitempty"}
+          - {name: FlatBonus, type: int64, json: "flat_bonus,omitempty"}
+          - {name: MultiModelCards, type: "[]int64", json: "multi_model_cards,omitempty"}
+          - {name: SpecificCardNos, type: "[]int64", json: "specific_card_nos,omitempty"}
+          - {name: Zone, type: string, json: "zone,omitempty"}
+          - {name: ExcludeSelf, type: bool, json: "exclude_self,omitempty"}
+
+      - name: PlatformEffectConfig
+        fields:
+          - {name: TargetFaction, type: string, json: "target_faction,omitempty"}
+          - {name: TargetCardTypes, type: "[]string", json: "target_card_types,omitempty"}
+          - {name: Bonus, type: int64, json: "bonus,omitempty"}
+          - {name: Reduction, type: int64, json: "reduction,omitempty"}
+          - {name: ApplyToSelf, type: bool, json: "apply_to_self,omitempty"}
+
+      - name: AttachmentEffectConfig
+        fields:
+          - {name: StatType, type: string, json: "stat_type"}
+          - {name: Bonus, type: int64, json: "bonus"}
+
+  # ─── Match ─────────────────────────────────────────────
+  - name: match
+    target: both
+    imports:
+      - time
+    types:
+      - name: Match
+        comment: "Match maps to the Matches table."
+        fields:
+          - {name: MatchID, type: int64, json: "match_id"}
+          - {name: GameID, type: string, json: "game_id"}
+          - {name: CreatedAt, type: time.Time, json: "created_at"}
+
+  # ─── Game (Battle only) ────────────────────────────────
+  - name: game
+    target: battle
+    imports:
+      - encoding/json
+      - time
+    types:
+      - name: Game
+        comment: "Game maps to the Games table."
+        fields:
+          - {name: GameID, type: string, json: "game_id", db: "game_id"}
+          - {name: Player1ID, type: string, json: "player1_id", db: "player1_id"}
+          - {name: Player2ID, type: string, json: "player2_id", db: "player2_id"}
+          - {name: Player1DeckSnapshot, type: json.RawMessage, json: "player1_deck_snapshot", db: "player1_deck_snapshot"}
+          - {name: Player2DeckSnapshot, type: json.RawMessage, json: "player2_deck_snapshot", db: "player2_deck_snapshot"}
+          - {name: Status, type: string, json: "status", db: "status"}
+          - {name: WinnerID, type: "*string", json: "winner_id,omitempty", db: "winner_id"}
+          - {name: CreatedAt, type: time.Time, json: "created_at", db: "created_at"}
+          - {name: UpdatedAt, type: time.Time, json: "updated_at", db: "updated_at"}
+          - {name: FinishedAt, type: "*time.Time", json: "finished_at,omitempty", db: "finished_at"}
+
+      - name: GameState
+        comment: "GameState maps to the GameStates table."
+        fields:
+          - {name: GameID, type: string, json: "game_id", db: "game_id"}
+          - {name: Version, type: int64, json: "version", db: "version"}
+          - {name: CurrentTurn, type: int64, json: "current_turn", db: "current_turn"}
+          - {name: CurrentPhase, type: string, json: "current_phase", db: "current_phase"}
+          - {name: ActivePlayer, type: int64, json: "active_player", db: "active_player"}
+          - {name: Player1Budget, type: int64, json: "player1_budget", db: "player1_budget"}
+          - {name: Player1InsightPool, type: int64, json: "player1_insight_pool", db: "player1_insight_pool"}
+          - {name: Player1Field, type: json.RawMessage, json: "player1_field", db: "player1_field"}
+          - {name: Player1Hand, type: json.RawMessage, json: "player1_hand", db: "player1_hand"}
+          - {name: Player1Repository, type: json.RawMessage, json: "player1_repository", db: "player1_repository"}
+          - {name: Player1Trash, type: json.RawMessage, json: "player1_trash", db: "player1_trash"}
+          - {name: Player1TimeBank, type: int64, json: "player1_time_bank", db: "player1_time_bank"}
+          - {name: Player2Budget, type: int64, json: "player2_budget", db: "player2_budget"}
+          - {name: Player2InsightPool, type: int64, json: "player2_insight_pool", db: "player2_insight_pool"}
+          - {name: Player2Field, type: json.RawMessage, json: "player2_field", db: "player2_field"}
+          - {name: Player2Hand, type: json.RawMessage, json: "player2_hand", db: "player2_hand"}
+          - {name: Player2Repository, type: json.RawMessage, json: "player2_repository", db: "player2_repository"}
+          - {name: Player2Trash, type: json.RawMessage, json: "player2_trash", db: "player2_trash"}
+          - {name: Player2TimeBank, type: int64, json: "player2_time_bank", db: "player2_time_bank"}
+          - {name: ChainStack, type: json.RawMessage, json: "chain_stack,omitempty", db: "chain_stack"}
+          - {name: CurrentActionTimer, type: "*int64", json: "current_action_timer,omitempty", db: "current_action_timer"}
+          - {name: NextInstanceSeq, type: int64, json: "next_instance_seq", db: "next_instance_seq"}
+          - {name: UpdatedAt, type: time.Time, json: "updated_at", db: "updated_at"}
+
+      - name: GameEvent
+        comment: "GameEvent maps to the GameEvents table."
+        fields:
+          - {name: GameID, type: string, json: "game_id", db: "game_id"}
+          - {name: SequenceNumber, type: int64, json: "sequence_number", db: "sequence_number"}
+          - {name: EventType, type: string, json: "event_type", db: "event_type"}
+          - {name: PlayerID, type: "*string", json: "player_id,omitempty", db: "player_id"}
+          - {name: EventData, type: json.RawMessage, json: "event_data", db: "event_data"}
+          - {name: CreatedAt, type: time.Time, json: "created_at", db: "created_at"}
+
+  # ─── Game State types (Battle only) ────────────────────
+  - name: game_state
+    target: battle
+    imports:
+      - encoding/json
+    types:
+      - name: Field
+        comment: "Field represents one player's complete field layout. Each zone has 3 slots. nil means the slot is empty."
+        fields:
+          - {name: Frontend, type: "[3]*ResourceInstance", json: "frontend"}
+          - {name: Backend, type: "[3]*ResourceInstance", json: "backend"}
+          - {name: Support, type: "[3]*SupportInstance", json: "support"}
+          - {name: IncidentPlayedThisTurn, type: bool, json: "incidentPlayedThisTurn,omitempty"}
+          - {name: HasHadActiveResource, type: bool, json: "hasHadActiveResource,omitempty"}
+
+      - name: ResourceInstance
+        comment: "ResourceInstance is a card deployed on the frontend or backend zone."
+        fields:
+          - {name: InstanceID, type: string, json: "instanceId"}
+          - {name: CardID, type: int64, json: "cardId"}
+          - {name: Rank, type: string, json: "rank"}
+          - {name: InstanceFamily, type: "*string", json: "instanceFamily"}
+          - {name: FaceUp, type: bool, json: "faceUp"}
+          - {name: DeployingTurnsLeft, type: int64, json: "deployingTurnsLeft,omitempty"}
+          - {name: CurrentAV, type: int64, json: "currentAV"}
+          - {name: MaxAV, type: int64, json: "maxAV"}
+          - {name: CurrentTP, type: "*int64", json: "currentTP,omitempty"}
+          - {name: MaxTP, type: "*int64", json: "maxTP,omitempty"}
+          - {name: CurrentYield, type: "*int64", json: "currentYield,omitempty"}
+          - {name: MaxYield, type: "*int64", json: "maxYield,omitempty"}
+          - {name: Damage, type: int64, json: "damage"}
+          - {name: Attachments, type: "[]AttachmentRef", json: "attachments"}
+          - {name: TemporaryEffects, type: "[]TemporaryEffect", json: "temporaryEffects"}
+          - {name: MonetizedAmount, type: int64, json: "monetizedAmount"}
+          - {name: HasAttacked, type: bool, json: "hasAttacked"}
+          - {name: EffectUsedThisTurn, type: bool, json: "effectUsedThisTurn,omitempty"}
+          - {name: DeployedOnTurn, type: int64, json: "deployedOnTurn,omitempty"}
+          - {name: DeployOrder, type: int64, json: "deployOrder,omitempty"}
+          - {name: MigratingFrom, type: "*string", json: "migratingFrom,omitempty"}
+          - {name: MigrationTarget, type: "*string", json: "migrationTarget,omitempty"}
+          - {name: MigratingOnTurn, type: int64, json: "migratingOnTurn,omitempty"}
+          - {name: ElasticBonus, type: int64, json: "elasticBonus,omitempty"}
+
+      - name: AttachmentRef
+        comment: "AttachmentRef references an attachment card on a resource."
+        fields:
+          - {name: InstanceID, type: string, json: "instanceId"}
+          - {name: CardID, type: int64, json: "cardId"}
+
+      - name: TemporaryEffect
+        comment: "TemporaryEffect is a time-limited modifier on a resource."
+        fields:
+          - {name: EffectType, type: string, json: "effectType"}
+          - {name: Value, type: int64, json: "value"}
+          - {name: Duration, type: string, json: "duration"}
+          - {name: SourceID, type: string, json: "sourceId"}
+
+      - name: SupportInstance
+        comment: "SupportInstance is a Platform or Reactive card in the support zone."
+        fields:
+          - {name: InstanceID, type: string, json: "instanceId"}
+          - {name: CardID, type: int64, json: "cardId"}
+          - {name: FaceDown, type: bool, json: "faceDown"}
+          - {name: DeployingTurnsLeft, type: int64, json: "deployingTurnsLeft,omitempty"}
+          - {name: DeployOrder, type: int64, json: "deployOrder,omitempty"}
+          - {name: EffectUsedThisTurn, type: bool, json: "effectUsedThisTurn,omitempty"}
+
+      - name: HandCard
+        comment: "HandCard represents a card in a player's hand."
+        fields:
+          - {name: InstanceID, type: string, json: "instanceId"}
+          - {name: CardID, type: int64, json: "cardId"}
+
+      - name: ChainEntry
+        comment: "ChainEntry is one entry in the chain stack."
+        fields:
+          - {name: ChainLevel, type: int64, json: "chainLevel"}
+          - {name: ActionType, type: string, json: "actionType"}
+          - {name: SourcePlayerID, type: string, json: "sourcePlayerId"}
+          - {name: SourceInstanceID, type: string, json: "sourceInstanceId"}
+          - {name: TargetInstanceID, type: string, json: "targetInstanceId"}
+          - {name: TargetChainLevel, type: int64, json: "targetChainLevel"}
+          - {name: EffectData, type: json.RawMessage, json: "effectData,omitempty"}
+          - {name: Resolved, type: bool, json: "resolved"}
+
+      - name: DeckSnapshot
+        comment: "DeckSnapshot is stored in Games.playerN_deck_snapshot."
+        fields:
+          - {name: DeckID, type: string, json: "deckId"}
+          - {name: Cards, type: "[]int64", json: "cards"}
+
+  # ─── Game Config (Battle only) ─────────────────────────
+  - name: game_config
+    target: battle
+    imports:
+      - time
+    types:
+      - name: GameConfig
+        fields:
+          - {name: Key, type: string, json: "key", db: "key"}
+          - {name: Value, type: string, json: "value", db: "value"}
+          - {name: UpdatedAt, type: time.Time, json: "updated_at", db: "updated_at"}
