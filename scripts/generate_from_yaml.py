@@ -37,7 +37,7 @@ MD_OUT = COMMON_ROOT / "docs" / "CARDS.md"
 
 # ─── Constants ──────────────────────────────────────────
 COMPUTE_TYPES = {"Compute", "Container", "Orchestrator", "Serverless", "AI/ML"}
-DATA_TYPES = {"Database", "NoSQL", "ObjectStorage", "CacheDB", "Datawarehouse"}
+DATA_TYPES = {"Database", "ObjectStorage", "CacheDB", "Datawarehouse"}
 SUPPORT_TYPES = {"Platform", "Attachment", "Strategy", "Reactive", "Incident"}
 ALL_CARD_TYPES = COMPUTE_TYPES | DATA_TYPES | SUPPORT_TYPES
 
@@ -55,7 +55,7 @@ FACTION_ORDER = ["SD", "Tenki", "Sugar", "Tuners", "Neutral"]
 CATEGORY_ORDER = [
     ("コンピュート系リソース", {"Compute", "Container", "Orchestrator", "Serverless"}),
     ("AI/ML系リソース", {"AI/ML"}),
-    ("DB系リソース", {"Database", "NoSQL", "CacheDB", "Datawarehouse"}),
+    ("DB系リソース", {"Database", "CacheDB", "Datawarehouse"}),
     ("オブジェクトストレージ", {"ObjectStorage"}),
     ("プラットフォーム", {"Platform"}),
     ("アタッチメント", {"Attachment"}),
@@ -186,6 +186,7 @@ def generate_json(cards, server_dir):
             "deploy_turns": deploy_turns,
             "resizable": card["resizable"],
             "elastic": card["elastic"],
+            "elastic_increment": card.get("elastic_increment", 0),
             "stats": stats,
             "restriction": card["restriction"],
             "is_active": card["is_active"],
@@ -317,6 +318,7 @@ def generate_go_constants(constants, server_dir):
     lines.append(f"\tMaxAttachments  = {iv['max_attachments']}   // max attachment slots per resource")
     lines.append(f"\tPerTurnBudget   = {iv['per_turn_budget']} // budget added automatically at the start of each turn")
     lines.append(f"\tSlotsPerZone    = {iv['slots_per_zone']}   // number of slots per zone")
+    lines.append(f"\tElasticMaxMultiplier = {iv['elastic_max_multiplier']} // default cap multiplier for Elastic cards without explicit max")
     lines.append(")")
     lines.append("")
 

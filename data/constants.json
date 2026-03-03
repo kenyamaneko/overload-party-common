@@ -15,7 +15,7 @@
   },
   "card_types": {
     "compute": ["Compute", "Container", "Orchestrator", "Serverless", "AI/ML"],
-    "data": ["Database", "NoSQL", "ObjectStorage", "CacheDB", "Datawarehouse"],
+    "data": ["Database", "ObjectStorage", "CacheDB", "Datawarehouse"],
     "support": ["Platform", "Attachment", "Strategy", "Reactive", "Incident"]
   },
   "restriction_values": ["unlimited", "limited", "semi_limited"],
@@ -37,7 +37,8 @@
     "deck_size": 30,
     "max_attachments": 2,
     "per_turn_budget": 500,
-    "slots_per_zone": 3
+    "slots_per_zone": 3,
+    "elastic_max_multiplier": 2
   },
   "level": {
     "exp_formula": "60 * n^2",

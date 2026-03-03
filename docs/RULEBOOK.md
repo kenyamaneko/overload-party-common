@@ -103,7 +103,7 @@ Budget はあなたの行動資金であり、同時にライフポイントで�
 | 要素 | 説明 | 例 |
 |------|------|-----|
 | **カード名** | キャラクター/エンティティの固有名 | ソラ、えくぼ、アリゲーター |
-| **リソースラベル** | リソースの技術分類（教育的分類） | VM、Container、RDB、NoSQL |
+| **リソースラベル** | リソースの技術分類（表示用の技術名） | VM、Container、RDB、NoSQL |
 | **陣営** | 所属陣営（別フィールドで管理） | SD、天気使い、しゅがーLab、調律部 |
 
 表示例: カード名「ソラ」、サブラベル「天気使い VM」
@@ -133,11 +133,11 @@ Budget はあなたの行動資金であり、同時にライフポイントで�
 
 - 数値は **small (Rank 1)** 基準
 - **(R)** = Resizable, **(E)** = Elastic, **(R+E)** = 両方
-- Elastic カードは「base→上限」で表記
+- Elastic カードは base 値で表記（ElasticBonus により実効値が増加）
 - カード右上の **可用性** と **スループット** はそのカードの**最大値**。ゲーム中はダメージや効果で変動するため、**現在値**を別途トラッキングする
 - **可用性** = 耐久値の最大値。ダメージは永続で蓄積し、現在可用性が 0 以下で破壊
-- **スループット** = 攻撃力 兼 収益化の変換上限の最大値。Elastic 効果などで現在スループットが変動する
-- **維持コスト (Maintenance Cost)** = ターン終了時に支払うランニングコスト。Resizable は固定、Elastic は利用量に応じて増加
+- **スループット** = 攻撃力 兼 収益化の変換上限の最大値。ElasticBonus やカード効果で現在スループットが変動する
+- **維持コスト (Maintenance Cost)** = ターン終了時に支払うランニングコスト。Non-Elastic は固定（× ランク倍率）、Elastic は ElasticBonus に比例して増加（base 時は無料）
 - **デプロイターン (Deploy Turns)** = デプロイしてから稼働するまでに必要なターン数。0 なら即座に稼働、1 なら次の自分のターンに稼働、2 ならその次。カードタイプごとに異なり、技術の構築難易度を表す
 - **SLAペナルティ** = カード破壊時にオーナーの Budget から強制減算
 - バックエンド（Backend）はスループットの代わりに **Yield**（毎ターン Insight 生成量）を持つ
@@ -156,8 +156,8 @@ Budget はあなたの行動資金であり、同時にライフポイントで�
 
 | サブタイプ | デプロイターン | 特徴 | 配置可能ゾーン |
 |----------|:---:|------|---------------|
-| **Serverless** | **0** | 維持コスト 0。即座に稼働。攻撃を受けるとスループット上昇 | Frontend / Backend |
-| **Container** | **0** | マネージドコンテナ。攻撃を受けるほどスループット上昇 | Frontend / Backend |
+| **Serverless** | **0** | 維持コスト 0。即座に稼働。Elastic により自動スケーリング | Frontend / Backend |
+| **Container** | **0** | マネージドコンテナ。Elastic により自動スケーリング | Frontend / Backend |
 | **Compute** | **1** | 基本ユニット。バランスのとれた攻撃性能 | Frontend / Backend |
 | **Orchestrator** | **2** | 手動成長 + 自動変動の両方。構築に時間がかかるが最も柔軟で強力 | Frontend / Backend |
 
@@ -173,8 +173,7 @@ Budget はあなたの行動資金であり、同時にライフポイントで�
 
 | サブタイプ | デプロイターン | 特徴 | 配置可能ゾーン |
 |----------|:---:|------|---------------|
-| **Database** | **1** | 主力の Insight 源。Yield が高いが可用性は低め | Backend のみ |
-| **NoSQL** | **0** | マネージドNoSQL。Insight 消費に連動して Yield が自動上昇 | Backend のみ |
+| **Database** | **0〜1** | 主力の Insight 源。Yield が高いが可用性は低め。NoSQL 系カードも Database に含まれる（`resource_label` で表示上区別） | Backend のみ |
 | **Cache DB** | **0** | マネージドキャッシュ。デプロイ時にボーナス効果を持つ補助 DB | Backend のみ |
 
 **オブジェクトストレージ**
@@ -183,7 +182,7 @@ Budget はあなたの行動資金であり、同時にライフポイントで�
 |----------|:---:|------|---------------|
 | **Object Storage** | **0** | 可用性高め。即座に稼働。**フロントエンドに置いた場合は静的ホスティング用途となり、Insight生成はできない** | Frontend / Backend |
 
-> **デプロイターンと技術選定:** Serverless（0ターン）や NoSQL（0ターン）はすぐに使える反面、ステータスは控えめ。Orchestrator（2ターン）や AI/ML（2ターン）は稼働まで時間がかかるが、完成すれば強力。現実のクラウド技術選定と同じトレードオフがゲームに反映されている。
+> **デプロイターンと技術選定:** Serverless（0ターン）や マネージド Database（0ターン）はすぐに使える反面、ステータスは控えめ。Orchestrator（2ターン）や AI/ML（2ターン）は稼働まで時間がかかるが、完成すれば強力。現実のクラウド技術選定と同じトレードオフがゲームに反映されている。
 
 ### プラットフォーム
 
@@ -231,11 +230,11 @@ Resource カードには **Resizable (R)** と **Elastic (E)** の2つの属性�
 | 区分 | 意味 |
 |------|------|
 | **(R)** | Resizable — 手動でランクアップ可能 |
-| **(E)** | Elastic — 負荷に連動して自動変動 |
+| **(E)** | Elastic — トリガーに応じて自動スケーリング（永続累積） |
 | **(R+E)** | 両方の属性を持つ |
 | **—** | どちらでもない（固定スペック） |
 
-これらの属性は排反せず、**サブタイプに依存しない**。同じ Database でも、手動スケーリングのサービス（RDS）は (R)、自律型サービス（Autonomous DB）は (E) と、元のクラウドサービスの実際のスケーリングモデルに基づいて個別に設定される。
+これらの属性は排反せず、**サブタイプに依存しない**。同じ Database でも、手動スケーリングのサービス（RDS）は (R)、自律型サービス（Autonomous DB）は (E) と、元のクラウドサービスの実際のスケーリングモデルに基づいて個別に設定される。Elastic カードは base 状態では維持コストが無料（フリーティア）だが、自動スケーリングが進むと利用量に比例してコストが増加する。
 
 ---
 
@@ -276,38 +275,64 @@ Resource カードには **Resizable (R)** と **Elastic (E)** の2つの属性�
 
 ---
 
-### Elastic（エラスティック）— 負荷連動の自動変動
+### Elastic（エラスティック）— 自動スケーリング
 
 **(E) または (R+E) のカードが対象。**
 
-Elastic カードのスペックは **「base → 上限」** で表記される（例: スループット 600→1,200）。
-通常時は base 値で動作し、特定の条件によって自動的にスペックが変動する。
+Elastic カードは、特定のトリガーに応じて **スループット（TP）または Yield が自動的に増加**する。増加分は **ElasticBonus** として**永続的に蓄積**される（ターン終了でリセットされない）。
 
-#### フロントエンド Elastic
+各 Elastic カードには **`elastic_increment`**（増加量）が定義されている。トリガー発生のたびに ElasticBonus に `elastic_increment` が加算される。
 
-- 攻撃を受けた**ダメージの分だけ**、次の自分のターンのスループットが上昇（上限値まで累積）
-- 自分のターンの終了時に、スループットが base に戻る
-- 負荷（攻撃）に応じてスループットが自動的にスケールアップし、負荷がなくなると縮退する
+#### ElasticBonus の上限
 
-> 例: Container (スループット 600→1,200) がスループット 600 の攻撃を受けた →
-> 次ターンスループット +600 → 上限 1,200 でキャップ。
-> 次ターンの終了時に、スループット 600 に戻る。
+- カードに **MaxTP / MaxYield** が定義されている場合: その値が上限
+- 定義されていない場合: **baseStat × ElasticMaxMultiplier**（デフォルト 2）が上限
 
-#### バックエンド Elastic
+> `baseStat` = カード定義上の素のスループット（Compute/AI系）または Yield（DB/Data系）
 
-- 収益化（Main Phase の distribute_yield アクション）で消費された Insight の分だけ、次ターンの Yield が上昇（上限まで）
-- 次の自分のターンの終了時に、Yield が base に戻る
+#### トリガー条件（配置ゾーン × カードタイプで決定）
 
-> 例: NoSQL (Yield 400→800) — 収益化で Insight 400 が消費されると、次ターンは Yield +400。
-> 次ターンの終了時に、Yield 400 に戻る。
+| 配置 | カードタイプ | 増加対象 | トリガー |
+|------|------------|---------|---------|
+| **フロントエンド** | Compute / AI/ML | **TP** | 攻撃を受けて生存した時 |
+| **バックエンド** | Compute / AI/ML | **TP** | 収益化（distribute_yield）に使用された時 |
+| **バックエンド** | Database / Data | **Yield** | エンドフェーズの Yield 生成時（毎ターン自動） |
+
+> 例: Container (TP 500, elastic_increment 100) がフロントエンドで攻撃を受けて生存 →
+> ElasticBonus +100。次に攻撃を受けて生存 → ElasticBonus +200（累積）。
+> 実効 TP = 500 + 200 = 700。上限（500 × 2 = 1,000）に達するまで蓄積し続ける。
+
+> 例: Database/NoSQL (Yield 400, elastic_increment 100) がバックエンドで稼働中 →
+> エンドフェーズの Yield 生成ごとに ElasticBonus +100 が蓄積。
+> 数ターン後には Yield が大幅に増加し、Insight 生成量が飛躍的に伸びる。
+
+#### 実効値の計算順序
+
+ElasticBonus は**他のボーナスよりも先に**適用される:
+
+1. ベーススタット（カード定義値）
+2. ランク倍率（Resizable の場合）
+3. Instance Family 修正（該当する場合）
+4. **ElasticBonus（永続・累積）**
+5. Platform カード効果
+6. パッシブ効果
+7. アタッチメント効果
+8. 一時的効果
 
 #### Resizable + Elastic
 
 R+E のカードは両方の属性を持つ。
-**Elastic 加算分（上限 - base）は Rank に依らず固定。** Scale Up しても Elastic 幅は変わらない。
+ElasticBonus は Rank 倍率の影響を受けず**フラット加算**される。
 
-> 例: Orchestrator (スループット 600→1,000) — Elastic 幅は常に +400
-> small: 600～1,000 / medium: 1,200～1,600 / large: 1,800～2,200
+> 例: Orchestrator (TP 600, elastic_increment 100, R+E) が medium (×2) の場合:
+> ベース TP = 600 × 2 = 1,200 → ElasticBonus 300 蓄積時 → 実効 TP = 1,200 + 300 = 1,500
+
+#### ElasticBonus のリセット
+
+ElasticBonus は以下の場合にリセットされる:
+- カードが**破壊**された場合
+- カードが**手札に戻された**（バウンス）場合
+- 通常のターン経過では**リセットされない**（永続）
 
 ---
 
@@ -444,8 +469,12 @@ DB/Object Storage（Backend） → Insight生成 → [Insightプール] → Back
 
 ターン終了処理を行う。
 1. **維持コスト徴収:** フィールド上の全リソースの維持コストを Budget から差し引く
-   - Resizable: 維持コスト × ランク乗数（small×1, medium×2, large×3）
-   - Elastic: 維持コスト × ランク乗数 × (実効値 / ベース値)。利用量が増えるほどコスト増加
+   - Non-Elastic: `MC = maintenance_cost × rank_multiplier`（small×1, medium×2, large×3）
+   - Elastic: `MC = ElasticBonus × maintenance_cost × rank_multiplier / baseStat`
+     - `baseStat` = カード定義上の素のスループット（Compute/AI系）または Yield（DB/Data系）
+     - ElasticBonus が 0（= base 状態）なら MC = 0（フリーティア）
+     - ElasticBonus が増えるほど MC が線形に増加
+     - 例: Container (baseStat=500, MC=50, rank=small×1, ElasticBonus=200) → MC = 200×50×1/500 = **20**
 2. 一時的な効果（「このターン中」など）の終了
 3. **Yield生成:** バックエンドの各カードが自動的に Insight を生成し、Insightプールに加算する
 4. 手札調整（上限 6枚になるように捨てる）
@@ -603,7 +632,7 @@ K8s → Serverless への移行で SLA ペナルティを回避する「事業�
   - Rank は small に戻る
   - 全てのダメージが除去される
   - Instance Family の選択がリセットされる
-  - Elastic の値が base に戻る
+  - ElasticBonus がリセットされる（base に戻る）
   - 装備されていた Attachment は全てトラッシュに送られる（破壊扱い）
 
 ### ターンタイマー
@@ -629,15 +658,15 @@ K8s → Serverless への移行で SLA ペナルティを回避する「事業�
 | スケールアップ | **無料**（メンテナンスコスト増） |
 | マイグレーション | **無料**（1ターンかかる） |
 | 攻撃 | 無料 |
-| 維持コスト（毎ターン自動） | カードの維持コスト × ランク乗数 |
+| 維持コスト（毎ターン自動） | Non-Elastic: MC × ランク乗数 / Elastic: ElasticBonus × MC × ランク乗数 / baseStat |
 | その他 | カードの記載に従う |
 
 ### デプロイターン早見
 
 | card_type | デプロイターン |
 |-----------|:---:|
-| Serverless / Container / CacheDB / ObjectStorage / NoSQL | **0**（即時） |
-| Compute / Database | **1** |
+| Serverless / Container / CacheDB / ObjectStorage / Database（一部） | **0**（即時） |
+| Compute / Database（一部） | **1** |
 | Orchestrator / AI/ML / Platform | **2** |
 
 ### 毎ターン予算
@@ -677,7 +706,7 @@ Scale Up コスト = **無料**。メンテナンスコストがランク倍率�
 | 区分 | 意味 |
 |------|------|
 | **(R)** | Resizable — 手動ランクアップ（small → medium → large） |
-| **(E)** | Elastic — 負荷連動の自動変動（base → 上限） |
+| **(E)** | Elastic — 自動スケーリング（ElasticBonus 永続累積、MC は利用量比例） |
 | **(R+E)** | 両方 |
 | **—** | どちらでもない（固定スペック） |
 

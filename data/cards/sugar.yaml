@@ -52,6 +52,7 @@ cards:
     deploy_turns: 0
     resizable: false
     elastic: true
+    elastic_increment: 100
     origin: "Cloud Run"
     restriction: unlimited
     is_active: true
@@ -72,6 +73,7 @@ cards:
     deploy_turns: 2
     resizable: true
     elastic: true
+    elastic_increment: 100
     origin: "GKE"
     restriction: unlimited
     is_active: true
@@ -92,6 +94,7 @@ cards:
     deploy_turns: 0
     resizable: false
     elastic: true
+    elastic_increment: 100
     origin: "Cloud Functions"
     restriction: unlimited
     is_active: true
@@ -173,6 +176,7 @@ cards:
     deploy_turns: 1
     resizable: false
     elastic: true
+    elastic_increment: 100
     origin: "Cloud Spanner"
     restriction: unlimited
     is_active: true
@@ -188,11 +192,12 @@ cards:
   - card_no: 57
     card_name: "トーストア"
     resource_label: "NoSQL"
-    const_name: SugarNoSQLToastoa
-    card_type: NoSQL
+    const_name: SugarDBToastoa
+    card_type: Database
     deploy_turns: 0
     resizable: false
     elastic: true
+    elastic_increment: 100
     origin: "Firestore"
     restriction: unlimited
     is_active: true

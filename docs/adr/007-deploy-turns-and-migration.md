@@ -40,7 +40,7 @@
 | **Container** | **0** | マネージドコンテナ（Cloud Run等） |
 | **CacheDB** | **0** | マネージドRedis等 |
 | **ObjectStorage** | **0** | S3バケット作成は即時 |
-| **NoSQL** | **0** | DynamoDB/Firestore等マネージド |
+| **Database (NoSQL)** | **0** | DynamoDB/Firestore等マネージド（card_type は Database に統合、deploy_turns はカード個別設定） |
 | **Compute** | **1** | VM/インスタンス起動・設定 |
 | **Database (RDB)** | **1** | マネージドDB（スキーマ設計等） |
 | **Orchestrator** | **2** | K8sクラスタ構築は最も複雑 |

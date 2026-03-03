@@ -1,7 +1,7 @@
 # Overload Party - データ設計 (Data Architecture)
 
 **Version:** 1.0
-**Last Updated:** 2026-02-26
+**Last Updated:** 2026-03-03
 
 > **完全なスキーマ定義:** `db/schema_postgres.sql` を参照。以下は各テーブルの設計意図とカラム仕様の概要。
 
@@ -258,9 +258,10 @@
 | `card_no` | BIGINT | No | カード番号（`CARDS.md` の `#` に対応） |
 | `card_name` | VARCHAR(100) | No | カード名 |
 | `faction` | VARCHAR(20) | No | 陣営 (`SD`, `Tenki`, `Sugar`, `Tuners`, `Neutral`) |
-| `card_type` | VARCHAR(30) | No | カードタイプ (`Compute`, `Container`, `Orchestrator`, `Serverless`, `AI_ML`, `Database`, `ObjectStorage`, `NoSQL`, `CacheDB`, `Platform`, `Attachment`, `Strategy`, `Incident`, `Reactive`) |
+| `card_type` | VARCHAR(30) | No | カードタイプ (`Compute`, `Container`, `Orchestrator`, `Serverless`, `AI_ML`, `Database`, `ObjectStorage`, `CacheDB`, `Datawarehouse`, `Platform`, `Attachment`, `Strategy`, `Incident`, `Reactive`) |
 | `resizable` | BOOLEAN | No | Resizable 属性 (Default: false) |
 | `elastic` | BOOLEAN | No | Elastic 属性 (Default: false) |
+| `elastic_increment` | BIGINT | Yes | Elastic トリガーごとの TP/Yield 増加量。Elastic カードのみ設定（非 Elastic は `null` または `0`） |
 | `stats` | JSONB | No | ステータス定義 |
 | `effect_text` | VARCHAR(500) | Yes | 効果テキスト（表示用） |
 | `effects` | JSONB | Yes | 効果定義（複数効果を JSON 配列で保持） |
@@ -276,9 +277,9 @@
 | フィールド | 型 | 説明 |
 |---|---|---|
 | `throughput` | int | スループット（base値） |
-| `throughput_max` | int? | Elastic上限（Elastic以外は `null`） |
+| `throughput_max` | int? | Elastic TP 上限（Elastic以外は `null`）。ElasticBonus の累積上限として使用 |
 | `availability` | int | 可用性 |
-| `maintenance_cost` | int | 維持コスト（毎ターン終了時に徴収） |
+| `maintenance_cost` | int | 維持コスト（毎ターン終了時に徴収）。Elastic 時は `ElasticBonus × maintenance_cost × rank_mult / baseStat` で算出（base 状態はフリーティア＝MC 0） |
 | `sla_penalty` | int | SLAペナルティ |
 
 **DB系リソースおよびオブジェクトストレージの場合:**
@@ -286,10 +287,23 @@
 | フィールド | 型 | 説明 |
 |---|---|---|
 | `yield` | int | Yield生成量（base値） |
-| `yield_max` | int? | Elastic上限 |
+| `yield_max` | int? | Elastic Yield 上限（Elastic以外は `null`）。ElasticBonus の累積上限として使用 |
 | `availability` | int | 可用性 |
-| `maintenance_cost` | int | 維持コスト（毎ターン終了時に徴収） |
+| `maintenance_cost` | int | 維持コスト（毎ターン終了時に徴収）。Elastic 時は `ElasticBonus × maintenance_cost × rank_mult / baseStat` で算出（base 状態はフリーティア＝MC 0） |
 | `sla_penalty` | int | SLAペナルティ |
+
+> **Elastic メカニクス（オートスケーリング）:**
+> Elastic カードは ElasticBonus が累積的に蓄積され、TP/Yield が増加する。旧仕様の MC 比率ベースのスケーリングは廃止。
+>
+> | ゾーン | トリガー | 増加対象 |
+> |--------|----------|----------|
+> | フロントエンド | 攻撃を受けた時 | スループット (TP) + `elastic_increment` |
+> | バックエンド Compute | 収益化（Monetize）に使用された時 | スループット (TP) + `elastic_increment` |
+> | バックエンド DB | 各エンドフェイズ | Yield + `elastic_increment` |
+>
+> - ElasticBonus は**累積**される（トリガーごとに `elastic_increment` ずつ加算）
+> - ElasticBonus 上限: **MaxTP / MaxYield** または **baseStat × ElasticMaxMultiplier(2)** のいずれか小さい方
+> - ElasticBonus = 0 の状態が初期値（フリーティア相当、MC = 0）
 
 **その他のカードタイプ（Platform, Attachment, Strategy, Incident, Reactive）:**
 
@@ -329,6 +343,23 @@ stats フィールドなし（Platform の場合、`deploy_turns` はトップ�
 ```
 
 > **設計判断:** カード定義の更新頻度は低い（月数回程度）ため、5分間隔ポーリングで十分。最大5分の遅延は許容範囲。
+
+### 6.5 ゲーム定数 (constants.json — initial_values)
+
+`data/constants.json` の `initial_values` セクションで管理されるゲーム全体の初期値・定数。サーバー（Go）とクライアント（TypeScript）の両方に自動生成される。
+
+| キー | 型 | 値 | 説明 |
+|------|-----|-----|------|
+| `budget` | int | 5000 | 初期 Budget |
+| `insight_pool` | int | 0 | 初期 Insight Pool |
+| `hand_size` | int | 5 | 初期手札枚数 |
+| `hand_limit` | int | 6 | 手札上限 |
+| `time_bank` | int | 480 | タイムバンク（秒） |
+| `deck_size` | int | 30 | デッキ枚数 |
+| `max_attachments` | int | 2 | リソースあたりの最大アタッチメント数 |
+| `per_turn_budget` | int | 500 | ターンごとの Budget 支給額 |
+| `slots_per_zone` | int | 3 | ゾーンあたりのスロット数 |
+| `elastic_max_multiplier` | int | 2 | Elastic の ElasticBonus 上限倍率。`baseStat × elastic_max_multiplier` が ElasticBonus の上限として使用される（MaxTP/MaxYield との小さい方を採用） |
 
 ---
 

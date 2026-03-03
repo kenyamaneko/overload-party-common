@@ -52,6 +52,7 @@ cards:
     deploy_turns: 0
     resizable: false
     elastic: true
+    elastic_increment: 100
     origin: "ACI"
     restriction: unlimited
     is_active: true
@@ -72,6 +73,7 @@ cards:
     deploy_turns: 2
     resizable: true
     elastic: true
+    elastic_increment: 100
     origin: "AKS"
     restriction: unlimited
     is_active: true
@@ -117,6 +119,7 @@ cards:
     deploy_turns: 0
     resizable: false
     elastic: true
+    elastic_increment: 100
     origin: "Azure Functions"
     restriction: unlimited
     is_active: true
@@ -194,11 +197,12 @@ cards:
   - card_no: 32
     card_name: "百花の天穹<コスモ>"
     resource_label: "NoSQL"
-    const_name: TenkiNoSQLCosmo
-    card_type: NoSQL
+    const_name: TenkiDBCosmo
+    card_type: Database
     deploy_turns: 0
     resizable: false
     elastic: true
+    elastic_increment: 100
     origin: "CosmosDB"
     restriction: unlimited
     is_active: true

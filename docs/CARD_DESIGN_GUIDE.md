@@ -22,7 +22,10 @@
 ```
 
 - DB系リソースおよびオブジェクトストレージはスループットを持たない。代わりに **Yield** を記載。
-- **維持コスト (Maintenance Cost)** は全リソースに存在する。Resizable は MC×ランク乗数で固定、Elastic は利用量に応じて増加。Serverless は MC=0（使わなければ無料）。
+- **維持コスト (Maintenance Cost)** は全リソースに存在する。Resizable は MC×ランク乗数で固定。Serverless は MC=0（使わなければ無料）。
+- **Elastic の MC 計算式:** `MC = ElasticBonus × maintenance_cost × rank_multiplier / baseStat`
+  - ElasticBonus = 0（初期状態）なら MC = 0（フリーティア）
+  - ElasticBonus が増加するほど MC もスケールする
 
 ### プラットフォーム
 
@@ -73,7 +76,9 @@ Resource カードのタイプ欄は `サブタイプ (区分)` の形式で記�
 ### サブタイプ一覧
 
 **フロントエンド:** Compute, Container, Orchestrator, AI/ML, Serverless
-**バックエンド:** Database, Object Storage, NoSQL, Cache DB
+**バックエンド:** Database, Object Storage, Cache DB
+
+> **注意:** 旧 NoSQL サブタイプは Database に統合された。表示用の `resource_label` として "NoSQL" は残るが、カードタイプとしては Database として扱う。
 
 ### 区分の割り当て
 
@@ -104,6 +109,20 @@ Elastic カードの Yield / スループットは `base→上限` で記載す�
 スループット 500→1100    ← Container の例
 Yield 500→700     ← Autonomous DB の例
 ```
+
+### Elastic オートスケーリング
+
+Elastic カードは自動スケーリング（ElasticBonus）を持つ。各カードの YAML に `elastic_increment` フィールドがあり、トリガーごとに TP / Yield が増加する。
+
+| ゾーン | トリガー | 増加対象 |
+|--------|----------|----------|
+| フロントエンド | 攻撃を受けた時 | スループット (TP) |
+| バックエンド Compute | 収益化（Monetize）に使用された時 | スループット (TP) |
+| バックエンド DB | 各エンドフェイズ | Yield |
+
+- ElasticBonus は**累積**される（トリガーごとに `elastic_increment` ずつ加算）
+- 上限: **MaxTP / MaxYield** または **baseStat × 2** のいずれか小さい方
+- ElasticBonus = 0 の状態が初期値（フリーティア相当）
 
 ### パラメータ設計の優先順位
 
@@ -319,7 +338,7 @@ Attachment カードの効果は装備先の Resource に適用される。
 
 - `コンピュート系リソース` = フロントエンドのコンピュート要素（Compute, Container, Orchestrator, Serverless）
 - `AI/ML系リソース` = フロントエンドの機械学習・深層学習要素（AI/ML）
-- `DB系リソース` = Database + NoSQL + Cache DB
+- `DB系リソース` = Database（NoSQL 含む）+ Cache DB
 - `オブジェクトストレージ` = Object Storage
 - `バックエンドリソース` = バックエンドの要素全般（DB系リソース + オブジェクトストレージ）
 - `Resource` = フロントエンド・バックエンドすべて
