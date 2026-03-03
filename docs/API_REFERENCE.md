@@ -16,8 +16,7 @@
    - [Card](#34-card)
    - [NPC Battle](#35-npc-battle)
    - [Shop](#36-shop)
-   - [Game Log](#37-game-log)
-   - [Webhook](#38-webhook)
+   - [Webhook](#37-webhook)
 4. [WebSocket API](#4-websocket-api)
    - [接続](#41-接続)
    - [Client → Server メッセージ](#42-client--server-メッセージ)
@@ -611,40 +610,7 @@ NPC 対戦開始。即座にゲームが作成される（マッチメイキン�
 
 ---
 
-### 3.7 Game Log
-
-#### GET `/games/{gameId}/log`
-
-構造化ゲームログ取得。
-
-**レスポンス (200):**
-```json
-{
-  "game_id": "ULID",
-  "events": [
-    {
-      "game_id": "ULID",
-      "sequence_number": 1,
-      "event_type": "string",
-      "player_id": "uuid",
-      "event_data": {},
-      "created_at": "timestamp"
-    }
-  ]
-}
-```
-
----
-
-#### GET `/games/{gameId}/log/text`
-
-テキスト形式のゲームログ取得。
-
-**レスポンス (200):** `Content-Type: text/plain`
-
----
-
-### 3.8 Webhook（認証不要）
+### 3.7 Webhook（認証不要）
 
 #### POST `/shop/webhook/apple`
 
@@ -1146,8 +1112,6 @@ NPC 表示名:
 | | GET | `/shop/products` | 要 | 要 | 商品一覧 |
 | | POST | `/shop/purchase` | 要 | 要 | 商品購入 |
 | | POST | `/shop/subscribe` | 要 | 要 | サブスク登録 |
-| **Log** | GET | `/games/{gameId}/log` | 要 | 要 | ゲームログ (JSON) |
-| | GET | `/games/{gameId}/log/text` | 要 | 要 | ゲームログ (テキスト) |
 | **Webhook** | POST | `/shop/webhook/apple` | 不要 | 不要 | Apple 通知 |
 | | POST | `/shop/webhook/google` | 不要 | 不要 | Google 通知 |
 | **WS** | GET | `/ws?token={token}` | 接続時 | 接続時 | WebSocket 接続 |
