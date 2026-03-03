@@ -32,6 +32,8 @@ cards:
     resizable: false
     elastic: true
     elastic_increment: 100
+    free_tier: 500
+    cost_per_request: 10
     origin: "ECS/Fargate"
     restriction: unlimited
     is_active: true
@@ -41,7 +43,6 @@ cards:
       deploy_cost: 300
       sla_penalty: 400
       maintenance_cost: 50
-    tp_max: 1100
     effect_text: ""
 
   - card_no: 4
@@ -53,6 +54,8 @@ cards:
     resizable: true
     elastic: true
     elastic_increment: 100
+    free_tier: 600
+    cost_per_request: 17
     origin: "EKS"
     restriction: unlimited
     is_active: true
@@ -62,7 +65,6 @@ cards:
       deploy_cost: 600
       sla_penalty: 600
       maintenance_cost: 100
-    tp_max: 1000
     effect_text: ""
 
   - card_no: 5
@@ -93,6 +95,8 @@ cards:
     resizable: false
     elastic: true
     elastic_increment: 100
+    free_tier: 500
+    cost_per_request: 0
     origin: "Lambda"
     restriction: unlimited
     is_active: true
@@ -102,7 +106,6 @@ cards:
       deploy_cost: 100
       sla_penalty: 200
       maintenance_cost: 0
-    tp_max: 1000
     effect_text: "**エリス Trigger:** 自分のフィールドに「SD Storage - エリス」がいる場合、このカードのスループットを +200 する"
     passive_effects:
       - type: tp_if_card_type_on_field
@@ -184,6 +187,8 @@ cards:
     resizable: false
     elastic: true
     elastic_increment: 100
+    free_tier: 300
+    cost_per_request: 17
     origin: "DynamoDB"
     restriction: unlimited
     is_active: true
@@ -193,7 +198,6 @@ cards:
       deploy_cost: 300
       sla_penalty: 400
       maintenance_cost: 50
-    yield_max: 800
     effect_text: "**On-Demand:** Budget 400 を払って発動できる。このターン、このカードの Yield を2倍にする。この効果は1ターン中に1回のみ使用できる"
     passive_effects:
       - type: dv_if_card_on_field

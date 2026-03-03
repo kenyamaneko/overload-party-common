@@ -112,9 +112,9 @@
 | `currentAV` | int | 現在耐久値 |
 | `maxAV` | int | AV最大値 |
 | `currentTP` | int? | 現在TP（DB系およびオブジェクトストレージは null） |
-| `maxTP` | int? | TP最大値（DB系およびオブジェクトストレージは null） |
+| `maxTP` | int? | TP最大値（DB系およびオブジェクトストレージは null。Elastic カードは `nil`＝上限なし） |
 | `currentYield` | int? | 現在Yield量（コンピュート系リソースは null） |
-| `maxYield` | int? | Yield最大値（コンピュート系リソースは null） |
+| `maxYield` | int? | Yield最大値（コンピュート系リソースは null。Elastic カードは `nil`＝上限なし） |
 | `damage` | int | 蓄積ダメージ量 |
 | `attachments` | array | アタッチメントリスト（instanceId + cardId） |
 | `temporaryEffects` | array | 一時効果リスト |
@@ -277,9 +277,10 @@
 | フィールド | 型 | 説明 |
 |---|---|---|
 | `throughput` | int | スループット（base値） |
-| `throughput_max` | int? | Elastic TP 上限（Elastic以外は `null`）。ElasticBonus の累積上限として使用 |
 | `availability` | int | 可用性 |
-| `maintenance_cost` | int | 維持コスト（毎ターン終了時に徴収）。Elastic 時は `ElasticBonus × maintenance_cost × rank_mult / baseStat` で算出（base 状態はフリーティア＝MC 0） |
+| `maintenance_cost` | int | 維持コスト（毎ターン終了時に徴収）。Resizable は MC×ランク乗数で固定。Elastic の MC 計算式は下記参照 |
+| `free_tier` | int? | Elastic MC 閾値 + ln スケールパラメータ（Elastic以外は `null`）。ランクで変動しない固定値 |
+| `cost_per_request` | int? | Elastic MC レート ÷100（Elastic以外は `null`）。Serverless は `0`（常に MC=0） |
 | `sla_penalty` | int | SLAペナルティ |
 
 **DB系リソースおよびオブジェクトストレージの場合:**
@@ -287,13 +288,14 @@
 | フィールド | 型 | 説明 |
 |---|---|---|
 | `yield` | int | Yield生成量（base値） |
-| `yield_max` | int? | Elastic Yield 上限（Elastic以外は `null`）。ElasticBonus の累積上限として使用 |
 | `availability` | int | 可用性 |
-| `maintenance_cost` | int | 維持コスト（毎ターン終了時に徴収）。Elastic 時は `ElasticBonus × maintenance_cost × rank_mult / baseStat` で算出（base 状態はフリーティア＝MC 0） |
+| `maintenance_cost` | int | 維持コスト（毎ターン終了時に徴収）。Resizable は MC×ランク乗数で固定。Elastic の MC 計算式は下記参照 |
+| `free_tier` | int? | Elastic MC 閾値 + ln スケールパラメータ（Elastic以外は `null`）。ランクで変動しない固定値 |
+| `cost_per_request` | int? | Elastic MC レート ÷100（Elastic以外は `null`）。Serverless は `0`（常に MC=0） |
 | `sla_penalty` | int | SLAペナルティ |
 
 > **Elastic メカニクス（オートスケーリング）:**
-> Elastic カードは ElasticBonus が累積的に蓄積され、TP/Yield が増加する。旧仕様の MC 比率ベースのスケーリングは廃止。
+> Elastic カードは ElasticBonus が累積的に蓄積され、TP/Yield が増加する。上限キャップは無く、代わりに対数的な逓減が適用される。
 >
 > | ゾーン | トリガー | 増加対象 |
 > |--------|----------|----------|
@@ -301,9 +303,14 @@
 > | バックエンド Compute | 収益化（Monetize）に使用された時 | スループット (TP) + `elastic_increment` |
 > | バックエンド DB | 各エンドフェイズ | Yield + `elastic_increment` |
 >
-> - ElasticBonus は**累積**される（トリガーごとに `elastic_increment` ずつ加算）
-> - ElasticBonus 上限: **MaxTP / MaxYield** または **baseStat × ElasticMaxMultiplier(2)** のいずれか小さい方
+> - ElasticBonus は**累積**される（トリガーごとに `elastic_increment` ずつ線形加算。上限なし）
+> - **ln 逓減:** 実効値は `effectiveElasticBonus = free_tier × ln(1 + ElasticBonus / free_tier)` で計算される。蓄積が進むほど伸びが鈍化する
 > - ElasticBonus = 0 の状態が初期値（フリーティア相当、MC = 0）
+> - **MC 計算式（Elastic）:** `MC = max(0, intrinsicStat - free_tier) × cost_per_request / 100`
+>   - `intrinsicStat = base × rank_multiplier × family_multiplier + effectiveElasticBonus`（外部バフを除く固有ステータス）
+>   - `free_tier` はランクで変動しない固定値
+>   - Serverless（`cost_per_request=0`）は常に MC=0
+> - Elastic カードは MaxTP / MaxYield を持たない（ResourceInstance 上は `nil`）
 
 **その他のカードタイプ（Platform, Attachment, Strategy, Incident, Reactive）:**
 
@@ -359,7 +366,6 @@ stats フィールドなし（Platform の場合、`deploy_turns` はトップ�
 | `max_attachments` | int | 2 | リソースあたりの最大アタッチメント数 |
 | `per_turn_budget` | int | 500 | ターンごとの Budget 支給額 |
 | `slots_per_zone` | int | 3 | ゾーンあたりのスロット数 |
-| `elastic_max_multiplier` | int | 2 | Elastic の ElasticBonus 上限倍率。`baseStat × elastic_max_multiplier` が ElasticBonus の上限として使用される（MaxTP/MaxYield との小さい方を採用） |
 
 ---
 

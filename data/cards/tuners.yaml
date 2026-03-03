@@ -55,6 +55,8 @@ cards:
     resizable: false
     elastic: true
     elastic_increment: 100
+    free_tier: 700
+    cost_per_request: 7
     origin: "OCI Container"
     restriction: unlimited
     is_active: true
@@ -64,7 +66,6 @@ cards:
       deploy_cost: 300
       sla_penalty: 400
       maintenance_cost: 50
-    tp_max: 1300
     effect_text: ""
 
   # === Orchestrator (1 card) ===
@@ -78,6 +79,8 @@ cards:
     resizable: true
     elastic: true
     elastic_increment: 100
+    free_tier: 600
+    cost_per_request: 17
     origin: "OKE"
     restriction: unlimited
     is_active: true
@@ -87,7 +90,6 @@ cards:
       deploy_cost: 600
       sla_penalty: 500
       maintenance_cost: 100
-    tp_max: 1000
     effect_text: "**初回無料:** small → medium の Scale Cost 0"
     passive_effects:
       - type: scale_cost_free
@@ -104,6 +106,8 @@ cards:
     resizable: false
     elastic: true
     elastic_increment: 100
+    free_tier: 500
+    cost_per_request: 0
     origin: "OCI Functions"
     restriction: unlimited
     is_active: true
@@ -113,7 +117,6 @@ cards:
       deploy_cost: 100
       sla_penalty: 200
       maintenance_cost: 0
-    tp_max: 900
     effect_text: ""
 
   - card_no: 76
@@ -125,6 +128,8 @@ cards:
     resizable: false
     elastic: true
     elastic_increment: 100
+    free_tier: 300
+    cost_per_request: 0
     origin: "Oracle APEX"
     restriction: semi_limited
     restriction_reason: "Dep 0 / RC 0 の完全無料フロントエンド"
@@ -135,7 +140,6 @@ cards:
       deploy_cost: 0
       sla_penalty: 200
       maintenance_cost: 0
-    tp_max: 600
     effect_text: "**Low-Code:** 自分のフィールドに 調律部 DB がある時、このカードのスループットを +400 する。"
     passive_effects:
       - type: tp_if_card_type_on_field
@@ -157,6 +161,8 @@ cards:
     resizable: false
     elastic: true
     elastic_increment: 100
+    free_tier: 500
+    cost_per_request: 10
     origin: "Autonomous DB"
     restriction: unlimited
     is_active: true
@@ -166,7 +172,6 @@ cards:
       deploy_cost: 400
       sla_penalty: 700
       maintenance_cost: 50
-    yield_max: 700
     effect_text: ""
 
   - card_no: 78

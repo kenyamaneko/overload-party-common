@@ -20,6 +20,11 @@ __pycache__/
 .venv/
 venv/
 
+# Docs (local only)
+docs/adr/
+docs/notes/
+docs/archive/
+
 # Secrets / env
 *.env
 .env*

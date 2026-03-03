@@ -53,6 +53,8 @@ cards:
     resizable: false
     elastic: true
     elastic_increment: 100
+    free_tier: 700
+    cost_per_request: 7
     origin: "Cloud Run"
     restriction: unlimited
     is_active: true
@@ -62,7 +64,6 @@ cards:
       deploy_cost: 200
       sla_penalty: 200
       maintenance_cost: 50
-    tp_max: 1500
     effect_text: "**Scale to Zero:** 前のターン、このカードが攻撃していない場合に発動できる。このターン、このカードのリクエストコストは 0 になる。この効果は、このカードをデプロイしたターンは使用できない。"
 
   - card_no: 50
@@ -74,6 +75,8 @@ cards:
     resizable: true
     elastic: true
     elastic_increment: 100
+    free_tier: 700
+    cost_per_request: 14
     origin: "GKE"
     restriction: unlimited
     is_active: true
@@ -83,7 +86,6 @@ cards:
       deploy_cost: 600
       sla_penalty: 600
       maintenance_cost: 100
-    tp_max: 1100
     effect_text: "**自動操縦:** このカードをデプロイした時に発動できる。開発コストなしで medium にスケールアップする。\n**大艦隊:** 自分のフィールドに他の「しゅがーLab Orchestrator - クーヘンバウムティス」がいる時に発動できる。手札からこのカードを、開発コストを払わずにデプロイする。この効果は1ターンに1回のみ使用できる。"
 
   - card_no: 53
@@ -95,6 +97,8 @@ cards:
     resizable: false
     elastic: true
     elastic_increment: 100
+    free_tier: 700
+    cost_per_request: 0
     origin: "Cloud Functions"
     restriction: unlimited
     is_active: true
@@ -104,7 +108,6 @@ cards:
       deploy_cost: 100
       sla_penalty: 200
       maintenance_cost: 0
-    tp_max: 1100
     effect_text: "—"
 
   # === AI/ML (2 cards) ===
@@ -177,6 +180,8 @@ cards:
     resizable: false
     elastic: true
     elastic_increment: 100
+    free_tier: 500
+    cost_per_request: 20
     origin: "Cloud Spanner"
     restriction: unlimited
     is_active: true
@@ -186,7 +191,6 @@ cards:
       deploy_cost: 600
       sla_penalty: 600
       maintenance_cost: 100
-    yield_max: 700
     effect_text: "**完全同期:** このカードは Incident カードの効果を受けない。"
 
   - card_no: 57
@@ -198,6 +202,8 @@ cards:
     resizable: false
     elastic: true
     elastic_increment: 100
+    free_tier: 300
+    cost_per_request: 17
     origin: "Firestore"
     restriction: unlimited
     is_active: true
@@ -207,7 +213,6 @@ cards:
       deploy_cost: 300
       sla_penalty: 400
       maintenance_cost: 50
-    yield_max: 800
     effect_text: "**即時反映:** 自分が しゅがーLab Resource をデプロイした時に発動できる。自分の Insight を +200 する。"
 
   - card_no: 58

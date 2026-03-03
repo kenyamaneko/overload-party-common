@@ -137,7 +137,7 @@ Budget はあなたの行動資金であり、同時にライフポイントで�
 - カード右上の **可用性** と **スループット** はそのカードの**最大値**。ゲーム中はダメージや効果で変動するため、**現在値**を別途トラッキングする
 - **可用性** = 耐久値の最大値。ダメージは永続で蓄積し、現在可用性が 0 以下で破壊
 - **スループット** = 攻撃力 兼 収益化の変換上限の最大値。ElasticBonus やカード効果で現在スループットが変動する
-- **維持コスト (Maintenance Cost)** = ターン終了時に支払うランニングコスト。Non-Elastic は固定（× ランク倍率）、Elastic は ElasticBonus に比例して増加（base 時は無料）
+- **維持コスト (Maintenance Cost)** = ターン終了時に支払うランニングコスト。Non-Elastic は固定（× ランク倍率）、Elastic は固有ステータスの `free_tier` 超過分 × `cost_per_request` で増加（`free_tier` 以下なら無料）
 - **デプロイターン (Deploy Turns)** = デプロイしてから稼働するまでに必要なターン数。0 なら即座に稼働、1 なら次の自分のターンに稼働、2 ならその次。カードタイプごとに異なり、技術の構築難易度を表す
 - **SLAペナルティ** = カード破壊時にオーナーの Budget から強制減算
 - バックエンド（Backend）はスループットの代わりに **Yield**（毎ターン Insight 生成量）を持つ
@@ -234,7 +234,7 @@ Resource カードには **Resizable (R)** と **Elastic (E)** の2つの属性�
 | **(R+E)** | 両方の属性を持つ |
 | **—** | どちらでもない（固定スペック） |
 
-これらの属性は排反せず、**サブタイプに依存しない**。同じ Database でも、手動スケーリングのサービス（RDS）は (R)、自律型サービス（Autonomous DB）は (E) と、元のクラウドサービスの実際のスケーリングモデルに基づいて個別に設定される。Elastic カードは base 状態では維持コストが無料（フリーティア）だが、自動スケーリングが進むと利用量に比例してコストが増加する。
+これらの属性は排反せず、**サブタイプに依存しない**。同じ Database でも、手動スケーリングのサービス（RDS）は (R)、自律型サービス（Autonomous DB）は (E) と、元のクラウドサービスの実際のスケーリングモデルに基づいて個別に設定される。Elastic カードは `free_tier` 以下なら維持コスト無料（フリーティアモデル）だが、自動スケーリングで実効値が `free_tier` を超えると `cost_per_request` に比例してコストが増加する。Serverless カード（`cost_per_request=0`）は常に MC=0 となる。
 
 ---
 
@@ -281,14 +281,52 @@ Resource カードには **Resizable (R)** と **Elastic (E)** の2つの属性�
 
 Elastic カードは、特定のトリガーに応じて **スループット（TP）または Yield が自動的に増加**する。増加分は **ElasticBonus** として**永続的に蓄積**される（ターン終了でリセットされない）。
 
-各 Elastic カードには **`elastic_increment`**（増加量）が定義されている。トリガー発生のたびに ElasticBonus に `elastic_increment` が加算される。
+各 Elastic カードには以下のパラメータが定義されている:
 
-#### ElasticBonus の上限
+| パラメータ | 説明 |
+|-----------|------|
+| **`elastic_increment`** | トリガー1回あたりの ElasticBonus 加算量 |
+| **`free_tier`** | MC 無料枠の閾値 **かつ** ln 対数変換のスケール係数。**Rank でスケールしない（固定値）** |
+| **`cost_per_request`** | `free_tier` 超過分に対する MC レート（1/100 単位）。0 なら常に MC=0（Serverless モデル） |
 
-- カードに **MaxTP / MaxYield** が定義されている場合: その値が上限
-- 定義されていない場合: **baseStat × ElasticMaxMultiplier**（デフォルト 2）が上限
+#### ElasticBonus の蓄積と対数逓減
 
-> `baseStat` = カード定義上の素のスループット（Compute/AI系）または Yield（DB/Data系）
+ElasticBonus は**上限なし**で線形に蓄積し続ける（トリガーごとに `+elastic_increment`）。ただし、実効値には**対数逓減（diminishing returns）**が適用される:
+
+```
+effectiveElasticBonus = free_tier × ln(1 + ElasticBonus / free_tier)
+```
+
+- 序盤（ElasticBonus が小さい時）: ほぼ線形に成長
+- 中盤以降: 対数カーブで逓減し、伸びが鈍化
+- 上限は存在しないが、実質的に収束していく
+
+#### Elastic カードのメンテナンスコスト（MC）
+
+Elastic カードの MC は、**固有ステータス**（intrinsicStat）が `free_tier` を超えた分に対して課金される:
+
+```
+intrinsicStat = base × rank × family + effectiveElasticBonus
+MC = max(0, intrinsicStat - free_tier) × cost_per_request / 100
+```
+
+- `intrinsicStat` にはカード本体の数値のみが含まれる（Platform / パッシブ / アタッチメント / 一時的効果は**除外**）
+- `free_tier` は**固定値**（Rank でスケールしない）。したがって **Scale Up すると即座に MC が増加**する
+- `cost_per_request = 0` のカード（Serverless 等）は常に MC = 0
+
+#### 数値例: Container (base TP=500, increment=100, free_tier=500, cost_per_request=10)
+
+| トリガー回数 | Raw Bonus | Effective Bonus | 実効 TP | MC |
+|:---:|---:|---:|---:|---:|
+| 0 | 0 | 0 | 500 | 0 |
+| 1 | 100 | 91 | 591 | 9 |
+| 5 | 500 | 346 | 846 | 34 |
+| 10 | 1,000 | 549 | 1,049 | 54 |
+| 20 | 2,000 | 804 | 1,304 | 80 |
+
+> free_tier=500 がちょうど base TP と一致するため、base 状態では MC=0（フリーティア）。
+> 自動スケーリングが進むほど TP は伸びるが、対数逓減により「青天井」にはならない。
+> MC は実効 TP の `free_tier` 超過分に `cost_per_request/100` を掛けた値。
 
 #### トリガー条件（配置ゾーン × カードタイプで決定）
 
@@ -298,34 +336,38 @@ Elastic カードは、特定のトリガーに応じて **スループット（
 | **バックエンド** | Compute / AI/ML | **TP** | 収益化（distribute_yield）に使用された時 |
 | **バックエンド** | Database / Data | **Yield** | エンドフェーズの Yield 生成時（毎ターン自動） |
 
-> 例: Container (TP 500, elastic_increment 100) がフロントエンドで攻撃を受けて生存 →
-> ElasticBonus +100。次に攻撃を受けて生存 → ElasticBonus +200（累積）。
-> 実効 TP = 500 + 200 = 700。上限（500 × 2 = 1,000）に達するまで蓄積し続ける。
+> 例: Container (TP 500, elastic_increment 100, free_tier 500) がフロントエンドで攻撃を受けて生存 →
+> ElasticBonus +100（Raw）。effectiveElasticBonus = 500 × ln(1 + 100/500) ≈ 91。実効 TP = 591。
+> 5回生存後 → ElasticBonus 500（Raw）、effective ≈ 346。実効 TP = 846。上限なしだが逓減する。
 
 > 例: Database/NoSQL (Yield 400, elastic_increment 100) がバックエンドで稼働中 →
 > エンドフェーズの Yield 生成ごとに ElasticBonus +100 が蓄積。
-> 数ターン後には Yield が大幅に増加し、Insight 生成量が飛躍的に伸びる。
+> 数ターン後には Yield が大幅に増加し、Insight 生成量が飛躍的に伸びる（ただし対数逓減あり）。
 
 #### 実効値の計算順序
 
-ElasticBonus は**他のボーナスよりも先に**適用される:
+effectiveElasticBonus は**他のボーナスよりも先に**適用される:
 
 1. ベーススタット（カード定義値）
 2. ランク倍率（Resizable の場合）
 3. Instance Family 修正（該当する場合）
-4. **ElasticBonus（永続・累積）**
+4. **effectiveElasticBonus（永続・累積・対数逓減済み）**
 5. Platform カード効果
 6. パッシブ効果
 7. アタッチメント効果
 8. 一時的効果
 
+> MC 計算に使う `intrinsicStat` はステップ 1〜4 の合計。ステップ 5〜8 は MC に影響しない。
+
 #### Resizable + Elastic
 
 R+E のカードは両方の属性を持つ。
-ElasticBonus は Rank 倍率の影響を受けず**フラット加算**される。
+effectiveElasticBonus は Rank 倍率の影響を受けず**フラット加算**される。
+ただし `free_tier` は固定値のため、Scale Up すると `intrinsicStat` が `free_tier` を大きく超え、MC が増加する。
 
-> 例: Orchestrator (TP 600, elastic_increment 100, R+E) が medium (×2) の場合:
-> ベース TP = 600 × 2 = 1,200 → ElasticBonus 300 蓄積時 → 実効 TP = 1,200 + 300 = 1,500
+> 例: Orchestrator (TP 600, elastic_increment 100, free_tier 600, cost_per_request 10, R+E) が medium (×2) の場合:
+> ベース TP = 600 × 2 = 1,200 → effectiveElasticBonus 300 蓄積時 → 実効 TP = 1,200 + 300 = 1,500
+> intrinsicStat = 1,500、MC = max(0, 1500 - 600) × 10 / 100 = **90**
 
 #### ElasticBonus のリセット
 
@@ -470,11 +512,13 @@ DB/Object Storage（Backend） → Insight生成 → [Insightプール] → Back
 ターン終了処理を行う。
 1. **維持コスト徴収:** フィールド上の全リソースの維持コストを Budget から差し引く
    - Non-Elastic: `MC = maintenance_cost × rank_multiplier`（small×1, medium×2, large×3）
-   - Elastic: `MC = ElasticBonus × maintenance_cost × rank_multiplier / baseStat`
-     - `baseStat` = カード定義上の素のスループット（Compute/AI系）または Yield（DB/Data系）
-     - ElasticBonus が 0（= base 状態）なら MC = 0（フリーティア）
-     - ElasticBonus が増えるほど MC が線形に増加
-     - 例: Container (baseStat=500, MC=50, rank=small×1, ElasticBonus=200) → MC = 200×50×1/500 = **20**
+   - Elastic: `MC = max(0, intrinsicStat - free_tier) × cost_per_request / 100`
+     - `intrinsicStat = base × rank × family + effectiveElasticBonus`（Platform/パッシブ/アタッチメント/一時効果は除外）
+     - `effectiveElasticBonus = free_tier × ln(1 + ElasticBonus / free_tier)`（対数逓減）
+     - `free_tier` は固定値（Rank でスケールしない）→ Scale Up すると即座に MC 増加
+     - `cost_per_request = 0`（Serverless 等）なら常に MC = 0
+     - 例: Container (base TP=500, rank=small×1, ElasticBonus=500, free_tier=500, cost_per_request=10)
+       → effectiveElasticBonus = 500 × ln(2) ≈ 346、intrinsicStat = 846、MC = (846 - 500) × 10 / 100 = **34**
 2. 一時的な効果（「このターン中」など）の終了
 3. **Yield生成:** バックエンドの各カードが自動的に Insight を生成し、Insightプールに加算する
 4. 手札調整（上限 6枚になるように捨てる）
@@ -658,7 +702,7 @@ K8s → Serverless への移行で SLA ペナルティを回避する「事業�
 | スケールアップ | **無料**（メンテナンスコスト増） |
 | マイグレーション | **無料**（1ターンかかる） |
 | 攻撃 | 無料 |
-| 維持コスト（毎ターン自動） | Non-Elastic: MC × ランク乗数 / Elastic: ElasticBonus × MC × ランク乗数 / baseStat |
+| 維持コスト（毎ターン自動） | Non-Elastic: MC × ランク乗数 / Elastic: max(0, intrinsicStat - free_tier) × cost_per_request / 100 |
 | その他 | カードの記載に従う |
 
 ### デプロイターン早見
@@ -706,7 +750,7 @@ Scale Up コスト = **無料**。メンテナンスコストがランク倍率�
 | 区分 | 意味 |
 |------|------|
 | **(R)** | Resizable — 手動ランクアップ（small → medium → large） |
-| **(E)** | Elastic — 自動スケーリング（ElasticBonus 永続累積、MC は利用量比例） |
+| **(E)** | Elastic — 自動スケーリング（ElasticBonus 永続累積・対数逓減、MC は free_tier 超過分 × cost_per_request） |
 | **(R+E)** | 両方 |
 | **—** | どちらでもない（固定スペック） |
 

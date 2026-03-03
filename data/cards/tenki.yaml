@@ -53,6 +53,8 @@ cards:
     resizable: false
     elastic: true
     elastic_increment: 100
+    free_tier: 600
+    cost_per_request: 8
     origin: "ACI"
     restriction: unlimited
     is_active: true
@@ -62,7 +64,6 @@ cards:
       deploy_cost: 300
       sla_penalty: 400
       maintenance_cost: 50
-    tp_max: 1200
     effect_text: "—"
 
   - card_no: 26
@@ -74,6 +75,8 @@ cards:
     resizable: true
     elastic: true
     elastic_increment: 100
+    free_tier: 600
+    cost_per_request: 17
     origin: "AKS"
     restriction: unlimited
     is_active: true
@@ -83,7 +86,6 @@ cards:
       deploy_cost: 600
       sla_penalty: 700
       maintenance_cost: 100
-    tp_max: 1000
     effect_text: "—"
 
   - card_no: 27
@@ -120,6 +122,8 @@ cards:
     resizable: false
     elastic: true
     elastic_increment: 100
+    free_tier: 400
+    cost_per_request: 0
     origin: "Azure Functions"
     restriction: unlimited
     is_active: true
@@ -129,7 +133,6 @@ cards:
       deploy_cost: 100
       sla_penalty: 200
       maintenance_cost: 0
-    tp_max: 800
     effect_text: "—"
 
   # ── AI/ML系リソース (1枚) ────────────────────────────────────
@@ -203,6 +206,8 @@ cards:
     resizable: false
     elastic: true
     elastic_increment: 100
+    free_tier: 300
+    cost_per_request: 17
     origin: "CosmosDB"
     restriction: unlimited
     is_active: true
@@ -212,7 +217,6 @@ cards:
       deploy_cost: 400
       sla_penalty: 500
       maintenance_cost: 50
-    yield_max: 900
     effect_text: "**百花の形:** このカードが 天気使い DB系リソースとして効果の対象になる時、このカードは2枚分として数える。\n**百花繚乱:** このカードをデプロイした時に発動できる。リポジトリから「天気使い NoSQL - 秩序の蒼<コスモ>」1枚をコストなしでデプロイする。この効果は1ターン中に1回のみ使用できる"
 
   - card_no: 33

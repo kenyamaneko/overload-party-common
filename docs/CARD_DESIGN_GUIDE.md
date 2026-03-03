@@ -22,10 +22,12 @@
 ```
 
 - DB系リソースおよびオブジェクトストレージはスループットを持たない。代わりに **Yield** を記載。
-- **維持コスト (Maintenance Cost)** は全リソースに存在する。Resizable は MC×ランク乗数で固定。Serverless は MC=0（使わなければ無料）。
-- **Elastic の MC 計算式:** `MC = ElasticBonus × maintenance_cost × rank_multiplier / baseStat`
-  - ElasticBonus = 0（初期状態）なら MC = 0（フリーティア）
-  - ElasticBonus が増加するほど MC もスケールする
+- **維持コスト (Maintenance Cost)** は全リソースに存在する。Resizable は MC×ランク乗数で固定。Serverless は `cost_per_request=0` → 常に MC=0。
+- **Elastic の MC 計算式:** `MC = max(0, intrinsicStat - free_tier) × cost_per_request / 100`
+  - `intrinsicStat = base × rank_multiplier × family_multiplier + effectiveElasticBonus`（外部バフを除く固有ステータス）
+  - `effectiveElasticBonus = free_tier × ln(1 + ElasticBonus / free_tier)`（対数逓減）
+  - `free_tier` はランクで変動しない固定値。intrinsicStat が free_tier 以下なら MC = 0（フリーティア）
+  - ElasticBonus が増加するほど MC もスケールするが、ln 逓減により緩やかに上昇
 
 ### プラットフォーム
 
@@ -103,11 +105,13 @@ Resource カードのタイプ欄は `サブタイプ (区分)` の形式で記�
 
 ### Elastic 表記
 
-Elastic カードの Yield / スループットは `base→上限` で記載する。
+Elastic カードの TP / Yield は base 値のみ記載する（上限キャップは廃止）。追加で `free_tier` と `cost_per_request` を設定する。
 
 ```
-スループット 500→1100    ← Container の例
-Yield 500→700     ← Autonomous DB の例
+スループット 500    ← Container の例（上限なし、ln 逓減で伸びが鈍化）
+Yield 500           ← Autonomous DB の例
+free_tier: 600      ← MC 発生閾値 + ln スケールパラメータ
+cost_per_request: 50  ← MC レート ÷100（Serverless は 0）
 ```
 
 ### Elastic オートスケーリング
@@ -120,9 +124,32 @@ Elastic カードは自動スケーリング（ElasticBonus）を持つ。各カ
 | バックエンド Compute | 収益化（Monetize）に使用された時 | スループット (TP) |
 | バックエンド DB | 各エンドフェイズ | Yield |
 
-- ElasticBonus は**累積**される（トリガーごとに `elastic_increment` ずつ加算）
-- 上限: **MaxTP / MaxYield** または **baseStat × 2** のいずれか小さい方
+- ElasticBonus は**累積**される（トリガーごとに `elastic_increment` ずつ線形加算。**上限なし**）
+- **ln 逓減:** 実効値は `effectiveElasticBonus = free_tier × ln(1 + ElasticBonus / free_tier)` で計算。蓄積が進むほど伸びが鈍化する
 - ElasticBonus = 0 の状態が初期値（フリーティア相当）
+- YAML には `tp_max` / `yield_max` を記載しない（Elastic カードに上限キャップは存在しない）
+
+### Elastic カード設計時の `free_tier` / `cost_per_request` ガイド
+
+Elastic カードを新規設計する際は、以下を参考に `free_tier` と `cost_per_request` を設定する。
+
+| パラメータ | 型 | 説明 | 設計指針 |
+|-----------|-----|------|---------|
+| `free_tier` | int64 | MC 発生閾値 + ln スケールパラメータ | base ステータスに近い値を設定。free_tier が大きいほど MC 0 の範囲が広く、ln 逓減も緩やかになる |
+| `cost_per_request` | int64 | MC レート（÷100 で適用） | 高いほど超過時の MC が重い。Serverless は `0`（常に MC=0） |
+
+**設計例:**
+
+```
+# Elastic Container（base TP=500, free_tier=600, cost_per_request=50）
+# small ランクの場合:
+#   intrinsicStat = 500 (base) × 1.0 (rank) × 1.0 (family) + effectiveElasticBonus
+#   ElasticBonus=0 → intrinsicStat=500 → MC = max(0, 500-600) × 50/100 = 0（フリーティア内）
+#   ElasticBonus=200 → effectiveEB = 600 × ln(1 + 200/600) ≈ 180
+#     → intrinsicStat=680 → MC = max(0, 680-600) × 50/100 = 40
+#
+# Serverless（cost_per_request=0）→ 常に MC=0
+```
 
 ### パラメータ設計の優先順位
 
@@ -521,7 +548,7 @@ Attachment カードの効果は装備先の Resource に適用される。
 - [ ] 任意発動（`できる`）と強制発動（`する`）を正しく書き分けているか
 - [ ] 他カードを参照する効果に**陣営名**が入っているか（陣営カードの場合）
 - [ ] 複数効果がある場合、**改行して複数行**で記載しているか
-- [ ] Elastic カードの表記が `base→上限` になっているか（Yield も同様）
+- [ ] Elastic カードに `free_tier` と `cost_per_request` が設定されているか（Serverless は `cost_per_request=0`）
 - [ ] R/E 区分が元サービスのスケーリングモデルと整合しているか
 - [ ] SLAペナルティが顧客影響の大きさを反映しているか
 - [ ] CARDS.md のテーブルカラムがカードタイプに合っているか

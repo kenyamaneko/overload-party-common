@@ -24,8 +24,8 @@
   "action_types": ["play_card", "attack", "scale_up", "distribute_yield", "discard_hand", "activate_effect", "set_reactive", "migrate", "end_phase"],
   "event_types": ["play_card", "attach_card", "attack", "scale_up", "distribute_yield", "discard_hand", "activate_effect", "trap_revealed", "migrate", "migration_complete", "phase_change", "phase_end", "turn_end", "game_over"],
   "ws_message_types": {
-    "server": ["game_state", "game_over", "error", "game_entered", "matchmaking_started", "matchmaking_cancelled", "action_rejected", "stamp_used", "pong", "match_found", "game_state_restore", "action_performed", "turn_controls"],
-    "client": ["game_enter", "matchmaking_start", "matchmaking_cancel", "game_action", "use_stamp", "ping"]
+    "server": ["game_state", "game_over", "error", "game_entered", "matchmaking_started", "matchmaking_cancelled", "action_rejected", "stamp_used", "pong", "match_found", "game_state_restore", "action_performed", "turn_controls", "npc_battle_created"],
+    "client": ["game_enter", "matchmaking_start", "matchmaking_cancel", "game_action", "use_stamp", "ping", "npc_battle_start"]
   },
   "effect_durations": ["this_turn", "until_next_turn_end"],
   "initial_values": {
@@ -37,8 +37,7 @@
     "deck_size": 30,
     "max_attachments": 2,
     "per_turn_budget": 500,
-    "slots_per_zone": 3,
-    "elastic_max_multiplier": 2
+    "slots_per_zone": 3
   },
   "level": {
     "exp_formula": "60 * n^2",

@@ -153,6 +153,12 @@ def validate(cards):
         if restriction and restriction not in VALID_RESTRICTION:
             errors.append(f"{label}: invalid restriction '{restriction}'")
 
+        # Elastic card validation: require free_tier and cost_per_request
+        if card.get("elastic"):
+            for ef in ("free_tier", "cost_per_request"):
+                if ef not in card:
+                    errors.append(f"{label}: elastic card missing required field '{ef}'")
+
         # Stats validation
         stats = card.get("stats", {})
         if card_type and stats:
@@ -187,6 +193,8 @@ def generate_json(cards, server_dir):
             "resizable": card["resizable"],
             "elastic": card["elastic"],
             "elastic_increment": card.get("elastic_increment", 0),
+            "free_tier": card.get("free_tier", 0),
+            "cost_per_request": card.get("cost_per_request", 0),
             "stats": stats,
             "restriction": card["restriction"],
             "is_active": card["is_active"],
@@ -318,7 +326,6 @@ def generate_go_constants(constants, server_dir):
     lines.append(f"\tMaxAttachments  = {iv['max_attachments']}   // max attachment slots per resource")
     lines.append(f"\tPerTurnBudget   = {iv['per_turn_budget']} // budget added automatically at the start of each turn")
     lines.append(f"\tSlotsPerZone    = {iv['slots_per_zone']}   // number of slots per zone")
-    lines.append(f"\tElasticMaxMultiplier = {iv['elastic_max_multiplier']} // default cap multiplier for Elastic cards without explicit max")
     lines.append(")")
     lines.append("")
 
@@ -627,20 +634,14 @@ def _scalability_display(card):
 
 
 def _tp_display(card):
-    """Format throughput with optional max."""
+    """Format throughput value."""
     tp = card["stats"].get("throughput", 0)
-    tp_max = card.get("tp_max")
-    if tp_max:
-        return f"{tp}→{tp_max}"
     return str(tp)
 
 
 def _yield_display(card):
-    """Format Yield with optional max."""
+    """Format Yield value."""
     y = card["stats"].get("yield", 0)
-    y_max = card.get("yield_max")
-    if y_max:
-        return f"{y}→{y_max}"
     return str(y)
 
 
