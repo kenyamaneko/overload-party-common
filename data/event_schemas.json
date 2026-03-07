@@ -1,0 +1,58 @@
+{
+  "_comment": "Event data schemas for each EventType. Used to generate typed classes (C#) and TypeScript types. Field suffix '?' means optional.",
+  "play_card": {
+    "cardId": "long",
+    "zone": "string",
+    "index": "int",
+    "cancelled?": "bool"
+  },
+  "attach_card": {
+    "cardId": "long",
+    "targetId": "string"
+  },
+  "attack": {
+    "attackerId": "string",
+    "targetId": "string",
+    "damage": "long",
+    "destroyed": "bool",
+    "slaPenalty?": "long",
+    "cancelled?": "bool"
+  },
+  "scale_up": {
+    "instanceId": "string",
+    "targetRank": "string",
+    "instanceFamily?": "string"
+  },
+  "monetize": {
+    "totalAmount": "long"
+  },
+  "discard_hand": {
+    "discardedCount": "int",
+    "discardedIds": "string[]"
+  },
+  "activate_effect": {
+    "cardNo": "long",
+    "sourceId": "string",
+    "targetId?": "string"
+  },
+  "migrate": {
+    "sourceInstanceId": "string",
+    "targetInstanceId": "string",
+    "sourceCardId": "long",
+    "targetCardId": "long"
+  },
+  "phase_change": {
+    "previousPhase": "string",
+    "currentPhase": "string"
+  },
+  "phase_end": {
+    "phase": "string",
+    "needsDiscard": "bool"
+  },
+  "turn_end": {
+    "phase": "string",
+    "nextTurn": "long",
+    "activePlayer": "long",
+    "currentPhase": "string"
+  }
+}

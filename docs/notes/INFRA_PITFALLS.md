@@ -157,3 +157,37 @@ defer func() { _ = tx.Rollback(ctx) }()
 - **GKE Autopilot の課金**: Pod が 0 なら $0。ノードは自動管理
 - **IAM 変更の反映**: 最大 5 分程度かかることがある。`kubectl delete pod` で再作成して反映確認
 - **Cloud SQL Proxy v2 起動時間**: CI 環境では 30 秒以上かかることがある。`sleep 5` では不十分。ポートの readiness をポーリングすべき
+
+---
+
+## 10. Homebrew 版 .NET SDK で VS Code C# Dev Kit が起動しない (macOS)
+
+**症状**: VS Code で C# Dev Kit の Solution Explorer が表示されず、F12 (Go to Definition) がクロスプロジェクトで効かない。Output ログに以下のエラー:
+
+```
+.NET server STDERR: Failed to load /opt/homebrew/Cellar/dotnet/10.0.103/libexec/host/fxr/10.0.3/libhostfxr.dylib,
+error: dlopen(...): code signature in '...' not valid for use in process:
+mapping process and mapped file (non-platform) have different Team IDs
+```
+
+C# Dev Kit サーバーが exit code 130 で即死する。
+
+**原因**: Homebrew でビルドされた .NET SDK のバイナリ (`libhostfxr.dylib`) のコード署名 Team ID と、VS Code 拡張機能プロセスの Team ID が一致しない。macOS のコード署名検証でロードが拒否される。
+
+C# 言語サーバー (Roslyn) 側はソリューションなしでも単体ファイルとして動くため、エディタ上で構文ハイライトや基本補完は動作する。しかし C# Dev Kit サーバーが起動しないため、Solution Explorer やクロスプロジェクト参照 (F12) は一切使えない。
+
+**修正**: Homebrew 版をアンインストールし、Microsoft 公式インストーラー (`.pkg`) で再インストール。
+
+```bash
+brew uninstall dotnet
+# https://dotnet.microsoft.com/download から .pkg をダウンロードしてインストール
+dotnet --version  # /usr/local/share/dotnet/dotnet から実行されることを確認
+```
+
+**ハマりポイント**:
+
+- C# の構文ハイライトと基本補完は動くため、C# Dev Kit が死んでいることに気付きにくい
+- Output パネルのドロップダウンで `C#` と `C# Dev Kit` は別チャネル。`C# Dev Kit` 側を確認しないとエラーが見えない
+- `.NET: Open Solution` コマンドも無反応になるため、ソリューション設定の問題と誤診しやすい
+
+**参考**: [microsoft/vscode-dotnettools#1002](https://github.com/microsoft/vscode-dotnettools/issues/1002), [Homebrew/homebrew-core#168205](https://github.com/Homebrew/homebrew-core/issues/168205)

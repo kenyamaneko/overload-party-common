@@ -19,8 +19,6 @@ files:
           - {name: Username, type: string, json: "username", db: "username"}
           - {name: Level, type: int64, json: "level", db: "level"}
           - {name: Exp, type: int64, json: "exp", db: "exp"}
-          - {name: Wins, type: int64, json: "wins", db: "wins"}
-          - {name: Losses, type: int64, json: "losses", db: "losses"}
           - {name: IsPremium, type: bool, json: "is_premium", db: "is_premium"}
           - {name: EquippedIconNo, type: "*int64", json: "equipped_icon_no,omitempty", db: "equipped_icon_no"}
           - {name: SelectedFaction, type: "*string", json: "selected_faction,omitempty", db: "selected_faction"}
@@ -45,14 +43,14 @@ files:
         fields:
           - {name: PlayerID, type: string, json: "player_id"}
           - {name: CardNo, type: int64, json: "card_no"}
-          - {name: IllustrationVariant, type: int64, json: "illustration_variant"}
+          - {name: ArtNo, type: int64, json: "art_no"}
           - {name: Count, type: int, json: "count"}
 
       - name: PlayerCardWithDef
         comment: "PlayerCardWithDef is a PlayerCard enriched with card definition fields for API responses."
         fields:
           - {name: CardNo, type: int64, json: "card_no"}
-          - {name: IllustrationVariant, type: int64, json: "illustration_variant"}
+          - {name: ArtNo, type: int64, json: "art_no"}
           - {name: Count, type: int, json: "count"}
           - {name: CardName, type: string, json: "card_name"}
           - {name: Faction, type: string, json: "faction"}
@@ -73,14 +71,14 @@ files:
           - {name: SleeveNo, type: "*int64", json: "sleeve_no,omitempty"}
           - {name: CreatedAt, type: time.Time, json: "created_at"}
           - {name: UpdatedAt, type: time.Time, json: "updated_at"}
-          - {name: CardNos, type: "[]int64", json: "card_nos,omitempty", comment: "Populated by the service layer for API responses."}
+          - {name: DeckCards, type: "[]DeckCard", json: "deck_cards,omitempty", comment: "Populated by the service layer for API responses."}
 
       - name: DeckCard
         fields:
           - {name: PlayerID, type: string, json: "player_id"}
           - {name: DeckID, type: int64, json: "deck_id"}
           - {name: CardNo, type: int64, json: "card_no"}
-          - {name: IllustrationVariant, type: int64, json: "illustration_variant"}
+          - {name: ArtNo, type: int64, json: "art_no"}
           - {name: Count, type: int, json: "count"}
 
   # ─── Card ──────────────────────────────────────────────
@@ -365,7 +363,7 @@ files:
 
   # ─── Game Config (Battle only) ─────────────────────────
   - name: game_config
-    target: battle
+    target: both
     imports:
       - time
     types:

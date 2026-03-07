@@ -189,8 +189,6 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
   "username": "string",
   "level": 1,
   "exp": 0,
-  "wins": 0,
-  "losses": 0,
   "is_premium": false,
   "selected_faction": null,
   "equipped_icon_no": null,
@@ -332,19 +330,18 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
 [
   {
     "player_id": "uuid",
-    "deck_id": 1,
-    "deck_name": "My Deck",
-    "is_valid": true,
-    "playmat_no": 1,
-    "sleeve_no": 2,
-    "card_nos": [1, 1, 1, 2, 2, 3, 4, 4, 4],
+    "deck_cards": [
+      {"card_no": 1, "illustration_variant": 0, "count": 3},
+      {"card_no": 2, "illustration_variant": 1, "count": 2}
+    ],
     "created_at": "timestamp",
     "updated_at": "timestamp"
   }
 ]
 ```
 
-`card_nos` は DeckCards を card_no × count で展開した配列。
+`deck_cards` はデッキのカード構成（`card_no`, `illustration_variant`, `count`）の配列。
+
 
 ---
 

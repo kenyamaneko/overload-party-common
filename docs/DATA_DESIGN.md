@@ -219,8 +219,7 @@
 | `username` | VARCHAR(50) | No | 表示名 |
 | `level` | BIGINT | No | レベル (Default: 1) |
 | `exp` | BIGINT | No | 経験値 (Default: 0) |
-| `wins` | BIGINT | Yes | 勝利数 (Default: 0) |
-| `losses` | BIGINT | Yes | 敗北数 (Default: 0) |
+
 | `is_premium` | BOOLEAN | No | 課金ステータス (Default: false) |
 | `equipped_icon_no` | BIGINT | Yes | 装備中アイコン番号（`CosmeticItems` 参照。NULL: デフォルト） |
 | `selected_faction` | VARCHAR(20) | Yes | 選択済みファクション |

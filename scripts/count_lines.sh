@@ -9,7 +9,8 @@ REPOS=(
   overload-party-infra
   overload-party-k8s
   overload-party-ops
-  overload-party-server
+  overload-party-battle
+  overload-party-gateway
 )
 
 echo "============================================================"
@@ -39,14 +40,15 @@ for repo in "${REPOS[@]}"; do
     -o -name "*.py" -o -name "*.go" -o -name "*.rs" -o -name "*.sh" \
     -o -name "*.rb" -o -name "*.java" -o -name "*.kt" -o -name "*.swift" \
     -o -name "*.dart" -o -name "*.vue" -o -name "*.svelte" \
+    -o -name "*.cs" \
     -o -name "*.css" -o -name "*.scss" -o -name "*.html" \
-    \) ! -path "*/node_modules/*" ! -path "*/.git/*" ! -path "*/dist/*" ! -path "*/build/*" ! -path "*/.next/*" \
+    \) ! -path "*/node_modules/*" ! -path "*/.git/*" ! -path "*/dist/*" ! -path "*/build/*" ! -path "*/.next/*" ! -path "*/obj/*" ! -path "*/bin/*" ! -path "*/coverage/*" \
     -exec cat {} + 2>/dev/null | wc -l | tr -d ' ')
 
   # Doc files
   doc_lines=$(find "$dir" -type f \( \
     -name "*.md" -o -name "*.txt" -o -name "*.rst" -o -name "*.adoc" \
-    \) ! -path "*/node_modules/*" ! -path "*/.git/*" \
+    \) ! -path "*/node_modules/*" ! -path "*/.git/*" ! -path "*/obj/*" ! -path "*/bin/*" ! -path "*/coverage/*" \
     -exec cat {} + 2>/dev/null | wc -l | tr -d ' ')
 
   # Config files
@@ -55,13 +57,13 @@ for repo in "${REPOS[@]}"; do
     -o -name "*.ini" -o -name ".env*" -o -name "Dockerfile*" \
     -o -name "docker-compose*" -o -name "*.tf" -o -name "*.hcl" \
     -o -name "*.conf" -o -name "*.cfg" \
-    \) ! -path "*/node_modules/*" ! -path "*/.git/*" ! -path "*/dist/*" ! -path "*/.next/*" \
+    \) ! -path "*/node_modules/*" ! -path "*/.git/*" ! -path "*/dist/*" ! -path "*/.next/*" ! -path "*/obj/*" ! -path "*/bin/*" ! -path "*/coverage/*" \
     -exec cat {} + 2>/dev/null | wc -l | tr -d ' ')
 
   # Data files
   data_lines=$(find "$dir" -type f \( \
     -name "*.csv" -o -name "*.sql" -o -name "*.graphql" -o -name "*.proto" \
-    \) ! -path "*/node_modules/*" ! -path "*/.git/*" \
+    \) ! -path "*/node_modules/*" ! -path "*/.git/*" ! -path "*/obj/*" ! -path "*/bin/*" ! -path "*/coverage/*" \
     -exec cat {} + 2>/dev/null | wc -l | tr -d ' ')
 
   code_lines=${code_lines:-0}
@@ -97,7 +99,7 @@ for repo in "${REPOS[@]}"; do
 
   echo "--- $repo ---"
   find "$dir" -type f \
-    ! -path "*/node_modules/*" ! -path "*/.git/*" ! -path "*/dist/*" ! -path "*/build/*" ! -path "*/.next/*" \
+    ! -path "*/node_modules/*" ! -path "*/.git/*" ! -path "*/dist/*" ! -path "*/build/*" ! -path "*/.next/*" ! -path "*/obj/*" ! -path "*/bin/*" ! -path "*/coverage/*" \
     -name "*.*" | \
     sed 's/.*\.//' | sort | uniq -c | sort -rn | head -15
   echo ""
@@ -122,23 +124,24 @@ for repo in "${REPOS[@]}"; do
     -o -name "*.py" -o -name "*.go" -o -name "*.rs" -o -name "*.sh" \
     -o -name "*.rb" -o -name "*.java" -o -name "*.kt" -o -name "*.swift" \
     -o -name "*.dart" -o -name "*.vue" -o -name "*.svelte" \
+    -o -name "*.cs" \
     -o -name "*.css" -o -name "*.scss" -o -name "*.html" \
-    \) ! -path "*/node_modules/*" ! -path "*/.git/*" ! -path "*/dist/*" ! -path "*/build/*" ! -path "*/.next/*" | wc -l | tr -d ' ')
+    \) ! -path "*/node_modules/*" ! -path "*/.git/*" ! -path "*/dist/*" ! -path "*/build/*" ! -path "*/.next/*" ! -path "*/obj/*" ! -path "*/bin/*" ! -path "*/coverage/*" | wc -l | tr -d ' ')
 
   doc_count=$(find "$dir" -type f \( \
     -name "*.md" -o -name "*.txt" -o -name "*.rst" -o -name "*.adoc" \
-    \) ! -path "*/node_modules/*" ! -path "*/.git/*" | wc -l | tr -d ' ')
+    \) ! -path "*/node_modules/*" ! -path "*/.git/*" ! -path "*/obj/*" ! -path "*/bin/*" ! -path "*/coverage/*" | wc -l | tr -d ' ')
 
   config_count=$(find "$dir" -type f \( \
     -name "*.json" -o -name "*.yaml" -o -name "*.yml" -o -name "*.toml" \
     -o -name "*.ini" -o -name ".env*" -o -name "Dockerfile*" \
     -o -name "docker-compose*" -o -name "*.tf" -o -name "*.hcl" \
     -o -name "*.conf" -o -name "*.cfg" \
-    \) ! -path "*/node_modules/*" ! -path "*/.git/*" ! -path "*/dist/*" ! -path "*/.next/*" | wc -l | tr -d ' ')
+    \) ! -path "*/node_modules/*" ! -path "*/.git/*" ! -path "*/dist/*" ! -path "*/.next/*" ! -path "*/obj/*" ! -path "*/bin/*" ! -path "*/coverage/*" | wc -l | tr -d ' ')
 
   data_count=$(find "$dir" -type f \( \
     -name "*.csv" -o -name "*.sql" -o -name "*.graphql" -o -name "*.proto" \
-    \) ! -path "*/node_modules/*" ! -path "*/.git/*" | wc -l | tr -d ' ')
+    \) ! -path "*/node_modules/*" ! -path "*/.git/*" ! -path "*/obj/*" ! -path "*/bin/*" ! -path "*/coverage/*" | wc -l | tr -d ' ')
 
   total_count=$((code_count + doc_count + config_count + data_count))
 

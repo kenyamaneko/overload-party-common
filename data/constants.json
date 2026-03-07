@@ -22,7 +22,7 @@
   "game_status": ["waiting", "playing", "finished"],
   "win_reasons": ["budget_zero", "system_down", "repository_out", "timeout", "disconnect", "turn_limit", "draw", "launch_failure"],
   "action_types": ["play_card", "attack", "scale_up", "distribute_yield", "discard_hand", "activate_effect", "set_reactive", "migrate", "end_phase"],
-  "event_types": ["play_card", "attach_card", "attack", "scale_up", "distribute_yield", "discard_hand", "activate_effect", "trap_revealed", "migrate", "migration_complete", "phase_change", "phase_end", "turn_end", "game_over"],
+  "event_types": ["play_card", "attach_card", "attack", "scale_up", "distribute_yield", "discard_hand", "activate_effect", "reactive_revealed", "migrate", "migration_complete", "phase_change", "phase_end", "turn_end", "game_over"],
   "ws_message_types": {
     "server": ["game_state", "game_over", "error", "game_entered", "matchmaking_started", "matchmaking_cancelled", "action_rejected", "stamp_used", "pong", "match_found", "game_state_restore", "action_performed", "turn_controls", "npc_battle_created"],
     "client": ["game_enter", "matchmaking_start", "matchmaking_cancel", "game_action", "use_stamp", "ping", "npc_battle_start"]
