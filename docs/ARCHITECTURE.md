@@ -1,7 +1,7 @@
 # Overload Party - システムアーキテクチャ設計書
 
-**Version:** 2.0  
-**Last Updated:** 2026-02-26  
+**Version:** 3.0  
+**Last Updated:** 2026-03-08  
 **Status:** Implementation Phase
 
 ---
@@ -82,7 +82,6 @@ overload-party-common/          # 共有データ・定義の SSoT
 │   │   ├── sugar.yaml
 │   │   ├── tuners.yaml
 │   │   └── neutral.yaml
-│   ├── cards.json              # 生成: 全カードの JSON データ
 │   └── constants.json          # ゲーム定数 (Phase, Zone, Rank, 初期値 等)
 ├── db/
 │   ├── schema_postgres.sql     # PostgreSQL DDL（SSoT）
@@ -197,11 +196,12 @@ ln -s /path/to/overload-party-common/docs  docs
 
 ```
 React + Capacitor (TypeScript)
-├── React 18+
+├── React 19
 ├── WebSocket Client (native WebSocket API)
-├── State Management (Zustand / Jotai)
-├── UI Framework (CSS Modules / Tailwind CSS)
+├── State Management (Zustand)
+├── UI Framework (Tailwind CSS)
 ├── Animation (Framer Motion)
+├── Audio (Howler.js)
 └── Capacitor (iOS / Android ネイティブラッパー)
 ```
 
@@ -213,20 +213,31 @@ React + Capacitor (TypeScript)
 
 ### 3.2 バックエンド
 
+バックエンドは **Gateway Server**（Go）と **Battle Server**（C#）の 2 サーバー構成。
+
 ```
-GKE Autopilot (Golang 1.25+)
+Gateway Server (Go 1.25+)
 ├── Web Framework (Gin)
 ├── WebSocket (gorilla/websocket)
 ├── PostgreSQL Client (pgxpool)
 ├── Cloud SQL Auth Proxy (サイドカー)
 └── Firebase Admin SDK
+
+Battle Server (C# / .NET 10)
+├── ASP.NET Core (REST API)
+├── PostgreSQL Client (Dapper)
+├── Cloud SQL Auth Proxy (サイドカー)
+└── xUnit (テスト)
 ```
 
+**責務分離:**
+- **Gateway**: 認証、WebSocket 管理、マッチメイキング、プレイヤーデータ、デッキ、ショップ/IAP
+- **Battle**: ゲームエンジン、アクション処理、エフェクト、NPC AI、勝利判定、ゲームログ
+
 **選定理由:**
-- 高パフォーマンス（並行処理）
-- 型安全（大規模開発）
-- GKE Autopilot（WebSocket常時接続に最適、ゲームサーバー管理）
-- GCP公式SDK充実
+- Gateway (Go): 高パフォーマンスな並行処理、WebSocket 常時接続に最適
+- Battle (C#): 複雑なゲームロジックの表現力、型安全性、.NET エコシステム
+- GKE Autopilot でゲームサーバー管理
 
 ### 3.3 データベース
 
@@ -258,7 +269,7 @@ Firebase Authentication
 ```
 Google Cloud Platform (4プロジェクト構成)
 ├── overload-party-shared
-│   ├── GKE Autopilot (API + WebSocket サーバー — 全環境共有)
+│   ├── GKE Autopilot (Gateway + Battle サーバー — 全環境共有)
 │   ├── Artifact Registry (Docker イメージ)
 │   └── Ingress (GCE L7 LB, パスベースルーティング)
 ├── overload-party-{dev,stg,prod}
@@ -278,8 +289,9 @@ CI: GitHub Actions
 ├── Docker イメージビルド
 └── Artifact Registry プッシュ
 
-CD: ArgoCD (on GKE)
-└── GitOps によるK8sマニフェスト同期・デプロイ
+CD: GitHub Actions (on k8s リポ)
+├── Kustomize でイメージタグ更新
+└── kubectl apply -k で GKE にデプロイ
 ```
 
 ---
@@ -299,7 +311,7 @@ CD: ArgoCD (on GKE)
 │  │  └────────────┘  └────────────┘  └────────────┘        │  │
 │  │  ┌────────────┐  ┌────────────┐  ┌────────────┐        │  │
 │  │  │   State    │  │  Framer    │  │   Audio    │        │  │
-│  │  │  (Zustand) │  │  Motion    │  │   (Howler) │        │  │
+│  │  │  (Zustand) │  │  Motion    │  │  (Howler)  │        │  │
 │  │  └────────────┘  └────────────┘  └────────────┘        │  │
 │  └──────────────────────────────────────────────────────────┘  │
 └────────────────────────────┬────────────────────────────────────┘
@@ -308,26 +320,27 @@ CD: ArgoCD (on GKE)
                              ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                  GKE Autopilot (Application Layer)              │
-│  ┌───────────────────────┐  ┌───────────────────────┐          │
-│  │   api-server Pod      │  │   ws-server Pod       │          │
-│  │  ┌─────────────────┐  │  │  ┌─────────────────┐  │          │
-│  │  │  REST API       │  │  │  │  WebSocket      │  │          │
-│  │  │  (Gin)          │  │  │  │  Handler        │  │          │
-│  │  └─────────────────┘  │  │  └─────────────────┘  │          │
-│  │  ┌─────────────────┐  │  │  ┌─────────────────┐  │          │
-│  │  │  Game Logic     │  │  │  │  Game Logic     │  │          │
-│  │  │  Engine         │  │  │  │  Engine         │  │          │
-│  │  └─────────────────┘  │  │  └─────────────────┘  │          │
-│  │  ┌─────────────────┐  │  │  ┌─────────────────┐  │          │
-│  │  │  Cloud SQL      │  │  │  │  Matchmaking    │  │          │
-│  │  │  Auth Proxy     │  │  │  │  (In-Memory)    │  │          │
-│  │  │  (sidecar)      │  │  │  │                 │  │          │
-│  │  └─────────────────┘  │  │  ┌─────────────────┐  │          │
-│  └───────────────────────┘  │  │  Cloud SQL      │  │          │
-│                              │  │  Auth Proxy     │  │          │
-│                              │  │  (sidecar)      │  │          │
-│                              │  └─────────────────┘  │          │
-│                              └───────────────────────┘          │
+│                                                                 │
+│  ┌───────────────────────┐      ┌───────────────────────┐      │
+│  │   gateway Pod (Go)    │      │   battle Pod (C#)     │      │
+│  │  ┌─────────────────┐  │      │  ┌─────────────────┐  │      │
+│  │  │  REST API       │  │      │  │  Game Engine     │  │      │
+│  │  │  (Gin)          │  │      │  │  (ASP.NET Core)  │  │      │
+│  │  └─────────────────┘  │      │  └─────────────────┘  │      │
+│  │  ┌─────────────────┐  │      │  ┌─────────────────┐  │      │
+│  │  │  WebSocket      │  │ HTTP │  │  Effect System   │  │      │
+│  │  │  Handler        │──┼──────┼─>│  + NPC AI        │  │      │
+│  │  └─────────────────┘  │      │  └─────────────────┘  │      │
+│  │  ┌─────────────────┐  │      │  ┌─────────────────┐  │      │
+│  │  │  Matchmaking    │  │      │  │  Cloud SQL      │  │      │
+│  │  │  (In-Memory)    │  │      │  │  Auth Proxy     │  │      │
+│  │  └─────────────────┘  │      │  │  (sidecar)      │  │      │
+│  │  ┌─────────────────┐  │      │  └─────────────────┘  │      │
+│  │  │  Cloud SQL      │  │      └───────────────────────┘      │
+│  │  │  Auth Proxy     │  │                                      │
+│  │  │  (sidecar)      │  │                                      │
+│  │  └─────────────────┘  │                                      │
+│  └───────────────────────┘                                      │
 └───────────────────────────────┬────────────────────────────────┘
                                 │ PostgreSQL (localhost:5432)
                                 ▼
@@ -353,6 +366,11 @@ CD: ArgoCD (on GKE)
 └─────────────────────────────────────────────────────────────────┘
 ```
 
+**サーバー間通信:**
+- Gateway → Battle: 内部 REST API（`http://battle:9002/api/v1/...`）
+- Battle は認証を行わず、Gateway を信頼（内部ネットワーク）
+- DB 所有権: Gateway = プレイヤー系テーブル、Battle = ゲーム状態 + イベント
+
 ### 4.2 インフラ基盤の選定
 
 > 比較検討の詳細（コスト表・6軸比較）は [DESIGN_NOTES.md](DESIGN_NOTES.md#インフラ基盤の選定ログ) を参照。
@@ -375,19 +393,19 @@ GKE Autopilot クラスタは共有プロジェクト `overload-party-shared` �
 ```
 [GKE Autopilot Cluster] overload-party-shared / asia-northeast1
   ├── Namespace: dev
-  │     └── game-server replicas: 0 (開発時以外)
+  │     ├── Deployment: gateway (Go)    replicas: 0 (開発時以外)
+  │     └── Deployment: battle  (C#)    replicas: 0 (開発時以外)
   ├── Namespace: staging
-  │     └── game-server replicas: 0 (開発時以外)
+  │     ├── Deployment: gateway (Go)    replicas: 0 (開発時以外)
+  │     └── Deployment: battle  (C#)    replicas: 0 (開発時以外)
   ├── Namespace: prod
-  │     ├── Deployment: game-server (Go)
-  │     │     replicas: 4 (5K接続) / 8 (10K接続)
-  │     │     resources: { cpu: "1", memory: "2Gi" }
-  │     │     Pod Anti-Affinity: ゾーン分散
-  │     ├── Service: type=ClusterIP, sessionAffinity=ClientIP
+  │     ├── Deployment: gateway (Go, port 9001)
+  │     │     resources: { cpu: "250m-500m", memory: "512Mi-1Gi" }
+  │     ├── Deployment: battle  (C#, port 9002)
+  │     │     resources: { cpu: "250m-500m", memory: "512Mi-1Gi" }
+  │     ├── Service: type=ClusterIP
   │     └── Ingress: External HTTP(S) LB (WebSocket対応)
-  ├── Namespace: argocd
-  │     └── ArgoCD (常時稼働)
-  └── 各Namespaceに Deployment: matchmaker (Go)
+  └── マッチメイキングは gateway Pod 内のインメモリ実装
 ```
 
 #### 4.2.2 状態管理方式: PostgreSQL 直接書き込み
@@ -407,9 +425,9 @@ GKE Autopilot クラスタは共有プロジェクト `overload-party-shared` �
 **データフロー:**
 
 ```
-[クライアント] → [GKE Pod] → [Cloud SQL PostgreSQL]
-                  ↑バリデーション   ↑毎アクション読み書き（SELECT FOR UPDATE）
-                  ↑ブロードキャスト  ↑GameEvents追記（イベントソーシング）
+[クライアント] → [Gateway Pod] → [Battle Pod] → [Cloud SQL PostgreSQL]
+                  ↑WS管理          ↑ゲームロジック    ↑毎アクション読み書き（SELECT FOR UPDATE）
+                  ↑ブロードキャスト  ↑バリデーション    ↑GameEvents追記（イベントソーシング）
 ```
 
 ### 4.3 通信フロー
@@ -417,45 +435,46 @@ GKE Autopilot クラスタは共有プロジェクト `overload-party-shared` �
 #### 4.3.1 ゲーム開始フロー
 
 ```
-Client                GKE Pod              Cloud SQL
-     │                          │                       │
-     │  1. Connect WebSocket    │                       │
-     ├─────────────────────────>│                       │
-     │                          │                       │
-     │  2. Join Game Request    │                       │
-     ├─────────────────────────>│                       │
-     │                          │  3. Read GameState    │
-     │                          ├──────────────────────>│
-     │                          │<──────────────────────┤
-     │                          │                       │
-     │  4. GameState Response   │                       │
-     │<─────────────────────────┤                       │
-     │                          │                       │
+Client              Gateway Pod          Battle Pod           Cloud SQL
+     │                    │                    │                    │
+     │  1. Connect WS     │                    │                    │
+     ├───────────────────>│                    │                    │
+     │                    │                    │                    │
+     │  2. Join Game      │                    │                    │
+     ├───────────────────>│                    │                    │
+     │                    │  3. GET state      │                    │
+     │                    ├───────────────────>│                    │
+     │                    │                    │  4. Read GameState │
+     │                    │                    ├───────────────────>│
+     │                    │                    │<───────────────────┤
+     │                    │<───────────────────┤                    │
+     │                    │                    │                    │
+     │  5. GameState      │                    │                    │
+     │<───────────────────┤                    │                    │
 ```
 
 #### 4.3.2 アクション実行フロー
 
 ```
-Player A (Client)        GKE Pod              Cloud SQL       Player B (Client)
-     │                      │                       │                  │
-     │  1. Play Card        │                       │                  │
-     ├─────────────────────>│                       │                  │
-     │                      │  2. Validate Action   │                  │
-     │                      │                       │                  │
-     │                      │  3. Update State      │                  │
-     │                      │      (Transaction)    │                  │
-     │                      ├──────────────────────>│                  │
-     │                      │<──────────────────────┤                  │
-     │                      │                       │                  │
-     │                      │  4. Record Event      │                  │
-     │                      ├──────────────────────>│                  │
-     │                      │<──────────────────────┤                  │
-     │                      │                       │                  │
-     │  5. State Update     │  6. State Update       │                  │
-     │  + available_actions │  (actions なし)         │                  │
-     │  + turn_controls     │                        │                  │
-     │<─────────────────────┤─────────────────────────────────────────>│
-     │                      │  (WebSocket broadcast) │                  │
+Player A (Client)   Gateway Pod          Battle Pod           Cloud SQL      Player B (Client)
+     │                    │                    │                    │                │
+     │  1. Play Card      │                    │                    │                │
+     ├───────────────────>│                    │                    │                │
+     │                    │  2. POST action    │                    │                │
+     │                    ├───────────────────>│                    │                │
+     │                    │                    │  3. Validate +     │                │
+     │                    │                    │     Update State   │                │
+     │                    │                    ├───────────────────>│                │
+     │                    │                    │<───────────────────┤                │
+     │                    │                    │  4. Record Event   │                │
+     │                    │                    ├───────────────────>│                │
+     │                    │<───────────────────┤                    │                │
+     │                    │                    │                    │                │
+     │  5. State Update   │                    │                    │                │
+     │  + available_actions│                   │                    │                │
+     │  + turn_controls   │                    │                    │                │
+     │<───────────────────┤────────────────────────────────────────────────────────>│
+     │                    │  (WebSocket broadcast)                  │                │
 ```
 
 > **Note:** `available_actions` は `my` の配下に含まれ、アクティブプレイヤーのみに送信される。
@@ -535,7 +554,7 @@ PostgreSQL をデータストアとして使用。テーブル構成、カラム
 |------|------|
 | 方式 | Firebase Custom Claims (`admin: true`) |
 | 設定方法 | Firebase Admin SDK で `SetCustomUserClaims` を実行（CLIまたはスクリプト） |
-| 検証方法 | api-server が ID Token をデコードし `admin` クレームを確認 |
+| 検証方法 | gateway が ID Token をデコードし `admin` クレームを確認 |
 | 未認可時 | HTTP 403 Forbidden |
 
 > Admin ユーザーの登録は Firebase Console または管理スクリプトで行い、アプリ上での自己昇格はできない設計とする。
@@ -608,18 +627,18 @@ Client                GKE Pod                   Apple / Google
 
 > サブスクの状態変更（自動更新・解約・猶予期間等）はサーバー通知で受信し、`premium_expires_at` を更新する。クライアント起点のポーリングは行わない。
 
-### 8.6 Webhook 受信（api-server 内）
+### 8.6 Webhook 受信（gateway 内）
 
-Apple / Google からのサーバー通知は GKE 上の **api-server** で受信する。
+Apple / Google からのサーバー通知は GKE 上の **gateway** で受信する。
 
 ```
-Apple Server Notifications V2  ──>  api-server (GKE)  ──>  Cloud SQL
-Google RTDN (Pub/Sub push)     ──>  api-server (GKE)  ──>  Cloud SQL
+Apple Server Notifications V2  ──>  gateway (GKE)  ──>  Cloud SQL
+Google RTDN (Pub/Sub push)     ──>  gateway (GKE)  ──>  Cloud SQL
 ```
 
 | 項目 | 内容 |
 |------|------|
-| 受信先 | api-server Pod (GKE Autopilot) |
+| 受信先 | gateway Pod (GKE Autopilot) |
 | ランタイム | Go |
 | 責務 | サーバー通知の受信・署名検証・DB 更新 |
 | 認証 | Apple: JWS 署名検証 / Google: Pub/Sub push トークン検証 |
@@ -678,9 +697,10 @@ COMMIT
 
 | 機能 | 内容 |
 |------|------|
-| 接続登録 | `playerID → WebSocket接続` のマップをPod内インメモリ管理 |
-| ゲーム参加 | `gameID → []playerID` のマップを管理（同一Pod内で対戦完結） |
-| ブロードキャスト | ゲーム内の全プレイヤー（Pod内の2人）に同じメッセージを送信 |
+| 接続登録 | `playerID → WebSocket接続` のマップを Gateway Pod 内インメモリ管理 |
+| ゲーム参加 | `gameID → []playerID` のマップを Gateway Pod 内で管理 |
+| ブロードキャスト | Gateway がゲーム内の全プレイヤーに状態更新を送信 |
+| ゲームロジック | Gateway が Battle Server に内部 REST で委譲し、結果をクライアントに中継 |
 | スレッドセーフティ | `sync.RWMutex` で同時アクセスを制御 |
 
 ### 9.2 再接続処理
@@ -689,7 +709,7 @@ COMMIT
 再接続リクエスト
         │
         ▼
-Cloud SQL から最新 GameState を取得
+Gateway が Battle Server から最新 GameState を取得
         │
         ▼
 接続をConnectionManagerに再登録
@@ -778,12 +798,12 @@ Pong 応答なし（5秒）
 
 | 項目 | 内容 |
 |------|------|
-| データストア | matchmaker Pod のインメモリ（Go の `sync.Map` + スライス） |
+| データストア | Gateway Pod のインメモリ（Go の `sync.Map` + スライス） |
 | マッチングワーカー | Pod内の goroutine（1秒間隔のティッカー） |
 | キュー離脱 | 明示的な離脱 or 60秒の Heartbeat タイムアウト |
 | Pod再起動時 | キュー消失 → プレイヤーは再キュー（WebSocket切断検知で自動リトライ） |
 
-> **注:** マッチメイキングキューはPodインメモリで管理する。DBには書き込まない。マッチ成立後のゲーム作成のみCloud SQLに書き込む。
+> **注:** マッチメイキングキューは Gateway Pod のインメモリで管理する。DBには書き込まない。マッチ成立後のゲーム作成は Gateway が Battle Server に委譲する。
 
 ### 9.5.2 WebSocket メッセージ
 
@@ -882,11 +902,11 @@ draw → yield → main → battle → end → (ActivePlayer切替) → draw ...
 
 | 項目 | 内容 |
 |------|------|
-| 計算タイミング | 状態更新ごと（`game_state_view.go`）、NPC ターン開始時（`game_service.go`） |
-| 関数 | `engine.ComputeAvailableActions(state, game, playerNum, ...)` |
-| 戻り値 | `[]engine.AvailableAction`（タイプ別 discriminated union） |
-| クライアント向け | `ClientGameState.my.available_actions` に含めて WebSocket 送信 |
-| NPC 向け | `runNPCTurnIfNeeded` 内で計算し Strategy に渡す |
+| 計算タイミング | 状態更新ごと（Battle Server）、NPC ターン開始時（`GameService`） |
+| 関数 | `Engine.ComputeAvailableActions(state, game, playerNum, ...)` |
+| 戻り値 | `List<AvailableAction>`（タイプ別 discriminated union） |
+| クライアント向け | `ClientGameState.my.available_actions` に含めて Gateway 経由で WebSocket 送信 |
+| NPC 向け | `RunNpcTurnIfNeeded` 内で計算し Strategy に渡す |
 
 **AvailableAction のアクションタイプ:**
 
@@ -901,14 +921,14 @@ draw → yield → main → battle → end → (ActivePlayer切替) → draw ...
 
 ゲームフロー制御（フェーズ終了、手札破棄）は `available_actions` に含めず、`turn_controls` メッセージとして別途送信される。
 
-**NPC AI アーキテクチャ:**
+**NPC AI アーキテクチャ（Battle Server / C#）:**
 
 ```
-engine.ComputeAvailableActions()
+Engine.ComputeAvailableActions()
         │
         ▼
 ┌─────────────────────┐
-│  Strategy interface  │  DecideMainPhaseActions(state, game, playerNum, available)
+│  IStrategy interface │  DecideMainPhaseActions(state, game, playerNum, available)
 │                      │  DecideBattlePhaseActions(state, game, playerNum, available)
 │                      │  DecideDiscard(state, playerNum)
 │                      │  DecideStartingResources(deckCards)
@@ -916,35 +936,33 @@ engine.ComputeAvailableActions()
          │
     ┌────┴────┐
     ▼         ▼
-StandardAI   FactionAI (SD / Tenki / Sugar / Tuners)
+StandardAi   FactionAi (SD / Tenki / Sugar / Tuners)
 ```
 
-NPC は `[]AvailableAction` から最適なアクションを選択するのみ。
-アクションの有効性判定はすべて engine 側が担当し、ロジック重複を排除。
+NPC は `List<AvailableAction>` から最適なアクションを選択するのみ。
+アクションの有効性判定はすべて Engine 側が担当し、ロジック重複を排除。
 
 **NPC の決定フロー（Main Phase）:**
 
-| 順序 | 処理 | ヘルパー関数 |
-|------|------|-------------|
-| 1 | Strategy/Incident カードを使用 | `doImmediateActions()` — `evaluateCard` でスコアリング |
-| 2 | Resource カードをデプロイ | `doDeployActions()` — `pickBestZone` でゾーン選択 |
-| 3 | フィールドエフェクトを発動 | `decideActivateActions()` — `selectTargetFromValid` でターゲット制約 |
-| 4 | スケールアップ | `doScaleUpActions()` — `AvailableAction.Cost` / `TargetRank` を使用 |
-| 5 | Insight 配分 | `doDistributeYieldActions()` — `RemainingCapacity` で greedy 配分 |
-| 6 | フェーズ終了 | `makeEndPhaseAction()` |
+| 順序 | 処理 | ヘルパー |
+|------|------|---------|
+| 1 | Strategy/Incident カードを使用 | `DoImmediateActions()` — `EvaluateCard` でスコアリング |
+| 2 | Resource カードをデプロイ | `DoDeployActions()` — `PickBestZone` でゾーン選択 |
+| 3 | フィールドエフェクトを発動 | `DecideActivateActions()` — `SelectTargetFromValid` でターゲット制約 |
+| 4 | スケールアップ | `DoScaleUpActions()` — `AvailableAction.Cost` / `TargetRank` を使用 |
+| 5 | Insight 配分 | `DoDistributeYieldActions()` — `RemainingCapacity` で greedy 配分 |
+| 6 | フェーズ終了 | `MakeEndPhaseAction()` |
 
-**ゾーン追跡:** `ComputeAvailableActions` は初期状態で計算されるため、`usedZones map[string]bool` を `DecideMainPhaseActions` 内で管理し、デプロイ済みスロットをフィルタする。
-
-**NPC 関連ファイル:**
+**NPC 関連ファイル（battle リポ: `src/OverloadParty.Battle.Npc/`）:**
 
 | ファイル | 役割 |
 |---------|------|
-| `internal/npc/ai.go` | Strategy インターフェース、StandardAI 実装 |
-| `internal/npc/faction_ai.go` | FactionAI（陣営別パラメータ・オーバーライド） |
-| `internal/npc/action_filter.go` | AvailableAction 用ヘルパー（`filterByType`, `pickBestZone`, `findBestTargetFromValid` 等） |
-| `internal/npc/evaluate.go` | カードスコアリング、ターゲット選択ヒューリスティクス |
-| `internal/npc/targeting.go` | ターゲット選択戦略（`weakestInZone`, `strongestInZone` 等） |
-| `internal/npc/decks.go` | 陣営別デッキ定義 |
+| `StandardAi.cs` | IStrategy インターフェース、StandardAI 実装 |
+| `FactionAi.cs` | FactionAI（陣営別パラメータ・オーバーライド） |
+| `ActionFilter.cs` | AvailableAction 用ヘルパー（`FilterByType`, `PickBestZone` 等） |
+| `ActionEvaluator.cs` | カードスコアリング、ターゲット選択ヒューリスティクス |
+| `Targeting.cs` | ターゲット選択戦略（`WeakestInZone`, `StrongestInZone` 等） |
+| `NpcDecks.cs` | 陣営別デッキ定義 |
 
 ---
 
@@ -1159,12 +1177,12 @@ GCPリソースは **Terraform** で管理する。
 |---------|--------|-----|---------|------|
 | GKE クラスタ | `overload-party`（1クラスタ） | — | — | — |
 | Artifact Registry | `overload-party`（Docker） | — | — | — |
-| ArgoCD | Namespace: `argocd`（常時稼働） | — | — | — |
 | GKE Namespace | — | `dev` | `staging` | `prod` |
-| game-server Pods | — | 0（開発時のみ起動） | 0（開発時のみ起動） | 4〜8（常時稼働） |
+| gateway Pods | — | 0（開発時のみ起動） | 0（開発時のみ起動） | TBD（常時稼働） |
+| battle Pods | — | 0（開発時のみ起動） | 0（開発時のみ起動） | TBD（常時稼働） |
 | Cloud SQL インスタンス | — | `overload-party-db` | `overload-party-db` | `overload-party-db` |
 | Cloud SQL tier | — | db-g1-small | db-g1-small | TBD |
-| Workload Identity | — | KSA `game-server` → GSA `overload-party-app@..dev` | 同パターン | 同パターン |
+| Workload Identity | — | KSA `overload-party-app` → GSA `overload-party-app@..dev` | 同パターン | 同パターン |
 
 
 > dev/stg は毎日 2:00 JST に自動停止してコストを最小化する。Cloud SQL 操作はインフラリポジトリ (Cloud Scheduler / Terraform)、K8s 操作は K8s リポジトリ (GitHub Actions) に責務を分離している。
@@ -1209,17 +1227,24 @@ overload-party-infra/
 
 ### 14.2 CI: GitHub Actions
 
-**ワークフロー 1: Game Server (`main` / PR トリガー)**
+**ワークフロー 1: Gateway Server (`main` / PR トリガー)**
 
 | ステップ | 内容 |
 |------|------|
 | 1. Lint | `golangci-lint run` |
-| 2. テスト | `go test ./...` |
+| 2. テスト | `go test -race ./internal/...` |
 | 3. ビルド | Docker イメージを `$COMMIT_SHA` タグでビルド |
 | 4. プッシュ | Artifact Registry にプッシュ (`asia-northeast1-docker.pkg.dev/overload-party-shared/overload-party`) |
-| 5. マニフェスト更新 | K8s マニフェストリポジトリの image tag を更新（ArgoCD 連携） |
 
-**ワークフロー 2: DB マイグレーション (`main` マージ時)**
+**ワークフロー 2: Battle Server (`main` / PR トリガー)**
+
+| ステップ | 内容 |
+|------|------|
+| 1. テスト | `dotnet test tests/OverloadParty.Battle.Tests` |
+| 2. ビルド | Docker イメージを `$COMMIT_SHA` タグでビルド |
+| 3. プッシュ | Artifact Registry にプッシュ |
+
+**ワークフロー 3: DB マイグレーション (`main` マージ時 — common リポ)**
 
 | ステップ | 内容 |
 |------|------|
@@ -1230,28 +1255,28 @@ overload-party-infra/
 
 > Terraform の `plan` / `apply` も GitHub Actions で実行する（`prod` は手動承認ゲート付き）。
 
-### 14.3 CD: ArgoCD (GitOps)
+### 14.3 CD: GitHub Actions + Kustomize
 
-K8s マニフェストの適用は **ArgoCD** による GitOps で行う。
+K8s マニフェストの適用は **GitHub Actions** による直接デプロイで行う。
 
 | 項目 | 内容 |
 |------|------|
-| ArgoCD 配置 | GKE Autopilot クラスタ内（Namespace: `argocd`、常時稼働） |
-| Application 構成 | 環境ごとに ArgoCD Application を定義（`op-dev`, `op-staging`, `op-prod`） |
-| 同期対象 | K8s マニフェストリポジトリ（GitHub）の各環境ディレクトリ |
-| 同期方式 | prod: 自動同期（Auto Sync）+ Self Heal / dev・staging: 手動同期 |
+| デプロイ方式 | GitHub Actions (`deploy.yaml`) で `kubectl apply -k` を実行 |
+| イメージタグ更新 | `kustomize edit set image` でタグを差し替え |
+| 環境指定 | workflow_dispatch でデプロイ先環境を選択 |
 | デプロイ戦略 | RollingUpdate（maxUnavailable: 0, maxSurge: 25%） |
-| ロールバック | ArgoCD UI または `argocd app rollback` で即座に前バージョンへ |
+| ロールバック | 前バージョンのイメージタグを指定して再デプロイ |
 
 **デプロイフロー:**
 
 ```
 開発者 → GitHub PR → GitHub Actions (CI)
   │                    ├── テスト・Lint
-  │                    ├── Docker ビルド → Artifact Registry
-  │                    └── K8s マニフェストリポジトリの image tag を更新
+  │                    └── Docker ビルド → Artifact Registry
   │
-  └→ ArgoCD が差分を検知 → GKE クラスタに自動デプロイ (RollingUpdate)
+  └→ k8s リポで deploy.yaml を手動 dispatch
+       ├── kustomize edit set image (gateway/battle)
+       └── kubectl apply -k → GKE クラスタにデプロイ (RollingUpdate)
 ```
 
 **K8s デプロイ設定:**
@@ -1391,33 +1416,59 @@ K8s マニフェストの適用は **ArgoCD** による GitOps で行う。
 
 ### A. 環境変数
 
+**Gateway Server:**
+
 | 変数名 | 内容 |
 |--------|------|
 | `DATABASE_URL` | `postgresql://user:pass@host:5432/dbname` または IAM DSN |
-| `FIREBASE_CREDENTIALS_PATH` | Firebaseサービスアカウントキーのパス |
+| `FIREBASE_CREDENTIALS_PATH` | Firebase サービスアカウントキーのパス |
 | `PORT` | サーバーポート（デフォルト: 9001） |
 | `ENV` | `production` / `staging` / `development` |
 | `LOG_LEVEL` | `info` / `debug` / `error` |
+| `BATTLE_SERVER_URL` | Battle Server の内部 URL（例: `http://battle:9002`） |
+
+**Battle Server:**
+
+| 変数名 | 内容 |
+|--------|------|
+| `DATABASE_URL` | `postgresql://user:pass@host:5432/dbname` または IAM DSN |
+| `PORT` | サーバーポート（デフォルト: 9002） |
+| `ENV` | `production` / `staging` / `development` |
+| `CARDS_JSON_PATH` | カードデータ JSON のファイルパス |
 
 ### B. 開発環境セットアップ
 
+**Gateway Server (Go):**
+
 | ステップ | コマンド |
 |------|--------|
-| Goインストール | `brew install go` |
+| Go インストール | `brew install go` |
 | 依存関係インストール | `go mod download` |
-| PostgreSQL 起動 | `make postgres-up` |
-| ローカル実行 (モック) | `make run-local` |
+| ローカル実行 (モック) | `make run-local` (port 9001) |
+
+**Battle Server (C#):**
+
+| ステップ | コマンド |
+|------|--------|
+| .NET インストール | `brew install dotnet` |
+| ローカル実行 (モック) | `make run` (port 9002) |
 
 ### C. テスト
 
+**Gateway Server:**
+
 | テスト種別 | コマンド |
 |----------|--------|
-| ユニットテスト | `go test ./...` |
-| 統合テスト | `go test -tags=integration ./...` |
-| カバレッジ | `go test -cover ./...` |
+| ユニットテスト | `go test -race ./internal/...` |
+
+**Battle Server:**
+
+| テスト種別 | コマンド |
+|----------|--------|
+| ユニットテスト | `dotnet test tests/OverloadParty.Battle.Tests` |
 
 ---
 
 **Document Version:** 2.0  
-**Last Updated:** 2026-02-26  
+**Last Updated:** 2026-03-08  
 **Next Review:** 2026-03-15
