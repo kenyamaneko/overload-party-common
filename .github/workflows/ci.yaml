@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  db-migrate:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.CI_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Install psqldef
+        run: |
+          curl -sL https://github.com/sqldef/sqldef/releases/latest/download/psqldef_linux_amd64.tar.gz | tar xz
+          sudo mv psqldef /usr/local/bin/
+
+      - name: Start Cloud SQL Proxy
+        run: |
+          curl -sL https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.14.3/cloud-sql-proxy.linux.amd64 -o cloud-sql-proxy
+          chmod +x cloud-sql-proxy
+          ./cloud-sql-proxy ${{ secrets.CLOUDSQL_CONNECTION_NAME }} --port=5432 > /tmp/proxy.log 2>&1 &
+          echo "Waiting for Cloud SQL Proxy..."
+          for i in $(seq 1 60); do
+            if nc -z 127.0.0.1 5432 2>/dev/null; then
+              echo "Cloud SQL Proxy is ready (attempt ${i})"
+              break
+            fi
+            if [ "$i" -eq 60 ]; then
+              echo "Cloud SQL Proxy failed to become ready"
+              cat /tmp/proxy.log
+              exit 1
+            fi
+            sleep 2
+          done
+
+      - name: Apply schema migration (dry-run)
+        run: |
+          psqldef \
+            --host=127.0.0.1 \
+            --port=5432 \
+            --user=${{ secrets.DB_USER }} \
+            --password=${{ secrets.DB_PASSWORD }} \
+            ${{ secrets.DB_NAME }} \
+            --dry-run \
+            < db/schema_postgres.sql || { echo "--- Cloud SQL Proxy logs ---"; cat /tmp/proxy.log; exit 1; }
+
+      - name: Apply schema migration
+        run: |
+          psqldef \
+            --host=127.0.0.1 \
+            --port=5432 \
+            --user=${{ secrets.DB_USER }} \
+            --password=${{ secrets.DB_PASSWORD }} \
+            ${{ secrets.DB_NAME }} \
+            < db/schema_postgres.sql || { echo "--- Cloud SQL Proxy logs ---"; cat /tmp/proxy.log; exit 1; }
+
+      - name: Apply IAM grants
+        run: |
+          PGPASSWORD=${{ secrets.DB_PASSWORD }} psql \
+            -h 127.0.0.1 -p 5432 \
+            -U ${{ secrets.DB_USER }} \
+            -d ${{ secrets.DB_NAME }} \
+            -f db/grant_iam.sql

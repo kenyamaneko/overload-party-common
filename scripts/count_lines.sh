@@ -11,6 +11,7 @@ REPOS=(
   overload-party-ops
   overload-party-battle
   overload-party-gateway
+  overload-party-newsfeed
 )
 
 echo "============================================================"

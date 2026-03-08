@@ -1039,16 +1039,18 @@ PostgreSQL トランザクションが失敗した場合、クライアントに
 
 **サブドメイン構成:**
 
-| 環境 | サブドメイン | 静的 IP |
-|------|------------|---------|
-| dev | `overloadparty-dev.keyandnotes.com` | `34.149.76.35`（`overload-party-dev-ip`） |
-| stg | `overloadparty-stg.keyandnotes.com` | なし（動的） |
+| 環境 | サブドメイン | IP |
+|------|------------|-----|
+| dev | `overloadparty-dev.keyandnotes.com` | 動的（Ingress 起動時に割当） |
+| stg | `overloadparty-stg.keyandnotes.com` | 動的（Ingress 起動時に割当） |
 | prod | `overloadparty.keyandnotes.com` | 未定 |
 
 - Cloudflare Universal SSL は `*.keyandnotes.com` をカバー（1 階層のみ）
 - そのため `overloadparty-dev` 形式を採用（`dev.overloadparty.keyandnotes.com` は証明書対象外）
 - Cloudflare DNS で Proxied (orange cloud) モードを使用
-- dev 環境のみグローバル静的 IP を予約（DNS A レコードの安定化のため）
+- 静的 IP は使用しない（コスト削減）。代わりに GitHub Actions で Cloudflare DNS を自動更新:
+  - **起動時** (`startup.yaml`): Ingress の外部 IP 取得後、Cloudflare API で A レコードを更新
+  - **停止時** (`nightly-shutdown.yaml`): DNS を `127.0.0.1` に変更し、予約済み IP を削除
 
 ---
 
@@ -1202,6 +1204,8 @@ K8s マニフェストの適用は **ArgoCD** による GitOps で行う。
 | Service Worker | クライアント側キャッシュ管理（Cache API） |
 
 > **Cloud CDN は初期段階では不要。** Service Worker + Cache API でクライアント端末にアセットをキャッシュするため、同一ユーザーが同じアセットを再DLすることはない。ユーザー規模拡大後、ダウンロード集中が問題になった場合に CDN を前段に追加する（URL 差し替えのみで対応可能な構成にしておく）。
+>
+> **CDN 導入時は Cloudflare Free を推奨。** Google Cloud CDN は HTTP(S) LB の固定費（~$18/月）がかかるため、小〜中規模では割高。Cloudflare Free なら CDN 自体は無料で、GCS エグレスを ~90% 削減できる。ただし Free プランでは Origin Rules（Host Header Override）が使えないため、GCS バケット名をサブドメイン名に合わせる必要がある（例: `assets-dev.keyandnotes.com`）。
 
 **配信フロー:**
 
