@@ -53,14 +53,28 @@ Overload Partyは、クラウドインフラをテーマにした対戦型デジ
 
 ---
 
-## 2. プロジェクト構成（Monorepo-like）
+## 2. プロジェクト構成（Multi-repo）
 
-Overload Party は3つの独立した Git リポジトリで構成されます。`overload-party-common` が共有データのハブとなり、server/client から **シンボリックリンク** で参照します。
+Overload Party は 9 つの独立した Git リポジトリで構成される。`overload-party-common` がゲームデザイン・カードデータ・ドキュメントの Single Source of Truth（SSoT）となり、コード生成パイプラインで各リポに成果物を配布する。
 
-### 2.1 リポジトリ構成
+### 2.1 リポジトリ一覧
+
+| リポジトリ | 役割 | 技術 | CI |
+|-----------|------|------|-----|
+| **common** | ゲーム設計・カードデータ・ドキュメント（SSoT） | YAML, Python, Markdown | DB マイグレーション自動適用 |
+| **gateway** | REST API + WebSocket サーバー | Go 1.25, Gin, PostgreSQL | lint → test → Docker push |
+| **battle** | 対戦ゲームエンジン | C# / .NET 10 | test → Docker push |
+| **client** | モバイル/Web フロントエンド | React 19, TypeScript, Vite, Capacitor | lint → typecheck → test |
+| **infra** | GCP リソース管理 | Terraform | plan → apply（パス変更時のみ） |
+| **k8s** | GKE デプロイ・運用 | Kustomize, GitHub Actions | deploy / startup / shutdown / scale |
+| **ops** | DB マイグレーションジョブ | Docker, Cloud Run | 手動 dispatch |
+| **analytics** | Spanner → BigQuery エクスポート | Go, Cloud Functions | 手動デプロイ |
+| **newsfeed** | ニュースフィード生成 | Python, Vertex AI | 手動デプロイ |
+
+### 2.2 リポジトリ構成（ディレクトリ）
 
 ```
-overload-party-common/          # 共有データ・定義の Single Source of Truth
+overload-party-common/          # 共有データ・定義の SSoT
 ├── data/
 │   ├── cards/                  # カード定義 YAML (5 faction files)
 │   │   ├── sd.yaml
@@ -70,52 +84,109 @@ overload-party-common/          # 共有データ・定義の Single Source of T
 │   │   └── neutral.yaml
 │   ├── cards.json              # 生成: 全カードの JSON データ
 │   └── constants.json          # ゲーム定数 (Phase, Zone, Rank, 初期値 等)
+├── db/
+│   ├── schema_postgres.sql     # PostgreSQL DDL（SSoT）
+│   └── grant_iam.sql           # IAM 認証権限付与
 ├── docs/                       # 全ドキュメント
 ├── scripts/
 │   └── generate_from_yaml.py   # カード＆定数のコード生成スクリプト
-└── README.md
+└── .github/workflows/ci.yaml   # DB マイグレーション CI
 
-overload-party-server/           # Go ゲームサーバー
-├── data -> ../common/data       # symlink
-├── docs -> ../common/docs       # symlink
+overload-party-gateway/         # Go API サーバー
+├── data -> ../common/data      # symlink
+├── docs -> ../common/docs      # symlink
 ├── internal/
-│   ├── cardno/cardno_gen.go     # 生成: カード番号 Go 定数
-│   ├── model/constants_gen.go   # 生成: ゲーム定数 Go 版
+│   ├── cardno/cardno_gen.go    # 生成: カード番号 Go 定数
+│   ├── model/constants_gen.go  # 生成: ゲーム定数 Go 版
 │   └── ...
-└── Makefile                     # `make generate` で全コード生成
+└── Makefile                    # `make generate` で全コード生成
 
-overload-party-client/           # React + Capacitor クライアント
+overload-party-battle/          # C# 対戦エンジン
+├── cards_gen.json              # 生成: カードデータ JSON
+├── src/
+│   └── OverloadParty.Battle/
+└── Makefile
+
+overload-party-client/          # React + Capacitor クライアント
 ├── src/
 │   ├── generated/
-│   │   └── constants.ts         # 生成: ゲーム定数 TypeScript 版
+│   │   └── constants.ts        # 生成: ゲーム定数 TypeScript 版
 │   └── ...
 └── ...
 ```
 
-### 2.2 コード生成パイプライン
+### 2.3 コード生成パイプライン
 
-`make generate`（サーバー側）を実行すると、common の `generate_from_yaml.py` が以下を生成します：
+`make generate`（gateway または battle）を実行すると、common の `generate_from_yaml.py` が以下を生成する：
 
 | 入力 | 出力 | 出力先 |
 |------|------|--------|
 | `data/cards/*.yaml` | `data/cards.json` | common |
 | `data/cards/*.yaml` | `docs/CARDS.md` | common |
-| `data/cards/*.yaml` | `internal/cardno/cardno_gen.go` | server |
-| `data/constants.json` | `internal/model/constants_gen.go` | server |
+| `data/cards/*.yaml` | `internal/cardno/cardno_gen.go` | gateway |
+| `data/cards/*.yaml` | `cards_gen.json` | gateway, battle |
+| `data/constants.json` | `internal/model/constants_gen.go` | gateway |
+| `data/constants.json` | `constants_gen.go` | battle |
 | `data/constants.json` | `src/generated/constants.ts` | client |
 
-生成されたファイルには `DO NOT EDIT` コメントが付きます。ゲーム定数（Phase, Zone, Rank, 初期値など）を変更する場合は `data/constants.json` を編集してから `make generate` を実行してください。
+生成されたファイルには `DO NOT EDIT` コメントが付く。ゲーム定数（Phase, Zone, Rank, 初期値など）を変更する場合は `data/constants.json` を編集してから `make generate` を実行する。
 
-### 2.3 シンボリックリンクと .gitignore
+### 2.4 シンボリックリンクと .gitignore
 
-server と client のリポジトリでは、common への symlink を `.gitignore` で除外しています。各リポジトリを clone した後、手動で symlink を張る必要があります：
+gateway のリポジトリでは、common への symlink を `.gitignore` で除外している。clone 後に手動で symlink を張る：
 
 ```bash
-# server
+# gateway
 ln -s /path/to/overload-party-common/data  data
 ln -s /path/to/overload-party-common/docs  docs
 
-# client は symlink 不要（generate で直接出力）
+# client, battle は symlink 不要（generate で直接出力）
+```
+
+### 2.5 作業別クロスリファレンス
+
+「何を変えたら、どのリポを触る必要があるか」の早見表。
+
+| やりたいこと | 編集するリポ | 次にやること | 影響を受けるリポ |
+|-------------|------------|------------|----------------|
+| カードの追加・変更 | common (`data/cards/*.yaml`) | `make generate`（gateway or battle） | gateway, battle, client |
+| ゲーム定数の変更 | common (`data/constants.json`) | `make generate`（gateway or battle） | gateway, battle, client |
+| DB スキーマの変更 | common (`db/schema_postgres.sql`) | main に push（CI が自動適用） | gateway, battle（コード側の対応） |
+| IAM 権限の変更 | common (`db/grant_iam.sql`) | main に push（CI が自動適用） | — |
+| API エンドポイント追加 | gateway | CI が自動で Docker push | k8s（deploy で反映） |
+| 対戦ロジックの変更 | battle | CI が自動で Docker push | k8s（deploy で反映） |
+| クライアント UI の変更 | client | CI で lint/test | — |
+| GCP リソースの追加・変更 | infra (`environments/`, `modules/`) | `terraform plan` → PR → merge で自動 apply | — |
+| K8s マニフェストの変更 | k8s (`k8s/overlays/`) | `deploy.yaml` を手動 dispatch | — |
+| DB マイグレーション（手動） | ops | `db-migrate.yaml` を手動 dispatch | — |
+| 環境の起動 | k8s | `startup.yaml` を手動 dispatch | infra（Cloud SQL 起動） |
+| 環境の停止 | — | 毎日 2:00 AM JST に自動実行 | k8s, infra（Ingress 削除、DNS 変更） |
+| 分析パイプラインの変更 | analytics | `scripts/deploy.sh` で手動デプロイ | — |
+| ニュースフィードの変更 | newsfeed | Docker build → Cloud Run にデプロイ | — |
+
+### 2.6 リポジトリ間の依存グラフ
+
+```
+                    ┌─────────┐
+                    │ common  │ ← SSoT (cards, constants, schema, docs)
+                    └────┬────┘
+           ┌─────────────┼─────────────┐
+           │  codegen     │  codegen     │ codegen
+           ▼             ▼             ▼
+      ┌─────────┐  ┌─────────┐  ┌─────────┐
+      │ gateway │  │ battle  │  │ client  │
+      └────┬────┘  └────┬────┘  └─────────┘
+           │ Docker      │ Docker
+           ▼             ▼
+      ┌─────────────────────┐
+      │    k8s (deploy)     │ ← Kustomize + GitHub Actions
+      └─────────────────────┘
+                │
+      ┌─────────┼─────────┐
+      ▼         ▼         ▼
+   ┌──────┐ ┌──────┐ ┌───────────┐
+   │ infra│ │ ops  │ │ analytics │  ← 独立したライフサイクル
+   └──────┘ └──────┘ └───────────┘
 ```
 
 ---
