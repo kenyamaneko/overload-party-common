@@ -363,7 +363,6 @@ stats フィールドなし（Platform の場合、`deploy_turns` はトップ�
 | `time_bank` | int | 480 | タイムバンク（秒） |
 | `deck_size` | int | 30 | デッキ枚数 |
 | `max_attachments` | int | 2 | リソースあたりの最大アタッチメント数 |
-| `per_turn_budget` | int | 500 | ターンごとの Budget 支給額 |
 | `slots_per_zone` | int | 3 | ゾーンあたりのスロット数 |
 
 ---

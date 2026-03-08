@@ -36,7 +36,6 @@
     "time_bank": 480,
     "deck_size": 30,
     "max_attachments": 2,
-    "per_turn_budget": 500,
     "slots_per_zone": 3
   },
   "level": {
