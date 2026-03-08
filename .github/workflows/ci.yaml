@@ -60,6 +60,17 @@ jobs:
             sleep 5
           done
 
+      # TODO: Remove after initial schema sync is complete
+      - name: Reset database (one-time)
+        run: |
+          PROJECT=$(echo "${{ secrets.CLOUDSQL_CONNECTION_NAME }}" | cut -d: -f1)
+          gcloud sql databases delete ${{ secrets.DB_NAME }} \
+            --instance=${{ secrets.CLOUDSQL_INSTANCE_NAME }} \
+            --project="$PROJECT" --quiet || true
+          gcloud sql databases create ${{ secrets.DB_NAME }} \
+            --instance=${{ secrets.CLOUDSQL_INSTANCE_NAME }} \
+            --project="$PROJECT" --quiet
+
       - name: Update and execute Cloud Run Job
         run: |
           PROJECT=$(echo "${{ secrets.CLOUDSQL_CONNECTION_NAME }}" | cut -d: -f1)
