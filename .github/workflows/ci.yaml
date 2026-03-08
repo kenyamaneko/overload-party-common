@@ -1,3 +1,6 @@
+# db/schema_postgres.sql を Cloud SQL (dev) に自動適用する。
+# nightly-shutdown でインスタンスが停止している場合があるため、
+# 最初に activation-policy=ALWAYS で起動してから接続する。
 name: CI
 
 on:
@@ -8,7 +11,7 @@ on:
 
 permissions:
   contents: read
-  id-token: write
+  id-token: write      # Workload Identity Federation
 
 jobs:
   db-migrate:
@@ -24,6 +27,24 @@ jobs:
           service_account: ${{ secrets.CI_SERVICE_ACCOUNT }}
 
       - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Ensure Cloud SQL instance is running
+        run: |
+          gcloud sql instances patch ${{ secrets.CLOUDSQL_INSTANCE_NAME }} \
+            --activation-policy=ALWAYS --quiet
+          echo "Waiting for instance to become RUNNABLE..."
+          for i in $(seq 1 60); do
+            STATE=$(gcloud sql instances describe ${{ secrets.CLOUDSQL_INSTANCE_NAME }} --format='value(state)')
+            if [ "$STATE" = "RUNNABLE" ]; then
+              echo "Instance is RUNNABLE (attempt ${i})"
+              break
+            fi
+            if [ "$i" -eq 60 ]; then
+              echo "Instance failed to become RUNNABLE (state: ${STATE})"
+              exit 1
+            fi
+            sleep 5
+          done
 
       - name: Install psqldef
         run: |
