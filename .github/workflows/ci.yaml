@@ -30,11 +30,12 @@ jobs:
 
       - name: Ensure Cloud SQL instance is running
         run: |
+          PROJECT=$(echo "${{ secrets.CLOUDSQL_CONNECTION_NAME }}" | cut -d: -f1)
           gcloud sql instances patch ${{ secrets.CLOUDSQL_INSTANCE_NAME }} \
-            --activation-policy=ALWAYS --quiet
+            --project="$PROJECT" --activation-policy=ALWAYS --quiet
           echo "Waiting for instance to become RUNNABLE..."
           for i in $(seq 1 60); do
-            STATE=$(gcloud sql instances describe ${{ secrets.CLOUDSQL_INSTANCE_NAME }} --format='value(state)')
+            STATE=$(gcloud sql instances describe ${{ secrets.CLOUDSQL_INSTANCE_NAME }} --project="$PROJECT" --format='value(state)')
             if [ "$STATE" = "RUNNABLE" ]; then
               echo "Instance is RUNNABLE (attempt ${i})"
               break
