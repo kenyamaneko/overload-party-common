@@ -1164,7 +1164,7 @@ GCPリソースは **Terraform** で管理する。
 | game-server Pods | — | 0（開発時のみ起動） | 0（開発時のみ起動） | 4〜8（常時稼働） |
 | Cloud SQL インスタンス | — | `overload-party-db` | `overload-party-db` | `overload-party-db` |
 | Cloud SQL tier | — | db-g1-small | db-g1-small | TBD |
-| Workload Identity | — | KSA `game-server` → GSA `game-server-dev@..dev` | 同パターン | 同パターン |
+| Workload Identity | — | KSA `game-server` → GSA `overload-party-app@..dev` | 同パターン | 同パターン |
 
 
 > dev/stg は毎日 2:00 JST に自動停止してコストを最小化する。Cloud SQL 操作はインフラリポジトリ (Cloud Scheduler / Terraform)、K8s 操作は K8s リポジトリ (GitHub Actions) に責務を分離している。
