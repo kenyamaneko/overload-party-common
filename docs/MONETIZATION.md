@@ -1,6 +1,5 @@
 # Overload Party - 課金設計書
 
-**Version:** 1.2
 **Last Updated:** 2026-02-21
 
 ---

@@ -1,6 +1,5 @@
 # Overload Party - UI デザイン設計書
 
-**Version:** 3.0
 **Last Updated:** 2026-02-24
 
 ---
