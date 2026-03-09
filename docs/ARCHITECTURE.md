@@ -1,7 +1,6 @@
 # Overload Party - システムアーキテクチャ設計書
 
-**Version:** 3.0  
-**Last Updated:** 2026-03-08  
+**Last Updated:** 2026-03-09
 **Status:** Implementation Phase
 
 ---
@@ -9,7 +8,7 @@
 ## 目次
 
 1. [概要](#1-概要)
-2. [プロジェクト構成](#2-プロジェクト構成monorepo-like)
+2. [プロジェクト構成](#2-プロジェクト構成multi-repo)
 3. [技術スタック](#3-技術スタック)
 4. [システムアーキテクチャ](#4-システムアーキテクチャ)
 5. [データ設計](#5-データ設計-data-architecture)
@@ -23,7 +22,6 @@
 13. [セキュリティ](#13-セキュリティ)
 14. [デプロイメント](#14-デプロイメント)
 15. [モニタリング](#15-モニタリング)
-16. [実装ロードマップ](#16-実装ロードマップ)
 
 ---
 
@@ -130,19 +128,7 @@ overload-party-client/          # React + Capacitor クライアント
 
 生成されたファイルには `DO NOT EDIT` コメントが付く。ゲーム定数（Phase, Zone, Rank, 初期値など）を変更する場合は `data/constants.json` を編集してから `make generate` を実行する。
 
-### 2.4 シンボリックリンクと .gitignore
-
-gateway のリポジトリでは、common への symlink を `.gitignore` で除外している。clone 後に手動で symlink を張る：
-
-```bash
-# gateway
-ln -s /path/to/overload-party-common/data  data
-ln -s /path/to/overload-party-common/docs  docs
-
-# client, battle は symlink 不要（generate で直接出力）
-```
-
-### 2.5 作業別クロスリファレンス
+### 2.4 作業別クロスリファレンス
 
 「何を変えたら、どのリポを触る必要があるか」の早見表。
 
@@ -163,7 +149,7 @@ ln -s /path/to/overload-party-common/docs  docs
 | 分析パイプラインの変更 | analytics | `scripts/deploy.sh` で手動デプロイ | — |
 | ニュースフィードの変更 | newsfeed | Docker build → Cloud Run にデプロイ | — |
 
-### 2.6 リポジトリ間の依存グラフ
+### 2.5 リポジトリ間の依存グラフ
 
 ```
                     ┌─────────┐
@@ -1035,31 +1021,17 @@ PostgreSQL トランザクションが失敗した場合、クライアントに
 
 ### 12.2 GKE Autopilot 最適化
 
-**Pod リソース設定:**
+- PodDisruptionBudget + preStop hook で WebSocket 接続のグレースフルドレインを保護
+- Pod Anti-Affinity でゾーン分散し障害影響を最小化
+- sessionAffinity (ClientIP) で同一クライアントを同一 Pod にルーティング
 
-| 設定項目 | 値 | 理由 |
-|----------|-----|------|
-| CPU request | 1 vCPU | Goの並行処理に対応 |
-| Memory request | 1 Gi | WebSocket接続管理・ゲームロジック処理 |
-| Replicas (初期) | 4 | 同時5,000接続を処理 |
-| Pod Anti-Affinity | ゾーン分散 | 障害時の影響を分散 |
-
-**K8s リソース設定:**
-
-| リソース | 設定 |
-|----------|------|
-| PodDisruptionBudget | `minAvailable: 90%` — WebSocket接続のドレイン保護 |
-| preStop hook | `sleep 10` — 接続のグレースフルシャットダウン猶予 |
-| terminationGracePeriodSeconds | 15 |
-| sessionAffinity | ClientIP — 同じクライアントを同一Podにルーティング |
+> 具体的なリソース値・レプリカ数は k8s リポの Kustomize マニフェストを参照。
 
 ### 12.3 接続プーリング (pgxpool)
 
-| パラメータ | 値 | 説明 |
-|----------|-----|------|
-| `MinConns` | 2 | 最小接続数 |
-| `MaxConns` | 10 | 最大接続数（Pod あたり） |
-| `MaxConnLifetime` | 30m | 接続の最大寿命 |
+pgxpool で接続プールを管理。Pod あたりの接続数を制限し、Cloud SQL の最大接続数を超えないようにする。
+
+> 具体的なパラメータ値は gateway / battle の接続設定コードを参照。
 
 ---
 
@@ -1358,117 +1330,6 @@ K8s マニフェストの適用は **GitHub Actions** による直接デプロ�
 
 ---
 
-## 16. 実装ロードマップ
-
-### Phase 1: 基盤構築（2-3週間）
-
-- [x] Terraform でGCPリソース構築（GKE, Cloud SQL, IAM）
-- [x] Cloud SQL PostgreSQL スキーマ作成
-- [x] ArgoCD セットアップ・K8sマニフェストリポジトリ整備
-- [x] GitHub Actions CI パイプライン構築
-- [x] Firebase Authentication設定
-- [x] WebSocket接続管理実装
-- [x] 基本的なREST API実装
-- [ ] React + Capacitor プロジェクトセットアップ
-- [ ] WebSocketクライアント実装
-- [ ] 基本的な状態同期確認
-
-### Phase 2: コアゲームロジック（4-6週間）
-
-- [x] ターン進行システム
-- [x] カード配置・移動
-- [x] Budget/Insight管理
-- [x] 基本攻撃
-- [x] 勝利条件判定
-- [ ] React UI実装（フィールド、手札）
-
-### Phase 3: 詳細メカニクス（4-6週間）
-
-- [x] Resizable/Elastic実装
-- [x] Attachmentシステム
-- [x] Platform/Reactive
-- [x] Strategy/Incident
-- [ ] 手動収益化UI
-- [ ] アニメーション実装（Framer Motion）
-
-### Phase 4: 高度な機能（3-4週間）
-
-- [x] チェーンシステム
-- [x] 継続効果管理
-- [ ] ターンタイマー
-- [x] リプレイ機能
-- [x] マッチメイキング
-
-### Phase 5: Polish & Launch（2-3週間）
-
-- [ ] UI/UXブラッシュアップ
-- [ ] サウンド実装
-- [ ] チュートリアル
-- [ ] パフォーマンス最適化
-- [ ] セキュリティ監査
-- [ ] ロードテスト
-- [ ] ベータテスト
-- [ ] 本番リリース
-
 ---
 
-## 付録
-
-### A. 環境変数
-
-**Gateway Server:**
-
-| 変数名 | 内容 |
-|--------|------|
-| `DATABASE_URL` | `postgresql://user:pass@host:5432/dbname` または IAM DSN |
-| `FIREBASE_CREDENTIALS_PATH` | Firebase サービスアカウントキーのパス |
-| `PORT` | サーバーポート（デフォルト: 9001） |
-| `ENV` | `production` / `staging` / `development` |
-| `LOG_LEVEL` | `info` / `debug` / `error` |
-| `BATTLE_SERVER_URL` | Battle Server の内部 URL（例: `http://battle:9002`） |
-
-**Battle Server:**
-
-| 変数名 | 内容 |
-|--------|------|
-| `DATABASE_URL` | `postgresql://user:pass@host:5432/dbname` または IAM DSN |
-| `PORT` | サーバーポート（デフォルト: 9002） |
-| `ENV` | `production` / `staging` / `development` |
-| `CARDS_JSON_PATH` | カードデータ JSON のファイルパス |
-
-### B. 開発環境セットアップ
-
-**Gateway Server (Go):**
-
-| ステップ | コマンド |
-|------|--------|
-| Go インストール | `brew install go` |
-| 依存関係インストール | `go mod download` |
-| ローカル実行 (モック) | `make run-local` (port 9001) |
-
-**Battle Server (C#):**
-
-| ステップ | コマンド |
-|------|--------|
-| .NET インストール | `brew install dotnet` |
-| ローカル実行 (モック) | `make run` (port 9002) |
-
-### C. テスト
-
-**Gateway Server:**
-
-| テスト種別 | コマンド |
-|----------|--------|
-| ユニットテスト | `go test -race ./internal/...` |
-
-**Battle Server:**
-
-| テスト種別 | コマンド |
-|----------|--------|
-| ユニットテスト | `dotnet test tests/OverloadParty.Battle.Tests` |
-
----
-
-**Document Version:** 2.0  
-**Last Updated:** 2026-03-08  
-**Next Review:** 2026-03-15
+> **実装ロードマップ・環境変数・開発セットアップ・テストコマンド** は各リポジトリの README を参照。
