@@ -26,7 +26,7 @@ cards:
     effect_text: ""
 
   - card_no: 72
-    card_name: "ベア・ベル太"
+    card_name: "ベル太"
     resource_label: "Bare Metal"
     const_name: TunersBareMetal
     card_type: Compute
@@ -331,7 +331,7 @@ cards:
     is_active: true
     stats:
       deploy_cost: 100
-    effect_text: "自分の「調律部 Compute - コンタータ」または「調律部 Bare Metal - ベア・ベル太」にのみ装備できる。装備先の可用性を +800 する。装備先へのインシデントカードによるダメージを -100 する。"
+    effect_text: "自分の「調律部 Compute - コンタータ」または「調律部 Bare Metal - ベル太」にのみ装備できる。装備先の可用性を +800 する。装備先へのインシデントカードによるダメージを -100 する。"
 
   # === Strategy (1 card) ===
 

@@ -89,7 +89,7 @@
 | 2 | しゅがーらぼ Profiler |
 | 2 | しゅがーらぼ Container - クラン |
 | 1 | しゅがーらぼ AI - Dr. テンソルベ |
-| 1 | しゅがーらぼ DestributedDB - パイナポ |
+| 1 | しゅがーらぼ DestributedDB - スーパーバナナ |
 | 1 | しゅがーらぼ Storage - シュトレーンジ |
 | 1 | しゅがーらぼ アイスクエリム Analytics |
 | 1 | 設定ミス |
@@ -123,7 +123,7 @@
 | 2 | 調律部 Failback |
 | 2 | 調律部 Storage - スコアージ |
 | 1 | 調律部 DB - エクサノーツ |
-| 1 | 調律部 Bare Metal - ベア・ベル太 |
+| 1 | 調律部 Bare Metal - ベル太 |
 | 1 | 調律部 Cache - カプリッシュ |
 | 1 | 調律部 DevOps |
 | 1 | 調律部 WAF |
