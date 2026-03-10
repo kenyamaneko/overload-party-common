@@ -72,7 +72,7 @@ Resource カードのタイプ欄は `サブタイプ (区分)` の形式で記�
 | `Compute (R)` | Resizable のみ | えくぼ |
 | `Container (E)` | Elastic のみ | Egao Container |
 | `Orchestrator (R+E)` | 両方 | 天気使い Kubernetes |
-| `Object Storage` | 区分なし | エリス |
+| `Object Storage` | 区分なし | えりり |
 | `Database` | 区分なし | BingoQuery |
 
 ### サブタイプ一覧

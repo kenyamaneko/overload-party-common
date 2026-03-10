@@ -236,7 +236,7 @@ cards:
     effect_text: "**データ収集:** 自分の しゅがーらぼ コンピュート系リソースが相手のカードを攻撃した時に発動できる。自分の Insight を +200 する。"
 
   - card_no: 125
-    card_name: "メレンゲもりもりストア"
+    card_name: "メレンゲの森"
     resource_label: "Cache"
     const_name: SugarCacheMeringue
     card_type: CacheDB

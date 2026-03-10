@@ -55,19 +55,19 @@ const (
 	SugarButterKunBatch      int64 = 66   // しゅがーらぼ バター君 Batch
 	SugarKnowledge           int64 = 67   // しゅがーらぼ Knowledge
 	SugarErrorBudget         int64 = 68   // しゅがーらぼ Error Budget
-	SugarCacheMeringue       int64 = 125  // メレンゲもりもりストア
+	SugarCacheMeringue       int64 = 125  // メレンゲの森
 	SugarBlockStorage        int64 = 133  // しゅがーらぼ ブロックストレージ
 )
 
 // 調律部（チューナーズ）
 const (
-	TunersComputeKantata        int64 = 70   // カンタータ
+	TunersComputeKantata        int64 = 70   // コンタータ
 	TunersBareMetal             int64 = 72   // ベア・ベル太
 	TunersContainerTena         int64 = 73   // テナ
 	TunersOrchestratorConductis int64 = 74   // コンダクティス
 	TunersFunctionsFanfare      int64 = 75   // ファンファーレクション
 	TunersLowCodeApietta        int64 = 76   // アピエッタ
-	TunersDBOtonmajutsushi      int64 = 77   // 音の魔術師
+	TunersDBOtonmajutsushi      int64 = 77   // 音の魔術師〈マジシャン・オブ・ミュージック〉
 	TunersDBExanotes            int64 = 78   // エクサノーツ
 	TunersStorageScourge        int64 = 79   // スコアージ
 	TunersCacheCaprish          int64 = 81   // カプリッシュ
@@ -122,15 +122,15 @@ const (
 // CardNames maps card number to card name.
 var CardNames = map[int64]string{
 	1: "えくぼ",
-	3: "アリゲーター",
+	3: "アリゲーテナ",
 	4: "クジラの統率者<クジランティス>",
 	5: "ラフメイカー",
-	6: "ラムネ",
+	6: "むらた",
 	7: "アデリース",
 	8: "オオロバ",
-	9: "エリス",
-	10: "ダイナソー",
-	11: "メリー",
+	9: "えりり",
+	10: "ダイノ",
+	11: "メリーモ",
 	12: "SHE Pipeline",
 	13: "SHE Front",
 	14: "SHE Guard",
@@ -188,13 +188,13 @@ var CardNames = map[int64]string{
 	66: "しゅがーらぼ バター君 Batch",
 	67: "しゅがーらぼ Knowledge",
 	68: "しゅがーらぼ Error Budget",
-	70: "カンタータ",
+	70: "コンタータ",
 	72: "ベア・ベル太",
 	73: "テナ",
 	74: "コンダクティス",
 	75: "ファンファーレクション",
 	76: "アピエッタ",
-	77: "音の魔術師",
+	77: "音の魔術師〈マジシャン・オブ・ミュージック〉",
 	78: "エクサノーツ",
 	79: "スコアージ",
 	81: "カプリッシュ",
@@ -236,7 +236,7 @@ var CardNames = map[int64]string{
 	122: "気象異変",
 	123: "天気使いの更新",
 	124: "だっくん",
-	125: "メレンゲもりもりストア",
+	125: "メレンゲの森",
 	126: "ITストラテジスト",
 	127: "リラックスペンギン",
 	128: "エレファントDB",

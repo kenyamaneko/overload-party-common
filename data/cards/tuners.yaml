@@ -7,7 +7,7 @@ cards:
   # === Compute-type Resources (2 cards) ===
 
   - card_no: 70
-    card_name: "カンタータ"
+    card_name: "コンタータ"
     resource_label: "Compute"
     const_name: TunersComputeKantata
     card_type: Compute
@@ -153,7 +153,7 @@ cards:
   # === DB-type Resources (2 cards) ===
 
   - card_no: 77
-    card_name: "音の魔術師"
+    card_name: "音の魔術師〈マジシャン・オブ・ミュージック〉"
     resource_label: "DB"
     const_name: TunersDBOtonmajutsushi
     card_type: Database
@@ -331,7 +331,7 @@ cards:
     is_active: true
     stats:
       deploy_cost: 100
-    effect_text: "自分の「調律部 Compute - カンタータ」または「調律部 Bare Metal - ベア・ベル太」にのみ装備できる。装備先の可用性を +800 する。装備先へのインシデントカードによるダメージを -100 する。"
+    effect_text: "自分の「調律部 Compute - コンタータ」または「調律部 Bare Metal - ベア・ベル太」にのみ装備できる。装備先の可用性を +800 する。装備先へのインシデントカードによるダメージを -100 する。"
 
   # === Strategy (1 card) ===
 

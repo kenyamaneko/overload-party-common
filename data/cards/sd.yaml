@@ -24,7 +24,7 @@ cards:
     effect_text: ""
 
   - card_no: 3
-    card_name: "アリゲーター"
+    card_name: "アリゲーテナ"
     resource_label: "Container"
     const_name: SHEContainerAlligator
     card_type: Container
@@ -87,7 +87,7 @@ cards:
     effect_text: ""
 
   - card_no: 6
-    card_name: "ラムネ"
+    card_name: "むらた"
     resource_label: "Serverless"
     const_name: SHEServerlessRamune
     card_type: Serverless
@@ -106,7 +106,7 @@ cards:
       deploy_cost: 100
       sla_penalty: 200
       maintenance_cost: 0
-    effect_text: "**エリス Trigger:** 自分のフィールドに「SHE Storage - エリス」がいる場合、このカードのスループットを +200 する"
+    effect_text: "**えりり Trigger:** 自分のフィールドに「SHE Storage - えりり」がいる場合、このカードのスループットを +200 する"
     passive_effects:
       - type: tp_if_card_type_on_field
         params:
@@ -160,7 +160,7 @@ cards:
           exclude_self: true
 
   - card_no: 9
-    card_name: "エリス"
+    card_name: "えりり"
     resource_label: "Storage"
     const_name: SHEStorageEris
     card_type: ObjectStorage
@@ -179,7 +179,7 @@ cards:
     effect_text: "**Versioning:** 自分のフィールドの SDのDB系リソース が破壊された時に発動できる。そのカードを自分の手札に戻す。"
 
   - card_no: 10
-    card_name: "ダイナソー"
+    card_name: "ダイノ"
     resource_label: "NoSQL"
     const_name: SHEDBDinosaur
     card_type: Database
@@ -207,7 +207,7 @@ cards:
           flat_bonus: 200
 
   - card_no: 11
-    card_name: "メリー"
+    card_name: "メリーモ"
     resource_label: "Cache"
     const_name: SHECacheMerry
     card_type: CacheDB
@@ -445,7 +445,7 @@ cards:
       deploy_cost: 200
       sla_penalty: 100
       maintenance_cost: 100
-    effect_text: "**キャッシュブースト:** 自分のフィールドの全ての SHE NoSQL - ダイナソーの Yield を +200 する。"
+    effect_text: "**キャッシュブースト:** 自分のフィールドの全ての SHE NoSQL - ダイノの Yield を +200 する。"
 
   - card_no: 131
     card_name: "SHE Block Storage"
