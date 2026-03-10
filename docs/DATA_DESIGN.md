@@ -255,7 +255,7 @@
 |---|---|---|---|
 | `card_no` | BIGINT | No | カード番号（`CARDS.md` の `#` に対応） |
 | `card_name` | VARCHAR(100) | No | カード名 |
-| `faction` | VARCHAR(20) | No | 陣営 (`SD`, `Tenki`, `Sugar`, `Tuners`, `Neutral`) |
+| `faction` | VARCHAR(20) | No | 陣営 (`SHE`, `Tenki`, `Sugar`, `Tuners`, `Neutral`) |
 | `card_type` | VARCHAR(30) | No | カードタイプ (`Compute`, `Container`, `Orchestrator`, `Serverless`, `AI_ML`, `Database`, `ObjectStorage`, `CacheDB`, `Datawarehouse`, `Platform`, `Attachment`, `Strategy`, `Incident`, `Reactive`) |
 | `resizable` | BOOLEAN | No | Resizable 属性 (Default: false) |
 | `elastic` | BOOLEAN | No | Elastic 属性 (Default: false) |

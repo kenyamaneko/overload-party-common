@@ -4,12 +4,12 @@
   "zones": ["frontend", "backend", "support"],
   "ranks": ["small", "medium", "large"],
   "instance_families": ["M", "C", "R"],
-  "factions": ["SD", "Tenki", "Sugar", "Tuners", "Neutral"],
-  "selectable_factions": ["SD", "Tenki", "Sugar", "Tuners"],
+  "factions": ["SHE", "Tenki", "Sugar", "Tuners", "Neutral"],
+  "selectable_factions": ["SHE", "Tenki", "Sugar", "Tuners"],
   "faction_display_names": {
-    "SD": "SD（Smile Delivery）",
+    "SHE": "SHE（Smile Horizon Express）",
     "Tenki": "天気使い",
-    "Sugar": "しゅがーLab",
+    "Sugar": "しゅがーらぼ",
     "Tuners": "調律部（チューナーズ）",
     "Neutral": "Neutral"
   },

@@ -1,13 +1,13 @@
 # NOTE: origin fields are for internal development reference only.
 # These values MUST NOT be displayed to end users.
 
-faction: SD
-display_name: "SD（Smile Delivery）"
+faction: SHE
+display_name: "SHE（Smile Horizon Express）"
 cards:
   - card_no: 1
     card_name: "えくぼ"
     resource_label: "Compute"
-    const_name: SDComputeEkubo
+    const_name: SHEComputeEkubo
     card_type: Compute
     deploy_turns: 1
     resizable: true
@@ -26,7 +26,7 @@ cards:
   - card_no: 3
     card_name: "アリゲーター"
     resource_label: "Container"
-    const_name: SDContainerAlligator
+    const_name: SHEContainerAlligator
     card_type: Container
     deploy_turns: 0
     resizable: false
@@ -48,7 +48,7 @@ cards:
   - card_no: 4
     card_name: "クジラの統率者<クジランティス>"
     resource_label: "Orchestrator"
-    const_name: SDOrchestratorKujirantis
+    const_name: SHEOrchestratorKujirantis
     card_type: Orchestrator
     deploy_turns: 2
     resizable: true
@@ -70,7 +70,7 @@ cards:
   - card_no: 5
     card_name: "ラフメイカー"
     resource_label: "ML"
-    const_name: SDMLRoughmaker
+    const_name: SHEMLRoughmaker
     card_type: AI/ML
     deploy_turns: 2
     resizable: true
@@ -89,7 +89,7 @@ cards:
   - card_no: 6
     card_name: "ラムネ"
     resource_label: "Serverless"
-    const_name: SDServerlessRamune
+    const_name: SHEServerlessRamune
     card_type: Serverless
     deploy_turns: 0
     resizable: false
@@ -106,11 +106,11 @@ cards:
       deploy_cost: 100
       sla_penalty: 200
       maintenance_cost: 0
-    effect_text: "**エリス Trigger:** 自分のフィールドに「SD Storage - エリス」がいる場合、このカードのスループットを +200 する"
+    effect_text: "**エリス Trigger:** 自分のフィールドに「SHE Storage - エリス」がいる場合、このカードのスループットを +200 する"
     passive_effects:
       - type: tp_if_card_type_on_field
         params:
-          faction: SD
+          faction: SHE
           card_types:
             - ObjectStorage
           flat_bonus: 200
@@ -118,7 +118,7 @@ cards:
   - card_no: 7
     card_name: "アデリース"
     resource_label: "RDB"
-    const_name: SDRDBAdeliece
+    const_name: SHERDBAdeliece
     card_type: Database
     deploy_turns: 1
     resizable: true
@@ -137,7 +137,7 @@ cards:
   - card_no: 8
     card_name: "オオロバ"
     resource_label: "DistributedDB"
-    const_name: SDDistributedDBOoroba
+    const_name: SHEDistributedDBOoroba
     card_type: Database
     deploy_turns: 1
     resizable: true
@@ -155,14 +155,14 @@ cards:
     passive_effects:
       - type: dv_per_other_db
         params:
-          faction: SD
+          faction: SHE
           bonus_per_card: 200
           exclude_self: true
 
   - card_no: 9
     card_name: "エリス"
     resource_label: "Storage"
-    const_name: SDStorageEris
+    const_name: SHEStorageEris
     card_type: ObjectStorage
     deploy_turns: 0
     resizable: false
@@ -181,7 +181,7 @@ cards:
   - card_no: 10
     card_name: "ダイナソー"
     resource_label: "NoSQL"
-    const_name: SDDBDinosaur
+    const_name: SHEDBDinosaur
     card_type: Database
     deploy_turns: 0
     resizable: false
@@ -209,7 +209,7 @@ cards:
   - card_no: 11
     card_name: "メリー"
     resource_label: "Cache"
-    const_name: SDCacheMerry
+    const_name: SHECacheMerry
     card_type: CacheDB
     deploy_turns: 0
     resizable: true
@@ -226,8 +226,8 @@ cards:
     effect_text: "**Cache Engine:** デプロイ時に選択以下のいずれかの効果を選択する。**Memcached:** Budget を +400 する。**Redis:** このカードの Yield を +200 する"
 
   - card_no: 12
-    card_name: "SD Pipeline"
-    const_name: SDPipeline
+    card_name: "SHE Pipeline"
+    const_name: SHEPipeline
     card_type: Platform
     deploy_turns: 2
     resizable: false
@@ -237,16 +237,16 @@ cards:
     is_active: true
     stats:
       deploy_cost: 0
-    effect_text: "自分のフィールドの SD リソースのスケールアップのための開発コストを -200 する。"
+    effect_text: "自分のフィールドの SHE リソースのスケールアップのための開発コストを -200 する。"
     platform_effects:
       - type: scale_cost_reduction
         params:
-          target_faction: SD
+          target_faction: SHE
           reduction: 200
 
   - card_no: 13
-    card_name: "SD Front"
-    const_name: SDFront
+    card_name: "SHE Front"
+    const_name: SHEFront
     card_type: Platform
     deploy_turns: 2
     resizable: false
@@ -256,11 +256,11 @@ cards:
     is_active: true
     stats:
       deploy_cost: 0
-    effect_text: "自分のフィールドの全ての SD コンピュート系リソースのスループットを +200 する。"
+    effect_text: "自分のフィールドの全ての SHE コンピュート系リソースのスループットを +200 する。"
     platform_effects:
       - type: tp_bonus
         params:
-          target_faction: SD
+          target_faction: SHE
           target_card_types:
             - Compute
             - "AI/ML"
@@ -270,8 +270,8 @@ cards:
           bonus: 200
 
   - card_no: 14
-    card_name: "SD Guard"
-    const_name: SDGuard
+    card_name: "SHE Guard"
+    const_name: SHEGuard
     card_type: Platform
     deploy_turns: 2
     resizable: false
@@ -284,8 +284,8 @@ cards:
     effect_text: "相手フィールドのサポートゾーンの裏側のカード 1枚を選択して確認する。"
 
   - card_no: 15
-    card_name: "SD Firewall"
-    const_name: SDFirewall
+    card_name: "SHE Firewall"
+    const_name: SHEFirewall
     card_type: Platform
     deploy_turns: 2
     resizable: false
@@ -298,8 +298,8 @@ cards:
     effect_text: "相手の DDoS Attack と Data Breach を無効化する。"
 
   - card_no: 16
-    card_name: "SD Queue"
-    const_name: SDQueue
+    card_name: "SHE Queue"
+    const_name: SHEQueue
     card_type: Attachment
     deploy_turns: 0
     resizable: false
@@ -312,8 +312,8 @@ cards:
     effect_text: "フロントエンドリソースに装備できる。装備したリソースのスループットをメインフェーズのみ +600 する。この効果は1ターン中に1回のみ使用できる"
 
   - card_no: 17
-    card_name: "SD Gateway"
-    const_name: SDGateway
+    card_name: "SHE Gateway"
+    const_name: SHEGateway
     card_type: Attachment
     deploy_turns: 0
     resizable: false
@@ -331,8 +331,8 @@ cards:
           bonus: 200
 
   - card_no: 18
-    card_name: "SD Keys"
-    const_name: SDKeys
+    card_name: "SHE Keys"
+    const_name: SHEKeys
     card_type: Attachment
     deploy_turns: 0
     resizable: false
@@ -345,8 +345,8 @@ cards:
     effect_text: "バックエンドリソースに装備できる。装備したリソースは「データ流出」の効果を受けない。"
 
   - card_no: 19
-    card_name: "SD Formation"
-    const_name: SDFormation
+    card_name: "SHE Formation"
+    const_name: SHEFormation
     card_type: Strategy
     deploy_turns: 0
     resizable: false
@@ -356,11 +356,11 @@ cards:
     is_active: true
     stats:
       deploy_cost: 200
-    effect_text: "Budget を 200 払って発動できる。リポジトリから SD Resource カード1枚を選択して手札に加える。"
+    effect_text: "Budget を 200 払って発動できる。リポジトリから SHE Resource カード1枚を選択して手札に加える。"
 
   - card_no: 20
-    card_name: "SD Marketplace"
-    const_name: SDMarketplace
+    card_name: "SHE Marketplace"
+    const_name: SHEMarketplace
     card_type: Strategy
     deploy_turns: 0
     resizable: false
@@ -370,11 +370,11 @@ cards:
     is_active: true
     stats:
       deploy_cost: 0
-    effect_text: "自分のフィールドに SD カードが3枚以上ある時に発動できる。自分の Budget を +600 する。"
+    effect_text: "自分のフィールドに SHE カードが3枚以上ある時に発動できる。自分の Budget を +600 する。"
 
   - card_no: 21
-    card_name: "SD 料金見積もり"
-    const_name: SDRyoukinMitsumori
+    card_name: "SHE 料金見積もり"
+    const_name: SHERyoukinMitsumori
     card_type: Strategy
     deploy_turns: 0
     resizable: false
@@ -384,7 +384,7 @@ cards:
     is_active: true
     stats:
       deploy_cost: 0
-    effect_text: "このターン、自分の全ての SD カードの開発コストを -200 する。"
+    effect_text: "このターン、自分の全ての SHE カードの開発コストを -200 する。"
 
   - card_no: 22
     card_name: "Smile Recovery"
@@ -398,11 +398,11 @@ cards:
     is_active: true
     stats:
       deploy_cost: 0
-    effect_text: "自分の SD リソースの可用性が 400 以下になった時に発動できる。そのリソースの可用性を +500 する。"
+    effect_text: "自分の SHE リソースの可用性が 400 以下になった時に発動できる。そのリソースの可用性を +500 する。"
 
   - card_no: 118
-    card_name: "SD Ecosystem"
-    const_name: SDEcosystem
+    card_name: "SHE Ecosystem"
+    const_name: SHEEcosystem
     card_type: Strategy
     deploy_turns: 0
     resizable: false
@@ -412,11 +412,11 @@ cards:
     is_active: true
     stats:
       deploy_cost: 0
-    effect_text: "自分のフィールドに SD カードが3枚以上ある時に使用できる。このターン、自分のフロントエンドの全ての SD カードのスループットを +200 する。"
+    effect_text: "自分のフィールドに SHE カードが3枚以上ある時に使用できる。このターン、自分のフロントエンドの全ての SHE カードのスループットを +200 する。"
 
   - card_no: 121
-    card_name: "SD Smile Delivery"
-    const_name: SDSmileDelivery
+    card_name: "SHE Smile Horizon Express"
+    const_name: SHESmileHorizonExpress
     card_type: Strategy
     deploy_turns: 0
     resizable: false
@@ -426,12 +426,12 @@ cards:
     is_active: true
     stats:
       deploy_cost: 200
-    effect_text: "Budget を 200 払って発動できる。手札の SD リソースを1枚を選択し、デプロイコストを払わずにデプロイできる。"
+    effect_text: "Budget を 200 払って発動できる。手札の SHE リソースを1枚を選択し、デプロイコストを払わずにデプロイできる。"
 
   - card_no: 124
     card_name: "だっくん"
     resource_label: "Cache"
-    const_name: SDCacheDakkun
+    const_name: SHECacheDakkun
     card_type: CacheDB
     deploy_turns: 0
     resizable: true
@@ -445,11 +445,11 @@ cards:
       deploy_cost: 200
       sla_penalty: 100
       maintenance_cost: 100
-    effect_text: "**キャッシュブースト:** 自分のフィールドの全ての SD NoSQL - ダイナソーの Yield を +200 する。"
+    effect_text: "**キャッシュブースト:** 自分のフィールドの全ての SHE NoSQL - ダイナソーの Yield を +200 する。"
 
   - card_no: 131
-    card_name: "SD Block Storage"
-    const_name: SDBlockStorage
+    card_name: "SHE Block Storage"
+    const_name: SHEBlockStorage
     card_type: Attachment
     deploy_turns: 0
     resizable: false
@@ -459,4 +459,4 @@ cards:
     is_active: true
     stats:
       deploy_cost: 100
-    effect_text: "自分の「SD Compute - えくぼ」にのみ装備できる。装備先の可用性を +500 する。"
+    effect_text: "自分の「SHE Compute - えくぼ」にのみ装備できる。装備先の可用性を +500 する。"

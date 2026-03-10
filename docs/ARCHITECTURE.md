@@ -922,7 +922,7 @@ Engine.ComputeAvailableActions()
          │
     ┌────┴────┐
     ▼         ▼
-StandardAi   FactionAi (SD / Tenki / Sugar / Tuners)
+StandardAi   FactionAi (SHE / Tenki / Sugar / Tuners)
 ```
 
 NPC は `List<AvailableAction>` から最適なアクションを選択するのみ。

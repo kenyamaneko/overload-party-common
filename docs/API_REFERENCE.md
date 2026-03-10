@@ -305,7 +305,7 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
     "illustration_variant": 0,
     "count": 3,
     "card_name": "EC2 Instance",
-    "faction": "SD",
+    "faction": "SHE",
     "card_type": "resource",
     "resizable": true,
     "elastic": false,
@@ -415,7 +415,7 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
   {
     "card_no": 1,
     "card_name": "string",
-    "faction": "SD|Tenki|Sugar|Tuners|Neutral",
+    "faction": "SHE|Tenki|Sugar|Tuners|Neutral",
     "card_type": "resource|support|action",
     "resizable": true,
     "elastic": false,
@@ -443,7 +443,7 @@ NPC 対戦開始。即座にゲームが作成される（マッチメイキン�
 ```json
 {
   "deckId": 1,
-  "npcFaction": "SD|Tenki|Sugar|Tuners"
+  "npcFaction": "SHE|Tenki|Sugar|Tuners"
 }
 ```
 
@@ -520,7 +520,7 @@ NPC 対戦開始。即座にゲームが作成される（マッチメイキン�
 **リクエスト:**
 ```json
 {
-  "faction": "SD|Tenki|Sugar|Tuners"
+  "faction": "SHE|Tenki|Sugar|Tuners"
 }
 ```
 
@@ -528,7 +528,7 @@ NPC 対戦開始。即座にゲームが作成される（マッチメイキン�
 ```json
 {
   "message": "faction selected",
-  "faction": "SD",
+  "faction": "SHE",
   "cards_granted": 59
 }
 ```
@@ -980,7 +980,7 @@ selecting フェーズ完了後、最初の game_state より前に送信され�
     "action_data": {
       "my_name": "Ken",
       "my_level": 24,
-      "opponent_name": "Smile Delivery",
+      "opponent_name": "Smile Horizon Express",
       "opponent_level": 50,
       "match_type": "npc"
     },
@@ -1000,9 +1000,9 @@ selecting フェーズ完了後、最初の game_state より前に送信され�
 NPC 表示名:
 | Faction ID | 表示名 |
 |------------|--------|
-| SD | Smile Delivery |
+| SHE | Smile Horizon Express |
 | Tenki | 天気使い |
-| Sugar | しゅがーLab |
+| Sugar | しゅがーらぼ |
 | Tuners | 調律部 |
 
 ##### `turn_start` — ターン開始バナー

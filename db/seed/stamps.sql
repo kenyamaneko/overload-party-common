@@ -12,11 +12,11 @@ INSERT INTO cosmetic_items (item_type, item_no, item_name, description, is_purch
 ON CONFLICT (item_type, item_no) DO NOTHING;
 
 -- 課金スタンプ（陣営別セット）— キャラクターデザインは今後追加予定
--- item_no 100番台: SD, 200番台: Tenki, 300番台: Sugar, 400番台: Tuners
+-- item_no 100番台: SHE, 200番台: Tenki, 300番台: Sugar, 400番台: Tuners
 -- 現時点ではプレースホルダーのみ（is_active = false で非公開）
 INSERT INTO cosmetic_items (item_type, item_no, item_name, description, is_purchasable, is_active) VALUES
-  ('stamp', 101, 'SDスタンプ（準備中）',         'SD陣営キャラクタースタンプ', true, false),
+  ('stamp', 101, 'SHEスタンプ（準備中）',         'SHE陣営キャラクタースタンプ', true, false),
   ('stamp', 201, '天気使いスタンプ（準備中）',    '天気使い陣営キャラクタースタンプ', true, false),
-  ('stamp', 301, 'しゅがーLabスタンプ（準備中）', 'しゅがーLab陣営キャラクタースタンプ', true, false),
+  ('stamp', 301, 'しゅがーらぼスタンプ（準備中）', 'しゅがーらぼ陣営キャラクタースタンプ', true, false),
   ('stamp', 401, '調律部スタンプ（準備中）',      '調律部陣営キャラクタースタンプ', true, false)
 ON CONFLICT (item_type, item_no) DO NOTHING;

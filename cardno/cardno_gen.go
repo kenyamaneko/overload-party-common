@@ -2,35 +2,6 @@
 
 package cardno
 
-// SD（Smile Delivery）
-const (
-	SDComputeEkubo           int64 = 1    // えくぼ
-	SDContainerAlligator     int64 = 3    // アリゲーター
-	SDOrchestratorKujirantis int64 = 4    // クジラの統率者<クジランティス>
-	SDMLRoughmaker           int64 = 5    // ラフメイカー
-	SDServerlessRamune       int64 = 6    // ラムネ
-	SDRDBAdeliece            int64 = 7    // アデリース
-	SDDistributedDBOoroba    int64 = 8    // オオロバ
-	SDStorageEris            int64 = 9    // エリス
-	SDDBDinosaur             int64 = 10   // ダイナソー
-	SDCacheMerry             int64 = 11   // メリー
-	SDPipeline               int64 = 12   // SD Pipeline
-	SDFront                  int64 = 13   // SD Front
-	SDGuard                  int64 = 14   // SD Guard
-	SDFirewall               int64 = 15   // SD Firewall
-	SDQueue                  int64 = 16   // SD Queue
-	SDGateway                int64 = 17   // SD Gateway
-	SDKeys                   int64 = 18   // SD Keys
-	SDFormation              int64 = 19   // SD Formation
-	SDMarketplace            int64 = 20   // SD Marketplace
-	SDRyoukinMitsumori       int64 = 21   // SD 料金見積もり
-	SmileRecovery            int64 = 22   // Smile Recovery
-	SDEcosystem              int64 = 118  // SD Ecosystem
-	SDSmileDelivery          int64 = 121  // SD Smile Delivery
-	SDCacheDakkun            int64 = 124  // だっくん
-	SDBlockStorage           int64 = 131  // SD Block Storage
-)
-
 // 天気使い
 const (
 	TenkiVMSora             int64 = 23   // ソラ
@@ -60,7 +31,7 @@ const (
 	TenkiBlockStorage       int64 = 132  // 天気使い ブロックストレージ
 )
 
-// しゅがーLab
+// しゅがーらぼ
 const (
 	SugarComputeConfettiito  int64 = 47   // コンフェッティート
 	SugarSpotSponjit         int64 = 48   // スポンジット
@@ -74,18 +45,18 @@ const (
 	SugarStorageSchtrenge    int64 = 56   // シュトレーンジ
 	SugarDBToastoa           int64 = 57   // トーストア
 	SugarDWIcecream          int64 = 58   // アイスクエリム
-	SugarBuild               int64 = 59   // しゅがーLab Build
-	SugarCDN                 int64 = 60   // しゅがーLab CDN
-	SugarIcecreamAnalytics   int64 = 61   // しゅがーLab アイスクエリム Analytics
-	SugarProfiler            int64 = 62   // しゅがーLab Profiler
-	SugarPakupakuSable       int64 = 63   // しゅがーLab ぱくぱくサブレ
-	SugarDangoFlow           int64 = 64   // しゅがーLab だんごフロー
-	SugarDeployment          int64 = 65   // しゅがーLab Deployment
-	SugarButterKunBatch      int64 = 66   // しゅがーLab バター君 Batch
-	SugarKnowledge           int64 = 67   // しゅがーLab Knowledge
-	SugarErrorBudget         int64 = 68   // しゅがーLab Error Budget
+	SugarBuild               int64 = 59   // しゅがーらぼ Build
+	SugarCDN                 int64 = 60   // しゅがーらぼ CDN
+	SugarIcecreamAnalytics   int64 = 61   // しゅがーらぼ アイスクエリム Analytics
+	SugarProfiler            int64 = 62   // しゅがーらぼ Profiler
+	SugarPakupakuSable       int64 = 63   // しゅがーらぼ ぱくぱくサブレ
+	SugarDangoFlow           int64 = 64   // しゅがーらぼ だんごフロー
+	SugarDeployment          int64 = 65   // しゅがーらぼ Deployment
+	SugarButterKunBatch      int64 = 66   // しゅがーらぼ バター君 Batch
+	SugarKnowledge           int64 = 67   // しゅがーらぼ Knowledge
+	SugarErrorBudget         int64 = 68   // しゅがーらぼ Error Budget
 	SugarCacheMeringue       int64 = 125  // メレンゲもりもりストア
-	SugarBlockStorage        int64 = 133  // しゅがーLab ブロックストレージ
+	SugarBlockStorage        int64 = 133  // しゅがーらぼ ブロックストレージ
 )
 
 // 調律部（チューナーズ）
@@ -160,16 +131,16 @@ var CardNames = map[int64]string{
 	9: "エリス",
 	10: "ダイナソー",
 	11: "メリー",
-	12: "SD Pipeline",
-	13: "SD Front",
-	14: "SD Guard",
-	15: "SD Firewall",
-	16: "SD Queue",
-	17: "SD Gateway",
-	18: "SD Keys",
-	19: "SD Formation",
-	20: "SD Marketplace",
-	21: "SD 料金見積もり",
+	12: "SHE Pipeline",
+	13: "SHE Front",
+	14: "SHE Guard",
+	15: "SHE Firewall",
+	16: "SHE Queue",
+	17: "SHE Gateway",
+	18: "SHE Keys",
+	19: "SHE Formation",
+	20: "SHE Marketplace",
+	21: "SHE 料金見積もり",
 	22: "Smile Recovery",
 	23: "ソラ",
 	24: "アサギリ",
@@ -207,16 +178,16 @@ var CardNames = map[int64]string{
 	56: "シュトレーンジ",
 	57: "トーストア",
 	58: "アイスクエリム",
-	59: "しゅがーLab Build",
-	60: "しゅがーLab CDN",
-	61: "しゅがーLab アイスクエリム Analytics",
-	62: "しゅがーLab Profiler",
-	63: "しゅがーLab ぱくぱくサブレ",
-	64: "しゅがーLab だんごフロー",
-	65: "しゅがーLab Deployment",
-	66: "しゅがーLab バター君 Batch",
-	67: "しゅがーLab Knowledge",
-	68: "しゅがーLab Error Budget",
+	59: "しゅがーらぼ Build",
+	60: "しゅがーらぼ CDN",
+	61: "しゅがーらぼ アイスクエリム Analytics",
+	62: "しゅがーらぼ Profiler",
+	63: "しゅがーらぼ ぱくぱくサブレ",
+	64: "しゅがーらぼ だんごフロー",
+	65: "しゅがーらぼ Deployment",
+	66: "しゅがーらぼ バター君 Batch",
+	67: "しゅがーらぼ Knowledge",
+	68: "しゅがーらぼ Error Budget",
 	70: "カンタータ",
 	72: "ベア・ベル太",
 	73: "テナ",
@@ -258,10 +229,10 @@ var CardNames = map[int64]string{
 	113: "レートリミット",
 	115: "フェイルオーバー",
 	117: "カオスエンジニアリング",
-	118: "SD Ecosystem",
+	118: "SHE Ecosystem",
 	119: "DB スナップショット",
 	120: "ベンチャーキャピタル",
-	121: "SD Smile Delivery",
+	121: "SHE Smile Horizon Express",
 	122: "気象異変",
 	123: "天気使いの更新",
 	124: "だっくん",
@@ -271,9 +242,9 @@ var CardNames = map[int64]string{
 	128: "エレファントDB",
 	129: "天気使いサーバー",
 	130: "調律部 DB",
-	131: "SD Block Storage",
+	131: "SHE Block Storage",
 	132: "天気使い ブロックストレージ",
-	133: "しゅがーLab ブロックストレージ",
+	133: "しゅがーらぼ ブロックストレージ",
 	134: "調律部 Block Volume",
 	135: "スロットリング",
 }

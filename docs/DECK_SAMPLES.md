@@ -6,27 +6,27 @@
 
 ---
 
-## SD — Ecosystem Synergy（エコシステムシナジー）
+## SHE — Ecosystem Synergy（エコシステムシナジー）
 
-**Starting Field: フロントエンド SD Compute - えくぼ / バックエンド SD RDB - アデリース**
+**Starting Field: フロントエンド SHE Compute - えくぼ / バックエンド SHE RDB - アデリース**
 
 | 枚数 | カード名 |
 |------|---------|
-| 3 | SD Compute - えくぼ |
-| 3 | SD RDB - アデリース |
-| 3 | SD DestributedDB - オオロバ |
-| 3 | SD Marketplace |
-| 2 | SD Serverless - ラムネ |
-| 2 | SD Storage - エリス |
-| 2 | SD Front |
+| 3 | SHE Compute - えくぼ |
+| 3 | SHE RDB - アデリース |
+| 3 | SHE DestributedDB - オオロバ |
+| 3 | SHE Marketplace |
+| 2 | SHE Serverless - ラムネ |
+| 2 | SHE Storage - エリス |
+| 2 | SHE Front |
 | 2 | プロジェクトマネージャー |
-| 1 | SD Container - アリゲーター |
+| 1 | SHE Container - アリゲーター |
 | 1 | DB スナップショット |
 | 1 | フェイルオーバー |
-| 1 | SD Firewall |
-| 1 | SD Gateway |
-| 1 | SD Smile Delivery |
-| 1 | SD Ecosystem |
+| 1 | SHE Firewall |
+| 1 | SHE Gateway |
+| 1 | SHE Smile Horizon Express |
+| 1 | SHE Ecosystem |
 | 1 | クラウドエンジニア |
 | 1 | クラウドアーキテクト |
 | 1 | 寺リフォーム |
@@ -36,8 +36,8 @@
 1. **ラムネ + エリス**: スループット 700（エリス Trigger）で RC 0 攻撃。Elastic で攻撃を受けるたび +100、最大 1,200。無料枠 MC で殴れる主力に
 2. **エリス Versioning**: オオロバ / アデリース が Data Breach で破壊されても手札に戻る。Revenue エンジンが途切れない
 3. **Aurora Cluster フル展開**: オオロバ ×2 + アデリース ×1 で Yield 900+900+500 = 2,300/T
-4. **SD Marketplace ×3**: 0 コスト ×3 = Budget +1,800。SD 15枚のデッキなら毎ゲーム発動
-5. **えくぼ C系 medium + SD Front + SD Gateway** = スループット 1,820+200+200 = 2,220。1体で Revenue 2,220
+4. **SHE Marketplace ×3**: 0 コスト ×3 = Budget +1,800。SHE 15枚のデッキなら毎ゲーム発動
+5. **えくぼ C系 medium + SHE Front + SHE Gateway** = スループット 1,820+200+200 = 2,220。1体で Revenue 2,220
 
 ---
 
@@ -73,27 +73,27 @@
 
 ---
 
-## しゅがーLab — Fleet Assault（艦隊強襲）
+## しゅがーらぼ — Fleet Assault（艦隊強襲）
 
-**Starting Field: フロントエンド しゅがーLab AI - バター君 / バックエンド しゅがーLab Datawarehouse - アイスクエリム**
+**Starting Field: フロントエンド しゅがーらぼ AI - バター君 / バックエンド しゅがーらぼ Datawarehouse - アイスクエリム**
 
 | 枚数 | カード名 |
 |------|---------|
-| 3 | しゅがーLab Compute - コンフェッティート |
-| 3 | しゅがーLab Spot - スポンジット |
+| 3 | しゅがーらぼ Compute - コンフェッティート |
+| 3 | しゅがーらぼ Spot - スポンジット |
 | 3 | DDoS 攻撃 |
-| 2 | しゅがーLab Orchestrator - クーヘンバウムティス |
-| 2 | しゅがーLab AI - バター君 |
-| 2 | しゅがーLab Datawarehouse - アイスクエリム |
-| 2 | しゅがーLab CDN |
-| 2 | しゅがーLab Profiler |
-| 2 | しゅがーLab Container - クラン |
-| 1 | しゅがーLab AI - Dr. テンソルベ |
-| 1 | しゅがーLab DestributedDB - パイナポ |
-| 1 | しゅがーLab Storage - シュトレーンジ |
-| 1 | しゅがーLab アイスクエリム Analytics |
+| 2 | しゅがーらぼ Orchestrator - クーヘンバウムティス |
+| 2 | しゅがーらぼ AI - バター君 |
+| 2 | しゅがーらぼ Datawarehouse - アイスクエリム |
+| 2 | しゅがーらぼ CDN |
+| 2 | しゅがーらぼ Profiler |
+| 2 | しゅがーらぼ Container - クラン |
+| 1 | しゅがーらぼ AI - Dr. テンソルベ |
+| 1 | しゅがーらぼ DestributedDB - パイナポ |
+| 1 | しゅがーらぼ Storage - シュトレーンジ |
+| 1 | しゅがーらぼ アイスクエリム Analytics |
 | 1 | 設定ミス |
-| 1 | しゅがーLab バター君 Batch |
+| 1 | しゅがーらぼ バター君 Batch |
 | 1 | クラウドエンジニア |
 | 1 | クラウドアーキテクト |
 | 1 | 寺リフォーム |
@@ -102,7 +102,7 @@
 
 1. **クーヘンバウムティス Autopilot + Fleet**: クーヘンバウムティス #1 Dep 200 → 即 medium。クーヘンバウムティス #2 Fleet で Dep 0 → 即 medium。合計 200 コストで medium ×2（スループット 2,800 / 可用性 5,200）
 2. **アイスクエリム ×2 + 3体攻撃**: Yield 1,400 + Streaming Insert 600 = 2,000/T
-3. **しゅがーLab バター君 Batch + Dr. テンソルベ**: スループット 1,700 ×2 = 3,400 + Insight 600 吸収。一撃で large も破壊
+3. **しゅがーらぼ バター君 Batch + Dr. テンソルベ**: スループット 1,700 ×2 = 3,400 + Insight 600 吸収。一撃で large も破壊
 4. **DDoS 攻撃 ×3 集中砲火**: 900×3 = 2,700 ダメージ（3ターンで）。相手の壁を確実に除去
 
 ---
