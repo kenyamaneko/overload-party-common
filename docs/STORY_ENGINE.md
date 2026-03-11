@@ -4,7 +4,7 @@
 
 ビジュアルノベル形式のシナリオ再生エンジン。ADVスタイル（画面上部に背景+立ち絵、下部にテキストボックス）でストーリーを進行する。
 
-**現在の用途**: ゲーム開始時のナビゲータキャラ「ユニ君」による導入シナリオ
+**現在の用途**: ゲーム開始時のナビゲータキャラ「カフカ」による導入シナリオ
 **設計方針**: 汎用エンジンとして、今後の追加シナリオにも再利用可能
 
 ## アーキテクチャ
@@ -27,7 +27,7 @@ src/features/story/
 │   └── useStoryPlayer.ts    # シナリオ進行ロジック
 └── data/
     ├── scenarios.ts          # シナリオレジストリ
-    └── uni-intro.ts          # ユニ君導入シナリオ
+    └── intro.ts              # カフカ導入シナリオ
 ```
 
 ### レイヤー構造
@@ -189,7 +189,7 @@ useStoryPlayer (状態管理)
 
 - フルスクリーンルート（タブバーなし）
 - `scenarioId` は `scenarios.ts` のレジストリで解決
-- 任意の画面から `navigate('/story/uni-intro')` で起動可能
+- 任意の画面から `navigate('/story/intro')` で起動可能
 - シナリオ完了時は `navigate(-1)` で前の画面に戻る
 
 ## i18n
@@ -232,7 +232,7 @@ src/i18n/locales/en/story.json
    ```typescript
    import { myScenario } from './my-scenario'
    const SCENARIOS = {
-     'uni-intro': uniIntro,
+     'intro': intro,
      'my-scenario': myScenario,  // ← 追加
    }
    ```
