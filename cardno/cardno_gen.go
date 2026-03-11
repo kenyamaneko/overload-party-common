@@ -33,7 +33,7 @@ const (
 
 // しゅがーらぼ
 const (
-	SugarComputeConfettiito  int64 = 47   // コンフェッティート
+	SugarComputeConfettiito  int64 = 47   // コンピエッタ
 	SugarSpotSponjit         int64 = 48   // スポンジット
 	SugarContainerClan       int64 = 49   // クラン
 	SugarOrchestratorKuchen  int64 = 50   // クーヘンバウムティス
@@ -166,7 +166,7 @@ var CardNames = map[int64]string{
 	44: "天気使い Policy",
 	45: "天気使い お守り傘",
 	46: "天気使い Traffic",
-	47: "コンフェッティート",
+	47: "コンピエッタ",
 	48: "スポンジット",
 	49: "クラン",
 	50: "クーヘンバウムティス",
