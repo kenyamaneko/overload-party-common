@@ -14,7 +14,7 @@ const (
 	TenkiDBHayate           int64 = 30   // ハヤテ
 	TenkiStorageFubuki      int64 = 31   // フブキ
 	TenkiDBCosmo            int64 = 32   // 百花の天穹<コスモ>
-	TenkiCacheReiu          int64 = 33   // レイウ
+	TenkiCacheReiu          int64 = 33   // シュウウ
 	TenkiDevOps             int64 = 34   // 天気使い DevOps
 	TenkiCDN                int64 = 35   // 天気使い CDN
 	TenkiFunnel             int64 = 36   // 天気使い ファンネル
@@ -152,7 +152,7 @@ var CardNames = map[int64]string{
 	30: "ハヤテ",
 	31: "フブキ",
 	32: "百花の天穹<コスモ>",
-	33: "レイウ",
+	33: "シュウウ",
 	34: "天気使い DevOps",
 	35: "天気使い CDN",
 	36: "天気使い ファンネル",

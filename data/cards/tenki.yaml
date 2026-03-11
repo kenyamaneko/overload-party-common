@@ -220,7 +220,7 @@ cards:
     effect_text: "**百花の形:** このカードが 天気使い DB系リソースとして効果の対象になる時、このカードは2枚分として数える。\n**百花繚乱:** このカードをデプロイした時に発動できる。リポジトリから「天気使い NoSQL - 秩序の蒼<コスモ>」1枚をコストなしでデプロイする。この効果は1ターン中に1回のみ使用できる"
 
   - card_no: 33
-    card_name: "レイウ"
+    card_name: "シュウウ"
     resource_label: "Cache"
     const_name: TenkiCacheReiu
     card_type: CacheDB
