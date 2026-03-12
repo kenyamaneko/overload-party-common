@@ -19,6 +19,8 @@ files:
           - {name: Username, type: string, json: "username", db: "username"}
           - {name: Level, type: int64, json: "level", db: "level"}
           - {name: Exp, type: int64, json: "exp", db: "exp"}
+          - {name: Wins, type: int64, json: "wins", db: "wins"}
+          - {name: Losses, type: int64, json: "losses", db: "losses"}
           - {name: IsPremium, type: bool, json: "is_premium", db: "is_premium"}
           - {name: EquippedIconNo, type: "*int64", json: "equipped_icon_no,omitempty", db: "equipped_icon_no"}
           - {name: SelectedFaction, type: "*string", json: "selected_faction,omitempty", db: "selected_faction"}
