@@ -2,6 +2,35 @@
 
 package cardno
 
+// SHE（Smile Horizon Express）
+const (
+	SHEComputeEkubo           int64 = 1    // えくぼ
+	SHEContainerAlligator     int64 = 3    // アリゲーテナ
+	SHEOrchestratorKujirantis int64 = 4    // クジラの統率者<クジランティス>
+	SHEMLRoughmaker           int64 = 5    // ラフメイカー
+	SHEServerlessRamune       int64 = 6    // むらた
+	SHERDBAdeliece            int64 = 7    // アデリース
+	SHEDistributedDBOoroba    int64 = 8    // オオロバ
+	SHEStorageEris            int64 = 9    // えりり
+	SHEDBDinosaur             int64 = 10   // ダイノ
+	SHECacheMerry             int64 = 11   // メリーモ
+	SHEPipeline               int64 = 12   // SHE Pipeline
+	SHEFront                  int64 = 13   // SHE Front
+	SHEGuard                  int64 = 14   // SHE Guard
+	SHEFirewall               int64 = 15   // SHE Firewall
+	SHEQueue                  int64 = 16   // SHE Queue
+	SHEGateway                int64 = 17   // SHE Gateway
+	SHEKeys                   int64 = 18   // SHE Keys
+	SHEFormation              int64 = 19   // SHE Formation
+	SHEMarketplace            int64 = 20   // SHE Marketplace
+	SHERyoukinMitsumori       int64 = 21   // SHE 料金見積もり
+	SmileRecovery             int64 = 22   // Smile Recovery
+	SHEEcosystem              int64 = 118  // SHE Ecosystem
+	SHESmileHorizonExpress    int64 = 121  // SHE Smile Horizon Express
+	SHECacheDakkun            int64 = 124  // だっくん
+	SHEBlockStorage           int64 = 131  // SHE Block Storage
+)
+
 // 天気使い
 const (
 	TenkiVMSora             int64 = 23   // ソラ
