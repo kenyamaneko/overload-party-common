@@ -1,6 +1,6 @@
 # Overload Party - データ設計 (Data Architecture)
 
-**Last Updated:** 2026-03-03
+**Last Updated:** 2026-03-12
 
 > **完全なスキーマ定義:** `db/schema_postgres.sql` を参照。以下は各テーブルの設計意図とカラム仕様の概要。
 
@@ -72,7 +72,7 @@
 | `game_id` | VARCHAR(26) | No | 親テーブル参照 |
 | `version` | BIGINT | No | 楽観的ロック用バージョン |
 | `current_turn` | BIGINT | No | 現在ターン数 |
-| `current_phase` | VARCHAR(20) | No | `'draw'`, `'yield'`, `'main'`, `'battle'`, `'end'` |
+| `current_phase` | VARCHAR(20) | No | `'draw'`, `'main'`, `'battle'`, `'end'` |
 | `active_player` | BIGINT | No | 現在のターンプレイヤー (1 or 2) |
 | `player1_budget` | BIGINT | No | Player 1 Budget |
 | `player1_insight_pool` | BIGINT | No | Player 1 Insight Pool |
@@ -85,6 +85,8 @@
 | `chain_stack` | JSONB | Yes | 現在積まれているチェーンスタック |
 | `current_action_timer`| BIGINT | Yes | アクションタイマー |
 | `updated_at` | TIMESTAMPTZ | No | 更新日時 (DEFAULT now()) |
+
+> **フェーズについて:** ゲームフェーズは `draw`, `main`, `battle`, `end` の4つ。Yield（Insight）生成は End フェーズ中に処理される。
 
 ### 2.2 JSONスキーマ (State Details)
 
@@ -126,7 +128,7 @@
 |---|---|---|
 | `effectType` | string | 効果種別 (`buff_tp`, `mod_av`, `disable_atk` 等) |
 | `value` | int | 変動値（加減算） |
-| `duration` | string | 持続期間 (`this_turn`, `until_next_turn_end`) |
+| `duration` | string | 持続期間 (`this_turn`, `until_next_turn_end`, `until_next_own_turn_end`) |
 | `sourceId` | string | 発生源のカード/インスタンスID |
 
 **サポートゾーンカードのフィールド (Support Object):**
@@ -256,7 +258,7 @@
 | `card_no` | BIGINT | No | カード番号（`CARDS.md` の `#` に対応） |
 | `card_name` | VARCHAR(100) | No | カード名 |
 | `faction` | VARCHAR(20) | No | 陣営 (`SHE`, `Tenki`, `Sugar`, `Tuners`, `Neutral`) |
-| `card_type` | VARCHAR(30) | No | カードタイプ (`Compute`, `Container`, `Orchestrator`, `Serverless`, `AI_ML`, `Database`, `ObjectStorage`, `CacheDB`, `Datawarehouse`, `Platform`, `Attachment`, `Strategy`, `Incident`, `Reactive`) |
+| `card_type` | VARCHAR(30) | No | カードタイプ (`Compute`, `Container`, `Orchestrator`, `Serverless`, `AI_ML`, `Database`, `ObjectStorage`, `CacheDB`, `Platform`, `Attachment`, `Strategy`, `Incident`, `Reactive`) |
 | `resizable` | BOOLEAN | No | Resizable 属性 (Default: false) |
 | `elastic` | BOOLEAN | No | Elastic 属性 (Default: false) |
 | `elastic_increment` | BIGINT | Yes | Elastic トリガーごとの TP/Yield 増加量。Elastic カードのみ設定（非 Elastic は `null` または `0`） |

@@ -142,26 +142,37 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
 
 クラウドニュース一覧取得。ホーム画面のニュースセクション用。
 
+**クエリパラメータ:**
+
+| パラメータ | 型 | デフォルト | 説明 |
+|-----------|-----|-----------|------|
+| `limit` | int | 20 | 取得件数（1-100） |
+| `offset` | int | 0 | オフセット |
+
 **レスポンス (200):**
 ```json
 [
   {
-    "id": "string",
-    "tag": "aws|gcp|azure|topic",
-    "headline": "string",
-    "meta": "string",
-    "url": "string (optional)"
+    "article_id": "string (ULID)",
+    "source": "aws|gcp|azure|oci",
+    "title": "string",
+    "summary": "string (nullable)",
+    "tags": ["aws", "storage"],
+    "published_at": "timestamp (nullable)",
+    "fetched_at": "timestamp"
   }
 ]
 ```
 
 | フィールド | 型 | 説明 |
 |-----------|-----|------|
-| `id` | string | ニュース一意ID |
-| `tag` | string | カテゴリ。`aws` / `gcp` / `azure` / `topic` のいずれか |
-| `headline` | string | 見出しテキスト |
-| `meta` | string | 表示用の相対時間（例: "2時間前"） |
-| `url` | string? | 詳細リンク（任意） |
+| `article_id` | string | 記事 ULID |
+| `source` | string | ソース。`aws` / `gcp` / `azure` / `oci` のいずれか |
+| `title` | string | 記事タイトル |
+| `summary` | string? | AI 要約（未完了の場合 null） |
+| `tags` | string[] | タグ配列 |
+| `published_at` | timestamp? | 記事の公開日時 |
+| `fetched_at` | timestamp | 取得日時 |
 
 ---
 
@@ -302,7 +313,7 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
 [
   {
     "card_no": 1,
-    "illustration_variant": 0,
+    "art_no": 0,
     "count": 3,
     "card_name": "EC2 Instance",
     "faction": "SHE",
@@ -329,9 +340,11 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
 [
   {
     "player_id": "uuid",
+    "playmat_no": 1,
+    "sleeve_no": 2,
     "deck_cards": [
-      {"card_no": 1, "illustration_variant": 0, "count": 3},
-      {"card_no": 2, "illustration_variant": 1, "count": 2}
+      {"card_no": 1, "art_no": 0, "count": 3},
+      {"card_no": 2, "art_no": 1, "count": 2}
     ],
     "created_at": "timestamp",
     "updated_at": "timestamp"
@@ -339,7 +352,7 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
 ]
 ```
 
-`deck_cards` はデッキのカード構成（`card_no`, `illustration_variant`, `count`）の配列。
+`deck_cards` はデッキのカード構成（`card_no`, `art_no`, `count`）の配列。
 
 
 ---
@@ -357,7 +370,7 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
       "player_id": "uuid",
       "deck_id": 1,
       "card_no": 1,
-      "illustration_variant": 0,
+      "art_no": 0,
       "count": 3
     }
   ]
@@ -375,8 +388,8 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
 {
   "deck_name": "string",
   "cards": [
-    { "card_no": 1, "illustration_variant": 0, "count": 3 },
-    { "card_no": 2, "illustration_variant": 0, "count": 2 }
+    { "card_no": 1, "art_no": 0, "count": 3 },
+    { "card_no": 2, "art_no": 0, "count": 2 }
   ],
   "playmat_no": 1,
   "sleeve_no": 2
@@ -433,81 +446,36 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
 
 ---
 
-### 3.5 NPC Battle
+### 3.5 NPC Battle (WebSocket)
 
-#### POST `/npc/battle/start`
+NPC バトルは WebSocket 経由で処理される。REST エンドポイントは存在しない。
+
+#### `npc_battle_start` (Client → Server)
 
 NPC 対戦開始。即座にゲームが作成される（マッチメイキング不要）。
 
-**リクエスト:**
+**ペイロード:**
 ```json
 {
+  "type": "npc_battle_start",
   "deckId": 1,
   "npcFaction": "SHE|Tenki|Sugar|Tuners"
 }
 ```
 
-**レスポンス (200):**
+**レスポンス:** `npc_battle_created` (Server → Client)
 ```json
 {
+  "type": "npc_battle_created",
   "gameId": "ULID",
   "player1Id": "uuid",
-  "player2Id": "npc_...",
-  "status": "selecting"
+  "player2Id": "npc_..."
 }
 ```
 
----
+エラー時は `error` メッセージが返る。
 
-#### POST `/npc/battle/{gameId}/select`
-
-初期配置カードの選択。
-
-**リクエスト:**
-```json
-{
-  "frontendCardNo": 1,
-  "backendCardNo": 2
-}
-```
-
-**レスポンス (200):** ゲーム状態オブジェクト
-
----
-
-#### POST `/npc/battle/{gameId}/action`
-
-ゲームアクションの実行。NPC は自動応答する。
-
-**リクエスト:**
-```json
-{
-  "actionType": "play_card|attack|scale_up|distribute_yield|end_phase|discard_hand|activate_effect",
-  "data": { /* アクション固有のデータ */ }
-}
-```
-
-**アクション別データ:**
-
-| actionType | data |
-|---|---|
-| `play_card` | `{ "cardInstanceId": "i0001", "position": { "zone": "frontend\|backend\|support", "index": 0-2 }, "targetInstanceId": "i0002?" }` |
-| `attack` | `{ "attackerInstanceId": "i0001", "targetInstanceId": "i0002" }` |
-| `scale_up` | `{ "componentInstanceId": "i0001", "targetRank": "medium\|large", "instanceFamily": "string?" }` |
-| `distribute_yield` | `{ "distributions": [{ "componentInstanceId": "i0001", "amount": 10 }] }` |
-| `end_phase` | `{}` |
-| `discard_hand` | `{ "cardInstanceIds": ["i0001"] }` |
-| `activate_effect` | `{ "instanceId": "i0001", "targetInstanceId": "i0002?" }` |
-
-**レスポンス (200):** ゲーム状態オブジェクト
-
----
-
-#### GET `/npc/battle/{gameId}/state`
-
-現在のゲーム状態を取得（情報秘匿適用済み）。
-
-**レスポンス (200):** ゲーム状態オブジェクト
+ゲーム開始後は PvP と同じ `game_action` メッセージでアクションを送信する。NPC は自動応答する。ゲーム状態は `game_enter` → `game_state` メッセージで取得可能。
 
 ---
 
@@ -1100,10 +1068,14 @@ NPC 表示名:
 | | PUT | `/player/decks/{deckId}` | 要 | 要 | デッキ更新 |
 | | DELETE | `/player/decks/{deckId}` | 要 | 要 | デッキ削除 |
 | **Card** | GET | `/cards` | 要 | 要 | 全カード定義 |
-| **NPC** | POST | `/npc/battle/start` | 要 | 要 | NPC 対戦開始 |
-| | POST | `/npc/battle/{gameId}/select` | 要 | 要 | 初期配置選択 |
-| | POST | `/npc/battle/{gameId}/action` | 要 | 要 | アクション実行 |
-| | GET | `/npc/battle/{gameId}/state` | 要 | 要 | 状態取得 |
+| **Game Log** | GET | `/games/{gameId}/log` | 要 | 要 | ゲームログ取得 |
+| | GET | `/games/{gameId}/log/text` | 要 | 要 | ゲームログ（テキスト） |
+| **Spectate** | GET | `/spectate/games` | 要 | 要 | 観戦可能ゲーム一覧 |
+| | WS | `spectate_join` | 要 | 要 | 観戦参加（WebSocket） |
+| | WS | `spectate_leave` | - | - | 観戦離脱（WebSocket） |
+| | WS | `spectate_stamp` | - | - | 観戦スタンプ送信（WebSocket） |
+| **NPC** | WS | `npc_battle_start` | 要 | 要 | NPC 対戦開始（WebSocket） |
+| | WS | `npc_battle_created` | - | - | NPC 対戦作成通知（Server→Client） |
 | **Shop** | POST | `/player/select-faction` | 要 | 要 | ファクション選択 |
 | | GET | `/shop/products` | 要 | 要 | 商品一覧 |
 | | POST | `/shop/purchase` | 要 | 要 | 商品購入 |
