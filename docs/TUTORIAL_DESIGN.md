@@ -7,7 +7,7 @@
 **設計方針:**
 - バトルエンジンそのものは変更しない（通常の NPC 戦と同じルールで動く）
 - チュートリアル専用の制御は**クライアント側のオーバーレイ + サーバー側の固定デッキ順序**で実現
-- 台詞データは **プレーンテキストファイル**（`.txt`、`---` 区切り）で管理し、テキスト表示には既存の useTypewriter のみ再利用する（ストーリーエンジン本体は使わない）
+- チュートリアルスクリプトは **プレーンテキストファイル**（`.tut`）で管理。メタデータ（`@trigger` 等）と台詞を1ファイルに同居させ、テキスト表示には既存の useTypewriter のみ再利用する（ストーリーエンジン本体は使わない）
 - カフカの台詞ウィンドウは**画面上部 30%**（相手の手札〜フィールド上部の領域）に一時表示し、台詞完了後にフェードアウト。**常時表示しない**
 - 全3章構成。1章あたり約3〜5分
 
@@ -65,26 +65,24 @@ src/features/tutorial/
 ├── hooks/
 │   └── useTutorialEngine.ts      # チュートリアル進行管理
 ├── data/
-│   ├── steps/
-│   │   ├── chapter1.ts           # 第1章のステップ定義（trigger, highlight, requiredAction）
-│   │   ├── chapter2.ts           # 第2章
-│   │   └── chapter3.ts           # 第3章
-│   └── dialogues/
-│       ├── ja/
-│       │   ├── chapter1.txt      # 第1章の台詞テキスト
-│       │   ├── chapter2.txt      # 第2章
-│       │   └── chapter3.txt      # 第3章
-│       └── en/
-│           ├── chapter1.txt
-│           ├── chapter2.txt
-│           └── chapter3.txt
+│   ├── ja/
+│   │   ├── chapter1.tut          # 第1章（メタデータ + 台詞）
+│   │   ├── chapter2.tut          # 第2章
+│   │   └── chapter3.tut          # 第3章
+│   └── en/
+│       ├── chapter1.tut
+│       ├── chapter2.tut
+│       └── chapter3.tut
+├── parser.ts                      # .tut パーサー
 └── types.ts                      # チュートリアル固有の型定義
 ```
 
-**ステップ定義（TS）と台詞テキスト（txt）の分離:**
-- `steps/*.ts` — いつ・どこをハイライト・何を操作させるか（ロジック）
-- `dialogues/{lang}/*.txt` — 各ステップで表示する台詞テキスト（コンテンツ）
-- `---` でステップ区切り。改行がそのまま行送り。インデックスで steps 配列と1対1対応
+**1ファイル完結のスクリプト形式（`.tut`）:**
+- `@` 行 = メタデータ（trigger, highlight, action）。パーサーが TutorialStep に変換
+- それ以外の行 = 台詞テキスト。改行がそのまま行送り
+- `---` でステップ区切り
+- メタデータと台詞が同じファイルにあるため、同期ずれが起きない
+- 言語ごとにファイルを分ける（`@` 行は各言語ファイルに重複するが許容する）
 
 ### サーバー側の変更（最小限）
 
@@ -103,75 +101,79 @@ src/features/tutorial/
 
 ## チュートリアルの進行モデル
 
-### TutorialStep 型
+### .tut スクリプトフォーマット
 
-```typescript
-interface TutorialStep {
-  // いつ発火するか
-  trigger: TutorialTrigger
-  // ハイライトする UI 領域（省略時はハイライトなし＝全体暗転で台詞のみ）
-  highlight?: HighlightTarget
-  // プレイヤーに求めるアクション（省略時は台詞を読み終えたら自動進行）
-  requiredAction?: RequiredAction
-  // このステップ中、他の操作をブロックするか
-  blockInput: boolean
-  // ※台詞テキストはこの型に含めない。
-  //   dialogues/{lang}/chapter{N}.txt の同じインデックスから取得する。
-}
-
-type TutorialTrigger =
-  | { type: 'on_enter' }                                    // チュートリアル開始直後
-  | { type: 'phase_start'; phase: GamePhase }               // 特定フェーズ開始時
-  | { type: 'turn_start'; turn: number }                    // 特定ターン開始時
-  | { type: 'after_action'; actionType: string }            // 特定アクション実行後
-  | { type: 'field_condition'; condition: FieldCondition }   // フィールド状態条件
-  | { type: 'after_step'; stepIndex: number }                // 特定ステップ完了後
-
-type HighlightTarget =
-  | { area: 'hand' }                          // 手札エリア全体
-  | { area: 'hand_card'; cardIndex: number }  // 手札の特定カード
-  | { area: 'field_slot'; zone: Zone; index: number }  // 特定スロット
-  | { area: 'field_zone'; zone: Zone }        // ゾーン全体
-  | { area: 'center_hud' }                    // フェーズ表示 + ボタン
-  | { area: 'button'; buttonId: string }      // 特定ボタン
-  | { area: 'budget' }                        // Budget 表示
-  | { area: 'insight' }                       // Insight 表示
-  | { area: 'opponent_field' }                // 相手フィールド全体
-
-type RequiredAction =
-  | { type: 'tap_to_continue' }                             // タップで次へ
-  | { type: 'play_card'; cardIndex: number; zone: Zone; slotIndex: number }  // 特定カードを特定スロットへ
-  | { type: 'attack'; attackerZone: Zone; attackerIndex: number; targetZone: Zone; targetIndex: number }
-  | { type: 'end_phase' }                                    // フェーズ終了ボタン
-  | { type: 'scale_up'; zone: Zone; index: number }          // スケールアップ
-  | { type: 'monetize' }                                     // 収益化
-```
-
-### 台詞テキストファイルフォーマット
-
-`dialogues/{lang}/chapter{N}.txt` はプレーンテキスト。`---` でステップを区切る。
+各チャプターは1つの `.tut` ファイルで完結する。`@` 行がメタデータ、それ以外が台詞テキスト、`---` がステップ区切り。
 
 ```
+@trigger on_enter
+@action tap_to_continue
 やあ、アーキテクト。準備はできたかい？
 ---
+@trigger after_step
+@action tap_to_continue
 今から君に、実戦の基本を教える。
 と言っても、そんなに構えなくていい。
 僕が横にいるから、一歩ずつやっていこう。
 ---
-まず、ターンの始まりだ。
-リポジトリから自動的にカードが1枚ドローされる。
-これが君の手札。ここから選んでフィールドに配置する——それを「デプロイ」と言う。
+@trigger phase_start:main
+@highlight hand_card:0
+@action play_card:0→frontend/0
+まずはこの「えくぼ」をデプロイしよう。
+SHE の看板配達員——Compute タイプのリソースだ。
+タップして選んでごらん。
 ```
 
-- `---` = ステップ区切り（steps 配列のインデックスと1対1対応）
-- 改行 = そのまま行送り（タイプライターで1行ずつ表示）
-- 台詞がないステップは `---` を連続させて空にする
+#### メタデータ一覧
+
+| ディレクティブ | 説明 | 例 |
+|---|---|---|
+| `@trigger` | いつ発火するか | `on_enter`, `phase_start:main`, `turn_start:3`, `after_action:deploy`, `after_step`, `field_condition:game_over` |
+| `@highlight` | ハイライト対象 | `hand`, `hand_card:0`, `field_slot:frontend/0`, `button:endTurn`, `budget`, `insight` |
+| `@action` | プレイヤーに求める操作 | `tap_to_continue`, `play_card:0→frontend/0`, `attack:frontend/0→opp_frontend/0`, `end_phase`, `scale_up:frontend/0`, `monetize` |
+| `@block` | 入力ブロック（省略時 true） | `true`, `false` |
+
+#### ルール
+
+- `@` で始まる行 = メタデータ（パーサーが抽出）
+- それ以外の行 = 台詞テキスト（改行がそのまま行送り）
+- `---` = ステップ区切り
+- `@trigger after_step` = 直前のステップ完了後（インデックスは自動計算）
+- 台詞がないステップ（操作待ちのみ）= `@` 行だけで台詞行なし
+
+#### パーサー
 
 ```typescript
-// パーサー
-const raw = await fetch(`/dialogues/${lang}/chapter${chapter}.txt`).then(r => r.text())
-const dialogues = raw.split('\n---\n').map(s => s.trim() || null)
-const text = dialogues[currentStepIndex]  // null ならテキストウィンドウ非表示
+interface TutorialStep {
+  trigger: TutorialTrigger
+  highlight?: HighlightTarget
+  requiredAction?: RequiredAction
+  blockInput: boolean
+  dialogue: string | null
+}
+
+function parseTutFile(raw: string): TutorialStep[] {
+  return raw.split('\n---\n').map((block, i) => {
+    const lines = block.trim().split('\n')
+    const meta: Record<string, string> = {}
+    const textLines: string[] = []
+    for (const line of lines) {
+      if (line.startsWith('@')) {
+        const [key, ...rest] = line.slice(1).split(' ')
+        meta[key] = rest.join(' ')
+      } else {
+        textLines.push(line)
+      }
+    }
+    return {
+      trigger: parseTrigger(meta.trigger, i),
+      highlight: meta.highlight ? parseHighlight(meta.highlight) : undefined,
+      requiredAction: meta.action ? parseAction(meta.action) : undefined,
+      blockInput: meta.block !== 'false',
+      dialogue: textLines.join('\n').trim() || null,
+    }
+  })
+}
 ```
 
 ### useTutorialEngine フック
@@ -273,64 +275,74 @@ SVG の `<clipPath>` + 半透明オーバーレイで、指定領域以外を暗
 **使用デッキ:** SHE スターター（チュートリアル専用の固定構成）
 **NPC:** Neutral デッキの弱い NPC（ファクション非所属の汎用キャラ）
 
-#### ステップ定義 + 台詞
-
-以下にステップの流れを示す。台詞は `dialogues/ja/chapter1.txt` にインデックス対応で記述。
-
-| # | trigger | highlight | requiredAction |
-|---|---------|-----------|----------------|
-| 0 | `on_enter` | — | tap_to_continue |
-| 1 | `after_step: 0` | — | tap_to_continue |
-| 2 | `phase_start: draw` | `hand` | tap_to_continue |
-| 3 | `phase_start: main` | `hand_card: 0` | `play_card: 0 → frontend/0` |
-| 4 | `after_action: deploy` | `field_slot: frontend/0` | tap_to_continue |
-| 5 | `after_step: 4` | `hand_card: 0` | `play_card: 0 → backend/0` |
-| 6 | `after_action: deploy` | — | tap_to_continue |
-| 7 | `after_step: 6` | `button: endTurn` | `end_phase` |
-| 8 | `after_action: end_turn` | — | tap_to_continue |
-| 9 | `turn_start: 2` | — | tap_to_continue |
-| 10 | `turn_start: 3` | — | tap_to_continue |
-| 11 | `after_step: 10` | — | tap_to_continue |
-
-`dialogues/ja/chapter1.txt`:
+#### スクリプト: `ja/chapter1.tut`
 
 ```
+@trigger on_enter
+@action tap_to_continue
 やあ、アーキテクト。準備はできたかい？
 ---
+@trigger after_step
+@action tap_to_continue
 今から君に、実戦の基本を教える。
 と言っても、そんなに構えなくていい。
 僕が横にいるから、一歩ずつやっていこう。
 ---
+@trigger phase_start:draw
+@highlight hand
+@action tap_to_continue
 まず、ターンの始まりだ。
 リポジトリから自動的にカードが1枚ドローされる。
 これが君の手札。ここから選んでフィールドに配置する——それを「デプロイ」と言う。
 ---
+@trigger phase_start:main
+@highlight hand_card:0
+@action play_card:0→frontend/0
 まずはこの「えくぼ」をデプロイしよう。
 SHE の看板配達員——Compute タイプのリソースだ。
 タップして選んでごらん。
 ---
+@trigger after_action:deploy
+@highlight field_slot:frontend/0
+@action tap_to_continue
 よくできた。
 ただし、えくぼの「デプロイターン」は 1。
 つまり、今は裏向き——構築中の状態だ。次の君のターンで表になって稼働を始めるよ。
 ---
+@trigger after_step
+@highlight hand_card:0
+@action play_card:0→backend/0
 次に、バックエンドにも配置しよう。
 「アデリース」——RDB タイプ。データベースは Insight を生成して、それが君の収入源になる。
 ---
+@trigger after_action:deploy
+@action tap_to_continue
 フロントエンドは「攻撃と防御」、バックエンドは「経済」。
 この2つのゾーンをバランスよく使うのが勝利の鍵だ。
 ---
+@trigger after_step
+@highlight button:endTurn
+@action end_phase
 メインフェーズでやりたいことが終わったら、ターンを終了する。
 このボタンを押してごらん。
 ---
+@trigger after_action:end_turn
+@action tap_to_continue
 先攻の最初のターンではバトルフェーズはスキップされる。
 これは公平性のためのルールだよ。
 ---
+@trigger turn_start:2
+@action tap_to_continue
 次は相手のターンだ。見ていてごらん。
 ---
+@trigger turn_start:3
+@action tap_to_continue
 相手もリソースをデプロイした。
 次の君のターンで、えくぼが稼働を開始する。
 いよいよ攻撃ができるようになるよ。
 ---
+@trigger after_step
+@action tap_to_continue
 第1章はここまで。基本は掴めたかい？
 デプロイ、フェーズ、ゾーン。この3つを覚えておけば大丈夫。
 ```
@@ -340,56 +352,67 @@ SHE の看板配達員——Compute タイプのリソースだ。
 **目的:** 攻撃・ダメージ・破壊・SLAペナルティ・スケールアップを学ぶ
 **前提:** 第1章のフィールド状態を引き継ぐ（= 第1章と第2章は連続した1つの NPC 戦）
 
-#### ステップ定義 + 台詞
-
-| # | trigger | highlight | requiredAction |
-|---|---------|-----------|----------------|
-| 0 | `turn_start: 3` | — | tap_to_continue |
-| 1 | `after_step: 0` | `budget` | tap_to_continue |
-| 2 | `after_step: 1` | `insight` | tap_to_continue |
-| 3 | `after_step: 2` | `button: toBattle` | `end_phase` |
-| 4 | `phase_start: battle` | `field_slot: frontend/0` | `attack: frontend/0 → opp_frontend/0` |
-| 5 | `after_action: attack` | — | tap_to_continue |
-| 6 | `after_step: 5` | — | tap_to_continue |
-| 7 | `after_step: 6` | `field_slot: frontend/0` | `scale_up: frontend/0` |
-| 8 | `after_action: scale_up` | — | tap_to_continue |
-| 9 | `field_condition: my_av_decreased` | — | tap_to_continue |
-| 10 | `after_step: 9` | — | tap_to_continue |
-
-`dialogues/ja/chapter2.txt`:
+#### スクリプト: `ja/chapter2.tut`
 
 ```
+@trigger turn_start:3
+@action tap_to_continue
 さあ、ここからが本番だ。
 えくぼが表向きになった——稼働開始だ！
 ---
+@trigger after_step
+@highlight budget
+@action tap_to_continue
 画面の数値を説明しよう。
 「Budget」——これは君の資金であり、ライフポイントでもある。0になったら負けだ。
 ---
+@trigger after_step
+@highlight insight
+@action tap_to_continue
 「Insight」——バックエンドの DB が毎ターン生成するデータ資源。
 これをバックエンドの Compute が Budget に変換する。
 つまり、DB を守ることが収入を守ることになる。
 ---
+@trigger after_step
+@highlight button:toBattle
+@action end_phase
 今日はまず攻撃を覚えよう。
 バトルフェーズに進んでごらん。
 ---
+@trigger phase_start:battle
+@highlight field_slot:frontend/0
+@action attack:frontend/0→opp_frontend/0
 フロントエンドの えくぼ をタップして攻撃元を選ぼう。
 ---
+@trigger after_action:attack
+@action tap_to_continue
 ダメージは「スループット」の値に等しい。
 相手の「可用性」が 0 以下になったら破壊——
 さらに「SLAペナルティ」分の Budget が相手から消える。
 ---
+@trigger after_step
+@action tap_to_continue
 ところで、えくぼ には「(R)」マークがついているだろう？
 これは Resizable——ランクを上げてパラメータを倍にできるということだ。
 ---
+@trigger after_step
+@highlight field_slot:frontend/0
+@action scale_up:frontend/0
 えくぼ をロングプレスしてみてごらん。
 ---
+@trigger after_action:scale_up
+@action tap_to_continue
 スケールアップは無料。ただし維持コストも倍になる。
 これはクラウドの現実と同じだ——スペックを上げればランニングコストも上がる。
 ---
+@trigger field_condition:my_av_decreased
+@action tap_to_continue
 攻撃を受けたね。可用性が減ったのが見えるだろう？
 可用性は自動回復しない。Strategy や Attachment の効果でしか回復できない。
 だから——耐えるのか、先に倒すのか。それが戦略だ。
 ---
+@trigger after_step
+@action tap_to_continue
 攻撃とダメージの仕組みは理解できたかい？
 フロントエンドで殴り合い、バックエンドで稼ぐ。
 この攻守のリズムがこのゲームの根幹だよ。
@@ -399,54 +422,61 @@ SHE の看板配達員——Compute タイプのリソースだ。
 
 **目的:** 収益化・Yield・サポートカード・勝利条件を学ぶ
 
-#### ステップ定義 + 台詞
-
-| # | trigger | highlight | requiredAction |
-|---|---------|-----------|----------------|
-| 0 | `turn_start: 7` | `insight` | tap_to_continue |
-| 1 | `after_step: 0` | — | `monetize` |
-| 2 | `after_action: monetize` | — | tap_to_continue |
-| 3 | `after_step: 2` | `hand_card: strategy` | tap_to_continue |
-| 4 | `after_step: 3` | — | tap_to_continue |
-| 5 | `after_step: 4` | — | tap_to_continue |
-| 6 | `field_condition: game_over` | — | tap_to_continue |
-| 7 | `after_step: 6` | — | tap_to_continue |
-| 8 | `after_step: 7` | — | tap_to_continue |
-| 9 | `after_step: 8` | — | tap_to_continue |
-
-`dialogues/ja/chapter3.txt`:
+#### スクリプト: `ja/chapter3.tut`
 
 ```
+@trigger turn_start:7
+@highlight insight
+@action tap_to_continue
 Insightプールに数値が溜まっているのが見えるかい？
 バックエンドの DB がエンドフェーズごとに自動生成してくれたものだ。
 ---
+@trigger after_step
+@action monetize
 これをバックエンドの Compute で Budget に変換できる。
 メインフェーズで「収益化」を実行してみよう。
 ---
+@trigger after_action:monetize
+@action tap_to_continue
 1 Insight = 1 Budget。シンプルだろう？
 DB の Yield が高いほど、Compute のスループットが高いほど、より多く稼げる。
 攻撃だけじゃない。経済で勝つのも立派な戦略だよ。
 ---
+@trigger after_step
+@highlight hand_card:strategy
+@action tap_to_continue
 これはストラテジーカード。使い切りの支援効果だ。
 手札から直接使って、すぐにトラッシュへ送られる。
 ---
+@trigger after_step
+@action tap_to_continue
 最後に、勝ち方を整理しよう。
 一番わかりやすいのは、相手の Budget を 0 にすること。
 相手のカードを壊すと SLA ペナルティが発生して、Budget がどんどん削れていく。
 ---
+@trigger after_step
+@action tap_to_continue
 もうひとつ——相手のフィールドから稼働中のリソースが全て消えたら「System-Down」。
 これも即座に勝利だ。
 フロントエンドを全部壊して、バックエンドも潰す。そうすれば相手のシステムは完全停止する。
 ---
+@trigger field_condition:game_over
+@action tap_to_continue
 おめでとう、アーキテクト。これが君の初勝利だ。
 ---
+@trigger after_step
+@action tap_to_continue
 デプロイ、攻撃、経済。3つの基本はもう身についている。
 あとは——自分のデッキを組んで、実戦で腕を磨くだけだ。
 ---
+@trigger after_step
+@action tap_to_continue
 まだまだ教えてないことは山ほどある。
 Elastic の自動スケーリング、マイグレーション、リアクティブ、チェーン……。
 でもそれは、自分で確かめた方がいいよ。
 ---
+@trigger after_step
+@action tap_to_continue
 じゃあ、行っておいで。
 困ったらいつでも呼んでくれ。僕はいつだって、君のそばを飛んでいるから。
 ```
@@ -624,12 +654,12 @@ ALTER TABLE players ADD COLUMN tutorial_progress INT NOT NULL DEFAULT 0;
 1. **Battle:** `tutorial_seed` パラメータの受け入れ + 固定シャッフル
 2. **Gateway:** `npc_battle_start` に `tutorial_chapter` フィールド追加
 3. **Client:** `TutorialOverlay` + `KafkaBubble` + `HighlightMask` + `useTutorialEngine`
-4. **Client:** 第1章の `steps/chapter1.ts` + `dialogues/ja/chapter1.txt`
+4. **Client:** 第1章の `ja/chapter1.tut` + `parser.ts`
 5. **Client:** BattleFieldPage に `inputFilter` プロップ追加
 
 ### Phase 2 — 第2章・第3章
 
-6. 第2章・第3章のステップ定義 + 台詞テキスト
+6. 第2章・第3章の `.tut` スクリプト
 7. チュートリアル専用デッキの作成（カード選定 + seed 計算）
 8. スキップ機能
 9. 再プレイ機能
