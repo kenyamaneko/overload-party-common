@@ -21,7 +21,7 @@ cards:
       deploy_cost: 400
       sla_penalty: 400
       maintenance_cost: 150
-    effect_text: ""
+    effect_text: "—"
 
   - card_no: 3
     card_name: "アリゲーテナ"
@@ -43,7 +43,7 @@ cards:
       deploy_cost: 300
       sla_penalty: 400
       maintenance_cost: 50
-    effect_text: ""
+    effect_text: "—"
 
   - card_no: 4
     card_name: "クジラの統率者<クジランティス>"
@@ -65,7 +65,7 @@ cards:
       deploy_cost: 600
       sla_penalty: 600
       maintenance_cost: 100
-    effect_text: ""
+    effect_text: "—"
 
   - card_no: 5
     card_name: "ラフメイカー"
@@ -84,7 +84,7 @@ cards:
       deploy_cost: 700
       sla_penalty: 600
       maintenance_cost: 200
-    effect_text: ""
+    effect_text: "—"
 
   - card_no: 6
     card_name: "むらた"
@@ -151,7 +151,7 @@ cards:
       deploy_cost: 600
       sla_penalty: 500
       maintenance_cost: 200
-    effect_text: "**星の連鎖:** 自分のバックエンドのこのカード以外の SDのDB系リソース1体につき、このカードの Yield を +200 する"
+    effect_text: "**星の連鎖:** 自分のバックエンドのこのカード以外の SHEのDB系リソース1体につき、このカードの Yield を +200 する"
     passive_effects:
       - type: dv_per_other_db
         params:
@@ -176,7 +176,7 @@ cards:
       deploy_cost: 100
       sla_penalty: 300
       maintenance_cost: 50
-    effect_text: "**Versioning:** 自分のフィールドの SDのDB系リソース が破壊された時に発動できる。そのカードを自分の手札に戻す。"
+    effect_text: "**Versioning:** 自分のフィールドの SHEのDB系リソース が破壊された時に発動できる。そのカードを自分の手札に戻す。"
 
   - card_no: 10
     card_name: "ダイノ"

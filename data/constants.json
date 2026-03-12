@@ -15,7 +15,7 @@
   },
   "card_types": {
     "compute": ["Compute", "Container", "Orchestrator", "Serverless", "AI/ML"],
-    "data": ["Database", "ObjectStorage", "CacheDB", "Datawarehouse"],
+    "data": ["Database", "ObjectStorage", "CacheDB"],
     "support": ["Platform", "Attachment", "Strategy", "Reactive", "Incident"]
   },
   "restriction_values": ["unlimited", "limited", "semi_limited"],
@@ -27,7 +27,7 @@
     "server": ["game_state", "game_over", "error", "game_entered", "matchmaking_started", "matchmaking_cancelled", "action_rejected", "stamp_used", "pong", "match_found", "game_state_restore", "action_performed", "turn_controls", "npc_battle_created"],
     "client": ["game_enter", "matchmaking_start", "matchmaking_cancel", "game_action", "use_stamp", "ping", "npc_battle_start"]
   },
-  "effect_durations": ["this_turn", "until_next_turn_end"],
+  "effect_durations": ["this_turn", "until_next_turn_end", "until_next_own_turn_end"],
   "initial_values": {
     "budget": 5000,
     "insight_pool": 0,

@@ -23,7 +23,7 @@ cards:
       deploy_cost: 300
       sla_penalty: 400
       maintenance_cost: 100
-    effect_text: ""
+    effect_text: "—"
 
   - card_no: 72
     card_name: "ベル太"
@@ -66,7 +66,7 @@ cards:
       deploy_cost: 300
       sla_penalty: 400
       maintenance_cost: 50
-    effect_text: ""
+    effect_text: "—"
 
   # === Orchestrator (1 card) ===
 
@@ -117,7 +117,7 @@ cards:
       deploy_cost: 100
       sla_penalty: 200
       maintenance_cost: 0
-    effect_text: ""
+    effect_text: "—"
 
   - card_no: 76
     card_name: "アピエッタ"
@@ -172,7 +172,7 @@ cards:
       deploy_cost: 400
       sla_penalty: 700
       maintenance_cost: 50
-    effect_text: ""
+    effect_text: "—"
 
   - card_no: 78
     card_name: "エクサノーツ"
@@ -191,7 +191,7 @@ cards:
       deploy_cost: 800
       sla_penalty: 1000
       maintenance_cost: 300
-    effect_text: ""
+    effect_text: "—"
 
   # === Object Storage (1 card) ===
 
@@ -212,7 +212,7 @@ cards:
       deploy_cost: 100
       sla_penalty: 200
       maintenance_cost: 50
-    effect_text: ""
+    effect_text: "—"
 
   # === Cache DB (1 card) ===
 
@@ -233,7 +233,7 @@ cards:
       deploy_cost: 200
       sla_penalty: 300
       maintenance_cost: 100
-    effect_text: ""
+    effect_text: "—"
 
   # === Platform (3 cards) ===
 
