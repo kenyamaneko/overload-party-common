@@ -16,9 +16,10 @@
   "card_types": {
     "compute": ["Compute", "Container", "Orchestrator", "Serverless", "AI/ML"],
     "data": ["Database", "ObjectStorage", "CacheDB"],
-    "support": ["Platform", "Attachment", "Strategy", "Reactive", "Incident"]
+    "support": ["Platform", "Attachment", "Strategy", "Reactive", "Incident"],
+    "log": ["Log"]
   },
-  "restriction_values": ["unlimited", "limited", "semi_limited"],
+  "restriction_values": ["unlimited", "limited", "semi_limited", "forbidden"],
   "game_status": ["waiting", "playing", "finished"],
   "win_reasons": ["budget_zero", "system_down", "repository_out", "timeout", "disconnect", "turn_limit", "draw", "launch_failure"],
   "action_types": ["play_card", "attack", "scale_up", "distribute_yield", "discard_hand", "activate_effect", "set_reactive", "migrate", "end_phase"],

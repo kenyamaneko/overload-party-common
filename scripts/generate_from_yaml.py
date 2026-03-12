@@ -44,10 +44,11 @@ MD_OUT = COMMON_ROOT / "docs" / "CARDS.md"
 COMPUTE_TYPES = {"Compute", "Container", "Orchestrator", "Serverless", "AI/ML"}
 DATA_TYPES = {"Database", "ObjectStorage", "CacheDB"}
 SUPPORT_TYPES = {"Platform", "Attachment", "Strategy", "Reactive", "Incident"}
-ALL_CARD_TYPES = COMPUTE_TYPES | DATA_TYPES | SUPPORT_TYPES
+LOG_TYPES = {"Log"}
+ALL_CARD_TYPES = COMPUTE_TYPES | DATA_TYPES | SUPPORT_TYPES | LOG_TYPES
 
 
-VALID_RESTRICTION = {"unlimited", "limited", "semi_limited"}
+VALID_RESTRICTION = {"unlimited", "limited", "semi_limited", "forbidden"}
 VALID_FACTIONS = {"SHE", "Tenki", "Sugar", "Tuners", "Neutral"}
 
 COMPUTE_STAT_KEYS = {"throughput", "availability", "maintenance_cost", "sla_penalty"}
@@ -73,6 +74,7 @@ CATEGORY_ORDER = [
     ("ストラテジー", {"Strategy"}),
     ("インシデント", {"Incident"}),
     ("リアクティブ", {"Reactive"}),
+    ("ログ", {"Log"}),
 ]
 
 
@@ -124,8 +126,13 @@ def validate(cards):
         card_name = card.get("card_name", "???")
         label = f"#{card_no} {card_name}"
 
-        # Required fields
-        for field in ["card_no", "card_name", "const_name", "card_type", "resizable", "elastic", "restriction", "is_active", "stats"]:
+        # Required fields (Log cards don't need stats, resizable, elastic)
+        is_log = card.get("card_type") in LOG_TYPES
+        if is_log:
+            required = ["card_no", "card_name", "const_name", "card_type", "restriction", "is_active"]
+        else:
+            required = ["card_no", "card_name", "const_name", "card_type", "resizable", "elastic", "restriction", "is_active", "stats"]
+        for field in required:
             if field not in card:
                 errors.append(f"{label}: missing required field '{field}'")
 
@@ -203,8 +210,8 @@ def generate_json(cards, repo_dir):
             "faction": card["faction"],
             "card_type": card["card_type"],
             "deploy_turns": deploy_turns,
-            "resizable": card["resizable"],
-            "elastic": card["elastic"],
+            "resizable": card.get("resizable", False),
+            "elastic": card.get("elastic", False),
             "elastic_increment": card.get("elastic_increment", 0),
             "free_tier": card.get("free_tier", 0),
             "cost_per_request": card.get("cost_per_request", 0),
@@ -733,6 +740,7 @@ def generate_ts_constants(constants, client_dir):
     lines.append("/** Returns the maximum number of copies allowed in a deck for a given restriction. */")
     lines.append("export function restrictionCopyCount(restriction: Restriction): number {")
     lines.append("  switch (restriction) {")
+    lines.append("    case 'forbidden': return 0;")
     lines.append("    case 'limited': return 1;")
     lines.append("    case 'semi_limited': return 2;")
     lines.append("    case 'unlimited': return 3;")
@@ -1115,6 +1123,11 @@ def generate_md(cards, faction_data):
                     )
             elif is_support:
                 # "元ネタ" column is excluded to prevent copyright concerns
+                lines.append("| # | カード名 | 効果 |")
+                lines.append("|---|---------|------|")
+                for c in cat_cards:
+                    lines.append(f"| {c['card_no']} | {c['card_name']} | {_effect_display(c)} |")
+            elif cat_types & LOG_TYPES:
                 lines.append("| # | カード名 | 効果 |")
                 lines.append("|---|---------|------|")
                 for c in cat_cards:

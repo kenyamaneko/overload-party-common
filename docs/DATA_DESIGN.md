@@ -265,7 +265,7 @@
 | `stats` | JSONB | No | ステータス定義 |
 | `effect_text` | VARCHAR(500) | Yes | 効果テキスト（表示用） |
 | `effects` | JSONB | Yes | 効果定義（複数効果を JSON 配列で保持） |
-| `restriction` | VARCHAR(20) | No | 制限区分 (`unlimited`, `semi_limited`, `limited`) |
+| `restriction` | VARCHAR(20) | No | 制限区分 (`unlimited`, `semi_limited`, `limited`, `forbidden`) |
 | `is_active` | BOOLEAN | No | 有効フラグ（メンテ・バランス調整用） |
 | `created_at` | TIMESTAMPTZ | No | 作成日時 |
 | `updated_at` | TIMESTAMPTZ | No | 更新日時 |

@@ -438,7 +438,7 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
     "passive_effects": [],
     "platform_effects": [],
     "attachment_effects": [],
-    "restriction": "unlimited|semi_limited|limited",
+    "restriction": "unlimited|semi_limited|limited|forbidden",
     "is_active": true
   }
 ]
