@@ -4,7 +4,7 @@
 This script lives in overload-party-common and generates outputs for:
   - common: docs/CARDS.md, cardno/cardno_gen.go
   - gateway: internal/cache/cards_gen.json, internal/model/*_gen.go, internal/constants/constants_gen.go
-  - battle:  src/OverloadParty.Battle.Models/GameConstants_gen.cs, EventData_gen.cs
+  - battle:  internal/cache/cards_gen.json, src/OverloadParty.Battle.Models/GameConstants_gen.cs, EventData_gen.cs
   - client:  src/generated/constants.ts, eventData.ts
 
 Usage:
@@ -42,25 +42,31 @@ MD_OUT = COMMON_ROOT / "docs" / "CARDS.md"
 
 # ─── Constants ──────────────────────────────────────────
 COMPUTE_TYPES = {"Compute", "Container", "Orchestrator", "Serverless", "AI/ML"}
-DATA_TYPES = {"Database", "ObjectStorage", "CacheDB", "Datawarehouse"}
+DATA_TYPES = {"Database", "ObjectStorage", "CacheDB"}
 SUPPORT_TYPES = {"Platform", "Attachment", "Strategy", "Reactive", "Incident"}
 ALL_CARD_TYPES = COMPUTE_TYPES | DATA_TYPES | SUPPORT_TYPES
 
 
 VALID_RESTRICTION = {"unlimited", "limited", "semi_limited"}
-VALID_FACTIONS = {"SD", "Tenki", "Sugar", "Tuners", "Neutral"}
+VALID_FACTIONS = {"SHE", "Tenki", "Sugar", "Tuners", "Neutral"}
 
 COMPUTE_STAT_KEYS = {"throughput", "availability", "maintenance_cost", "sla_penalty"}
 DATA_STAT_KEYS = {"yield", "availability", "maintenance_cost", "sla_penalty"}
 
-# Faction file order
-FACTION_ORDER = ["SD", "Tenki", "Sugar", "Tuners", "Neutral"]
+# Faction display order for CARDS.md and generated code.
+# Keys must match the `faction` field in each YAML file (not the filename).
+FACTION_ORDER = ["SHE", "Tenki", "Sugar", "Tuners", "Neutral"]
+
+# Maps faction name → YAML filename stem for factions whose filename differs from faction name.
+FACTION_FILE_MAP = {
+    "SHE": "sd",  # sd.yaml contains the SHE faction
+}
 
 # Card category display order within each faction for CARDS.md
 CATEGORY_ORDER = [
     ("コンピュート系リソース", {"Compute", "Container", "Orchestrator", "Serverless"}),
     ("AI/ML系リソース", {"AI/ML"}),
-    ("DB系リソース", {"Database", "CacheDB", "Datawarehouse"}),
+    ("DB系リソース", {"Database", "CacheDB"}),
     ("オブジェクトストレージ", {"ObjectStorage"}),
     ("プラットフォーム", {"Platform"}),
     ("アタッチメント", {"Attachment"}),
@@ -77,7 +83,9 @@ def load_all_cards():
     faction_data = {}  # faction -> {display_name, cards}
 
     for faction in FACTION_ORDER:
-        filename = f"{faction.lower()}.yaml"
+        # Use FACTION_FILE_MAP to handle factions whose filename differs from faction name
+        file_stem = FACTION_FILE_MAP.get(faction, faction.lower())
+        filename = f"{file_stem}.yaml"
         filepath = YAML_DIR / filename
         if not filepath.exists():
             print(f"WARNING: {filepath} not found, skipping", file=sys.stderr)
@@ -438,7 +446,7 @@ def generate_repo_constants(constants, repo_dir, target):
 
     # Phases (battle only)
     if _target_matches("battle", target):
-        phase_map = {"draw": "PhaseDraw", "yield": "PhaseYield", "main": "PhaseMain", "battle": "PhaseBattle", "end": "PhaseEnd"}
+        phase_map = {"draw": "PhaseDraw", "main": "PhaseMain", "battle": "PhaseBattle", "end": "PhaseEnd"}
         lines.append("// Phase constants.")
         lines.append("const (")
         for phase in constants["phases"]:
@@ -592,10 +600,6 @@ def generate_repo_constants(constants, repo_dir, target):
         f.write("\n".join(lines))
 
     return str(go_out.relative_to(repo_dir))
-
-
-
-    return str(go_out.relative_to(COMMON_ROOT))
 
 
 # ─── Generate TypeScript (constants) ──────────────────
@@ -1086,35 +1090,35 @@ def generate_md(cards, faction_data):
             is_support = cat_types & SUPPORT_TYPES
 
             if is_compute:
-                lines.append("| # | カード名 | タイプ | スループット | 可用性 | 維持コスト | デプロイT | SLAペナルティ | 効果 | 元ネタ |")
-                lines.append("|---|---------|-------|-----|-----|-----|-----|-----|------|----------|")
+                # "元ネタ" column is excluded to prevent copyright concerns
+                lines.append("| # | カード名 | タイプ | スループット | 可用性 | 維持コスト | デプロイT | SLAペナルティ | 効果 |")
+                lines.append("|---|---------|-------|-----|-----|-----|-----|-----|------|")
                 for c in cat_cards:
-                    origin = c.get("origin", "")
                     dt = c.get("deploy_turns", 0)
                     lines.append(
                         f"| {c['card_no']} | {c['card_name']} | {_scalability_display(c)} "
                         f"| {_tp_display(c)} | {c['stats']['availability']} "
                         f"| {c['stats']['maintenance_cost']} | {dt} "
-                        f"| {c['stats']['sla_penalty']} | {_effect_display(c)} | {origin} |"
+                        f"| {c['stats']['sla_penalty']} | {_effect_display(c)} |"
                     )
             elif is_data:
-                lines.append("| # | カード名 | タイプ | Yield | 可用性 | 維持コスト | デプロイT | SLAペナルティ | 効果 | 元ネタ |")
-                lines.append("|---|---------|-------|-----|-----|-----|-----|-----|------|----------|")
+                # "元ネタ" column is excluded to prevent copyright concerns
+                lines.append("| # | カード名 | タイプ | Yield | 可用性 | 維持コスト | デプロイT | SLAペナルティ | 効果 |")
+                lines.append("|---|---------|-------|-----|-----|-----|-----|-----|------|")
                 for c in cat_cards:
-                    origin = c.get("origin", "")
                     dt = c.get("deploy_turns", 0)
                     lines.append(
                         f"| {c['card_no']} | {c['card_name']} | {_scalability_display(c)} "
                         f"| {_yield_display(c)} | {c['stats']['availability']} "
                         f"| {c['stats']['maintenance_cost']} | {dt} "
-                        f"| {c['stats']['sla_penalty']} | {_effect_display(c)} | {origin} |"
+                        f"| {c['stats']['sla_penalty']} | {_effect_display(c)} |"
                     )
             elif is_support:
-                lines.append("| # | カード名 | 効果 | 元ネタ |")
-                lines.append("|---|---------|------|----------|")
+                # "元ネタ" column is excluded to prevent copyright concerns
+                lines.append("| # | カード名 | 効果 |")
+                lines.append("|---|---------|------|")
                 for c in cat_cards:
-                    origin = c.get("origin", "")
-                    lines.append(f"| {c['card_no']} | {c['card_name']} | {_effect_display(c)} | {origin} |")
+                    lines.append(f"| {c['card_no']} | {c['card_name']} | {_effect_display(c)} |")
 
             lines.append("")
 
@@ -1210,11 +1214,13 @@ def main():
     else:
         print("SKIP: gateway outputs (--gateway-dir not set or not found)", file=sys.stderr)
 
-    # Battle outputs (C#)
+    # Battle outputs (cards JSON + C#)
     battle_dir = Path(args.battle_dir) if args.battle_dir else None
     if battle_dir and battle_dir.exists():
+        json_count_b = generate_json(cards, battle_dir)
         cs_path = generate_csharp_constants(constants, battle_dir)
         cs_evt_path = generate_csharp_event_data(event_schemas, battle_dir)
+        print(f"Generated {json_count_b} cards → {battle_dir.name}/internal/cache/cards_gen.json", file=sys.stderr)
         print(f"Generated constants → {battle_dir.name}/{cs_path}", file=sys.stderr)
         print(f"Generated event data → {battle_dir.name}/{cs_evt_path}", file=sys.stderr)
     else:
