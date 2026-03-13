@@ -81,7 +81,7 @@ dev 環境の基盤は構築済み。今後のフェーズで必要になる項�
 
 ## 完了済み
 
-- [x] GKE Autopilot クラスタ作成 (overload-party-shared)
+- [x] GKE Autopilot クラスタ作成 (keyandnotes-platform)
 - [x] Cloud SQL PostgreSQL 作成 (overload-party-dev)
 - [x] Artifact Registry 作成
 - [x] WIF + CI SA + Deploy SA 作成

@@ -254,7 +254,7 @@ Firebase Authentication
 
 ```
 Google Cloud Platform (4プロジェクト構成)
-├── overload-party-shared
+├── keyandnotes-platform
 │   ├── GKE Autopilot (Gateway + Battle サーバー — 全環境共有)
 │   ├── Artifact Registry (Docker イメージ)
 │   └── Ingress (GCE L7 LB, パスベースルーティング)
@@ -374,10 +374,10 @@ Cloud Run + Redis と GKE Autopilot を比較検討し、**GKE Autopilot を採�
 
 **クラスタ構成（1クラスタ・Namespace分離）:**
 
-GKE Autopilot クラスタは共有プロジェクト `overload-party-shared` に配置し、Namespace で環境を分離する。各環境の Cloud SQL は環境別プロジェクト（`overload-party-dev` 等）に配置し、**Workload Identity + Cloud SQL Auth Proxy** でクロスプロジェクトアクセスする。
+GKE Autopilot クラスタは共有プロジェクト `keyandnotes-platform` に配置し、Namespace で環境を分離する。各環境の Cloud SQL は環境別プロジェクト（`overload-party-dev` 等）に配置し、**Workload Identity + Cloud SQL Auth Proxy** でクロスプロジェクトアクセスする。
 
 ```
-[GKE Autopilot Cluster] overload-party-shared / asia-northeast1
+[GKE Autopilot Cluster] keyandnotes-platform / asia-northeast1
   ├── Namespace: dev
   │     ├── Deployment: gateway (Go)    replicas: 0 (開発時以外)
   │     └── Deployment: battle  (C#)    replicas: 0 (開発時以外)
@@ -1125,7 +1125,7 @@ GCPリソースは **Terraform** で管理する。
 
 | プロジェクト | 用途 | 主なリソース |
 |-------------|------|------------|
-| `overload-party-shared` | 共有インフラ | GKE Autopilot, Artifact Registry, ArgoCD |
+| `keyandnotes-platform` | 共有インフラ | GKE Autopilot, Artifact Registry, ArgoCD |
 | `overload-party-dev` | 開発環境 | Cloud SQL PostgreSQL, IAM |
 | `overload-party-stg` | ステージング環境 | Cloud SQL PostgreSQL, IAM |
 | `overload-party-prod` | 本番環境 | Cloud SQL PostgreSQL, IAM |
@@ -1206,7 +1206,7 @@ overload-party-infra/
 | 1. Lint | `golangci-lint run` |
 | 2. テスト | `go test -race ./internal/...` |
 | 3. ビルド | Docker イメージを `$COMMIT_SHA` タグでビルド |
-| 4. プッシュ | Artifact Registry にプッシュ (`asia-northeast1-docker.pkg.dev/overload-party-shared/overload-party`) |
+| 4. プッシュ | Artifact Registry にプッシュ (`asia-northeast1-docker.pkg.dev/keyandnotes-platform/overload-party`) |
 
 **ワークフロー 2: Battle Server (`main` / PR トリガー)**
 

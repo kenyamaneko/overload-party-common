@@ -48,7 +48,7 @@ gcloud services enable iam.googleapis.com --project=overload-party-dev
 -  # Original intention: project_id = "overload-party-dev"
 -  project_id     = "overload-party-stg"
 +  project_id     = "overload-party-dev"
-   gke_project_id = "overload-party-shared"
+   gke_project_id = "keyandnotes-platform"
    region         = "asia-northeast1"
  }
 ```

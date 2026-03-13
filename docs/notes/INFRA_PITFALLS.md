@@ -25,14 +25,14 @@ GKE Autopilot + Cloud SQL + GitHub Actions CI の構築で遭遇した問題と�
 
 **症状**: Cloud SQL Proxy が `The proxy has started successfully` と表示されるのに、接続すると `connection reset by peer` になる。
 
-**原因**: Cloud SQL Proxy は SA が所属するプロジェクト（`overload-party-shared`）で `sqladmin.googleapis.com` API を呼ぶ。Cloud SQL インスタンスは `overload-party-dev` にあっても、**SA のプロジェクト側で API が有効でないと動かない**。
+**原因**: Cloud SQL Proxy は SA が所属するプロジェクト（`keyandnotes-platform`）で `sqladmin.googleapis.com` API を呼ぶ。Cloud SQL インスタンスは `overload-party-dev` にあっても、**SA のプロジェクト側で API が有効でないと動かない**。
 
 Proxy の起動時チェック（リスナーの開始）は API 呼び出しを行わないため、`ready for new connections!` と表示されても実際の接続は失敗する。
 
 **修正**:
 
 ```bash
-gcloud services enable sqladmin.googleapis.com --project=overload-party-shared
+gcloud services enable sqladmin.googleapis.com --project=keyandnotes-platform
 ```
 
 **教訓**: Cloud SQL Proxy のエラーは background プロセスの stderr に出力されるため、CI では必ずログをファイルに出力してエラー時に表示するようにする。
@@ -58,8 +58,8 @@ gcloud services enable sqladmin.googleapis.com --project=overload-party-shared
 **修正**:
 
 ```bash
-PROJECT_NUMBER=$(gcloud projects describe overload-party-shared --format='value(projectNumber)')
-gcloud projects add-iam-policy-binding overload-party-shared \
+PROJECT_NUMBER=$(gcloud projects describe keyandnotes-platform --format='value(projectNumber)')
+gcloud projects add-iam-policy-binding keyandnotes-platform \
   --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
   --role="roles/artifactregistry.reader"
 ```
@@ -224,13 +224,13 @@ dotnet --version  # /usr/local/share/dotnet/dotnet から実行されること�
 
 **症状**: infra CI が `terraform init` で `storage.objects.list access denied` になる。
 
-**原因**: Terraform state bucket (`overload-party-tf-state`) が `overload-party-stg` プロジェクトに作成されていたが、`terraform-deployer` SA は `overload-party-shared` プロジェクトに所属。SA にプロジェクトレベルの editor があっても、**別プロジェクトの bucket にはアクセスできない**。
+**原因**: Terraform state bucket (`keyandnotes-tf-state`) が `overload-party-stg` プロジェクトに作成されていたが、`terraform-deployer` SA は `keyandnotes-platform` プロジェクトに所属。SA にプロジェクトレベルの editor があっても、**別プロジェクトの bucket にはアクセスできない**。
 
 **修正**: bucket レベルで SA に `objectAdmin` を直接付与。
 
 ```bash
-gsutil iam ch serviceAccount:terraform-deployer@overload-party-shared.iam.gserviceaccount.com:objectAdmin \
-  gs://overload-party-tf-state
+gsutil iam ch serviceAccount:terraform-deployer@keyandnotes-platform.iam.gserviceaccount.com:objectAdmin \
+  gs://keyandnotes-tf-state
 ```
 
 **教訓**: state bucket の所在プロジェクトと SA の所属プロジェクトが異なる場合、プロジェクト IAM では不足。bucket-level IAM が必要。
@@ -246,7 +246,7 @@ gsutil iam ch serviceAccount:terraform-deployer@overload-party-shared.iam.gservi
 **修正**:
 
 ```bash
-gcloud services enable cloudresourcemanager.googleapis.com --project=overload-party-shared
+gcloud services enable cloudresourcemanager.googleapis.com --project=keyandnotes-platform
 ```
 
 これは Cloud SQL Proxy のパターン（#2）と同じ。**GCP の API 呼び出しは、対象リソースのプロジェクトではなく SA のプロジェクトで API が有効である必要がある**。
@@ -280,7 +280,7 @@ terraform destroy -auto-approve
 
 ```bash
 gcloud artifacts repositories add-iam-policy-binding overload-party \
-  --project=overload-party-shared \
+  --project=keyandnotes-platform \
   --location=asia-northeast1 \
   --member="serviceAccount:service-{PROJECT_NUMBER}@serverless-robot-prod.iam.gserviceaccount.com" \
   --role="roles/artifactregistry.reader"
