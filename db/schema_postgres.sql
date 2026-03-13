@@ -265,3 +265,45 @@ CREATE TABLE news_articles (
 CREATE UNIQUE INDEX idx_news_articles_source_url ON news_articles(source_url);
 CREATE INDEX idx_news_articles_published ON news_articles(published_at DESC);
 CREATE INDEX idx_news_articles_source ON news_articles(source, published_at DESC);
+
+-- =============================================================================
+-- 4.12 Player Factions (陣営所持の中間テーブル)
+-- =============================================================================
+
+CREATE TABLE player_factions (
+  player_id   UUID NOT NULL REFERENCES players(player_id) ON DELETE CASCADE,
+  faction     VARCHAR(20) NOT NULL,
+  source      VARCHAR(20) NOT NULL,
+  acquired_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (player_id, faction)
+);
+
+-- =============================================================================
+-- 4.13 Story Scenarios
+-- =============================================================================
+
+CREATE TABLE scenario_episodes (
+  episode_id        VARCHAR(50) NOT NULL,
+  faction           VARCHAR(20),
+  episode_number    BIGINT NOT NULL,
+  title_ja          VARCHAR(200) NOT NULL,
+  title_en          VARCHAR(200) NOT NULL,
+  required_level    BIGINT NOT NULL DEFAULT 1,
+  required_factions TEXT[] NOT NULL DEFAULT '{}',
+  required_episodes TEXT[] NOT NULL DEFAULT '{}',
+  script_path       VARCHAR(500) NOT NULL,
+  thumbnail_path    VARCHAR(500),
+  sort_order        BIGINT NOT NULL,
+  is_active         BOOLEAN NOT NULL DEFAULT true,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (episode_id)
+);
+
+CREATE INDEX idx_scenario_episodes_sort ON scenario_episodes(sort_order);
+
+CREATE TABLE player_story_progress (
+  player_id    UUID NOT NULL REFERENCES players(player_id) ON DELETE CASCADE,
+  episode_id   VARCHAR(50) NOT NULL,
+  completed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (player_id, episode_id)
+);
