@@ -24,6 +24,7 @@ venv/
 docs/adr/
 docs/notes/
 docs/archive/
+docs/STORY/
 
 # Secrets / env
 *.env
