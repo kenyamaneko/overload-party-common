@@ -1,0 +1,37 @@
+{
+  "name": "@overload-party/generated",
+  "version": "0.0.0",
+  "description": "Auto-generated game constants and event data types for Overload Party",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./constants": "./dist/constants.js",
+    "./eventData": "./dist/eventData.js"
+  },
+  "typesVersions": {
+    "*": {
+      "constants": ["dist/constants.d.ts"],
+      "eventData": ["dist/eventData.d.ts"]
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kenyamaneko/overload-party-common.git",
+    "directory": "gen/npm"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.0"
+  }
+}

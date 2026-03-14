@@ -10,8 +10,11 @@ overload-party-common
   ├─ db/ push (main) ──── repository_dispatch ────→ ops/db-migrate-on-push.yaml
   │                                                    └→ build → AR push → Cloud Run Job 実行 (dev)
   │
+  ├─ data/ push (main) ──── publish-packages.yaml
+  │                           └→ codegen 実行 → gen/ commit → Go tag + NuGet push + npm publish
+  │
   └─ data/ push (PR) ──── codegen-check.yaml
-                            └→ gateway/battle/client の生成コード整合性チェック
+                            └→ gen/ 内の整合性チェック（クロスリポ不要）
 
 overload-party-gateway
   └─ push (main) ──── ci.yaml
@@ -73,7 +76,7 @@ overload-party-analytics
 | 送信側 | 受信側 | メカニズム | イベント |
 |--------|--------|-----------|---------|
 | common | ops | `repository_dispatch` | `db-migrate`（db/ 変更時） |
-| common | gateway, battle, client | `codegen-check.yaml` 内で checkout | data/ 変更時の整合性チェック |
+| common | GitHub Packages | `publish-packages.yaml` | data/ 変更時にパッケージ publish (Go tag, NuGet, npm) |
 
 `repository_dispatch` は GitHub API 経由でワークフローを起動する仕組み。common の ci.yaml が ops リポに POST し、ops 側の `db-migrate-on-push.yaml` が受信して dev 環境のマイグレーションを自動実行する。
 
@@ -118,7 +121,7 @@ Service Account (用途別)
 |-------------|---------|------|
 | `OPS_DISPATCH_TOKEN` | common | ops への repository_dispatch |
 | `COMMON_REPO_TOKEN` | ops | common の sparse-checkout |
-| `CROSS_REPO_TOKEN` | common | codegen-check で gateway/battle/client を checkout |
+| `CROSS_REPO_TOKEN` | common | ~~廃止予定~~ 旧 codegen-check 用（現在は不要） |
 | `CF_API_TOKEN` | k8s | Cloudflare DNS 更新 |
 
 ## Artifact Registry

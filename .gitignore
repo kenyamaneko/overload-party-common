@@ -26,6 +26,10 @@ docs/notes/
 docs/archive/
 docs/STORY/
 
+# Generated packages (build artifacts)
+gen/npm/dist/
+gen/npm/node_modules/
+
 # Secrets / env
 *.env
 .env*

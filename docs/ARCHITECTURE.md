@@ -85,48 +85,61 @@ overload-party-common/          # 共有データ・定義の SSoT
 │   ├── schema_postgres.sql     # PostgreSQL DDL（SSoT）
 │   └── grant_iam.sql           # IAM 認証権限付与
 ├── docs/                       # 全ドキュメント
+├── gen/
+│   ├── go/                     # Go パッケージ (gateway 用)
+│   │   ├── model/              # 生成: Go モデル
+│   │   ├── constants/          # 生成: ゲーム定数
+│   │   ├── cardno/             # 生成: カード番号定数
+│   │   └── cache/              # 生成: cards_gen.json (embed)
+│   ├── dotnet/                 # NuGet パッケージ (battle 用)
+│   │   ├── GameConstants_gen.cs
+│   │   └── EventData_gen.cs
+│   └── npm/                    # npm パッケージ (client 用)
+│       └── src/constants.ts, eventData.ts
 ├── scripts/
 │   └── generate_from_yaml.py   # カード＆定数のコード生成スクリプト
-└── .github/workflows/ci.yaml   # DB マイグレーション CI
+└── .github/workflows/
+    ├── ci.yaml                 # DB マイグレーション CI
+    └── publish-packages.yaml   # data/ 変更時にパッケージ publish
 
 overload-party-gateway/         # Go API サーバー
-├── data -> ../common/data      # symlink
-├── docs -> ../common/docs      # symlink
 ├── internal/
-│   ├── cardno/cardno_gen.go    # 生成: カード番号 Go 定数
-│   ├── model/constants_gen.go  # 生成: ゲーム定数 Go 版
+│   ├── model/gen.go            # gen/go/model の re-export
+│   ├── constants/gen.go        # gen/go/constants の re-export
 │   └── ...
-└── Makefile                    # `make generate` で全コード生成
+└── go.mod                      # gen/go モジュールを依存
 
 overload-party-battle/          # C# 対戦エンジン
-├── cards_gen.json              # 生成: カードデータ JSON
 ├── src/
-│   └── OverloadParty.Battle/
-└── Makefile
+│   └── OverloadParty.Battle.Models/
+│       └── GlobalUsings.cs     # global using OverloadParty.Generated
+└── nuget.config                # GitHub Packages NuGet feed
 
 overload-party-client/          # React + Capacitor クライアント
-├── src/
-│   ├── generated/
-│   │   └── constants.ts        # 生成: ゲーム定数 TypeScript 版
+├── src/                        # @overload-party/generated パッケージを import
 │   └── ...
-└── ...
+├── .npmrc                      # GitHub Packages npm registry
+└── package.json                # @overload-party/generated 依存
 ```
 
 ### 2.3 コード生成パイプライン
 
-`make generate`（gateway または battle）を実行すると、common の `generate_from_yaml.py` が以下を生成する：
+`python3 scripts/generate_from_yaml.py --gen-dir gen/` を実行すると、common の `gen/` 以下にパッケージとして生成される。main への push 時に CI が自動で publish する。
 
-| 入力 | 出力 | 出力先 |
-|------|------|--------|
-| `data/cards/*.yaml` | `data/cards.json` | common |
-| `data/cards/*.yaml` | `docs/CARDS.md` | common |
-| `data/cards/*.yaml` | `internal/cardno/cardno_gen.go` | gateway |
-| `data/cards/*.yaml` | `cards_gen.json` | gateway, battle |
-| `data/constants.json` | `internal/model/constants_gen.go` | gateway |
-| `data/constants.json` | `constants_gen.go` | battle |
-| `data/constants.json` | `src/generated/constants.ts` | client |
+| 入力 | 出力先 | パッケージ |
+|------|--------|-----------|
+| `data/cards/*.yaml` | `docs/CARDS.md` | — |
+| `data/cards/*.yaml` | `gen/go/cardno/cardno_gen.go` | Go module |
+| `data/cards/*.yaml` | `gen/go/cache/cards_gen.json` | Go module (embed) |
+| `data/cards/*.yaml` | `gen/dotnet/cache/cards_gen.json` | NuGet (EmbeddedResource) |
+| `data/models.yaml` | `gen/go/model/*_gen.go` | Go module |
+| `data/constants.json` | `gen/go/constants/constants_gen.go` | Go module |
+| `data/constants.json` | `gen/dotnet/GameConstants_gen.cs` | NuGet (`OverloadParty.Generated`) |
+| `data/constants.json` | `gen/npm/src/constants.ts` | npm (`@overload-party/generated`) |
+| `data/event_schemas.json` | `gen/dotnet/EventData_gen.cs` | NuGet |
+| `data/event_schemas.json` | `gen/npm/src/eventData.ts` | npm |
 
-生成されたファイルには `DO NOT EDIT` コメントが付く。ゲーム定数（Phase, Zone, Rank, 初期値など）を変更する場合は `data/constants.json` を編集してから `make generate` を実行する。
+各リポはパッケージをインストールして使う（gateway: `go get`, battle: NuGet, client: npm）。生成されたファイルには `DO NOT EDIT` コメントが付く。
 
 ### 2.4 作業別クロスリファレンス
 
@@ -134,8 +147,8 @@ overload-party-client/          # React + Capacitor クライアント
 
 | やりたいこと | 編集するリポ | 次にやること | 影響を受けるリポ |
 |-------------|------------|------------|----------------|
-| カードの追加・変更 | common (`data/cards/*.yaml`) | `make generate`（gateway or battle） | gateway, battle, client |
-| ゲーム定数の変更 | common (`data/constants.json`) | `make generate`（gateway or battle） | gateway, battle, client |
+| カードの追加・変更 | common (`data/cards/*.yaml`) | `--gen-dir gen/` で生成 → main push で自動 publish | gateway, battle, client（パッケージ更新） |
+| ゲーム定数の変更 | common (`data/constants.json`) | `--gen-dir gen/` で生成 → main push で自動 publish | gateway, battle, client（パッケージ更新） |
 | DB スキーマの変更 | common (`db/schema_postgres.sql`) | main に push（CI が自動適用） | gateway, battle（コード側の対応） |
 | IAM 権限の変更 | common (`db/grant_iam.sql`) | main に push（CI が自動適用） | — |
 | API エンドポイント追加 | gateway | CI が自動で Docker push | k8s（deploy で反映） |
