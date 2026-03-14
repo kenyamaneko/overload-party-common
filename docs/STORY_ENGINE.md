@@ -4,8 +4,21 @@
 
 ビジュアルノベル形式のシナリオ再生エンジン。ADVスタイル（画面上部に背景+立ち絵、下部にテキストボックス）でストーリーを進行する。
 
-**現在の用途**: ゲーム開始時のナビゲータキャラ「カフカ」による導入シナリオ
+**現在の用途**: ゲーム開始時のナビゲータキャラ「カフカ」による導入シナリオ + 陣営別シナリオストーリー
 **設計方針**: ティラノスクリプト互換の `.ks` スクリプトで記述し、React コンポーネントで描画する
+
+## スクリプト配信方式
+
+スクリプトの配信方式は用途によって2系統ある:
+
+| 用途 | 方式 | 配置場所 | 取得方法 |
+|------|------|----------|----------|
+| ナビゲーションストーリー（intro 等） | クライアントバンドル | `src/features/story/data/scripts/{lang}/` | Vite `?raw` import → `scripts.ts` レジストリ |
+| シナリオストーリー（陣営別 + 最終話） | サーバー配信 | GCS バケット or ローカルファイルシステム | `GET /api/v1/scenarios/{episodeId}/script` |
+
+**ナビゲーションストーリー** はアプリ起動直後に使用され、ネットワーク遅延を避けるためバンドルに含める。**シナリオストーリー** はエピソード数が多く（21話）、アンロック判定が必要なためサーバー配信とする。
+
+サーバー配信のスクリプトパスは `scenario_episodes.script_path` に `stories/{lang}/she_ep1.ks` の形式で格納され、`{lang}` が実際の言語コードに置換される。未対応言語は `ja` にフォールバックする。
 
 ## アーキテクチャ
 
@@ -53,20 +66,25 @@ src/features/story/
 
 ### データフロー
 
+ナビゲーションストーリーとシナリオストーリーで取得経路が異なるが、パーサー以降は共通:
+
 ```
-.ks スクリプト（言語別）
-  ↓ Vite ?raw import
-scripts.ts (レジストリ)
-  ↓ getScript(scenarioId, lang)
-parser.ts (parseKs)
-  ↓ KsCommand[]
-useStoryEngine (コマンド実行)
-  ├── displayText      → useTypewriter → TextBox
-  ├── speakerName      → TextBox
-  ├── activeBackground → BackgroundLayer
-  ├── activeCharacters → CharacterLayer
-  ├── choices          → ChoiceOverlay
-  └── advance/selectChoice → ユーザー入力
+[ナビゲーションストーリー]          [シナリオストーリー]
+.ks スクリプト（言語別）            scenario_episodes.script_path
+  ↓ Vite ?raw import                 ↓ GET /api/v1/scenarios/{episodeId}/script
+scripts.ts (レジストリ)             API レスポンス (.script)
+  ↓ getScript(scenarioId, lang)       ↓
+  └──────────────┬────────────────────┘
+                 ↓
+           parser.ts (parseKs)
+                 ↓ KsCommand[]
+           useStoryEngine (コマンド実行)
+             ├── displayText      → useTypewriter → TextBox
+             ├── speakerName      → TextBox
+             ├── activeBackground → BackgroundLayer
+             ├── activeCharacters → CharacterLayer
+             ├── choices          → ChoiceOverlay
+             └── advance/selectChoice → ユーザー入力
 ```
 
 ## スクリプト書式
@@ -184,16 +202,21 @@ scripts/en/intro.ks    ← 英語版
 
 ## ルーティング
 
-```
-/story/:scenarioId
-```
+| ルート | 用途 | スクリプト取得元 |
+|--------|------|-----------------|
+| `/story/:scenarioId` | ナビゲーションストーリー | `scripts.ts` レジストリ（Vite バンドル） |
+| `/scenarios/:episodeId` | シナリオストーリー | `GET /api/v1/scenarios/{episodeId}/script` |
 
-- フルスクリーンルート（タブバーなし）
-- `scenarioId` は `scripts.ts` のレジストリで解決
-- 任意の画面から `navigate('/story/intro')` で起動可能
-- シナリオ完了時は `navigate(-1)` で前の画面に戻る
+- いずれもフルスクリーンルート（タブバーなし）
+- ナビゲーション: `navigate('/story/intro')` で起動。`scenarioId` は `scripts.ts` のレジストリで解決
+- シナリオ: `navigate('/scenarios/she_ep1')` で起動。API からスクリプトを取得し、アンロック判定はサーバー側で実施（403 でロック中を返す）
+- 完了時は `navigate(-1)` で前の画面に戻る
 
 ## 新規シナリオの追加手順
+
+### ナビゲーションストーリー（クライアントバンドル）
+
+ゲーム開始時の導入など、ネットワーク不要で即座に再生する必要があるストーリー向け。
 
 1. **スクリプトファイルを作成**
    ```
@@ -221,6 +244,35 @@ scripts/en/intro.ks    ← 英語版
 
 4. **ナビゲーション**
    任意の画面から `navigate('/story/my-scenario')` で起動。
+
+### シナリオストーリー（サーバー配信）
+
+陣営別ストーリー等、アンロック判定が必要なストーリー向け。
+
+1. **スクリプトファイルを作成し GCS にアップロード**
+   ```
+   stories/ja/my_episode.ks
+   stories/en/my_episode.ks
+   ```
+   GCS バケットの `stories/{lang}/` 配下に配置する。
+
+2. **シードデータに追加**
+   `db/seed/scenarios.sql` にエピソード定義を追加:
+   ```sql
+   ('my_episode', 'main', 'SHE', 3, 'タイトル', 'Title',
+     10, '{SHE}', '{she_ep2}', 'stories/{lang}/my_episode.ks', 9)
+   ```
+   - `category`: `main` / `side` / `event`
+   - `required_level`, `required_factions`, `required_episodes` でアンロック条件を定義
+   - `sort_order` で一覧画面の表示順を制御
+
+3. **DB にシードを適用**
+   ops リポジトリ経由でマイグレーションを実行。
+
+4. **画像アセットを配置**（ナビゲーションストーリーと同様）
+
+5. **ナビゲーション**
+   シナリオ一覧画面から自動的にアクセス可能になる。直接遷移する場合は `navigate('/scenarios/my_episode')` で起動。
 
 ## アセット規約
 

@@ -272,8 +272,8 @@ CREATE INDEX idx_news_articles_source ON news_articles(source, published_at DESC
 
 CREATE TABLE player_factions (
   player_id   UUID NOT NULL REFERENCES players(player_id) ON DELETE CASCADE,
-  faction     VARCHAR(20) NOT NULL,
-  source      VARCHAR(20) NOT NULL,
+  faction     VARCHAR(20) NOT NULL CHECK (faction IN ('SHE', 'Tenki', 'Sugar', 'Tuners')),
+  source      VARCHAR(20) NOT NULL CHECK (source IN ('initial_selection', 'shop_purchase')),
   acquired_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   PRIMARY KEY (player_id, faction)
 );
@@ -284,7 +284,8 @@ CREATE TABLE player_factions (
 
 CREATE TABLE scenario_episodes (
   episode_id        VARCHAR(50) NOT NULL,
-  faction           VARCHAR(20),
+  category          VARCHAR(20) NOT NULL DEFAULT 'main' CHECK (category IN ('main', 'side', 'event')),
+  faction           VARCHAR(20) CHECK (faction IS NULL OR faction IN ('SHE', 'Tenki', 'Sugar', 'Tuners')),
   episode_number    BIGINT NOT NULL,
   title_ja          VARCHAR(200) NOT NULL,
   title_en          VARCHAR(200) NOT NULL,
@@ -296,6 +297,7 @@ CREATE TABLE scenario_episodes (
   sort_order        BIGINT NOT NULL,
   is_active         BOOLEAN NOT NULL DEFAULT true,
   created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
   PRIMARY KEY (episode_id)
 );
 
@@ -303,7 +305,7 @@ CREATE INDEX idx_scenario_episodes_sort ON scenario_episodes(sort_order);
 
 CREATE TABLE player_story_progress (
   player_id    UUID NOT NULL REFERENCES players(player_id) ON DELETE CASCADE,
-  episode_id   VARCHAR(50) NOT NULL,
+  episode_id   VARCHAR(50) NOT NULL REFERENCES scenario_episodes(episode_id) ON DELETE RESTRICT,
   completed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   PRIMARY KEY (player_id, episode_id)
 );

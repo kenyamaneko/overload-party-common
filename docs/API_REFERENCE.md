@@ -14,8 +14,9 @@
    - [Deck](#33-deck)
    - [Card](#34-card)
    - [NPC Battle](#35-npc-battle)
-   - [Shop](#36-shop)
-   - [Webhook](#37-webhook)
+   - [Scenario](#36-scenarioストーリー)
+   - [Shop](#37-shop)
+   - [Webhook](#38-webhook)
 4. [WebSocket API](#4-websocket-api)
    - [接続](#41-接続)
    - [Client → Server メッセージ](#42-client--server-メッセージ)
@@ -479,7 +480,111 @@ NPC 対戦開始。即座にゲームが作成される（マッチメイキン�
 
 ---
 
-### 3.6 Shop
+### 3.6 Scenario（ストーリー）
+
+#### GET `/scenarios`
+
+シナリオエピソード一覧取得。各エピソードのアンロック状態・完了状態を含む。
+
+**クエリパラメータ:**
+
+| パラメータ | 型 | デフォルト | 説明 |
+|-----------|-----|-----------|------|
+| `lang` | string | `ja` | タイトル言語（`ja` / `en`） |
+
+**レスポンス (200):**
+```json
+{
+  "episodes": [
+    {
+      "episode_id": "she_ep1",
+      "faction": "SHE",
+      "episode_number": 1,
+      "title": "SHE 第1章 ワニと少年と、届かない返事",
+      "thumbnail_url": null,
+      "is_unlocked": true,
+      "is_completed": false,
+      "lock_reason": null
+    },
+    {
+      "episode_id": "she_ep2",
+      "faction": "SHE",
+      "episode_number": 2,
+      "title": "SHE 第2章 霧の中の「サジェスト」",
+      "thumbnail_url": null,
+      "is_unlocked": false,
+      "is_completed": false,
+      "lock_reason": {
+        "type": "level",
+        "required": "6",
+        "current": "2"
+      }
+    }
+  ]
+}
+```
+
+**アンロック条件（優先順で判定）:**
+
+| lock_reason.type | 説明 |
+|------------------|------|
+| `level` | プレイヤーレベルが不足（`required`: 必要レベル, `current`: 現在レベル） |
+| `faction` | 陣営カードセット未所持（`required`: 陣営名） |
+| `episode` | 前提エピソード未クリア（`required`: 未完了エピソードIDの配列） |
+
+`lock_reason` の例:
+
+```json
+{ "type": "level", "required": "6", "current": "2" }
+{ "type": "faction", "required": "SHE" }
+{ "type": "episode", "required": ["she_ep5", "tenki_ep5"] }
+```
+
+---
+
+#### GET `/scenarios/{episodeId}/script`
+
+エピソードのスクリプト（`.ks` 形式）を取得。アンロック済みのエピソードのみ取得可能。
+
+**クエリパラメータ:**
+
+| パラメータ | 型 | デフォルト | 説明 |
+|-----------|-----|-----------|------|
+| `lang` | string | `ja` | スクリプト言語（`ja` / `en`、未対応言語は `ja` にフォールバック） |
+
+**レスポンス (200):**
+```json
+{
+  "episode_id": "she_ep1",
+  "script": "[chara_new name=\"kafka\" ...]\n# kafka\nようこそ。[p]\n..."
+}
+```
+
+**エラー:** `404` エピソードが存在しない / `403` ロック中
+
+---
+
+#### POST `/scenarios/{episodeId}/complete`
+
+エピソードの完了を記録。冪等（同じエピソードを複数回完了してもエラーにならない）。
+
+**リクエスト:** なし
+
+**レスポンス (200):**
+```json
+{
+  "message": "episode completed",
+  "episode_id": "she_ep1"
+}
+```
+
+**エラー:** `404` エピソードが存在しない / `403` ロック中
+
+---
+
+### 3.7 Shop
+
+> **注:** 旧番号 3.6。ストーリーセクション追加に伴い 3.7 に繰り下げ。
 
 #### POST `/player/select-faction`
 
@@ -574,7 +679,7 @@ NPC 対戦開始。即座にゲームが作成される（マッチメイキン�
 
 ---
 
-### 3.7 Webhook（認証不要）
+### 3.8 Webhook（認証不要）
 
 #### POST `/shop/webhook/apple`
 
@@ -1076,6 +1181,9 @@ NPC 表示名:
 | | WS | `spectate_stamp` | - | - | 観戦スタンプ送信（WebSocket） |
 | **NPC** | WS | `npc_battle_start` | 要 | 要 | NPC 対戦開始（WebSocket） |
 | | WS | `npc_battle_created` | - | - | NPC 対戦作成通知（Server→Client） |
+| **Scenario** | GET | `/scenarios` | 要 | 要 | エピソード一覧 |
+| | GET | `/scenarios/{episodeId}/script` | 要 | 要 | スクリプト取得 |
+| | POST | `/scenarios/{episodeId}/complete` | 要 | 要 | エピソード完了 |
 | **Shop** | POST | `/player/select-faction` | 要 | 要 | ファクション選択 |
 | | GET | `/shop/products` | 要 | 要 | 商品一覧 |
 | | POST | `/shop/purchase` | 要 | 要 | 商品購入 |

@@ -17,6 +17,8 @@
 7. [カード・デッキ管理](#7-カードデッキ管理-card--deck-management)
 8. [ショップ・設定管理](#8-ショップ設定管理-shop--settings)
 9. [コスメティクス管理](#9-コスメティクス管理-cosmetics)
+10. [陣営所持管理](#10-陣営所持管理-player-factions)
+11. [ストーリー管理](#11-ストーリー管理-story-scenarios)
 
 ---
 
@@ -522,3 +524,93 @@ stats フィールドなし（Platform の場合、`deploy_turns` はトップ�
 | スリーブ | `Decks` | `sleeve_no` |
 
 > 対戦開始時にデッキ情報と合わせて取得できるため、追加クエリ不要。
+
+---
+
+## 10. 陣営所持管理 (Player Factions)
+
+プレイヤーが所持している陣営カードセットの中間テーブル。初期選択やショップ購入で取得する。
+
+### 10.1 PostgreSQL スキーマ (player_factions)
+
+**PlayerFactions** (陣営所持)
+- **Primary Key:** `(player_id, faction)`
+- **Foreign Key:** `player_id REFERENCES players(player_id) ON DELETE CASCADE`
+- **CHECK:** `faction IN ('SHE', 'Tenki', 'Sugar', 'Tuners')`
+- **CHECK:** `source IN ('initial_selection', 'shop_purchase')`
+
+| カラム名 | 型 | Nullable | 説明 |
+|---|---|---|---|
+| `player_id` | UUID | No | 親テーブル参照 |
+| `faction` | VARCHAR(20) | No | 陣営名 (`SHE`, `Tenki`, `Sugar`, `Tuners`) |
+| `source` | VARCHAR(20) | No | 取得経路 (`initial_selection`, `shop_purchase`) |
+| `acquired_at` | TIMESTAMPTZ | No | 取得日時 (DEFAULT now()) |
+
+> `Players.selected_faction` は初回選択のみを保持するが、`player_factions` はショップ購入を含む全所持陣営を管理する。ストーリーのアンロック条件判定はこのテーブルを参照する。
+
+---
+
+## 11. ストーリー管理 (Story Scenarios)
+
+各陣営のストーリーエピソード定義と、プレイヤーの進行状況。
+
+### 11.1 PostgreSQL スキーマ (scenario_episodes, player_story_progress)
+
+**ScenarioEpisodes** (エピソード定義マスター)
+- **Primary Key:** `episode_id`
+- **CHECK:** `category IN ('main', 'side', 'event')`
+- **CHECK:** `faction IS NULL OR faction IN ('SHE', 'Tenki', 'Sugar', 'Tuners')`
+
+| カラム名 | 型 | Nullable | 説明 |
+|---|---|---|---|
+| `episode_id` | VARCHAR(50) | No | エピソードID（例: `she_ep1`, `final`） |
+| `category` | VARCHAR(20) | No | エピソード種別（DEFAULT `'main'`）。`main`: メインストーリー, `side`: サイドストーリー, `event`: イベントストーリー |
+| `faction` | VARCHAR(20) | Yes | 所属陣営（`NULL` = グランドエンディング等の全陣営共通エピソード） |
+| `episode_number` | BIGINT | No | 陣営内の章番号 |
+| `title_ja` | VARCHAR(200) | No | 日本語タイトル |
+| `title_en` | VARCHAR(200) | No | 英語タイトル |
+| `required_level` | BIGINT | No | アンロックに必要なプレイヤーレベル (DEFAULT 1) |
+| `required_factions` | TEXT[] | No | アンロックに必要な陣営所持（DEFAULT '{}'） |
+| `required_episodes` | TEXT[] | No | アンロックに必要な完了済みエピソード（DEFAULT '{}'） |
+| `script_path` | VARCHAR(500) | No | スクリプトパステンプレート（`{lang}` を言語コードに置換） |
+| `thumbnail_path` | VARCHAR(500) | Yes | サムネイル画像パス |
+| `sort_order` | BIGINT | No | 表示順 |
+| `is_active` | BOOLEAN | No | 公開フラグ (DEFAULT true) |
+| `created_at` | TIMESTAMPTZ | No | 作成日時 (DEFAULT now()) |
+| `updated_at` | TIMESTAMPTZ | No | 更新日時 (DEFAULT now()) |
+
+**PlayerStoryProgress** (プレイヤーの進行状況)
+- **Primary Key:** `(player_id, episode_id)`
+- **Foreign Key:** `player_id REFERENCES players(player_id) ON DELETE CASCADE`
+- **Foreign Key:** `episode_id REFERENCES scenario_episodes(episode_id) ON DELETE RESTRICT`
+
+| カラム名 | 型 | Nullable | 説明 |
+|---|---|---|---|
+| `player_id` | UUID | No | 親テーブル参照 |
+| `episode_id` | VARCHAR(50) | No | 完了したエピソードID |
+| `completed_at` | TIMESTAMPTZ | No | 完了日時 (DEFAULT now()) |
+
+> 完了記録は冪等（`ON CONFLICT DO NOTHING`）。同じエピソードを再読了してもレコードは増えない。
+
+### 11.2 アンロック条件の判定
+
+アンロック条件は以下の優先順で判定される。最初に不足が見つかった時点で `lock_reason` を返す:
+
+1. **レベル**: `players.level >= scenario_episodes.required_level`
+2. **陣営所持**: `player_factions` に `required_factions` のすべてが存在
+3. **前提エピソード**: `player_story_progress` に `required_episodes` のすべてが存在
+
+### 11.3 エピソード構成
+
+| ラウンド | レベル帯 | エピソード数 | 内容 |
+|----------|---------|-------------|------|
+| Round 1 | Lv 2〜5 | 4 | 各陣営 第1章 |
+| Round 2 | Lv 6〜9 | 4 | 各陣営 第2章 |
+| Round 3 | Lv 10〜13 | 4 | 各陣営 第3章 |
+| Round 4 | Lv 14〜17 | 4 | 各陣営 第4章 |
+| Round 5 | Lv 18〜21 | 4 | 各陣営 第5章 |
+| Final | Lv 22 | 1 | グランドエンディング（全陣営クリア必須） |
+
+### 11.4 関連インデックス
+
+- `ScenarioEpisodesBySort`: `scenario_episodes(sort_order)`
