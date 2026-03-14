@@ -59,10 +59,13 @@ overload-party-ops
 
 overload-party-newsfeed
   └─ push (main) ──── ci.yaml
-                        └→ build + push → Artifact Registry (SHA + latest)
+                        ├→ build + push → Artifact Registry (SHA + latest)
+                        └→ Cloud Run Job イメージ更新 (dev)
 
 overload-party-analytics
-  └─ (CI/CD なし — scripts/deploy.sh で手動デプロイ)
+  └─ push / PR ──── ci.yaml
+                      ├→ PR: go vet + go build
+                      └→ main: gcloud functions deploy (dev)
 ```
 
 ## リポ間連携
@@ -86,10 +89,19 @@ Workload Identity Provider (keyandnotes-platform)
     │
     ▼
 Service Account (用途別)
-    ├─ CI_SERVICE_ACCOUNT   — イメージビルド・AR push
-    ├─ TF_SERVICE_ACCOUNT   — Terraform plan/apply
-    └─ DEPLOY_SERVICE_ACCOUNT — kubectl apply
+    ├─ CI_SERVICE_ACCOUNT      — イメージビルド・AR push・Cloud Run Jobs 更新・Cloud Functions deploy
+    ├─ TF_SERVICE_ACCOUNT      — Terraform plan/apply
+    └─ DEPLOY_SERVICE_ACCOUNT  — kubectl apply (GKE)
 ```
+
+**SA の管理場所:**
+
+| SA | 管理リポ | Terraform パス |
+|----|---------|---------------|
+| `github-ci` (CI) | infra | `environments/platform/` → `modules/ci-cd/` |
+| `terraform-deployer` (TF) | infra | 同上 |
+| `github-deploy` (Deploy) | k8s | `terraform/environments/platform/` → `modules/ci-cd/` |
+| WIF プール・プロバイダ | infra | 同上 |
 
 **GitHub Secrets（全リポ共通）:**
 
@@ -133,8 +145,8 @@ Service Account (用途別)
 | nightly-review | Cloud Run Job (diff + full) | gcloud run jobs update | main push で自動 |
 | cost-monitor | Cloud Run Job | gcloud run jobs update | main push で自動 |
 | drift-monitor | Cloud Run Job | gcloud run jobs update | main push で自動 |
-| newsfeed | Cloud Run Job | (手動) | 手動 |
-| analytics | Cloud Function | scripts/deploy.sh | 手動 |
+| newsfeed | Cloud Run Job | gcloud run jobs update | main push で自動 |
+| analytics | Cloud Function Gen2 | gcloud functions deploy | main push で自動 |
 | infra | Terraform | terraform apply | main push で自動 |
 
 ## スケジュールジョブ
