@@ -6,7 +6,7 @@ on:
     branches: [main]
     paths:
       - "data/**"
-      - "scripts/generate_from_yaml.py"
+      - "packages/generate_from_yaml.py"
 
 permissions:
   contents: write
@@ -46,12 +46,12 @@ jobs:
           registry-url: "https://npm.pkg.github.com"
 
       - name: Run code generation
-        run: python3 scripts/generate_from_yaml.py --gen-dir gen/
+        run: python3 packages/generate_from_yaml.py --gen-dir packages/
 
       - name: Check for changes
         id: check
         run: |
-          if git diff --quiet -- gen/; then
+          if git diff --quiet -- packages/; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
@@ -62,7 +62,7 @@ jobs:
         id: version
         run: |
           DATE=$(date +%Y%m%d)
-          PREFIX="gen/go/v0.${DATE}."
+          PREFIX="packages/go/v0.${DATE}."
           # Find the highest N for today's tags
           LAST=$(git tag -l "${PREFIX}*" | sed "s|${PREFIX}||" | sort -n | tail -1)
           if [ -z "$LAST" ]; then
@@ -78,19 +78,19 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add gen/
+          git add packages/
           git commit -m "chore: update generated packages v${{ steps.version.outputs.version }}"
           git push
 
       - name: Tag Go module
         if: steps.check.outputs.changed == 'true'
         run: |
-          git tag "gen/go/v${{ steps.version.outputs.version }}"
-          git push origin "gen/go/v${{ steps.version.outputs.version }}"
+          git tag "packages/go/v${{ steps.version.outputs.version }}"
+          git push origin "packages/go/v${{ steps.version.outputs.version }}"
 
       - name: Publish NuGet package
         if: steps.check.outputs.changed == 'true'
-        working-directory: gen/dotnet
+        working-directory: packages/dotnet
         run: |
           dotnet pack -c Release -p:Version=${{ steps.version.outputs.version }} -o ./nupkg
           dotnet nuget push ./nupkg/*.nupkg \
@@ -99,7 +99,7 @@ jobs:
 
       - name: Publish npm package
         if: steps.check.outputs.changed == 'true'
-        working-directory: gen/npm
+        working-directory: packages/npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

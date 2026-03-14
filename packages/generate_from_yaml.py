@@ -1287,45 +1287,46 @@ def main():
 
     gen_dir = Path(args.gen_dir) if args.gen_dir else None
     if gen_dir:
-        # ─── Package mode: output to gen/ ─────────────────
+        # ─── Package mode: output to packages/ ───────────
         gen_dir = COMMON_ROOT / gen_dir if not gen_dir.is_absolute() else gen_dir
+        rel = gen_dir.relative_to(COMMON_ROOT)
 
         # Go package
         go_dir = gen_dir / "go"
         go_count = generate_go_cardno(cards, faction_data, out_path=go_dir / "cardno" / "cardno_gen.go")
-        print(f"Generated {go_count} constants → gen/go/cardno/cardno_gen.go", file=sys.stderr)
+        print(f"Generated {go_count} constants → {rel}/go/cardno/cardno_gen.go", file=sys.stderr)
 
         model_names = generate_go_models(target="gateway", out_dir=go_dir / "model")
-        print(f"Generated models → gen/go/model/ [{', '.join(model_names)}]", file=sys.stderr)
+        print(f"Generated models → {rel}/go/model/ [{', '.join(model_names)}]", file=sys.stderr)
 
         generate_repo_constants(constants, target="gateway", out_path=go_dir / "constants" / "constants_gen.go")
-        print(f"Generated constants → gen/go/constants/constants_gen.go", file=sys.stderr)
+        print(f"Generated constants → {rel}/go/constants/constants_gen.go", file=sys.stderr)
 
         json_count = generate_json(cards, out_path=go_dir / "cache" / "cards_gen.json")
-        print(f"Generated {json_count} cards → gen/go/cache/cards_gen.json", file=sys.stderr)
+        print(f"Generated {json_count} cards → {rel}/go/cache/cards_gen.json", file=sys.stderr)
 
         # .NET package
         dotnet_dir = gen_dir / "dotnet"
         generate_csharp_constants(constants,
                                   out_path=dotnet_dir / "GameConstants_gen.cs",
                                   namespace="OverloadParty.Generated")
-        print(f"Generated constants → gen/dotnet/GameConstants_gen.cs", file=sys.stderr)
+        print(f"Generated constants → {rel}/dotnet/GameConstants_gen.cs", file=sys.stderr)
 
         generate_csharp_event_data(event_schemas,
                                    out_path=dotnet_dir / "EventData_gen.cs",
                                    namespace="OverloadParty.Generated")
-        print(f"Generated event data → gen/dotnet/EventData_gen.cs", file=sys.stderr)
+        print(f"Generated event data → {rel}/dotnet/EventData_gen.cs", file=sys.stderr)
 
         generate_json(cards, out_path=dotnet_dir / "cache" / "cards_gen.json")
-        print(f"Generated cards → gen/dotnet/cache/cards_gen.json", file=sys.stderr)
+        print(f"Generated cards → {rel}/dotnet/cache/cards_gen.json", file=sys.stderr)
 
         # npm package
         npm_dir = gen_dir / "npm"
         generate_ts_constants(constants, out_path=npm_dir / "src" / "constants.ts")
-        print(f"Generated constants → gen/npm/src/constants.ts", file=sys.stderr)
+        print(f"Generated constants → {rel}/npm/src/constants.ts", file=sys.stderr)
 
         generate_ts_event_data(event_schemas, out_path=npm_dir / "src" / "eventData.ts")
-        print(f"Generated event data → gen/npm/src/eventData.ts", file=sys.stderr)
+        print(f"Generated event data → {rel}/npm/src/eventData.ts", file=sys.stderr)
 
         return
 

@@ -11,10 +11,10 @@ overload-party-common
   │                                                    └→ build → AR push → Cloud Run Job 実行 (dev)
   │
   ├─ data/ push (main) ──── publish-packages.yaml
-  │                           └→ codegen 実行 → gen/ commit → Go tag + NuGet push + npm publish
+  │                           └→ codegen 実行 → packages/ commit → Go tag + NuGet push + npm publish
   │
   └─ data/ push (PR) ──── codegen-check.yaml
-                            └→ gen/ 内の整合性チェック（クロスリポ不要）
+                            └→ packages/ 内の整合性チェック（クロスリポ不要）
 
 overload-party-gateway
   └─ push (main) ──── ci.yaml

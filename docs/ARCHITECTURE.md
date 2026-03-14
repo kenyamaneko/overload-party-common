@@ -85,7 +85,8 @@ overload-party-common/          # 共有データ・定義の SSoT
 │   ├── schema_postgres.sql     # PostgreSQL DDL（SSoT）
 │   └── grant_iam.sql           # IAM 認証権限付与
 ├── docs/                       # 全ドキュメント
-├── gen/
+├── packages/
+│   ├── generate_from_yaml.py   # カード＆定数のコード生成スクリプト
 │   ├── go/                     # Go パッケージ (gateway 用)
 │   │   ├── model/              # 生成: Go モデル
 │   │   ├── constants/          # 生成: ゲーム定数
@@ -96,18 +97,16 @@ overload-party-common/          # 共有データ・定義の SSoT
 │   │   └── EventData_gen.cs
 │   └── npm/                    # npm パッケージ (client 用)
 │       └── src/constants.ts, eventData.ts
-├── scripts/
-│   └── generate_from_yaml.py   # カード＆定数のコード生成スクリプト
 └── .github/workflows/
     ├── ci.yaml                 # DB マイグレーション CI
     └── publish-packages.yaml   # data/ 変更時にパッケージ publish
 
 overload-party-gateway/         # Go API サーバー
 ├── internal/
-│   ├── model/gen.go            # gen/go/model の re-export
-│   ├── constants/gen.go        # gen/go/constants の re-export
+│   ├── model/gen.go            # packages/go/model の re-export
+│   ├── constants/gen.go        # packages/go/constants の re-export
 │   └── ...
-└── go.mod                      # gen/go モジュールを依存
+└── go.mod                      # packages/go モジュールを依存
 
 overload-party-battle/          # C# 対戦エンジン
 ├── src/
@@ -124,20 +123,20 @@ overload-party-client/          # React + Capacitor クライアント
 
 ### 2.3 コード生成パイプライン
 
-`python3 scripts/generate_from_yaml.py --gen-dir gen/` を実行すると、common の `gen/` 以下にパッケージとして生成される。main への push 時に CI が自動で publish する。
+`python3 packages/generate_from_yaml.py --gen-dir packages/` を実行すると、common の `packages/` 以下にパッケージとして生成される。main への push 時に CI が自動で publish する。
 
 | 入力 | 出力先 | パッケージ |
 |------|--------|-----------|
 | `data/cards/*.yaml` | `docs/CARDS.md` | — |
-| `data/cards/*.yaml` | `gen/go/cardno/cardno_gen.go` | Go module |
-| `data/cards/*.yaml` | `gen/go/cache/cards_gen.json` | Go module (embed) |
-| `data/cards/*.yaml` | `gen/dotnet/cache/cards_gen.json` | NuGet (EmbeddedResource) |
-| `data/models.yaml` | `gen/go/model/*_gen.go` | Go module |
-| `data/constants.json` | `gen/go/constants/constants_gen.go` | Go module |
-| `data/constants.json` | `gen/dotnet/GameConstants_gen.cs` | NuGet (`OverloadParty.Generated`) |
-| `data/constants.json` | `gen/npm/src/constants.ts` | npm (`@overload-party/generated`) |
-| `data/event_schemas.json` | `gen/dotnet/EventData_gen.cs` | NuGet |
-| `data/event_schemas.json` | `gen/npm/src/eventData.ts` | npm |
+| `data/cards/*.yaml` | `packages/go/cardno/cardno_gen.go` | Go module |
+| `data/cards/*.yaml` | `packages/go/cache/cards_gen.json` | Go module (embed) |
+| `data/cards/*.yaml` | `packages/dotnet/cache/cards_gen.json` | NuGet (EmbeddedResource) |
+| `data/models.yaml` | `packages/go/model/*_gen.go` | Go module |
+| `data/constants.json` | `packages/go/constants/constants_gen.go` | Go module |
+| `data/constants.json` | `packages/dotnet/GameConstants_gen.cs` | NuGet (`OverloadParty.Generated`) |
+| `data/constants.json` | `packages/npm/src/constants.ts` | npm (`@overload-party/generated`) |
+| `data/event_schemas.json` | `packages/dotnet/EventData_gen.cs` | NuGet |
+| `data/event_schemas.json` | `packages/npm/src/eventData.ts` | npm |
 
 各リポはパッケージをインストールして使う（gateway: `go get`, battle: NuGet, client: npm）。生成されたファイルには `DO NOT EDIT` コメントが付く。
 
@@ -147,8 +146,8 @@ overload-party-client/          # React + Capacitor クライアント
 
 | やりたいこと | 編集するリポ | 次にやること | 影響を受けるリポ |
 |-------------|------------|------------|----------------|
-| カードの追加・変更 | common (`data/cards/*.yaml`) | `--gen-dir gen/` で生成 → main push で自動 publish | gateway, battle, client（パッケージ更新） |
-| ゲーム定数の変更 | common (`data/constants.json`) | `--gen-dir gen/` で生成 → main push で自動 publish | gateway, battle, client（パッケージ更新） |
+| カードの追加・変更 | common (`data/cards/*.yaml`) | `--gen-dir packages/` で生成 → main push で自動 publish | gateway, battle, client（パッケージ更新） |
+| ゲーム定数の変更 | common (`data/constants.json`) | `--gen-dir packages/` で生成 → main push で自動 publish | gateway, battle, client（パッケージ更新） |
 | DB スキーマの変更 | common (`db/schema_postgres.sql`) | main に push（CI が自動適用） | gateway, battle（コード側の対応） |
 | IAM 権限の変更 | common (`db/grant_iam.sql`) | main に push（CI が自動適用） | — |
 | API エンドポイント追加 | gateway | CI が自動で Docker push | k8s（deploy で反映） |

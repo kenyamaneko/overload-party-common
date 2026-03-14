@@ -1,11 +1,11 @@
-# data/ または生成スクリプトが変更されたとき、gen/ の整合性を検証する。
+# data/ または生成スクリプトが変更されたとき、packages/ の整合性を検証する。
 name: Codegen Sync Check
 
 on:
   pull_request:
     paths:
       - "data/**"
-      - "scripts/generate_from_yaml.py"
+      - "packages/generate_from_yaml.py"
 
 jobs:
   check-sync:
@@ -23,12 +23,12 @@ jobs:
         run: pip install pyyaml
 
       - name: Run code generation
-        run: python3 scripts/generate_from_yaml.py --gen-dir gen/
+        run: python3 packages/generate_from_yaml.py --gen-dir packages/
 
       - name: Check for diffs
         run: |
-          if ! git diff --exit-code -- gen/ docs/CARDS.md; then
-            echo "::error::Generated files are out of sync. Run: python3 scripts/generate_from_yaml.py --gen-dir gen/"
+          if ! git diff --exit-code -- packages/ docs/CARDS.md; then
+            echo "::error::Generated files are out of sync. Run: python3 packages/generate_from_yaml.py --gen-dir packages/"
             git diff --stat
             exit 1
           fi
