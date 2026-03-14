@@ -1,0 +1,160 @@
+# CI/CD 設計
+
+overload-party 全リポジトリの CI/CD ワークフローと、リポ間連携の全体像。
+
+## 全体フロー
+
+```
+overload-party-common
+  │
+  ├─ db/ push (main) ──── repository_dispatch ────→ ops/db-migrate-on-push.yaml
+  │                                                    └→ build → AR push → Cloud Run Job 実行 (dev)
+  │
+  └─ data/ push (PR) ──── codegen-check.yaml
+                            └→ gateway/battle/client の生成コード整合性チェック
+
+overload-party-gateway
+  └─ push (main) ──── ci.yaml
+                        ├→ lint (golangci-lint)
+                        ├→ test (go test -race)
+                        └→ build + push → Artifact Registry (SHA + latest)
+
+overload-party-battle
+  └─ push (main) ──── ci.yaml
+                        ├→ test (dotnet test)
+                        └→ build + push → Artifact Registry (SHA + latest)
+
+overload-party-client
+  └─ push / PR ──── ci.yml
+  │                   ├→ lint (eslint)
+  │                   ├→ typecheck (tsc)
+  │                   └→ test (vitest)
+  └─ push / PR ──── e2e.yaml
+                      └→ Playwright E2E (docker-compose で gateway+battle 起動)
+
+overload-party-infra
+  └─ push / PR ──── terraform.yaml
+                      ├→ PR: terraform plan (変更環境のみ)
+                      └→ main: terraform apply (順次実行)
+
+overload-party-k8s
+  ├─ workflow_dispatch ──── deploy.yaml
+  │                          └→ kustomize edit set image → kubectl apply
+  ├─ workflow_dispatch ──── startup.yaml
+  │                          └→ Pod スケール 1 → Ingress 適用 → Cloudflare DNS 更新
+  ├─ cron (2:00 JST) ──── nightly-shutdown.yaml
+  │                          └→ Ingress 削除 → IP 解放 → DNS 無効化 → Pod スケール 0
+  └─ push / PR ──── terraform.yaml
+                      └→ GKE / AR / WIF の Terraform plan/apply
+
+overload-party-ops
+  ├─ workflow_dispatch ──── db-migrate.yaml
+  │                          └→ schema_check → build → AR push → Cloud Run Job 実行
+  ├─ repository_dispatch ── db-migrate-on-push.yaml (common から自動)
+  ├─ push (main) ──── nightly-review.yaml  (nightly-review/** 変更時)
+  ├─ push (main) ──── cost-monitor.yaml    (cost-monitor/** 変更時)
+  └─ push (main) ──── drift-monitor.yaml   (drift-monitor/** 変更時)
+        └→ 共通: build-deploy-job.yaml (reusable workflow)
+             └→ build → AR push → Cloud Run Job イメージ更新
+
+overload-party-newsfeed
+  └─ push (main) ──── ci.yaml
+                        └→ build + push → Artifact Registry (SHA + latest)
+
+overload-party-analytics
+  └─ (CI/CD なし — scripts/deploy.sh で手動デプロイ)
+```
+
+## リポ間連携
+
+| 送信側 | 受信側 | メカニズム | イベント |
+|--------|--------|-----------|---------|
+| common | ops | `repository_dispatch` | `db-migrate`（db/ 変更時） |
+| common | gateway, battle, client | `codegen-check.yaml` 内で checkout | data/ 変更時の整合性チェック |
+
+`repository_dispatch` は GitHub API 経由でワークフローを起動する仕組み。common の ci.yaml が ops リポに POST し、ops 側の `db-migrate-on-push.yaml` が受信して dev 環境のマイグレーションを自動実行する。
+
+## 認証
+
+全リポ共通で **Workload Identity Federation (WIF)** を使用。
+
+```
+GitHub Actions (OIDC token)
+    │
+    ▼
+Workload Identity Provider (keyandnotes-platform)
+    │
+    ▼
+Service Account (用途別)
+    ├─ CI_SERVICE_ACCOUNT   — イメージビルド・AR push
+    ├─ TF_SERVICE_ACCOUNT   — Terraform plan/apply
+    └─ DEPLOY_SERVICE_ACCOUNT — kubectl apply
+```
+
+**GitHub Secrets（全リポ共通）:**
+
+| シークレット | 用途 |
+|-------------|------|
+| `WIF_PROVIDER` | Workload Identity Provider URI |
+| `CI_SERVICE_ACCOUNT` | ビルド・push 用 SA |
+| `TF_SERVICE_ACCOUNT` | Terraform 用 SA |
+| `DEPLOY_SERVICE_ACCOUNT` | K8s デプロイ用 SA |
+
+**リポ間アクセス用トークン:**
+
+| シークレット | 保持リポ | 用途 |
+|-------------|---------|------|
+| `OPS_DISPATCH_TOKEN` | common | ops への repository_dispatch |
+| `COMMON_REPO_TOKEN` | ops | common の sparse-checkout |
+| `CROSS_REPO_TOKEN` | common | codegen-check で gateway/battle/client を checkout |
+| `CF_API_TOKEN` | k8s | Cloudflare DNS 更新 |
+
+## Artifact Registry
+
+**レジストリ:** `asia-northeast1-docker.pkg.dev/keyandnotes-platform/overload-party/`
+
+| イメージ | ビルド元リポ | タグ戦略 |
+|---------|------------|---------|
+| `overload-party-gateway` | gateway | `{SHA}`, `latest` |
+| `overload-party-battle` | battle | `{SHA}`, `latest` |
+| `db-migrate` | ops | `{SHA}`, `latest` |
+| `nightly-review` | ops | `{SHA}`, `latest` |
+| `cost-monitor` | ops | `{SHA}`, `latest` |
+| `drift-monitor` | ops | `{SHA}`, `latest` |
+| `newsfeed` | newsfeed | `{SHA}`, `latest` |
+
+## デプロイ先と方式
+
+| サービス | デプロイ先 | 方式 | 自動/手動 |
+|---------|----------|------|----------|
+| gateway | GKE (dev/stg/prod namespace) | kustomize + kubectl apply | 手動 dispatch |
+| battle | GKE (dev/stg/prod namespace) | kustomize + kubectl apply | 手動 dispatch |
+| db-migrate | Cloud Run Job | gcloud run jobs update + execute | dev 自動 / stg 手動 |
+| nightly-review | Cloud Run Job (diff + full) | gcloud run jobs update | main push で自動 |
+| cost-monitor | Cloud Run Job | gcloud run jobs update | main push で自動 |
+| drift-monitor | Cloud Run Job | gcloud run jobs update | main push で自動 |
+| newsfeed | Cloud Run Job | (手動) | 手動 |
+| analytics | Cloud Function | scripts/deploy.sh | 手動 |
+| infra | Terraform | terraform apply | main push で自動 |
+
+## スケジュールジョブ
+
+Cloud Scheduler が Cloud Run Job を起動する。イメージ更新は CI で行い、実行はスケジューラ任せ。
+
+| ジョブ | スケジュール (JST) | 管理 |
+|--------|-------------------|------|
+| nightly-review (diff) | 3:00 (月火木金土日) | ops terraform |
+| nightly-review (full) | 3:00 (水) | ops terraform |
+| cost-monitor | 8:00 (毎日) | ops terraform |
+| drift-monitor | 7:00 (毎日) | ops terraform |
+| newsfeed | 2時間ごと | infra terraform |
+| Cloud SQL 停止 (dev/stg) | 2:00 | infra terraform |
+| K8s シャットダウン (dev/stg) | 2:00 | k8s cron workflow |
+
+## 環境戦略
+
+| 環境 | GCP プロジェクト | デプロイ条件 |
+|------|-----------------|------------|
+| dev | overload-party-dev | main push で自動（ops ジョブ、infra）/ 手動 dispatch（gateway, battle） |
+| stg | overload-party-stg | 手動 dispatch |
+| prod | overload-party-prod | 手動 dispatch（将来的に承認ゲート追加） |

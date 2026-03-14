@@ -1197,59 +1197,9 @@ overload-party-infra/
 
 **Terraform state:** `gs://overload-party-tf-state` に GCS backend で管理。prefix で `terraform/shared`, `terraform/dev` 等に分離。
 
-### 14.2 CI: GitHub Actions
+### 14.2 CI/CD
 
-**ワークフロー 1: Gateway Server (`main` / PR トリガー)**
-
-| ステップ | 内容 |
-|------|------|
-| 1. Lint | `golangci-lint run` |
-| 2. テスト | `go test -race ./internal/...` |
-| 3. ビルド | Docker イメージを `$COMMIT_SHA` タグでビルド |
-| 4. プッシュ | Artifact Registry にプッシュ (`asia-northeast1-docker.pkg.dev/keyandnotes-platform/overload-party`) |
-
-**ワークフロー 2: Battle Server (`main` / PR トリガー)**
-
-| ステップ | 内容 |
-|------|------|
-| 1. テスト | `dotnet test tests/OverloadParty.Battle.Tests` |
-| 2. ビルド | Docker イメージを `$COMMIT_SHA` タグでビルド |
-| 3. プッシュ | Artifact Registry にプッシュ |
-
-**ワークフロー 3: DB マイグレーション (`main` マージ時 — common リポ)**
-
-| ステップ | 内容 |
-|------|------|
-| 1. psqldef インストール | GitHub Releases から最新版を取得 |
-| 2. Cloud SQL Proxy 起動 | WIF 認証でプロキシを起動 |
-| 3. dry-run | `psqldef --dry-run` でスキーマ差分を確認 |
-| 4. apply | `psqldef` でスキーマを同期 |
-
-> Terraform の `plan` / `apply` も GitHub Actions で実行する（`prod` は手動承認ゲート付き）。
-
-### 14.3 CD: GitHub Actions + Kustomize
-
-K8s マニフェストの適用は **GitHub Actions** による直接デプロイで行う。
-
-| 項目 | 内容 |
-|------|------|
-| デプロイ方式 | GitHub Actions (`deploy.yaml`) で `kubectl apply -k` を実行 |
-| イメージタグ更新 | `kustomize edit set image` でタグを差し替え |
-| 環境指定 | workflow_dispatch でデプロイ先環境を選択 |
-| デプロイ戦略 | RollingUpdate（maxUnavailable: 0, maxSurge: 25%） |
-| ロールバック | 前バージョンのイメージタグを指定して再デプロイ |
-
-**デプロイフロー:**
-
-```
-開発者 → GitHub PR → GitHub Actions (CI)
-  │                    ├── テスト・Lint
-  │                    └── Docker ビルド → Artifact Registry
-  │
-  └→ k8s リポで deploy.yaml を手動 dispatch
-       ├── kustomize edit set image (gateway/battle)
-       └── kubectl apply -k → GKE クラスタにデプロイ (RollingUpdate)
-```
+全リポのワークフロー一覧・リポ間連携・認証・デプロイ方式の詳細は **[CI_CD.md](CI_CD.md)** を参照。
 
 **K8s デプロイ設定:**
 
