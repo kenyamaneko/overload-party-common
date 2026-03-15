@@ -11,6 +11,7 @@ Thumbs.db
 # IDE
 .idea/
 .vscode/
+*.sln
 
 # Python
 __pycache__/
@@ -27,6 +28,8 @@ docs/archive/
 docs/STORY/
 
 # Generated packages (build artifacts)
+packages/dotnet/obj/
+packages/dotnet/bin/
 packages/npm/dist/
 packages/npm/node_modules/
 
