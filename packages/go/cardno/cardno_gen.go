@@ -62,7 +62,7 @@ const (
 
 // しゅがーらぼ
 const (
-	SugarComputeConfettiito  int64 = 47   // コンピエッタ
+	SugarComputeConfettiito  int64 = 47   // ジューシィ・いちご
 	SugarSpotSponjit         int64 = 48   // スポンジット
 	SugarContainerClan       int64 = 49   // クラン
 	SugarOrchestratorKuchen  int64 = 50   // クーヘンバウムティス
@@ -91,7 +91,7 @@ const (
 // 調律部（チューナーズ）
 const (
 	TunersComputeKantata        int64 = 70   // コンタータ
-	TunersBareMetal             int64 = 72   // ベル太
+	TunersBareMetal             int64 = 72   // ベア太
 	TunersContainerTena         int64 = 73   // テナ
 	TunersOrchestratorConductis int64 = 74   // コンダクティス
 	TunersFunctionsFanfare      int64 = 75   // ファンファーレクション
@@ -195,7 +195,7 @@ var CardNames = map[int64]string{
 	44: "天気使い Policy",
 	45: "天気使い お守り傘",
 	46: "天気使い Traffic",
-	47: "コンピエッタ",
+	47: "ジューシィ・いちご",
 	48: "スポンジット",
 	49: "クラン",
 	50: "クーヘンバウムティス",
@@ -218,7 +218,7 @@ var CardNames = map[int64]string{
 	67: "しゅがーらぼ Knowledge",
 	68: "しゅがーらぼ Error Budget",
 	70: "コンタータ",
-	72: "ベル太",
+	72: "ベア太",
 	73: "テナ",
 	74: "コンダクティス",
 	75: "ファンファーレクション",

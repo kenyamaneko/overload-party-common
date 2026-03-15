@@ -975,7 +975,7 @@
   },
   {
     "card_no": 47,
-    "card_name": "コンピエッタ",
+    "card_name": "ジューシィ・いちご",
     "resource_label": "Compute",
     "faction": "Sugar",
     "card_type": "Compute",
@@ -1481,7 +1481,7 @@
   },
   {
     "card_no": 72,
-    "card_name": "ベル太",
+    "card_name": "ベア太",
     "resource_label": "Bare Metal",
     "faction": "Tuners",
     "card_type": "Compute",
@@ -2550,7 +2550,7 @@
     "stats": {},
     "restriction": "unlimited",
     "is_active": true,
-    "effect_text": "自分の「しゅがーらぼ Compute - コンピエッタ」にのみ装備できる。①装備先の可用性を +400 する。②自分のメインフェーズに発動できる。このカードを別の自分の「しゅがーらぼ Compute - コンピエッタ」に付け替える。この効果は1ターン中に1回のみ使用できる。"
+    "effect_text": "自分の「しゅがーらぼ Compute - ジューシィ・いちご」にのみ装備できる。①装備先の可用性を +400 する。②自分のメインフェーズに発動できる。このカードを別の自分の「しゅがーらぼ Compute - ジューシィ・いちご」に付け替える。この効果は1ターン中に1回のみ使用できる。"
   },
   {
     "card_no": 134,
@@ -2567,7 +2567,7 @@
     "stats": {},
     "restriction": "unlimited",
     "is_active": true,
-    "effect_text": "自分の「調律部 Compute - コンタータ」または「調律部 Bare Metal - ベル太」にのみ装備できる。装備先の可用性を +800 する。装備先へのインシデントカードによるダメージを -100 する。"
+    "effect_text": "自分の「調律部 Compute - コンタータ」または「調律部 Bare Metal - ベア太」にのみ装備できる。装備先の可用性を +800 する。装備先へのインシデントカードによるダメージを -100 する。"
   },
   {
     "card_no": 135,

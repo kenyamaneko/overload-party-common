@@ -7,7 +7,7 @@ cards:
   # === Compute (5 cards) ===
 
   - card_no: 47
-    card_name: "コンピエッタ"
+    card_name: "ジューシィ・いちご"
     resource_label: "Compute"
     const_name: SugarComputeConfettiito
     card_type: Compute
@@ -405,7 +405,7 @@ cards:
     is_active: true
     stats:
       deploy_cost: 100
-    effect_text: "自分の「しゅがーらぼ Compute - コンピエッタ」にのみ装備できる。①装備先の可用性を +400 する。②自分のメインフェーズに発動できる。このカードを別の自分の「しゅがーらぼ Compute - コンピエッタ」に付け替える。この効果は1ターン中に1回のみ使用できる。"
+    effect_text: "自分の「しゅがーらぼ Compute - ジューシィ・いちご」にのみ装備できる。①装備先の可用性を +400 する。②自分のメインフェーズに発動できる。このカードを別の自分の「しゅがーらぼ Compute - ジューシィ・いちご」に付け替える。この効果は1ターン中に1回のみ使用できる。"
 
   # === Strategy (3 cards) ===
 
