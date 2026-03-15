@@ -66,6 +66,11 @@ export interface TurnEndEventData {
   currentPhase: string;
 }
 
+export interface TurnStartEventData {
+  turn: number;
+  activePlayer: number;
+}
+
 export interface EventDataMap {
   play_card: PlayCardEventData;
   attach_card: AttachCardEventData;
@@ -78,4 +83,5 @@ export interface EventDataMap {
   phase_change: PhaseChangeEventData;
   phase_end: PhaseEndEventData;
   turn_end: TurnEndEventData;
+  turn_start: TurnStartEventData;
 }

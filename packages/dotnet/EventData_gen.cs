@@ -199,3 +199,19 @@ public class TurnEndEventData
         return d;
     }
 }
+
+public class TurnStartEventData
+{
+    public required long Turn { get; init; }
+    public required long ActivePlayer { get; init; }
+
+    public Dictionary<string, object> ToDictionary()
+    {
+        var d = new Dictionary<string, object>
+        {
+            ["turn"] = Turn,
+            ["activePlayer"] = ActivePlayer,
+        };
+        return d;
+    }
+}
