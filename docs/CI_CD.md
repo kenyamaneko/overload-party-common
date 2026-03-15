@@ -10,8 +10,8 @@ overload-party-common
   ├─ db/ push (main) ──── repository_dispatch ────→ ops/db-migrate-on-push.yaml
   │                                                    └→ build → AR push → Cloud Run Job 実行 (dev)
   │
-  ├─ data/ push (main) ──── publish-packages.yaml
-  │                           └→ codegen 実行 → packages/ commit → Go tag + NuGet push + npm publish
+  ├─ data/ push (main) ──── publish-packages.yaml (workflow_dispatch 対応)
+  │                           └→ 前回タグとの差分検出 → Go tag + NuGet push + npm publish
   │
   └─ data/ push (PR) ──── codegen-check.yaml
                             └→ packages/ 内の整合性チェック（クロスリポ不要）
@@ -173,3 +173,14 @@ Cloud Scheduler が Cloud Run Job を起動する。イメージ更新は CI で
 | dev | overload-party-dev | main push で自動（ops ジョブ、infra）/ 手動 dispatch（gateway, battle） |
 | stg | overload-party-stg | 手動 dispatch |
 | prod | overload-party-prod | 手動 dispatch（将来的に承認ゲート追加） |
+
+### ブランチ・環境戦略まとめ
+
+| ブランチ | 環境 | 備考 |
+|---------|------|------|
+| main | prod | |
+| release | stg | long-lived で運用開始、将来的にバージョン管理が必要になったら short-lived（release/1.0.0）に移行 |
+| develop | dev | |
+| feature/* | なし | |
+
+現状：main がまだ安定していないので、まずは main を直接育てる。安定したら上記構成に移行。
