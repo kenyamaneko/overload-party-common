@@ -1,5 +1,5 @@
 {
-  "name": "@overload-party/generated",
+  "name": "@kenyamaneko/overload-party-generated",
   "version": "0.0.0",
   "description": "Auto-generated game constants and event data types for Overload Party",
   "type": "module",
