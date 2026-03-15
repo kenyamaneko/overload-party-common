@@ -53,15 +53,14 @@ jobs:
         if: steps.check.outputs.publish == 'true'
         id: version
         run: |
-          DATE=$(date +%Y%m%d)
-          PREFIX="packages/go/v0.${DATE}."
-          LAST=$(git tag -l "${PREFIX}*" | sed "s|${PREFIX}||" | sort -n | tail -1)
+          # 連番: 既存タグの最大 patch を +1 (例: 0.1.0 → 0.1.1 → 0.1.2)
+          LAST=$(git tag -l 'packages/go/v0.1.*' | sed 's|packages/go/v0\.1\.||' | sort -n | tail -1)
           if [ -z "$LAST" ]; then
             N=0
           else
             N=$((LAST + 1))
           fi
-          VERSION="0.${DATE}.${N}"
+          VERSION="0.1.${N}"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Tag Go module
