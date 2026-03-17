@@ -1,0 +1,23 @@
+# シードデータの参照整合性を検証する。
+name: Validate Seed Data
+
+on:
+  pull_request:
+    paths:
+      - "db/seed/**"
+      - "scripts/validate_seed.py"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate seed data
+        run: python3 scripts/validate_seed.py

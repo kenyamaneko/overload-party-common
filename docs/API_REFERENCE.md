@@ -504,7 +504,7 @@ NPC 対戦開始。即座にゲームが作成される（マッチメイキン�
       "thumbnail_url": null,
       "is_unlocked": true,
       "is_completed": false,
-      "lock_reason": null
+      "lock_reasons": []
     },
     {
       "episode_id": "she_ep2",
@@ -514,30 +514,30 @@ NPC 対戦開始。即座にゲームが作成される（マッチメイキン�
       "thumbnail_url": null,
       "is_unlocked": false,
       "is_completed": false,
-      "lock_reason": {
-        "type": "level",
-        "required": "6",
-        "current": "2"
-      }
+      "lock_reasons": [
+        { "type": "level", "required": 6, "current": 2 },
+        { "type": "faction", "required": "SHE" },
+        { "type": "episode", "required": "she_ep1" }
+      ]
     }
   ]
 }
 ```
 
-**アンロック条件（優先順で判定）:**
+**`lock_reasons`:** 未達のアンロック条件を全て返す配列。アンロック済みの場合は空配列。
 
-| lock_reason.type | 説明 |
-|------------------|------|
-| `level` | プレイヤーレベルが不足（`required`: 必要レベル, `current`: 現在レベル） |
-| `faction` | 陣営カードセット未所持（`required`: 陣営名） |
-| `episode` | 前提エピソード未クリア（`required`: 未完了エピソードIDの配列） |
+| lock_reasons[].type | required の型 | 説明 |
+|---------------------|---------------|------|
+| `level` | number | プレイヤーレベルが不足（`required`: 必要レベル, `current`: 現在レベル） |
+| `faction` | string | 陣営カードセット未所持（`required`: 陣営名） |
+| `episode` | string | 前提エピソード未クリア（`required`: 未完了エピソードID） |
 
-`lock_reason` の例:
+`lock_reasons` の例:
 
 ```json
-{ "type": "level", "required": "6", "current": "2" }
-{ "type": "faction", "required": "SHE" }
-{ "type": "episode", "required": ["she_ep5", "tenki_ep5"] }
+[{ "type": "level", "required": 6, "current": 2 }]
+[{ "type": "faction", "required": "SHE" }]
+[{ "type": "episode", "required": "she_ep5" }, { "type": "episode", "required": "tenki_ep5" }]
 ```
 
 ---

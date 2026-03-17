@@ -2,6 +2,18 @@
 -- All tables with foreign keys and indexes
 
 -- =============================================================================
+-- Shared: updated_at auto-update trigger function
+-- =============================================================================
+
+CREATE OR REPLACE FUNCTION update_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- =============================================================================
 -- 4.1 Game Management
 -- =============================================================================
 
@@ -20,6 +32,7 @@ CREATE TABLE games (
 );
 
 CREATE INDEX idx_games_status ON games(status, created_at DESC);
+CREATE TRIGGER trg_games_updated_at BEFORE UPDATE ON games FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 -- 4.2 Game State (child of games, 1:1)
 
@@ -48,6 +61,7 @@ CREATE TABLE game_states (
   next_instance_seq    BIGINT NOT NULL DEFAULT 0,
   updated_at           TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+CREATE TRIGGER trg_game_states_updated_at BEFORE UPDATE ON game_states FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 -- 4.3 Game Events (child of games)
 
@@ -96,6 +110,7 @@ CREATE TABLE players (
 );
 
 CREATE UNIQUE INDEX idx_players_firebase_uid ON players(firebase_uid);
+CREATE TRIGGER trg_players_updated_at BEFORE UPDATE ON players FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 -- player_daily_battle (child of players, 1:1)
 
@@ -129,6 +144,7 @@ CREATE TABLE card_definitions (
 
 CREATE INDEX idx_cards_faction ON card_definitions(faction, card_type);
 CREATE INDEX idx_cards_type ON card_definitions(card_type);
+CREATE TRIGGER trg_card_definitions_updated_at BEFORE UPDATE ON card_definitions FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 -- =============================================================================
 -- 4.7 Card & Deck Management (children of players)
@@ -155,6 +171,7 @@ CREATE TABLE decks (
 );
 
 CREATE INDEX idx_decks_player ON decks(player_id, updated_at DESC);
+CREATE TRIGGER trg_decks_updated_at BEFORE UPDATE ON decks FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 CREATE TABLE deck_cards (
   player_id  UUID NOT NULL,
@@ -193,6 +210,7 @@ CREATE TABLE subscriptions (
   updated_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
   PRIMARY KEY (player_id, subscription_id)
 );
+CREATE TRIGGER trg_subscriptions_updated_at BEFORE UPDATE ON subscriptions FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 CREATE TABLE one_time_purchases (
   player_id      UUID NOT NULL REFERENCES players(player_id) ON DELETE CASCADE,
@@ -212,6 +230,7 @@ CREATE TABLE user_settings (
   push_enabled BOOLEAN NOT NULL,
   updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+CREATE TRIGGER trg_user_settings_updated_at BEFORE UPDATE ON user_settings FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 -- =============================================================================
 -- 4.9 Cosmetics
@@ -244,6 +263,7 @@ CREATE TABLE game_config (
   value      JSONB NOT NULL,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+CREATE TRIGGER trg_game_config_updated_at BEFORE UPDATE ON game_config FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 -- =============================================================================
 -- 4.11 News Feed
@@ -290,7 +310,7 @@ CREATE TABLE scenario_episodes (
   title_ja          VARCHAR(200) NOT NULL,
   title_en          VARCHAR(200) NOT NULL,
   required_level    BIGINT NOT NULL DEFAULT 1,
-  required_factions TEXT[] NOT NULL DEFAULT '{}',
+  required_factions TEXT[] NOT NULL DEFAULT '{}' CHECK (required_factions <@ ARRAY['SHE','Tenki','Sugar','Tuners']::TEXT[]),
   required_episodes TEXT[] NOT NULL DEFAULT '{}',
   script_path       VARCHAR(500) NOT NULL,
   thumbnail_path    VARCHAR(500),
@@ -302,6 +322,7 @@ CREATE TABLE scenario_episodes (
 );
 
 CREATE INDEX idx_scenario_episodes_sort ON scenario_episodes(sort_order);
+CREATE TRIGGER trg_scenario_episodes_updated_at BEFORE UPDATE ON scenario_episodes FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 CREATE TABLE player_story_progress (
   player_id    UUID NOT NULL REFERENCES players(player_id) ON DELETE CASCADE,
