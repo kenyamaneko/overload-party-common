@@ -18,7 +18,6 @@ cards:
     stats:
       throughput: 700
       availability: 1400
-      deploy_cost: 400
       sla_penalty: 400
       maintenance_cost: 150
     effect_text: "—"
@@ -40,7 +39,6 @@ cards:
     stats:
       throughput: 500
       availability: 1200
-      deploy_cost: 300
       sla_penalty: 400
       maintenance_cost: 50
     effect_text: "—"
@@ -62,7 +60,6 @@ cards:
     stats:
       throughput: 600
       availability: 1500
-      deploy_cost: 600
       sla_penalty: 600
       maintenance_cost: 100
     effect_text: "—"
@@ -81,7 +78,6 @@ cards:
     stats:
       throughput: 1100
       availability: 1000
-      deploy_cost: 700
       sla_penalty: 600
       maintenance_cost: 200
     effect_text: "—"
@@ -103,7 +99,6 @@ cards:
     stats:
       throughput: 500
       availability: 1200
-      deploy_cost: 100
       sla_penalty: 200
       maintenance_cost: 0
     effect_text: "**えりり Trigger:** 自分のフィールドに「SHE Storage - えりり」がいる場合、このカードのスループットを +200 する"
@@ -129,7 +124,6 @@ cards:
     stats:
       yield: 500
       availability: 1300
-      deploy_cost: 400
       sla_penalty: 500
       maintenance_cost: 150
     effect_text: "**予約契約:** このカードのデプロイ時に発動できる。デプロイ時のコストを -200 する。この効果を使用してデプロイした場合、他のリソースをデプロイするためにこのカードをトラッシュすることはできない。"
@@ -148,7 +142,6 @@ cards:
     stats:
       yield: 500
       availability: 1200
-      deploy_cost: 600
       sla_penalty: 500
       maintenance_cost: 200
     effect_text: "**星の連鎖:** 自分のバックエンドのこのカード以外の SHEのDB系リソース1体につき、このカードの Yield を +200 する"
@@ -173,7 +166,6 @@ cards:
     stats:
       yield: 300
       availability: 1800
-      deploy_cost: 100
       sla_penalty: 300
       maintenance_cost: 50
     effect_text: "**Versioning:** 自分のフィールドの SHEのDB系リソース が破壊された時に発動できる。そのカードを自分の手札に戻す。"
@@ -195,7 +187,6 @@ cards:
     stats:
       yield: 300
       availability: 1600
-      deploy_cost: 300
       sla_penalty: 400
       maintenance_cost: 50
     effect_text: "**On-Demand:** Budget 400 を払って発動できる。このターン、このカードの Yield を2倍にする。この効果は1ターン中に1回のみ使用できる"
@@ -220,7 +211,6 @@ cards:
     stats:
       yield: 200
       availability: 1100
-      deploy_cost: 200
       sla_penalty: 100
       maintenance_cost: 100
     effect_text: "**Cache Engine:** デプロイ時に選択以下のいずれかの効果を選択する。**Memcached:** Budget を +400 する。**Redis:** このカードの Yield を +200 する"
@@ -236,7 +226,6 @@ cards:
     restriction: unlimited
     is_active: true
     stats:
-      deploy_cost: 0
     effect_text: "自分のフィールドの SHE リソースのスケールアップのための開発コストを -200 する。"
     platform_effects:
       - type: scale_cost_reduction
@@ -255,7 +244,6 @@ cards:
     restriction: unlimited
     is_active: true
     stats:
-      deploy_cost: 0
     effect_text: "自分のフィールドの全ての SHE コンピュート系リソースのスループットを +200 する。"
     platform_effects:
       - type: tp_bonus
@@ -280,7 +268,6 @@ cards:
     restriction: unlimited
     is_active: true
     stats:
-      deploy_cost: 0
     effect_text: "相手フィールドのサポートゾーンの裏側のカード 1枚を選択して確認する。"
 
   - card_no: 15
@@ -294,7 +281,6 @@ cards:
     restriction: unlimited
     is_active: true
     stats:
-      deploy_cost: 0
     effect_text: "相手の DDoS Attack と Data Breach を無効化する。"
 
   - card_no: 16
@@ -308,7 +294,6 @@ cards:
     restriction: unlimited
     is_active: true
     stats:
-      deploy_cost: 100
     effect_text: "フロントエンドリソースに装備できる。装備したリソースのスループットをメインフェーズのみ +600 する。この効果は1ターン中に1回のみ使用できる"
 
   - card_no: 17
@@ -322,7 +307,6 @@ cards:
     restriction: unlimited
     is_active: true
     stats:
-      deploy_cost: 100
     effect_text: "フロントエンドリソースに装備できる。装備したリソースのスループットを +200 する。"
     attachment_effects:
       - type: stat_bonus
@@ -341,7 +325,6 @@ cards:
     restriction: unlimited
     is_active: true
     stats:
-      deploy_cost: 100
     effect_text: "バックエンドリソースに装備できる。装備したリソースは「データ流出」の効果を受けない。"
 
   - card_no: 19
@@ -355,7 +338,6 @@ cards:
     restriction: unlimited
     is_active: true
     stats:
-      deploy_cost: 200
     effect_text: "Budget を 200 払って発動できる。リポジトリから SHE Resource カード1枚を選択して手札に加える。"
 
   - card_no: 20
@@ -369,7 +351,6 @@ cards:
     restriction: unlimited
     is_active: true
     stats:
-      deploy_cost: 0
     effect_text: "自分のフィールドに SHE カードが3枚以上ある時に発動できる。自分の Budget を +600 する。"
 
   - card_no: 21
@@ -383,7 +364,6 @@ cards:
     restriction: unlimited
     is_active: true
     stats:
-      deploy_cost: 0
     effect_text: "このターン、自分の全ての SHE カードの開発コストを -200 する。"
 
   - card_no: 22
@@ -397,7 +377,6 @@ cards:
     restriction: unlimited
     is_active: true
     stats:
-      deploy_cost: 0
     effect_text: "自分の SHE リソースの可用性が 400 以下になった時に発動できる。そのリソースの可用性を +500 する。"
 
   - card_no: 118
@@ -411,7 +390,6 @@ cards:
     restriction: unlimited
     is_active: true
     stats:
-      deploy_cost: 0
     effect_text: "自分のフィールドに SHE カードが3枚以上ある時に使用できる。このターン、自分のフロントエンドの全ての SHE カードのスループットを +200 する。"
 
   - card_no: 121
@@ -425,7 +403,6 @@ cards:
     restriction: unlimited
     is_active: true
     stats:
-      deploy_cost: 200
     effect_text: "Budget を 200 払って発動できる。手札の SHE リソースを1枚を選択し、デプロイコストを払わずにデプロイできる。"
 
   - card_no: 124
@@ -442,7 +419,6 @@ cards:
     stats:
       yield: 200
       availability: 1200
-      deploy_cost: 200
       sla_penalty: 100
       maintenance_cost: 100
     effect_text: "**キャッシュブースト:** 自分のフィールドの全ての SHE NoSQL - ダイノの Yield を +200 する。"
@@ -458,5 +434,4 @@ cards:
     restriction: unlimited
     is_active: true
     stats:
-      deploy_cost: 100
     effect_text: "自分の「SHE Compute - えくぼ」にのみ装備できる。装備先の可用性を +500 する。"

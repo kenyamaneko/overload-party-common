@@ -19,8 +19,6 @@ files:
           - {name: Username, type: string, json: "username", db: "username"}
           - {name: Level, type: int64, json: "level", db: "level"}
           - {name: Exp, type: int64, json: "exp", db: "exp"}
-          - {name: Wins, type: int64, json: "wins", db: "wins"}
-          - {name: Losses, type: int64, json: "losses", db: "losses"}
           - {name: IsPremium, type: bool, json: "is_premium", db: "is_premium"}
           - {name: EquippedIconNo, type: "*int64", json: "equipped_icon_no,omitempty", db: "equipped_icon_no"}
           - {name: SelectedFaction, type: "*string", json: "selected_faction,omitempty", db: "selected_faction"}
@@ -200,19 +198,6 @@ files:
         fields:
           - {name: StatType, type: string, json: "stat_type"}
           - {name: Bonus, type: int64, json: "bonus"}
-
-  # ─── Match ─────────────────────────────────────────────
-  - name: match
-    target: both
-    imports:
-      - time
-    types:
-      - name: Match
-        comment: "Match maps to the Matches table."
-        fields:
-          - {name: MatchID, type: int64, json: "match_id"}
-          - {name: GameID, type: string, json: "game_id"}
-          - {name: CreatedAt, type: time.Time, json: "created_at"}
 
   # ─── Game (Battle only) ────────────────────────────────
   - name: game

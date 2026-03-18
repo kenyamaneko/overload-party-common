@@ -76,20 +76,7 @@ CREATE TABLE game_events (
 );
 
 -- =============================================================================
--- 4.4 Match History
--- =============================================================================
-
-CREATE TABLE matches (
-  match_id              BIGINT NOT NULL GENERATED ALWAYS AS IDENTITY,
-  game_id               VARCHAR(26) NOT NULL,
-  created_at            TIMESTAMPTZ NOT NULL DEFAULT now(),
-  PRIMARY KEY (match_id)
-);
-
-CREATE INDEX idx_matches_game_id ON matches(game_id);
-
--- =============================================================================
--- 4.5 Player Management
+-- 4.4 Player Management
 -- =============================================================================
 
 CREATE TABLE players (
@@ -98,8 +85,6 @@ CREATE TABLE players (
   username           VARCHAR(50) NOT NULL,
   level              BIGINT NOT NULL DEFAULT 1,
   exp                BIGINT NOT NULL DEFAULT 0,
-  wins               BIGINT,
-  losses             BIGINT,
   is_premium         BOOLEAN NOT NULL,
   equipped_icon_no   BIGINT,
   selected_faction   VARCHAR(20),

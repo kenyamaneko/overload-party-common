@@ -332,7 +332,7 @@ MC = max(0, intrinsicStat - free_tier) × cost_per_request / 100
 | 配置 | カードタイプ | 増加対象 | トリガー |
 |------|------------|---------|---------|
 | **フロントエンド** | Compute / AI/ML | **TP** | 攻撃を受けて生存した時 |
-| **バックエンド** | Compute / AI/ML | **TP** | 収益化（distribute_yield）に使用された時 |
+| **バックエンド** | Compute / AI/ML | **TP** | 収益化（monetize）に使用された時 |
 | **バックエンド** | Database / Data | **Yield** | エンドフェーズの Yield 生成時（毎ターン自動） |
 
 > 例: Container (TP 500, elastic_increment 100, free_tier 500) がフロントエンドで攻撃を受けて生存 →
@@ -396,7 +396,7 @@ Budget はライフポイントであり、ランニングコストの支払い�
 
 ### Insight — 中間データ資源
 
-バックエンドの DB/Object Storage が各ターンのエンドフェーズに自動生成するデータ資源。Insightプールに蓄積され、バックエンドの Compute がメインフェーズの収益化（distribute_yield アクション）で Budget に変換する。
+バックエンドの DB/Object Storage が各ターンのエンドフェーズに自動生成するデータ資源。Insightプールに蓄積され、バックエンドの Compute がメインフェーズの収益化（monetize アクション）で Budget に変換する。
 Insightプールに上限はない。
 
 ### 収益化
@@ -555,7 +555,7 @@ K8s → Serverless への移行で SLA ペナルティを回避する「事業�
 ### 先攻プレイヤーの制限（T1 のみ）
 
 先攻の **T1**（ゲーム最初のターン）は **Draw + Main Phase + End Phase のみ**。
-収益化（メインフェーズ内の distribute_yield アクション）、Battle Phase をスキップする。
+収益化（メインフェーズ内の monetize アクション）、Battle Phase をスキップする。
 **インシデントカードも T1 では使用できない。** 相手がサポートカードを配置する前に一方的に妨害できてしまうのを防ぐため。
 後攻の T2 以降は全フェーズ・全カードが有効。
 

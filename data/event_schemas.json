@@ -58,5 +58,19 @@
   "turn_start": {
     "turn": "long",
     "activePlayer": "long"
+  },
+  "reactive_revealed": {
+    "instanceId": "string",
+    "cardId": "long"
+  },
+  "migration_complete": {
+    "sourceInstanceId": "string",
+    "targetInstanceId": "string",
+    "sourceCardId": "long",
+    "targetCardId": "long"
+  },
+  "game_over": {
+    "winnerNum": "long",
+    "winReason": "string"
   }
 }

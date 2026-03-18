@@ -913,7 +913,7 @@ draw → yield → main → battle → end → (ActivePlayer切替) → draw ...
 | `play_card` | `HandInstanceID`, `CardID`, `ValidZones`, `ValidTargets`, `Cost` |
 | `attack` | `SourceInstanceID`, `ValidTargets` |
 | `scale_up` | `SourceInstanceID`, `Cost`, `TargetRank`, `NeedsFamily` |
-| `distribute_yield` | `SourceInstanceID`, `RemainingCapacity` |
+| `monetize` | `SourceInstanceID`, `RemainingCapacity` |
 | `activate_effect` | `SourceInstanceID`, `ValidTargets`, `EffectTargetType` |
 | `set_reactive` | `SourceInstanceID` |
 
@@ -1071,7 +1071,7 @@ pgxpool で接続プールを管理。Pod あたりの接続数を制限し、Cl
 | `attack` | Battle Phase | フィールド上の自コンピュート（表向き） | 相手フィールド上の表向きリソース | — | 攻撃済みでない |
 | `scale_up` | Main Phase | フィールド上の自リソース（表向き） | — | — | Resizable 属性、現在Rank < 対象Rank |
 | `migrate` | Main Phase | フィールド上の表向き新リソース | 表向き旧リソース | — | 新.deploy_turns >= 旧.deploy_turns |
-| `distribute_yield` | Main Phase | バックエンドのコンピュート | — | — | Insight Pool 残量 ≥ 分配量、TP上限 |
+| `monetize` | Main Phase | バックエンドのコンピュート | — | — | Insight Pool 残量 ≥ 分配量、TP上限 |
 | `activate_effect` | Main/Battle Phase | 効果を持つカード | 効果の対象 | 効果コスト | 1ターン1回制限 |
 
 ### 13.2 レート制限

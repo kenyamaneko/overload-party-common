@@ -20,7 +20,6 @@ cards:
     stats:
       throughput: 600
       availability: 1500
-      deploy_cost: 300
       sla_penalty: 400
       maintenance_cost: 100
     effect_text: "—"
@@ -39,7 +38,6 @@ cards:
     stats:
       throughput: 1300
       availability: 1000
-      deploy_cost: 600
       sla_penalty: 500
       maintenance_cost: 200
     effect_text: "**No Virtualization:** 攻撃時、このカードに 300 ダメージを与える"
@@ -63,7 +61,6 @@ cards:
     stats:
       throughput: 700
       availability: 1400
-      deploy_cost: 300
       sla_penalty: 400
       maintenance_cost: 50
     effect_text: "—"
@@ -87,7 +84,6 @@ cards:
     stats:
       throughput: 600
       availability: 1600
-      deploy_cost: 600
       sla_penalty: 500
       maintenance_cost: 100
     effect_text: "**初回無料:** small → medium の Scale Cost 0"
@@ -114,7 +110,6 @@ cards:
     stats:
       throughput: 500
       availability: 1200
-      deploy_cost: 100
       sla_penalty: 200
       maintenance_cost: 0
     effect_text: "—"
@@ -137,7 +132,6 @@ cards:
     stats:
       throughput: 300
       availability: 1400
-      deploy_cost: 0
       sla_penalty: 200
       maintenance_cost: 0
     effect_text: "**Low-Code:** 自分のフィールドに 調律部 DB がある時、このカードのスループットを +400 する。"
@@ -169,7 +163,6 @@ cards:
     stats:
       yield: 500
       availability: 1500
-      deploy_cost: 400
       sla_penalty: 700
       maintenance_cost: 50
     effect_text: "—"
@@ -188,7 +181,6 @@ cards:
     stats:
       yield: 900
       availability: 1200
-      deploy_cost: 800
       sla_penalty: 1000
       maintenance_cost: 300
     effect_text: "—"
@@ -209,7 +201,6 @@ cards:
     stats:
       yield: 200
       availability: 1500
-      deploy_cost: 100
       sla_penalty: 200
       maintenance_cost: 50
     effect_text: "—"
@@ -230,7 +221,6 @@ cards:
     stats:
       yield: 200
       availability: 1300
-      deploy_cost: 200
       sla_penalty: 300
       maintenance_cost: 100
     effect_text: "—"
@@ -248,7 +238,6 @@ cards:
     restriction: unlimited
     is_active: true
     stats:
-      deploy_cost: 0
     effect_text: "自分のフィールドの 調律部 リソースのスケールアップコストを -300 する。"
     platform_effects:
       - type: scale_cost_reduction
@@ -267,7 +256,6 @@ cards:
     restriction: unlimited
     is_active: true
     stats:
-      deploy_cost: 0
     effect_text: "インシデントカードによる自分の 調律部 リソースへのダメージを -200 する。"
 
   - card_no: 84
@@ -281,7 +269,6 @@ cards:
     restriction: unlimited
     is_active: true
     stats:
-      deploy_cost: 0
     effect_text: "自分のフィールドの 調律部 リソースは相手の「DDoS攻撃」と「データ流出」の効果を受けない。"
 
   # === Attachment (3 cards) ===
@@ -297,7 +284,6 @@ cards:
     restriction: unlimited
     is_active: true
     stats:
-      deploy_cost: 100
     effect_text: "自分の 調律部 DB系リソースに装備できる。装備先が破壊された時に発動できる。リポジトリから 調律部 DB系リソース1枚をデプロイコストなしでデプロイする。この効果は1ゲーム中に1回のみ使用できる。"
 
   - card_no: 86
@@ -311,7 +297,6 @@ cards:
     restriction: unlimited
     is_active: true
     stats:
-      deploy_cost: 100
     effect_text: "自分の 調律部 DB系リソースに装備できる。装備先の可用性を +400 する。装備先へのインシデントカードによるダメージを -200 する。"
     attachment_effects:
       - type: stat_bonus
@@ -330,7 +315,6 @@ cards:
     restriction: unlimited
     is_active: true
     stats:
-      deploy_cost: 100
     effect_text: "自分の「調律部 Compute - コンタータ」または「調律部 Bare Metal - ベア太」にのみ装備できる。装備先の可用性を +800 する。装備先へのインシデントカードによるダメージを -100 する。"
 
   # === Strategy (1 card) ===
@@ -346,7 +330,6 @@ cards:
     restriction: unlimited
     is_active: true
     stats:
-      deploy_cost: 100
     effect_text: "Budget 100 を払って発動できる。自分の 調律部 DB系リソース1体の可用性を最大値まで回復する。"
 
   # === Reactive (1 card) ===
@@ -362,5 +345,4 @@ cards:
     restriction: unlimited
     is_active: true
     stats:
-      deploy_cost: 0
     effect_text: "自分の 調律部 DB系リソースが破壊された時に発動できる。手札から 調律部 DB系リソース1枚をデプロイコストなしでデプロイする。"

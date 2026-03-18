@@ -782,7 +782,7 @@ GET /ws?token={token}
   "type": "game_action",
   "data": {
     "game_id": "ULID",
-    "action_type": "play_card|attack|scale_up|distribute_yield|...",
+    "action_type": "play_card|attack|scale_up|monetize|...",
     "data": { /* アクション固有データ（NPC Battle セクション参照） */ }
   }
 }
@@ -921,7 +921,7 @@ GET /ws?token={token}
 | `attack` | `source_instance_id`, `valid_targets` | フロントの表向き Compute で攻撃。相手フロントに表向きリソースあり→フロントのみ対象 |
 | `scale_up` | `source_instance_id`, `target_rank`, `needs_family` | リソースをスケールアップ（無料）。`needs_family=true` なら S→M でファミリー選択が必要 |
 | `migrate` | `source_instance_id`, `target_instance_id` | 新リソース(source)から旧リソース(target)へマイグレーション開始。新.deploy_turns >= 旧.deploy_turns が必要 |
-| `distribute_yield` | `source_instance_id`, `remaining_capacity` | バックエンド Compute に Insight を配分。`remaining_capacity` は残りスループット |
+| `monetize` | `source_instance_id`, `remaining_capacity` | バックエンド Compute に Insight を配分。`remaining_capacity` は残りスループット |
 | `activate_effect` | `source_instance_id`, `effect_target_type`, `valid_targets?` | アクティブ効果を発動。`effect_target_type`: `"none"`, `"choice"`, `"all_opp"`, `"self"` |
 
 #### `turn_controls` — ゲームフロー制御
@@ -1025,7 +1025,7 @@ GET /ws?token={token}
 
 | フィールド | 型 | 説明 |
 |-----------|-----|------|
-| `action_type` | string | 実行されたアクション種別 (`play_card`, `attack`, `scale_up`, `activate_effect`, `distribute_yield`, `end_phase`, `discard_hand`, `battle_start`, `turn_start`) |
+| `action_type` | string | 実行されたアクション種別 (`play_card`, `attack`, `scale_up`, `activate_effect`, `monetize`, `end_phase`, `discard_hand`, `battle_start`, `turn_start`) |
 
 | `action_data` | object | アクションの詳細データ（アクション種別により構造が異なる） |
 | `state` | ClientGameState | アクション実行後のゲーム状態（情報隠蔽適用済み） |

@@ -73,6 +73,7 @@ def validate_scenarios() -> list[str]:
 
 
 def main() -> int:
+    # TODO: dev_cards.sql のカード番号と YAML の整合性チェック、products.sql のデータ検証を追加する
     errors = validate_scenarios()
 
     if errors:

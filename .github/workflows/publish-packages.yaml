@@ -53,14 +53,17 @@ jobs:
         if: steps.check.outputs.publish == 'true'
         id: version
         run: |
-          # 連番: 既存タグの最大 patch を +1 (例: 0.1.0 → 0.1.1 → 0.1.2)
-          LAST=$(git tag -l 'packages/go/v0.1.*' | sed 's|packages/go/v0\.1\.||' | sort -n | tail -1)
-          if [ -z "$LAST" ]; then
-            N=0
+          # Check ステップと同じタグパターンで最新タグを取得し patch +1
+          LAST_TAG=$(git tag -l 'packages/go/v*' | sort -V | tail -1)
+          if [ -z "$LAST_TAG" ]; then
+            VERSION="0.1.0"
           else
-            N=$((LAST + 1))
+            CURRENT=$(echo "$LAST_TAG" | sed 's|packages/go/v||')
+            MAJOR=$(echo "$CURRENT" | cut -d. -f1)
+            MINOR=$(echo "$CURRENT" | cut -d. -f2)
+            PATCH=$(echo "$CURRENT" | cut -d. -f3)
+            VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
           fi
-          VERSION="0.1.${N}"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Tag Go module

@@ -277,3 +277,4 @@ var CardNames = map[int64]string{
 	134: "調律部 Block Volume",
 	135: "スロットリング",
 }
+

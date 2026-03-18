@@ -71,6 +71,23 @@ export interface TurnStartEventData {
   activePlayer: number;
 }
 
+export interface ReactiveRevealedEventData {
+  instanceId: string;
+  cardId: number;
+}
+
+export interface MigrationCompleteEventData {
+  sourceInstanceId: string;
+  targetInstanceId: string;
+  sourceCardId: number;
+  targetCardId: number;
+}
+
+export interface GameOverEventData {
+  winnerNum: number;
+  winReason: string;
+}
+
 export interface EventDataMap {
   play_card: PlayCardEventData;
   attach_card: AttachCardEventData;
@@ -84,4 +101,8 @@ export interface EventDataMap {
   phase_end: PhaseEndEventData;
   turn_end: TurnEndEventData;
   turn_start: TurnStartEventData;
+  reactive_revealed: ReactiveRevealedEventData;
+  migration_complete: MigrationCompleteEventData;
+  game_over: GameOverEventData;
 }
+

@@ -215,3 +215,56 @@ public class TurnStartEventData
         return d;
     }
 }
+
+public class ReactiveRevealedEventData
+{
+    public required string InstanceId { get; init; } = "";
+    public required long CardId { get; init; }
+
+    public Dictionary<string, object> ToDictionary()
+    {
+        var d = new Dictionary<string, object>
+        {
+            ["instanceId"] = InstanceId,
+            ["cardId"] = CardId,
+        };
+        return d;
+    }
+}
+
+public class MigrationCompleteEventData
+{
+    public required string SourceInstanceId { get; init; } = "";
+    public required string TargetInstanceId { get; init; } = "";
+    public required long SourceCardId { get; init; }
+    public required long TargetCardId { get; init; }
+
+    public Dictionary<string, object> ToDictionary()
+    {
+        var d = new Dictionary<string, object>
+        {
+            ["sourceInstanceId"] = SourceInstanceId,
+            ["targetInstanceId"] = TargetInstanceId,
+            ["sourceCardId"] = SourceCardId,
+            ["targetCardId"] = TargetCardId,
+        };
+        return d;
+    }
+}
+
+public class GameOverEventData
+{
+    public required long WinnerNum { get; init; }
+    public required string WinReason { get; init; } = "";
+
+    public Dictionary<string, object> ToDictionary()
+    {
+        var d = new Dictionary<string, object>
+        {
+            ["winnerNum"] = WinnerNum,
+            ["winReason"] = WinReason,
+        };
+        return d;
+    }
+}
+
