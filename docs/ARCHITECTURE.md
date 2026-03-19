@@ -156,7 +156,7 @@ overload-party-client/          # React + Capacitor クライアント
 | GCP リソースの追加・変更 | infra (`environments/`, `modules/`) | `terraform plan` → PR → merge で自動 apply | — |
 | K8s マニフェストの変更 | k8s (`k8s/overlays/`) | `deploy.yaml` を手動 dispatch | — |
 | DB マイグレーション（手動） | ops | `db-migrate.yaml` を手動 dispatch | — |
-| 環境の起動 | k8s | `startup.yaml` を手動 dispatch | infra（Cloud SQL 起動） |
+| 環境の起動 | k8s | Slack コマンド (`/gke-up`) → `env-lifecycle.yaml` | infra（Cloud SQL 起動） |
 | 環境の停止 | — | 毎日 2:00 AM JST に自動実行 | k8s, infra（Ingress 削除、DNS 変更） |
 | 分析パイプラインの変更 | analytics | `scripts/deploy.sh` で手動デプロイ | — |
 | ニュースフィードの変更 | newsfeed | Docker build → Cloud Run にデプロイ | — |
@@ -1122,7 +1122,7 @@ pgxpool で接続プールを管理。Pod あたりの接続数を制限し、Cl
 - そのため `overloadparty-dev` 形式を採用（`dev.overloadparty.keyandnotes.com` は証明書対象外）
 - Cloudflare DNS で Proxied (orange cloud) モードを使用
 - 静的 IP は使用しない（コスト削減）。代わりに GitHub Actions で Cloudflare DNS を自動更新:
-  - **起動時** (`startup.yaml`): Ingress の外部 IP 取得後、Cloudflare API で A レコードを更新
+  - **起動時** (`env-lifecycle.yaml`): Ingress の外部 IP 取得後、Cloudflare API で A レコードを更新
   - **停止時** (`nightly-shutdown.yaml`): DNS を `127.0.0.1` に変更し、予約済み IP を削除
 
 ---
@@ -1180,13 +1180,12 @@ GCPリソースは **Terraform** で管理する。
 
 **手動操作:**
 
-| リポジトリ | スクリプト / ワークフロー | 内容 |
-|-----------|--------------------------|------|
-| infra | `scripts/cloudsql-start.sh <dev\|stg>` | Cloud SQL 起動 (RUNNABLE 待ち) |
-| infra | `scripts/cloudsql-stop.sh <dev\|stg>` | Cloud SQL 停止 |
-| k8s | `scripts/env-up.sh <dev\|stg>` | Pod スケール 1 → Ingress 適用 |
-| k8s | `scripts/env-down.sh <dev\|stg>` | Ingress 削除 → Pod スケール 0 |
-| k8s | `.github/workflows/startup.yaml` | K8s 手動起動 (workflow_dispatch) |
+| 操作 | Slack コマンド | GitHub Actions ワークフロー | 内容 |
+|------|---------------|---------------------------|------|
+| Cloud SQL 起動 | `/db-start dev` | — (sqladmin API 直接呼び出し) | Cloud SQL 起動 (RUNNABLE 待ち) |
+| Cloud SQL 停止 | `/db-stop dev` | — (sqladmin API 直接呼び出し) | Cloud SQL 停止 |
+| 環境起動 | `/gke-up dev` | `env-lifecycle.yaml` | Cloud SQL 起動 → Pod スケール 1 → Ingress 適用 → DNS 更新 |
+| 環境停止 | `/gke-down dev` | `env-lifecycle.yaml` | Ingress 削除 → Pod スケール 0 → DNS 変更 → Cloud SQL 停止 |
 
 **ディレクトリ構成:**
 
@@ -1200,11 +1199,7 @@ overload-party-infra/
 │   ├── cloudsql/     # Cloud SQL PostgreSQL インスタンス + DB
 │   ├── iam/          # GSA + Cloud SQL role + Workload Identity binding
 │   └── scheduler/    # Cloud Scheduler: Cloud SQL 自動停止 (sqladmin API)
-└── scripts/
-    ├── cloudsql-start.sh
-    ├── cloudsql-stop.sh
-    ├── infra-up.sh
-    └── infra-destroy.sh
+└── (scripts/ は削除済み — Slack コマンド経由で操作)
 ```
 
 **Terraform state:** `gs://overload-party-tf-state` に GCS backend で管理。prefix で `terraform/platform`, `terraform/dev` 等に分離。

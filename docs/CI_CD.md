@@ -43,8 +43,8 @@ overload-party-infra
 overload-party-k8s
   ├─ workflow_dispatch ──── deploy.yaml
   │                          └→ kustomize edit set image → kubectl apply
-  ├─ workflow_dispatch ──── startup.yaml
-  │                          └→ Pod スケール 1 → Ingress 適用 → Cloudflare DNS 更新
+  ├─ workflow_dispatch ──── env-lifecycle.yaml
+  │                          └→ 環境起動/停止 (PSC → Pod → Ingress → DNS / 逆順停止)
   ├─ cron (2:00 JST) ──── nightly-shutdown.yaml
   │                          └→ Ingress 削除 → IP 解放 → DNS 無効化 → Pod スケール 0
   └─ push / PR ──── terraform.yaml
@@ -133,8 +133,8 @@ Service Account (用途別)
 
 | イメージ | ビルド元リポ | タグ戦略 |
 |---------|------------|---------|
-| `overload-party-gateway` | gateway | `{SHA}`, `latest` |
-| `overload-party-battle` | battle | `{SHA}`, `latest` |
+| `gateway` | gateway | `{SHA}`, `latest` |
+| `battle` | battle | `{SHA}`, `latest` |
 | `db-migrate` | ops | `{SHA}`, `latest` |
 | `nightly-review` | ops | `{SHA}`, `latest` |
 | `cost-monitor` | ops | `{SHA}`, `latest` |
