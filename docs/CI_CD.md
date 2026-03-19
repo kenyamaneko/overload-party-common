@@ -56,9 +56,12 @@ overload-party-ops
   ├─ repository_dispatch ── db-migrate-on-push.yaml (common から自動)
   ├─ push (main) ──── nightly-review.yaml  (nightly-review/** 変更時)
   ├─ push (main) ──── cost-monitor.yaml    (cost-monitor/** 変更時)
-  └─ push (main) ──── drift-monitor.yaml   (drift-monitor/** 変更時)
-        └→ 共通: build-deploy-job.yaml (reusable workflow)
-             └→ build → AR push → Cloud Run Job イメージ更新
+  ├─ push (main) ──── drift-monitor.yaml   (drift-monitor/** 変更時)
+  │     └→ 共通: build-deploy-job.yaml (reusable workflow)
+  │          └→ build → AR push → Cloud Run Job イメージ更新
+  └─ push (main) ──── slack-commands.yaml  (slack-commands/** 変更時)
+        └→ build-deploy-service.yaml (reusable workflow)
+             └→ build → AR push → Cloud Run Service イメージ更新
 
 overload-party-newsfeed
   └─ push (main) ──── ci.yaml
@@ -136,6 +139,7 @@ Service Account (用途別)
 | `nightly-review` | ops | `{SHA}`, `latest` |
 | `cost-monitor` | ops | `{SHA}`, `latest` |
 | `drift-monitor` | ops | `{SHA}`, `latest` |
+| `slack-commands` | ops | `{SHA}`, `latest` |
 | `newsfeed` | newsfeed | `{SHA}`, `latest` |
 
 ## デプロイ先と方式
@@ -148,6 +152,7 @@ Service Account (用途別)
 | nightly-review | Cloud Run Job | gcloud run jobs update | main push で自動 |
 | cost-monitor | Cloud Run Job | gcloud run jobs update | main push で自動 |
 | drift-monitor | Cloud Run Job | gcloud run jobs update | main push で自動 |
+| slack-commands | Cloud Run Service | gcloud run services update | main push で自動 |
 | newsfeed | Cloud Run Job | gcloud run jobs update | main push で自動 |
 | analytics | Cloud Function Gen2 | gcloud functions deploy | main push で自動 |
 | infra | Terraform | terraform apply | main push で自動 |
