@@ -145,7 +145,7 @@ Service Account (用途別)
 | gateway | GKE (dev/stg/prod namespace) | kustomize + kubectl apply | 手動 dispatch |
 | battle | GKE (dev/stg/prod namespace) | kustomize + kubectl apply | 手動 dispatch |
 | db-migrate | Cloud Run Job | gcloud run jobs update + execute | dev 自動 / stg 手動 |
-| nightly-review | Cloud Run Job (diff + full) | gcloud run jobs update | main push で自動 |
+| nightly-review | Cloud Run Job | gcloud run jobs update | main push で自動 |
 | cost-monitor | Cloud Run Job | gcloud run jobs update | main push で自動 |
 | drift-monitor | Cloud Run Job | gcloud run jobs update | main push で自動 |
 | newsfeed | Cloud Run Job | gcloud run jobs update | main push で自動 |
@@ -158,8 +158,7 @@ Cloud Scheduler が Cloud Run Job を起動する。イメージ更新は CI で
 
 | ジョブ | スケジュール (JST) | 管理 |
 |--------|-------------------|------|
-| nightly-review (diff) | 3:00 (月火木金土日) | ops terraform |
-| nightly-review (full) | 3:00 (水) | ops terraform |
+| nightly-review | 3:00 (毎日) | ops terraform |
 | cost-monitor | 8:00 (毎日) | ops terraform |
 | drift-monitor | 7:00 (毎日) | ops terraform |
 | newsfeed | 2時間ごと | infra terraform |
