@@ -1207,7 +1207,7 @@ overload-party-infra/
     └── infra-destroy.sh
 ```
 
-**Terraform state:** `gs://overload-party-tf-state` に GCS backend で管理。prefix で `terraform/shared`, `terraform/dev` 等に分離。
+**Terraform state:** `gs://overload-party-tf-state` に GCS backend で管理。prefix で `terraform/platform`, `terraform/dev` 等に分離。
 
 ### 14.2 CI/CD
 
