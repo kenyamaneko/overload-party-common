@@ -1,6 +1,6 @@
 # パッケージを手動で publish する。
 # GitHub Actions UI または gh workflow run で任意のブランチから実行可能。
-name: Publish Generated Packages
+name: Publish GameData Packages
 
 on:
   workflow_dispatch:

@@ -202,7 +202,7 @@ PR の自動チェックが通ったら、パッケージを配信する。
 **Slack から（推奨）:**
 
 ```
-/publish-packages <ブランチ名>
+/publish-gamedata-pkg <ブランチ名>
 ```
 
 ブランチ名を省略すると main ブランチから実行される。
@@ -210,17 +210,17 @@ PR の自動チェックが通ったら、パッケージを配信する。
 **GitHub CLI から:**
 
 ```bash
-gh workflow run "Publish Generated Packages" --ref <ブランチ名>
+gh workflow run "Publish GameData Packages" --ref <ブランチ名>
 ```
 
-**GitHub Web UI から:** Actions → Publish Generated Packages → Run workflow → ブランチを選択 → Run
+**GitHub Web UI から:** Actions → Publish GameData Packages → Run workflow → ブランチを選択 → Run
 
 ### 配信されるパッケージ
 
 | パッケージ | 参照元 |
 |-----------|--------|
 | Go モジュール（`packages/go/vX.Y.Z` タグ） | Gateway サーバー |
-| NuGet `OverloadParty.Generated` | Battle サーバー |
+| NuGet `OverloadParty.GameData` | Battle サーバー |
 | npm `@overload-party/generated` | クライアント |
 
 ---
@@ -234,7 +234,7 @@ gh workflow run "Publish Generated Packages" --ref <ブランチ名>
 go get github.com/kenyamaneko/overload-party-common/packages/go@latest
 
 # Battle（.NET） - NuGet の最新バージョンを指定
-dotnet add package OverloadParty.Generated
+dotnet add package OverloadParty.GameData
 
 # Client（npm）
 npm install @overload-party/generated@latest

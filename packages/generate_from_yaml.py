@@ -659,7 +659,7 @@ def generate_ts_constants(constants, *, out_path):
 
 
 # ─── Generate C# (constants for battle) ───────────────
-def generate_csharp_constants(constants, *, out_path, namespace="OverloadParty.Generated"):
+def generate_csharp_constants(constants, *, out_path, namespace="OverloadParty.GameData"):
     """Generate GameConstants_gen.cs from constants.json.
 
     Args:
@@ -746,7 +746,7 @@ def _camel_to_pascal(s):
     return s[0].upper() + s[1:]
 
 
-def generate_csharp_event_data(schemas, *, out_path, namespace="OverloadParty.Generated"):
+def generate_csharp_event_data(schemas, *, out_path, namespace="OverloadParty.GameData"):
     """Generate EventData_gen.cs from event_schemas.json.
 
     Args:

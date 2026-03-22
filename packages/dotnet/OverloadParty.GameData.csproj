@@ -3,7 +3,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <PackageId>OverloadParty.Generated</PackageId>
+    <PackageId>OverloadParty.GameData</PackageId>
     <Version>0.0.0</Version>
     <Description>Auto-generated game constants, event data types, and card definitions for Overload Party.</Description>
     <RepositoryUrl>https://github.com/kenyamaneko/overload-party-common</RepositoryUrl>

@@ -108,14 +108,14 @@ overload-party-gateway/         # Go API サーバー
 overload-party-battle/          # C# 対戦エンジン
 ├── src/
 │   └── OverloadParty.Battle.Models/
-│       └── GlobalUsings.cs     # global using OverloadParty.Generated
+│       └── GlobalUsings.cs     # global using OverloadParty.GameData
 └── nuget.config                # GitHub Packages NuGet feed
 
 overload-party-client/          # React + Capacitor クライアント
-├── src/                        # @kenyamaneko/overload-party-generated パッケージを import
+├── src/                        # @kenyamaneko/overload-party-gamedata パッケージを import
 │   └── ...
 ├── .npmrc                      # GitHub Packages npm registry
-└── package.json                # @kenyamaneko/overload-party-generated 依存
+└── package.json                # @kenyamaneko/overload-party-gamedata 依存
 ```
 
 ### 2.3 コード生成パイプライン
@@ -130,8 +130,8 @@ overload-party-client/          # React + Capacitor クライアント
 | `data/cards/*.yaml` | `packages/dotnet/cache/cards_gen.json` | NuGet (EmbeddedResource) |
 | `data/models.yaml` | `packages/go/model/*_gen.go` | Go module |
 | `data/constants.json` | `packages/go/constants/constants_gen.go` | Go module |
-| `data/constants.json` | `packages/dotnet/GameConstants_gen.cs` | NuGet (`OverloadParty.Generated`) |
-| `data/constants.json` | `packages/npm/src/constants.ts` | npm (`@kenyamaneko/overload-party-generated`) |
+| `data/constants.json` | `packages/dotnet/GameConstants_gen.cs` | NuGet (`OverloadParty.GameData`) |
+| `data/constants.json` | `packages/npm/src/constants.ts` | npm (`@kenyamaneko/overload-party-gamedata`) |
 | `data/event_schemas.json` | `packages/dotnet/EventData_gen.cs` | NuGet |
 | `data/event_schemas.json` | `packages/npm/src/eventData.ts` | npm |
 

@@ -48,8 +48,8 @@ psql -U postgres overload_party < db/seed/stamps.sql
 | パッケージ | 内容 | 利用リポ |
 |-----------|------|---------|
 | Go module (`packages/go/`) | model, constants, cardno, cards_gen.json (embed) | gateway |
-| NuGet `OverloadParty.Generated` (`packages/dotnet/`) | GameConstants, EventData, cards_gen.json | battle |
-| npm `@kenyamaneko/overload-party-generated` (`packages/npm/`) | constants.ts, eventData.ts | client |
+| NuGet `OverloadParty.GameData` (`packages/dotnet/`) | GameConstants, EventData, cards_gen.json | battle |
+| npm `@kenyamaneko/overload-party-gamedata` (`packages/npm/`) | constants.ts, eventData.ts | client |
 
 ### 実行方法
 
