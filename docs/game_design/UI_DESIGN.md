@@ -248,7 +248,7 @@ stateDiagram-v2
 
 **目的:** 初回ログイン時にナビゲーションキャラ「カフカ」が世界観を紹介し、プレイヤー名入力・陣営選択・動機選択を行う
 
-> 詳細なスクリプトは [STORY.md](STORY.md) を参照
+> 詳細なスクリプトは [STORY_ENGINE.md](../architecture/STORY_ENGINE.md) を参照
 
 **フロー:**
 ```
@@ -635,7 +635,7 @@ stateDiagram-v2
 
 **保存時のバリデーション:**
 
-> 参照: [MONETIZATION.md §7 デッキ管理](MONETIZATION.md#7-デッキ管理)
+> 参照: [MONETIZATION.md §7 デッキ管理](../business/MONETIZATION.md#7-デッキ管理)
 
 ```
 枚数 = 30枚？ → No → エラー「30枚必要です」

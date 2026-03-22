@@ -1,13 +1,8 @@
-# data/ または生成スクリプトが変更されたとき、パッケージを publish する。
+# パッケージを手動で publish する。
+# GitHub Actions UI または gh workflow run で任意のブランチから実行可能。
 name: Publish Generated Packages
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "data/**"
-      - "packages/generate_from_yaml.py"
-      - ".github/workflows/publish-packages.yaml"
   workflow_dispatch:
 
 permissions:

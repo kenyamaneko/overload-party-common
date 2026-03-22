@@ -31,7 +31,7 @@ EVENT_SCHEMAS_JSON = COMMON_ROOT / "data" / "event_schemas.json"
 MODELS_YAML = COMMON_ROOT / "data" / "models.yaml"
 
 # Common outputs
-MD_OUT = COMMON_ROOT / "docs" / "CARDS.md"
+MD_OUT = COMMON_ROOT / "docs" / "game_design" / "CARDS.md"
 
 # ─── Constants ──────────────────────────────────────────
 COMPUTE_TYPES = {"Compute", "Container", "Orchestrator", "Serverless", "AI/ML"}
@@ -183,6 +183,41 @@ def validate(cards):
                 missing = DATA_STAT_KEYS - set(stats.keys())
                 if missing:
                     errors.append(f"{label}: data card missing stats: {missing}")
+
+            # Stat value range checks
+            for stat_key, stat_val in stats.items():
+                if not isinstance(stat_val, (int, float)):
+                    errors.append(f"{label}: stat '{stat_key}' must be a number, got {type(stat_val).__name__}")
+                elif stat_val < 0:
+                    errors.append(f"{label}: stat '{stat_key}' must be non-negative, got {stat_val}")
+
+        # deploy_turns range
+        deploy_turns = card.get("deploy_turns")
+        if deploy_turns is not None:
+            if not isinstance(deploy_turns, int) or deploy_turns not in (0, 1, 2):
+                errors.append(f"{label}: deploy_turns must be 0, 1, or 2, got {deploy_turns}")
+
+        # Elastic field range checks
+        if card.get("elastic"):
+            for ef in ("elastic_increment", "free_tier", "cost_per_request"):
+                val = card.get(ef)
+                if val is not None and (not isinstance(val, (int, float)) or val < 0):
+                    errors.append(f"{label}: '{ef}' must be a non-negative number, got {val}")
+
+        # Faction consistency
+        faction = card.get("faction", "")
+        if faction and faction not in VALID_FACTIONS:
+            errors.append(f"{label}: invalid faction '{faction}'")
+
+        # is_active type check
+        is_active = card.get("is_active")
+        if is_active is not None and not isinstance(is_active, bool):
+            errors.append(f"{label}: 'is_active' must be a boolean, got {type(is_active).__name__}")
+
+        # card_no type and range
+        if card_no is not None:
+            if not isinstance(card_no, int) or card_no <= 0:
+                errors.append(f"{label}: card_no must be a positive integer, got {card_no}")
 
     return errors
 

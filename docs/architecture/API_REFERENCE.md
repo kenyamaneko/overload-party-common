@@ -1,7 +1,5 @@
 # Overload Party - API リファレンス
 
-**Last Updated:** 2026-02-27
-
 ---
 
 ## 目次

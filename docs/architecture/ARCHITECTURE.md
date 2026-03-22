@@ -1,8 +1,5 @@
 # Overload Party - システムアーキテクチャ設計書
 
-**Last Updated:** 2026-03-09
-**Status:** Implementation Phase
-
 ---
 
 ## 目次
@@ -569,7 +566,7 @@ PostgreSQL をデータストアとして使用。テーブル構成、カラム
 
 ## 8. 課金システム
 
-> 課金プラン・スタミナ仕様・カード入手モデル等のビジネスルールは [MONETIZATION.md](MONETIZATION.md) を参照。
+> 課金プラン・スタミナ仕様・カード入手モデル等のビジネスルールは [MONETIZATION.md](../business/MONETIZATION.md) を参照。
 > 本セクションではアーキテクチャとしての技術的実装方針を記載する。
 
 ### 8.1 決済基盤

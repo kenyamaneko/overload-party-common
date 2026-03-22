@@ -1,7 +1,5 @@
 # Overload Party - データ設計 (Data Architecture)
 
-**Last Updated:** 2026-03-12
-
 > **完全なスキーマ定義:** `db/schema_postgres.sql` を参照。以下は各テーブルの設計意図とカラム仕様の概要。
 
 ---
