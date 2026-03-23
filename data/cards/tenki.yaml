@@ -111,7 +111,7 @@ cards:
         params:
           faction: Tenki
           bonus_per_card: 200
-          multi_model_cards: [32]
+          multi_model_card_ids: ["TK-0010"]
 
   - card_no: 28
     card_id: "TK-0006"

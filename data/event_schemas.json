@@ -1,13 +1,13 @@
 {
   "_comment": "Event data schemas for each EventType. Used to generate typed classes (C#) and TypeScript types. Field suffix '?' means optional.",
   "play_card": {
-    "cardId": "long",
+    "cardId": "string",
     "zone": "string",
     "index": "int",
     "cancelled?": "bool"
   },
   "attach_card": {
-    "cardId": "long",
+    "cardId": "string",
     "targetId": "string"
   },
   "attack": {
@@ -31,15 +31,15 @@
     "discardedIds": "string[]"
   },
   "activate_effect": {
-    "cardNo": "long",
+    "cardId": "string",
     "sourceId": "string",
     "targetId?": "string"
   },
   "migrate": {
     "sourceInstanceId": "string",
     "targetInstanceId": "string",
-    "sourceCardId": "long",
-    "targetCardId": "long"
+    "sourceCardId": "string",
+    "targetCardId": "string"
   },
   "phase_change": {
     "previousPhase": "string",
@@ -61,13 +61,13 @@
   },
   "reactive_revealed": {
     "instanceId": "string",
-    "cardId": "long"
+    "cardId": "string"
   },
   "migration_complete": {
     "sourceInstanceId": "string",
     "targetInstanceId": "string",
-    "sourceCardId": "long",
-    "targetCardId": "long"
+    "sourceCardId": "string",
+    "targetCardId": "string"
   },
   "game_over": {
     "winnerNum": "long",

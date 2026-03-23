@@ -4,7 +4,7 @@ namespace OverloadParty.GameData;
 
 public class PlayCardEventData
 {
-    public required long CardId { get; init; }
+    public required string CardId { get; init; } = "";
     public required string Zone { get; init; } = "";
     public required int Index { get; init; }
     public bool? Cancelled { get; init; }
@@ -24,7 +24,7 @@ public class PlayCardEventData
 
 public class AttachCardEventData
 {
-    public required long CardId { get; init; }
+    public required string CardId { get; init; } = "";
     public required string TargetId { get; init; } = "";
 
     public Dictionary<string, object> ToDictionary()
@@ -112,7 +112,7 @@ public class DiscardHandEventData
 
 public class ActivateEffectEventData
 {
-    public required long CardNo { get; init; }
+    public required string CardId { get; init; } = "";
     public required string SourceId { get; init; } = "";
     public string? TargetId { get; init; }
 
@@ -120,7 +120,7 @@ public class ActivateEffectEventData
     {
         var d = new Dictionary<string, object>
         {
-            ["cardNo"] = CardNo,
+            ["cardId"] = CardId,
             ["sourceId"] = SourceId,
         };
         if (TargetId is not null) d["targetId"] = TargetId;
@@ -132,8 +132,8 @@ public class MigrateEventData
 {
     public required string SourceInstanceId { get; init; } = "";
     public required string TargetInstanceId { get; init; } = "";
-    public required long SourceCardId { get; init; }
-    public required long TargetCardId { get; init; }
+    public required string SourceCardId { get; init; } = "";
+    public required string TargetCardId { get; init; } = "";
 
     public Dictionary<string, object> ToDictionary()
     {
@@ -219,7 +219,7 @@ public class TurnStartEventData
 public class ReactiveRevealedEventData
 {
     public required string InstanceId { get; init; } = "";
-    public required long CardId { get; init; }
+    public required string CardId { get; init; } = "";
 
     public Dictionary<string, object> ToDictionary()
     {
@@ -236,8 +236,8 @@ public class MigrationCompleteEventData
 {
     public required string SourceInstanceId { get; init; } = "";
     public required string TargetInstanceId { get; init; } = "";
-    public required long SourceCardId { get; init; }
-    public required long TargetCardId { get; init; }
+    public required string SourceCardId { get; init; } = "";
+    public required string TargetCardId { get; init; } = "";
 
     public Dictionary<string, object> ToDictionary()
     {

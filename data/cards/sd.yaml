@@ -202,8 +202,8 @@ cards:
     passive_effects:
       - type: dv_if_card_on_field
         params:
-          specific_card_nos:
-            - 124
+          specific_card_ids:
+            - "SH-0024"
           flat_bonus: 200
 
   - card_no: 11

@@ -42,14 +42,13 @@ files:
       - name: PlayerCard
         fields:
           - {name: PlayerID, type: string, json: "player_id"}
-          - {name: CardNo, type: int64, json: "card_no"}
+          - {name: CardID, type: string, json: "card_id"}
           - {name: ArtNo, type: int64, json: "art_no"}
           - {name: Count, type: int, json: "count"}
 
       - name: PlayerCardWithDef
         comment: "PlayerCardWithDef is a PlayerCard enriched with card definition fields for API responses."
         fields:
-          - {name: CardNo, type: int64, json: "card_no"}
           - {name: CardID, type: string, json: "card_id"}
           - {name: ArtNo, type: int64, json: "art_no"}
           - {name: Count, type: int, json: "count"}
@@ -78,7 +77,7 @@ files:
         fields:
           - {name: PlayerID, type: string, json: "player_id"}
           - {name: DeckID, type: int64, json: "deck_id"}
-          - {name: CardNo, type: int64, json: "card_no"}
+          - {name: CardID, type: string, json: "card_id"}
           - {name: ArtNo, type: int64, json: "art_no"}
           - {name: Count, type: int, json: "count"}
 
@@ -91,7 +90,6 @@ files:
     types:
       - name: CardDefinition
         fields:
-          - {name: CardNo, type: int64, json: "card_no"}
           - {name: CardID, type: string, json: "card_id"}
           - {name: CardName, type: string, json: "card_name"}
           - {name: ResourceLabel, type: string, json: "resource_label"}
@@ -183,8 +181,8 @@ files:
           - {name: CardTypes, type: "[]string", json: "card_types,omitempty"}
           - {name: BonusPerCard, type: int64, json: "bonus_per_card,omitempty"}
           - {name: FlatBonus, type: int64, json: "flat_bonus,omitempty"}
-          - {name: MultiModelCards, type: "[]int64", json: "multi_model_cards,omitempty"}
-          - {name: SpecificCardNos, type: "[]int64", json: "specific_card_nos,omitempty"}
+          - {name: MultiModelCardIDs, type: "[]string", json: "multi_model_card_ids,omitempty"}
+          - {name: SpecificCardIDs, type: "[]string", json: "specific_card_ids,omitempty"}
           - {name: Zone, type: string, json: "zone,omitempty"}
           - {name: ExcludeSelf, type: bool, json: "exclude_self,omitempty"}
 
@@ -278,7 +276,7 @@ files:
         comment: "ResourceInstance is a card deployed on the frontend or backend zone."
         fields:
           - {name: InstanceID, type: string, json: "instanceId"}
-          - {name: CardID, type: int64, json: "cardId"}
+          - {name: CardID, type: string, json: "cardId"}
           - {name: Rank, type: string, json: "rank"}
           - {name: InstanceFamily, type: "*string", json: "instanceFamily"}
           - {name: FaceUp, type: bool, json: "faceUp"}
@@ -306,7 +304,7 @@ files:
         comment: "AttachmentRef references an attachment card on a resource."
         fields:
           - {name: InstanceID, type: string, json: "instanceId"}
-          - {name: CardID, type: int64, json: "cardId"}
+          - {name: CardID, type: string, json: "cardId"}
 
       - name: TemporaryEffect
         comment: "TemporaryEffect is a time-limited modifier on a resource."
@@ -320,7 +318,7 @@ files:
         comment: "SupportInstance is a Platform or Reactive card in the support zone."
         fields:
           - {name: InstanceID, type: string, json: "instanceId"}
-          - {name: CardID, type: int64, json: "cardId"}
+          - {name: CardID, type: string, json: "cardId"}
           - {name: FaceDown, type: bool, json: "faceDown"}
           - {name: DeployingTurnsLeft, type: int64, json: "deployingTurnsLeft,omitempty"}
           - {name: DeployOrder, type: int64, json: "deployOrder,omitempty"}
@@ -330,7 +328,7 @@ files:
         comment: "HandCard represents a card in a player's hand."
         fields:
           - {name: InstanceID, type: string, json: "instanceId"}
-          - {name: CardID, type: int64, json: "cardId"}
+          - {name: CardID, type: string, json: "cardId"}
 
       - name: ChainEntry
         comment: "ChainEntry is one entry in the chain stack."
@@ -348,7 +346,7 @@ files:
         comment: "DeckSnapshot is stored in Games.playerN_deck_snapshot."
         fields:
           - {name: DeckID, type: string, json: "deckId"}
-          - {name: Cards, type: "[]int64", json: "cards"}
+          - {name: Cards, type: "[]string", json: "cards"}
 
   # ─── WebSocket Messages (Gateway + Client) ─────────────
   # Shared message payloads for WebSocket communication.

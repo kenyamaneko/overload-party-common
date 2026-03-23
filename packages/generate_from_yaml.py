@@ -242,11 +242,10 @@ def generate_json(cards, *, out_path):
     """
     json_out = Path(out_path)
     output = []
-    for card in sorted(cards, key=lambda c: c["card_no"]):
+    for card in sorted(cards, key=lambda c: c["card_id"]):
         stats = dict(card["stats"].items()) if card.get("stats") else {}
         deploy_turns = card.get("deploy_turns", 0)
         entry = {
-            "card_no": card["card_no"],
             "card_id": card["card_id"],
             "card_name": card["card_name"],
             "resource_label": card.get("resource_label", ""),
@@ -299,7 +298,7 @@ def generate_go_cardno(cards, faction_data, *, out_path=None):
     for faction in FACTION_ORDER:
         if faction not in faction_data:
             continue
-        faction_cards = sorted(faction_data[faction]["cards"], key=lambda c: c["card_no"])
+        faction_cards = sorted(faction_data[faction]["cards"], key=lambda c: c["card_id"])
         if not faction_cards:
             continue
 
@@ -312,33 +311,17 @@ def generate_go_cardno(cards, faction_data, *, out_path=None):
 
         for card in faction_cards:
             padding = " " * (max_const_len - len(card["const_name"]) + 1)
-            lines.append(f"\t{card['const_name']}{padding}int64 = {card['card_no']:<4} // {card['card_name']}")
+            lines.append(f"\t{card['const_name']}{padding}= \"{card['card_id']}\" // {card['card_name']}")
 
         lines.append(")")
         lines.append("")
 
-    # CardNames map
-    all_sorted = sorted(cards, key=lambda c: c["card_no"])
-    lines.append("// CardNames maps card number to card name.")
-    lines.append("var CardNames = map[int64]string{")
+    # CardNames map (card_id → card_name)
+    all_sorted = sorted(cards, key=lambda c: c["card_id"])
+    lines.append("// CardNames maps card ID to card name.")
+    lines.append("var CardNames = map[string]string{")
     for card in all_sorted:
-        lines.append(f'\t{card["card_no"]}: "{card["card_name"]}",')
-    lines.append("}")
-    lines.append("")
-
-    # CardIDs map (card_no → card_id)
-    lines.append("// CardIDs maps card number to card ID (e.g. \"SH-0001\").")
-    lines.append("var CardIDs = map[int64]string{")
-    for card in all_sorted:
-        lines.append(f'\t{card["card_no"]}: "{card["card_id"]}",')
-    lines.append("}")
-    lines.append("")
-
-    # CardNoByID map (card_id → card_no)
-    lines.append("// CardNoByID maps card ID to card number.")
-    lines.append("var CardNoByID = map[string]int64{")
-    for card in all_sorted:
-        lines.append(f'\t"{card["card_id"]}": {card["card_no"]},')
+        lines.append(f'\t"{card["card_id"]}": "{card["card_name"]}",')
     lines.append("}")
     lines.append("")
 
@@ -1081,7 +1064,7 @@ def generate_md(cards, faction_data, *, out_path=None):
         for cat_name, cat_types in CATEGORY_ORDER:
             cat_cards = sorted(
                 [c for c in faction_cards if c["card_type"] in cat_types],
-                key=lambda c: c["card_no"]
+                key=lambda c: c["card_id"]
             )
             if not cat_cards:
                 summary[faction][cat_name] = 0

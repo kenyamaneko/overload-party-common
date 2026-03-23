@@ -110,7 +110,6 @@ CREATE TABLE player_daily_battle (
 -- =============================================================================
 
 CREATE TABLE card_definitions (
-  card_no        BIGINT NOT NULL,
   card_id        VARCHAR(10) NOT NULL,
   card_name      VARCHAR(100) NOT NULL,
   resource_label VARCHAR(30) NOT NULL DEFAULT '',
@@ -125,8 +124,7 @@ CREATE TABLE card_definitions (
   is_active      BOOLEAN NOT NULL,
   created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
-  PRIMARY KEY (card_no),
-  UNIQUE (card_id)
+  PRIMARY KEY (card_id)
 );
 
 CREATE INDEX idx_cards_faction ON card_definitions(faction, card_type);
@@ -139,10 +137,10 @@ CREATE TRIGGER trg_card_definitions_updated_at BEFORE UPDATE ON card_definitions
 
 CREATE TABLE player_cards (
   player_id  UUID NOT NULL REFERENCES players(player_id) ON DELETE CASCADE,
-  card_no    BIGINT NOT NULL,
+  card_id    VARCHAR(10) NOT NULL,
   art_no     BIGINT NOT NULL DEFAULT 0,
   count      INT NOT NULL DEFAULT 1,
-  PRIMARY KEY (player_id, card_no, art_no)
+  PRIMARY KEY (player_id, card_id, art_no)
 );
 
 CREATE TABLE decks (
@@ -162,10 +160,10 @@ CREATE TRIGGER trg_decks_updated_at BEFORE UPDATE ON decks FOR EACH ROW EXECUTE 
 CREATE TABLE deck_cards (
   player_id  UUID NOT NULL,
   deck_id    BIGINT NOT NULL,
-  card_no    BIGINT NOT NULL,
+  card_id    VARCHAR(10) NOT NULL,
   art_no     BIGINT NOT NULL DEFAULT 0,
   count      INT NOT NULL DEFAULT 1,
-  PRIMARY KEY (player_id, deck_id, card_no, art_no),
+  PRIMARY KEY (player_id, deck_id, card_id, art_no),
   FOREIGN KEY (player_id, deck_id) REFERENCES decks(player_id, deck_id) ON DELETE CASCADE
 );
 

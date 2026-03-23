@@ -4,537 +4,277 @@ package cardno
 
 // SHE（Smile Horizon Express）
 const (
-	SHEComputeEkubo           int64 = 1    // えくぼ
-	SHEContainerAlligator     int64 = 3    // アリゲーテナ
-	SHEOrchestratorKujirantis int64 = 4    // クジラの統率者<クジランティス>
-	SHEMLRoughmaker           int64 = 5    // ラフメイカー
-	SHEServerlessRamune       int64 = 6    // むらた
-	SHERDBAdeliece            int64 = 7    // アデリース
-	SHEDistributedDBOoroba    int64 = 8    // オオロバ
-	SHEStorageEris            int64 = 9    // えりり
-	SHEDBDinosaur             int64 = 10   // ダイノ
-	SHECacheMerry             int64 = 11   // メリーモ
-	SHEPipeline               int64 = 12   // SHE Pipeline
-	SHEFront                  int64 = 13   // SHE Front
-	SHEGuard                  int64 = 14   // SHE Guard
-	SHEFirewall               int64 = 15   // SHE Firewall
-	SHEQueue                  int64 = 16   // SHE Queue
-	SHEGateway                int64 = 17   // SHE Gateway
-	SHEKeys                   int64 = 18   // SHE Keys
-	SHEFormation              int64 = 19   // SHE Formation
-	SHEMarketplace            int64 = 20   // SHE Marketplace
-	SHERyoukinMitsumori       int64 = 21   // SHE 料金見積もり
-	SmileRecovery             int64 = 22   // Smile Recovery
-	SHEEcosystem              int64 = 118  // SHE Ecosystem
-	SHESmileHorizonExpress    int64 = 121  // SHE Smile Horizon Express
-	SHECacheDakkun            int64 = 124  // だっくん
-	SHEBlockStorage           int64 = 131  // SHE Block Storage
+	SHEComputeEkubo           = "SH-0001" // えくぼ
+	SHEContainerAlligator     = "SH-0002" // アリゲーテナ
+	SHEOrchestratorKujirantis = "SH-0003" // クジラの統率者<クジランティス>
+	SHEMLRoughmaker           = "SH-0004" // ラフメイカー
+	SHEServerlessRamune       = "SH-0005" // むらた
+	SHERDBAdeliece            = "SH-0006" // アデリース
+	SHEDistributedDBOoroba    = "SH-0007" // オオロバ
+	SHEStorageEris            = "SH-0008" // えりり
+	SHEDBDinosaur             = "SH-0009" // ダイノ
+	SHECacheMerry             = "SH-0010" // メリーモ
+	SHEPipeline               = "SH-0011" // SHE Pipeline
+	SHEFront                  = "SH-0012" // SHE Front
+	SHEGuard                  = "SH-0013" // SHE Guard
+	SHEFirewall               = "SH-0014" // SHE Firewall
+	SHEQueue                  = "SH-0015" // SHE Queue
+	SHEGateway                = "SH-0016" // SHE Gateway
+	SHEKeys                   = "SH-0017" // SHE Keys
+	SHEFormation              = "SH-0018" // SHE Formation
+	SHEMarketplace            = "SH-0019" // SHE Marketplace
+	SHERyoukinMitsumori       = "SH-0020" // SHE 料金見積もり
+	SmileRecovery             = "SH-0021" // Smile Recovery
+	SHEEcosystem              = "SH-0022" // SHE Ecosystem
+	SHESmileHorizonExpress    = "SH-0023" // SHE Smile Horizon Express
+	SHECacheDakkun            = "SH-0024" // だっくん
+	SHEBlockStorage           = "SH-0025" // SHE Block Storage
 )
 
 // 天気使い
 const (
-	TenkiVMSora             int64 = 23   // ソラ
-	TenkiPaaSAsagiri        int64 = 24   // アサギリ
-	TenkiContainerKouten    int64 = 25   // コウテン
-	TenkiOrchestratorKusoku int64 = 26   // 空即蒼色
-	TenkiAIOpener           int64 = 27   // 智の解放者<オープナー>
-	TenkiFunctionsRai       int64 = 28   // ライ
-	TenkiRDBShigure         int64 = 29   // シグレ
-	TenkiDBHayate           int64 = 30   // ハヤテ
-	TenkiStorageFubuki      int64 = 31   // フブキ
-	TenkiDBCosmo            int64 = 32   // 百花の天穹<コスモ>
-	TenkiCacheReiu          int64 = 33   // シュウウ
-	TenkiDevOps             int64 = 34   // 天気使い DevOps
-	TenkiCDN                int64 = 35   // 天気使い CDN
-	TenkiFunnel             int64 = 36   // 天気使い ファンネル
-	TenkiProtection         int64 = 37   // 天気使い Protection
-	TenkiBackup             int64 = 38   // 天気使い Backup
-	TenkiEntra              int64 = 39   // 天気使い 空の入口
-	TenkiVault              int64 = 40   // 天気使い Vault
-	TenkiRecovery           int64 = 41   // 天気使い Recovery
-	TenkiTemplate           int64 = 42   // 天気使い Template
-	TenkiMigration          int64 = 43   // 天気使い Migration
-	TenkiPolicy             int64 = 44   // 天気使い Policy
-	TenkiOmamoriGasa        int64 = 45   // 天気使い お守り傘
-	TenkiTraffic            int64 = 46   // 天気使い Traffic
-	TenkiBlockStorage       int64 = 132  // 天気使い ブロックストレージ
+	TenkiVMSora             = "TK-0001" // ソラ
+	TenkiPaaSAsagiri        = "TK-0002" // アサギリ
+	TenkiContainerKouten    = "TK-0003" // コウテン
+	TenkiOrchestratorKusoku = "TK-0004" // 空即蒼色
+	TenkiAIOpener           = "TK-0005" // 智の解放者<オープナー>
+	TenkiFunctionsRai       = "TK-0006" // ライ
+	TenkiRDBShigure         = "TK-0007" // シグレ
+	TenkiDBHayate           = "TK-0008" // ハヤテ
+	TenkiStorageFubuki      = "TK-0009" // フブキ
+	TenkiDBCosmo            = "TK-0010" // 百花の天穹<コスモ>
+	TenkiCacheReiu          = "TK-0011" // シュウウ
+	TenkiDevOps             = "TK-0012" // 天気使い DevOps
+	TenkiCDN                = "TK-0013" // 天気使い CDN
+	TenkiProtection         = "TK-0014" // 天気使い Protection
+	TenkiBackup             = "TK-0015" // 天気使い Backup
+	TenkiEntra              = "TK-0016" // 天気使い 空の入口
+	TenkiVault              = "TK-0017" // 天気使い Vault
+	TenkiRecovery           = "TK-0018" // 天気使い Recovery
+	TenkiBlockStorage       = "TK-0019" // 天気使い ブロックストレージ
+	TenkiTemplate           = "TK-0020" // 天気使い Template
+	TenkiMigration          = "TK-0021" // 天気使い Migration
+	TenkiPolicy             = "TK-0022" // 天気使い Policy
+	TenkiOmamoriGasa        = "TK-0023" // 天気使い お守り傘
+	TenkiTraffic            = "TK-0024" // 天気使い Traffic
+	TenkiFunnel             = "TK-0025" // 天気使い ファンネル
 )
 
 // しゅがーらぼ
 const (
-	SugarComputeConfettiito  int64 = 47   // ジューシィ・いちご
-	SugarSpotSponjit         int64 = 48   // スポンジット
-	SugarContainerClan       int64 = 49   // クラン
-	SugarOrchestratorKuchen  int64 = 50   // クーヘンバウムティス
-	SugarAIButterKun         int64 = 51   // バター君
-	SugarAIDrTensorbe        int64 = 52   // Dr. テンソルベ
-	SugarFunctionsClan       int64 = 53   // クラン
-	SugarRDBEclairL          int64 = 54   // エクレアーエル
-	SugarDistributedDBPinapo int64 = 55   // スーパーバナナ
-	SugarStorageSchtrenge    int64 = 56   // シュトレーンジ
-	SugarDBToastoa           int64 = 57   // トーストア
-	SugarDWIcecream          int64 = 58   // アイスクエリム
-	SugarBuild               int64 = 59   // しゅがーらぼ Build
-	SugarCDN                 int64 = 60   // しゅがーらぼ CDN
-	SugarIcecreamAnalytics   int64 = 61   // しゅがーらぼ アイスクエリム Analytics
-	SugarProfiler            int64 = 62   // しゅがーらぼ Profiler
-	SugarPakupakuSable       int64 = 63   // しゅがーらぼ ぱくぱくサブレ
-	SugarDangoFlow           int64 = 64   // しゅがーらぼ だんごフロー
-	SugarDeployment          int64 = 65   // しゅがーらぼ Deployment
-	SugarButterKunBatch      int64 = 66   // しゅがーらぼ バター君 Batch
-	SugarKnowledge           int64 = 67   // しゅがーらぼ Knowledge
-	SugarErrorBudget         int64 = 68   // しゅがーらぼ Error Budget
-	SugarCacheMeringue       int64 = 125  // メレンゲスト
-	SugarBlockStorage        int64 = 133  // しゅがーらぼ ブロックストレージ
+	SugarComputeConfettiito  = "SL-0001" // ジューシィ・いちご
+	SugarSpotSponjit         = "SL-0002" // スポンジット
+	SugarContainerClan       = "SL-0003" // クラン
+	SugarOrchestratorKuchen  = "SL-0004" // クーヘンバウムティス
+	SugarFunctionsClan       = "SL-0005" // クラン
+	SugarAIButterKun         = "SL-0006" // バター君
+	SugarAIDrTensorbe        = "SL-0007" // Dr. テンソルベ
+	SugarRDBEclairL          = "SL-0008" // エクレアーエル
+	SugarDistributedDBPinapo = "SL-0009" // スーパーバナナ
+	SugarDBToastoa           = "SL-0010" // トーストア
+	SugarDWIcecream          = "SL-0011" // アイスクエリム
+	SugarCacheMeringue       = "SL-0012" // メレンゲスト
+	SugarStorageSchtrenge    = "SL-0013" // シュトレーンジ
+	SugarBuild               = "SL-0014" // しゅがーらぼ Build
+	SugarCDN                 = "SL-0015" // しゅがーらぼ CDN
+	SugarIcecreamAnalytics   = "SL-0016" // しゅがーらぼ アイスクエリム Analytics
+	SugarProfiler            = "SL-0017" // しゅがーらぼ Profiler
+	SugarPakupakuSable       = "SL-0018" // しゅがーらぼ ぱくぱくサブレ
+	SugarDangoFlow           = "SL-0019" // しゅがーらぼ だんごフロー
+	SugarBlockStorage        = "SL-0020" // しゅがーらぼ ブロックストレージ
+	SugarDeployment          = "SL-0021" // しゅがーらぼ Deployment
+	SugarButterKunBatch      = "SL-0022" // しゅがーらぼ バター君 Batch
+	SugarKnowledge           = "SL-0023" // しゅがーらぼ Knowledge
+	SugarErrorBudget         = "SL-0024" // しゅがーらぼ Error Budget
 )
 
 // 調律部（チューナーズ）
 const (
-	TunersComputeKantata        int64 = 70   // コンタータ
-	TunersBareMetal             int64 = 72   // ベア太
-	TunersContainerTena         int64 = 73   // テナ
-	TunersOrchestratorConductis int64 = 74   // コンダクティス
-	TunersFunctionsFanfare      int64 = 75   // ファンファーレクション
-	TunersLowCodeApietta        int64 = 76   // アピエッタ
-	TunersDBOtonmajutsushi      int64 = 77   // 音の魔術師〈マジシャン・オブ・ミュージック〉
-	TunersDBExanotes            int64 = 78   // エクサノーツ
-	TunersStorageScourge        int64 = 79   // スコアージ
-	TunersCacheCaprish          int64 = 81   // カプリッシュ
-	TunersDevOps                int64 = 82   // 調律部 DevOps
-	TunersGuard                 int64 = 83   // 調律部 Guard
-	TunersWAF                   int64 = 84   // 調律部 WAF
-	TunersNotesGuard            int64 = 85   // 調律部 ノーツガード
-	TunersRAC                   int64 = 86   // 調律部 リアル・アンサンブル・クラスター
-	TunersLicense               int64 = 89   // 調律部 License
-	TunersFailback              int64 = 90   // 調律部 Failback
-	TunersBlockVolume           int64 = 134  // 調律部 Block Volume
+	TunersComputeKantata        = "TN-0001" // コンタータ
+	TunersBareMetal             = "TN-0002" // ベア太
+	TunersContainerTena         = "TN-0003" // テナ
+	TunersOrchestratorConductis = "TN-0004" // コンダクティス
+	TunersFunctionsFanfare      = "TN-0005" // ファンファーレクション
+	TunersLowCodeApietta        = "TN-0006" // アピエッタ
+	TunersDBOtonmajutsushi      = "TN-0007" // 音の魔術師〈マジシャン・オブ・ミュージック〉
+	TunersDBExanotes            = "TN-0008" // エクサノーツ
+	TunersStorageScourge        = "TN-0009" // スコアージ
+	TunersCacheCaprish          = "TN-0010" // カプリッシュ
+	TunersDevOps                = "TN-0011" // 調律部 DevOps
+	TunersGuard                 = "TN-0012" // 調律部 Guard
+	TunersWAF                   = "TN-0013" // 調律部 WAF
+	TunersNotesGuard            = "TN-0014" // 調律部 ノーツガード
+	TunersRAC                   = "TN-0015" // 調律部 リアル・アンサンブル・クラスター
+	TunersBlockVolume           = "TN-0016" // 調律部 Block Volume
+	TunersLicense               = "TN-0017" // 調律部 License
+	TunersFailback              = "TN-0018" // 調律部 Failback
 )
 
 // Neutral
 const (
-	NeutralLoadBalancer     int64 = 91   // ロードバランサー
-	NeutralAutoScaler       int64 = 92   // オートスケーラー
-	NeutralPrivateSubnet    int64 = 93   // プライベートサブネット
-	NeutralMultiAZ          int64 = 94   // マルチ AZ
-	NeutralISMS             int64 = 96   // ISMS認証
-	NeutralSOC2             int64 = 97   // SOC2認証
-	NeutralCloudEngineer    int64 = 98   // クラウドエンジニア
-	NeutralCloudArchitect   int64 = 99   // クラウドアーキテクト
-	NeutralTeraReform       int64 = 100  // 寺リフォーム
-	NeutralProjectManager   int64 = 101  // プロジェクトマネージャー
-	NeutralCloudFunding     int64 = 102  // クラウドファンディング
-	NeutralOSSMigration     int64 = 103  // オープンソースマイグレーション
-	NeutralDDoSAttack       int64 = 104  // DDoS 攻撃
-	NeutralDataBreach       int64 = 105  // データ流出
-	NeutralMisconfiguration int64 = 106  // 設定ミス
-	NeutralDataScraping     int64 = 107  // データスクレイピング
-	NeutralCrawlerBot       int64 = 108  // クローラーボット
-	NeutralRegionOutage     int64 = 109  // リージョン障害
-	NeutralCryptoMining     int64 = 110  // クリプトマイニング
-	NeutralRansomware       int64 = 111  // ランサムウェア
-	NeutralComplianceAudit  int64 = 112  // コンプライアンス監査
-	NeutralRateLimit        int64 = 113  // レートリミット
-	NeutralFailover         int64 = 115  // フェイルオーバー
-	NeutralChaosEngineering int64 = 117  // カオスエンジニアリング
-	NeutralDBSnapshot       int64 = 119  // DB スナップショット
-	NeutralVentureCapital   int64 = 120  // ベンチャーキャピタル
-	NeutralWeatherAnomaly   int64 = 122  // 気象異変
-	NeutralTenkiUpdate      int64 = 123  // 天気使いの更新
-	NeutralITStrategist     int64 = 126  // ITストラテジスト
-	NeutralOnpremLinux      int64 = 127  // リラックスペンギン
-	NeutralOnpremElephantDB int64 = 128  // エレファントDB
-	NeutralOnpremTenki      int64 = 129  // 天気使いサーバー
-	NeutralOnpremTunersDB   int64 = 130  // 調律部 DB
-	NeutralThrottling       int64 = 135  // スロットリング
+	NeutralLoadBalancer     = "NT-0001" // ロードバランサー
+	NeutralAutoScaler       = "NT-0002" // オートスケーラー
+	NeutralPrivateSubnet    = "NT-0003" // プライベートサブネット
+	NeutralMultiAZ          = "NT-0004" // マルチ AZ
+	NeutralISMS             = "NT-0005" // ISMS認証
+	NeutralSOC2             = "NT-0006" // SOC2認証
+	NeutralCloudEngineer    = "NT-0007" // クラウドエンジニア
+	NeutralCloudArchitect   = "NT-0008" // クラウドアーキテクト
+	NeutralTeraReform       = "NT-0009" // 寺リフォーム
+	NeutralProjectManager   = "NT-0010" // プロジェクトマネージャー
+	NeutralCloudFunding     = "NT-0011" // クラウドファンディング
+	NeutralOSSMigration     = "NT-0012" // オープンソースマイグレーション
+	NeutralDDoSAttack       = "NT-0013" // DDoS 攻撃
+	NeutralDataBreach       = "NT-0014" // データ流出
+	NeutralMisconfiguration = "NT-0015" // 設定ミス
+	NeutralDataScraping     = "NT-0016" // データスクレイピング
+	NeutralCrawlerBot       = "NT-0017" // クローラーボット
+	NeutralRegionOutage     = "NT-0018" // リージョン障害
+	NeutralCryptoMining     = "NT-0019" // クリプトマイニング
+	NeutralRansomware       = "NT-0020" // ランサムウェア
+	NeutralComplianceAudit  = "NT-0021" // コンプライアンス監査
+	NeutralRateLimit        = "NT-0022" // レートリミット
+	NeutralFailover         = "NT-0023" // フェイルオーバー
+	NeutralChaosEngineering = "NT-0024" // カオスエンジニアリング
+	NeutralDBSnapshot       = "NT-0025" // DB スナップショット
+	NeutralVentureCapital   = "NT-0026" // ベンチャーキャピタル
+	NeutralWeatherAnomaly   = "NT-0027" // 気象異変
+	NeutralTenkiUpdate      = "NT-0028" // 天気使いの更新
+	NeutralITStrategist     = "NT-0029" // ITストラテジスト
+	NeutralOnpremLinux      = "NT-0030" // リラックスペンギン
+	NeutralOnpremElephantDB = "NT-0031" // エレファントDB
+	NeutralOnpremTenki      = "NT-0032" // 天気使いサーバー
+	NeutralOnpremTunersDB   = "NT-0033" // 調律部 DB
+	NeutralThrottling       = "NT-0034" // スロットリング
 )
 
-// CardNames maps card number to card name.
-var CardNames = map[int64]string{
-	1: "えくぼ",
-	3: "アリゲーテナ",
-	4: "クジラの統率者<クジランティス>",
-	5: "ラフメイカー",
-	6: "むらた",
-	7: "アデリース",
-	8: "オオロバ",
-	9: "えりり",
-	10: "ダイノ",
-	11: "メリーモ",
-	12: "SHE Pipeline",
-	13: "SHE Front",
-	14: "SHE Guard",
-	15: "SHE Firewall",
-	16: "SHE Queue",
-	17: "SHE Gateway",
-	18: "SHE Keys",
-	19: "SHE Formation",
-	20: "SHE Marketplace",
-	21: "SHE 料金見積もり",
-	22: "Smile Recovery",
-	23: "ソラ",
-	24: "アサギリ",
-	25: "コウテン",
-	26: "空即蒼色",
-	27: "智の解放者<オープナー>",
-	28: "ライ",
-	29: "シグレ",
-	30: "ハヤテ",
-	31: "フブキ",
-	32: "百花の天穹<コスモ>",
-	33: "シュウウ",
-	34: "天気使い DevOps",
-	35: "天気使い CDN",
-	36: "天気使い ファンネル",
-	37: "天気使い Protection",
-	38: "天気使い Backup",
-	39: "天気使い 空の入口",
-	40: "天気使い Vault",
-	41: "天気使い Recovery",
-	42: "天気使い Template",
-	43: "天気使い Migration",
-	44: "天気使い Policy",
-	45: "天気使い お守り傘",
-	46: "天気使い Traffic",
-	47: "ジューシィ・いちご",
-	48: "スポンジット",
-	49: "クラン",
-	50: "クーヘンバウムティス",
-	51: "バター君",
-	52: "Dr. テンソルベ",
-	53: "クラン",
-	54: "エクレアーエル",
-	55: "スーパーバナナ",
-	56: "シュトレーンジ",
-	57: "トーストア",
-	58: "アイスクエリム",
-	59: "しゅがーらぼ Build",
-	60: "しゅがーらぼ CDN",
-	61: "しゅがーらぼ アイスクエリム Analytics",
-	62: "しゅがーらぼ Profiler",
-	63: "しゅがーらぼ ぱくぱくサブレ",
-	64: "しゅがーらぼ だんごフロー",
-	65: "しゅがーらぼ Deployment",
-	66: "しゅがーらぼ バター君 Batch",
-	67: "しゅがーらぼ Knowledge",
-	68: "しゅがーらぼ Error Budget",
-	70: "コンタータ",
-	72: "ベア太",
-	73: "テナ",
-	74: "コンダクティス",
-	75: "ファンファーレクション",
-	76: "アピエッタ",
-	77: "音の魔術師〈マジシャン・オブ・ミュージック〉",
-	78: "エクサノーツ",
-	79: "スコアージ",
-	81: "カプリッシュ",
-	82: "調律部 DevOps",
-	83: "調律部 Guard",
-	84: "調律部 WAF",
-	85: "調律部 ノーツガード",
-	86: "調律部 リアル・アンサンブル・クラスター",
-	89: "調律部 License",
-	90: "調律部 Failback",
-	91: "ロードバランサー",
-	92: "オートスケーラー",
-	93: "プライベートサブネット",
-	94: "マルチ AZ",
-	96: "ISMS認証",
-	97: "SOC2認証",
-	98: "クラウドエンジニア",
-	99: "クラウドアーキテクト",
-	100: "寺リフォーム",
-	101: "プロジェクトマネージャー",
-	102: "クラウドファンディング",
-	103: "オープンソースマイグレーション",
-	104: "DDoS 攻撃",
-	105: "データ流出",
-	106: "設定ミス",
-	107: "データスクレイピング",
-	108: "クローラーボット",
-	109: "リージョン障害",
-	110: "クリプトマイニング",
-	111: "ランサムウェア",
-	112: "コンプライアンス監査",
-	113: "レートリミット",
-	115: "フェイルオーバー",
-	117: "カオスエンジニアリング",
-	118: "SHE Ecosystem",
-	119: "DB スナップショット",
-	120: "ベンチャーキャピタル",
-	121: "SHE Smile Horizon Express",
-	122: "気象異変",
-	123: "天気使いの更新",
-	124: "だっくん",
-	125: "メレンゲスト",
-	126: "ITストラテジスト",
-	127: "リラックスペンギン",
-	128: "エレファントDB",
-	129: "天気使いサーバー",
-	130: "調律部 DB",
-	131: "SHE Block Storage",
-	132: "天気使い ブロックストレージ",
-	133: "しゅがーらぼ ブロックストレージ",
-	134: "調律部 Block Volume",
-	135: "スロットリング",
-}
-
-// CardIDs maps card number to card ID (e.g. "SH-0001").
-var CardIDs = map[int64]string{
-	1: "SH-0001",
-	3: "SH-0002",
-	4: "SH-0003",
-	5: "SH-0004",
-	6: "SH-0005",
-	7: "SH-0006",
-	8: "SH-0007",
-	9: "SH-0008",
-	10: "SH-0009",
-	11: "SH-0010",
-	12: "SH-0011",
-	13: "SH-0012",
-	14: "SH-0013",
-	15: "SH-0014",
-	16: "SH-0015",
-	17: "SH-0016",
-	18: "SH-0017",
-	19: "SH-0018",
-	20: "SH-0019",
-	21: "SH-0020",
-	22: "SH-0021",
-	23: "TK-0001",
-	24: "TK-0002",
-	25: "TK-0003",
-	26: "TK-0004",
-	27: "TK-0005",
-	28: "TK-0006",
-	29: "TK-0007",
-	30: "TK-0008",
-	31: "TK-0009",
-	32: "TK-0010",
-	33: "TK-0011",
-	34: "TK-0012",
-	35: "TK-0013",
-	36: "TK-0025",
-	37: "TK-0014",
-	38: "TK-0015",
-	39: "TK-0016",
-	40: "TK-0017",
-	41: "TK-0018",
-	42: "TK-0020",
-	43: "TK-0021",
-	44: "TK-0022",
-	45: "TK-0023",
-	46: "TK-0024",
-	47: "SL-0001",
-	48: "SL-0002",
-	49: "SL-0003",
-	50: "SL-0004",
-	51: "SL-0006",
-	52: "SL-0007",
-	53: "SL-0005",
-	54: "SL-0008",
-	55: "SL-0009",
-	56: "SL-0013",
-	57: "SL-0010",
-	58: "SL-0011",
-	59: "SL-0014",
-	60: "SL-0015",
-	61: "SL-0016",
-	62: "SL-0017",
-	63: "SL-0018",
-	64: "SL-0019",
-	65: "SL-0021",
-	66: "SL-0022",
-	67: "SL-0023",
-	68: "SL-0024",
-	70: "TN-0001",
-	72: "TN-0002",
-	73: "TN-0003",
-	74: "TN-0004",
-	75: "TN-0005",
-	76: "TN-0006",
-	77: "TN-0007",
-	78: "TN-0008",
-	79: "TN-0009",
-	81: "TN-0010",
-	82: "TN-0011",
-	83: "TN-0012",
-	84: "TN-0013",
-	85: "TN-0014",
-	86: "TN-0015",
-	89: "TN-0017",
-	90: "TN-0018",
-	91: "NT-0001",
-	92: "NT-0002",
-	93: "NT-0003",
-	94: "NT-0004",
-	96: "NT-0005",
-	97: "NT-0006",
-	98: "NT-0007",
-	99: "NT-0008",
-	100: "NT-0009",
-	101: "NT-0010",
-	102: "NT-0011",
-	103: "NT-0012",
-	104: "NT-0013",
-	105: "NT-0014",
-	106: "NT-0015",
-	107: "NT-0016",
-	108: "NT-0017",
-	109: "NT-0018",
-	110: "NT-0019",
-	111: "NT-0020",
-	112: "NT-0021",
-	113: "NT-0022",
-	115: "NT-0023",
-	117: "NT-0024",
-	118: "SH-0022",
-	119: "NT-0025",
-	120: "NT-0026",
-	121: "SH-0023",
-	122: "NT-0027",
-	123: "NT-0028",
-	124: "SH-0024",
-	125: "SL-0012",
-	126: "NT-0029",
-	127: "NT-0030",
-	128: "NT-0031",
-	129: "NT-0032",
-	130: "NT-0033",
-	131: "SH-0025",
-	132: "TK-0019",
-	133: "SL-0020",
-	134: "TN-0016",
-	135: "NT-0034",
-}
-
-// CardNoByID maps card ID to card number.
-var CardNoByID = map[string]int64{
-	"SH-0001": 1,
-	"SH-0002": 3,
-	"SH-0003": 4,
-	"SH-0004": 5,
-	"SH-0005": 6,
-	"SH-0006": 7,
-	"SH-0007": 8,
-	"SH-0008": 9,
-	"SH-0009": 10,
-	"SH-0010": 11,
-	"SH-0011": 12,
-	"SH-0012": 13,
-	"SH-0013": 14,
-	"SH-0014": 15,
-	"SH-0015": 16,
-	"SH-0016": 17,
-	"SH-0017": 18,
-	"SH-0018": 19,
-	"SH-0019": 20,
-	"SH-0020": 21,
-	"SH-0021": 22,
-	"TK-0001": 23,
-	"TK-0002": 24,
-	"TK-0003": 25,
-	"TK-0004": 26,
-	"TK-0005": 27,
-	"TK-0006": 28,
-	"TK-0007": 29,
-	"TK-0008": 30,
-	"TK-0009": 31,
-	"TK-0010": 32,
-	"TK-0011": 33,
-	"TK-0012": 34,
-	"TK-0013": 35,
-	"TK-0025": 36,
-	"TK-0014": 37,
-	"TK-0015": 38,
-	"TK-0016": 39,
-	"TK-0017": 40,
-	"TK-0018": 41,
-	"TK-0020": 42,
-	"TK-0021": 43,
-	"TK-0022": 44,
-	"TK-0023": 45,
-	"TK-0024": 46,
-	"SL-0001": 47,
-	"SL-0002": 48,
-	"SL-0003": 49,
-	"SL-0004": 50,
-	"SL-0006": 51,
-	"SL-0007": 52,
-	"SL-0005": 53,
-	"SL-0008": 54,
-	"SL-0009": 55,
-	"SL-0013": 56,
-	"SL-0010": 57,
-	"SL-0011": 58,
-	"SL-0014": 59,
-	"SL-0015": 60,
-	"SL-0016": 61,
-	"SL-0017": 62,
-	"SL-0018": 63,
-	"SL-0019": 64,
-	"SL-0021": 65,
-	"SL-0022": 66,
-	"SL-0023": 67,
-	"SL-0024": 68,
-	"TN-0001": 70,
-	"TN-0002": 72,
-	"TN-0003": 73,
-	"TN-0004": 74,
-	"TN-0005": 75,
-	"TN-0006": 76,
-	"TN-0007": 77,
-	"TN-0008": 78,
-	"TN-0009": 79,
-	"TN-0010": 81,
-	"TN-0011": 82,
-	"TN-0012": 83,
-	"TN-0013": 84,
-	"TN-0014": 85,
-	"TN-0015": 86,
-	"TN-0017": 89,
-	"TN-0018": 90,
-	"NT-0001": 91,
-	"NT-0002": 92,
-	"NT-0003": 93,
-	"NT-0004": 94,
-	"NT-0005": 96,
-	"NT-0006": 97,
-	"NT-0007": 98,
-	"NT-0008": 99,
-	"NT-0009": 100,
-	"NT-0010": 101,
-	"NT-0011": 102,
-	"NT-0012": 103,
-	"NT-0013": 104,
-	"NT-0014": 105,
-	"NT-0015": 106,
-	"NT-0016": 107,
-	"NT-0017": 108,
-	"NT-0018": 109,
-	"NT-0019": 110,
-	"NT-0020": 111,
-	"NT-0021": 112,
-	"NT-0022": 113,
-	"NT-0023": 115,
-	"NT-0024": 117,
-	"SH-0022": 118,
-	"NT-0025": 119,
-	"NT-0026": 120,
-	"SH-0023": 121,
-	"NT-0027": 122,
-	"NT-0028": 123,
-	"SH-0024": 124,
-	"SL-0012": 125,
-	"NT-0029": 126,
-	"NT-0030": 127,
-	"NT-0031": 128,
-	"NT-0032": 129,
-	"NT-0033": 130,
-	"SH-0025": 131,
-	"TK-0019": 132,
-	"SL-0020": 133,
-	"TN-0016": 134,
-	"NT-0034": 135,
+// CardNames maps card ID to card name.
+var CardNames = map[string]string{
+	"NT-0001": "ロードバランサー",
+	"NT-0002": "オートスケーラー",
+	"NT-0003": "プライベートサブネット",
+	"NT-0004": "マルチ AZ",
+	"NT-0005": "ISMS認証",
+	"NT-0006": "SOC2認証",
+	"NT-0007": "クラウドエンジニア",
+	"NT-0008": "クラウドアーキテクト",
+	"NT-0009": "寺リフォーム",
+	"NT-0010": "プロジェクトマネージャー",
+	"NT-0011": "クラウドファンディング",
+	"NT-0012": "オープンソースマイグレーション",
+	"NT-0013": "DDoS 攻撃",
+	"NT-0014": "データ流出",
+	"NT-0015": "設定ミス",
+	"NT-0016": "データスクレイピング",
+	"NT-0017": "クローラーボット",
+	"NT-0018": "リージョン障害",
+	"NT-0019": "クリプトマイニング",
+	"NT-0020": "ランサムウェア",
+	"NT-0021": "コンプライアンス監査",
+	"NT-0022": "レートリミット",
+	"NT-0023": "フェイルオーバー",
+	"NT-0024": "カオスエンジニアリング",
+	"NT-0025": "DB スナップショット",
+	"NT-0026": "ベンチャーキャピタル",
+	"NT-0027": "気象異変",
+	"NT-0028": "天気使いの更新",
+	"NT-0029": "ITストラテジスト",
+	"NT-0030": "リラックスペンギン",
+	"NT-0031": "エレファントDB",
+	"NT-0032": "天気使いサーバー",
+	"NT-0033": "調律部 DB",
+	"NT-0034": "スロットリング",
+	"SH-0001": "えくぼ",
+	"SH-0002": "アリゲーテナ",
+	"SH-0003": "クジラの統率者<クジランティス>",
+	"SH-0004": "ラフメイカー",
+	"SH-0005": "むらた",
+	"SH-0006": "アデリース",
+	"SH-0007": "オオロバ",
+	"SH-0008": "えりり",
+	"SH-0009": "ダイノ",
+	"SH-0010": "メリーモ",
+	"SH-0011": "SHE Pipeline",
+	"SH-0012": "SHE Front",
+	"SH-0013": "SHE Guard",
+	"SH-0014": "SHE Firewall",
+	"SH-0015": "SHE Queue",
+	"SH-0016": "SHE Gateway",
+	"SH-0017": "SHE Keys",
+	"SH-0018": "SHE Formation",
+	"SH-0019": "SHE Marketplace",
+	"SH-0020": "SHE 料金見積もり",
+	"SH-0021": "Smile Recovery",
+	"SH-0022": "SHE Ecosystem",
+	"SH-0023": "SHE Smile Horizon Express",
+	"SH-0024": "だっくん",
+	"SH-0025": "SHE Block Storage",
+	"SL-0001": "ジューシィ・いちご",
+	"SL-0002": "スポンジット",
+	"SL-0003": "クラン",
+	"SL-0004": "クーヘンバウムティス",
+	"SL-0005": "クラン",
+	"SL-0006": "バター君",
+	"SL-0007": "Dr. テンソルベ",
+	"SL-0008": "エクレアーエル",
+	"SL-0009": "スーパーバナナ",
+	"SL-0010": "トーストア",
+	"SL-0011": "アイスクエリム",
+	"SL-0012": "メレンゲスト",
+	"SL-0013": "シュトレーンジ",
+	"SL-0014": "しゅがーらぼ Build",
+	"SL-0015": "しゅがーらぼ CDN",
+	"SL-0016": "しゅがーらぼ アイスクエリム Analytics",
+	"SL-0017": "しゅがーらぼ Profiler",
+	"SL-0018": "しゅがーらぼ ぱくぱくサブレ",
+	"SL-0019": "しゅがーらぼ だんごフロー",
+	"SL-0020": "しゅがーらぼ ブロックストレージ",
+	"SL-0021": "しゅがーらぼ Deployment",
+	"SL-0022": "しゅがーらぼ バター君 Batch",
+	"SL-0023": "しゅがーらぼ Knowledge",
+	"SL-0024": "しゅがーらぼ Error Budget",
+	"TK-0001": "ソラ",
+	"TK-0002": "アサギリ",
+	"TK-0003": "コウテン",
+	"TK-0004": "空即蒼色",
+	"TK-0005": "智の解放者<オープナー>",
+	"TK-0006": "ライ",
+	"TK-0007": "シグレ",
+	"TK-0008": "ハヤテ",
+	"TK-0009": "フブキ",
+	"TK-0010": "百花の天穹<コスモ>",
+	"TK-0011": "シュウウ",
+	"TK-0012": "天気使い DevOps",
+	"TK-0013": "天気使い CDN",
+	"TK-0014": "天気使い Protection",
+	"TK-0015": "天気使い Backup",
+	"TK-0016": "天気使い 空の入口",
+	"TK-0017": "天気使い Vault",
+	"TK-0018": "天気使い Recovery",
+	"TK-0019": "天気使い ブロックストレージ",
+	"TK-0020": "天気使い Template",
+	"TK-0021": "天気使い Migration",
+	"TK-0022": "天気使い Policy",
+	"TK-0023": "天気使い お守り傘",
+	"TK-0024": "天気使い Traffic",
+	"TK-0025": "天気使い ファンネル",
+	"TN-0001": "コンタータ",
+	"TN-0002": "ベア太",
+	"TN-0003": "テナ",
+	"TN-0004": "コンダクティス",
+	"TN-0005": "ファンファーレクション",
+	"TN-0006": "アピエッタ",
+	"TN-0007": "音の魔術師〈マジシャン・オブ・ミュージック〉",
+	"TN-0008": "エクサノーツ",
+	"TN-0009": "スコアージ",
+	"TN-0010": "カプリッシュ",
+	"TN-0011": "調律部 DevOps",
+	"TN-0012": "調律部 Guard",
+	"TN-0013": "調律部 WAF",
+	"TN-0014": "調律部 ノーツガード",
+	"TN-0015": "調律部 リアル・アンサンブル・クラスター",
+	"TN-0016": "調律部 Block Volume",
+	"TN-0017": "調律部 License",
+	"TN-0018": "調律部 Failback",
 }
 
