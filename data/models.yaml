@@ -348,6 +348,130 @@ files:
           - {name: DeckID, type: string, json: "deckId"}
           - {name: Cards, type: "[]int64", json: "cards"}
 
+  # ─── WebSocket Messages (Gateway + Client) ─────────────
+  # Shared message payloads for WebSocket communication.
+  # Go: used as-is in handler/ws. TS: generated as interfaces.
+  # ActionPerformedMessage is excluded (TS uses generics + ClientGameState).
+  - name: ws_messages
+    target: gateway
+    imports:
+      - encoding/json
+    types:
+      # Client → Server
+      - name: MatchmakingStartMessage
+        fields:
+          - {name: DeckID, type: int64, json: "deck_id"}
+
+      - name: GameEnterMessage
+        fields:
+          - {name: GameID, type: string, json: "game_id"}
+          - {name: DeckID, type: int64, json: "deck_id"}
+
+      - name: NPCBattleStartMessage
+        fields:
+          - {name: DeckID, type: int64, json: "deck_id"}
+          - {name: NPCFaction, type: string, json: "npc_faction"}
+
+      - name: GameActionMessage
+        fields:
+          - {name: GameID, type: string, json: "game_id"}
+          - {name: ActionType, type: string, json: "action_type"}
+          - {name: Data, type: json.RawMessage, json: "data"}
+
+      - name: UseStampMessage
+        fields:
+          - {name: GameID, type: string, json: "game_id"}
+          - {name: StampNo, type: int64, json: "stamp_no"}
+
+      # Server → Client
+      - name: ErrorMessage
+        fields:
+          - {name: Code, type: string, json: "error_code"}
+          - {name: Message, type: string, json: "message"}
+          - {name: Retryable, type: bool, json: "retryable"}
+
+      - name: MatchFoundMessage
+        fields:
+          - {name: GameID, type: string, json: "game_id"}
+          - {name: Player1ID, type: string, json: "player1_id"}
+          - {name: Player2ID, type: string, json: "player2_id"}
+
+      - name: GameOverMessage
+        fields:
+          - {name: GameID, type: string, json: "game_id"}
+          - {name: WinnerNum, type: int64, json: "winner_num"}
+          - {name: WinReason, type: string, json: "win_reason"}
+
+      - name: ActionRejectedMessage
+        fields:
+          - {name: GameID, type: string, json: "game_id"}
+          - {name: ActionType, type: string, json: "action_type"}
+          - {name: Reason, type: string, json: "reason"}
+
+      - name: ActionPerformedMessage
+        comment: "ActionPerformedMessage notifies a player of an action and the resulting state."
+        fields:
+          - {name: Sequence, type: int64, json: "sequence"}
+          - {name: ActionType, type: string, json: "action_type"}
+          - {name: ActionData, type: json.RawMessage, json: "action_data"}
+          - {name: State, type: json.RawMessage, json: "state"}
+
+      - name: TurnControlsMessage
+        fields:
+          - {name: CanEndPhase, type: bool, json: "can_end_phase"}
+          - {name: DiscardRequired, type: int, json: "discard_required"}
+
+      - name: StampUsedMessage
+        fields:
+          - {name: GameID, type: string, json: "game_id"}
+          - {name: PlayerID, type: string, json: "player_id"}
+          - {name: StampNo, type: int64, json: "stamp_no"}
+
+      - name: NPCBattleCreatedMessage
+        fields:
+          - {name: GameID, type: string, json: "game_id"}
+          - {name: Player1ID, type: string, json: "player1_id"}
+          - {name: Player2ID, type: string, json: "player2_id"}
+
+      # Spectate: Client → Server
+      - name: SpectateJoinMessage
+        fields:
+          - {name: GameID, type: string, json: "game_id"}
+
+      - name: SpectateLeaveMessage
+        fields:
+          - {name: GameID, type: string, json: "game_id"}
+
+      - name: SpectateStampMessage
+        fields:
+          - {name: GameID, type: string, json: "game_id"}
+          - {name: StampNo, type: int64, json: "stamp_no"}
+
+      # Spectate: Server → Client
+      - name: SpectateJoinedMessage
+        fields:
+          - {name: GameID, type: string, json: "game_id"}
+          - {name: Player1ID, type: string, json: "player1_id"}
+          - {name: Player2ID, type: string, json: "player2_id"}
+          - {name: State, type: json.RawMessage, json: "state"}
+
+      - name: SpectateErrorMessage
+        fields:
+          - {name: Code, type: string, json: "error_code"}
+          - {name: Message, type: string, json: "message"}
+
+      - name: SpectateEndedMessage
+        fields:
+          - {name: GameID, type: string, json: "game_id"}
+          - {name: WinnerNum, type: int64, json: "winner_num"}
+          - {name: WinReason, type: string, json: "win_reason"}
+
+      - name: SpectateStampBroadcastMessage
+        fields:
+          - {name: GameID, type: string, json: "game_id"}
+          - {name: SpectatorID, type: string, json: "spectator_id"}
+          - {name: StampNo, type: int64, json: "stamp_no"}
+
   # ─── Game Config (Battle only) ─────────────────────────
   - name: game_config
     target: both

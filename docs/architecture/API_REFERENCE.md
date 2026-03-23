@@ -284,6 +284,10 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
 
 **レスポンス (200):** Player オブジェクト
 
+**エラー:**
+- `400` リクエスト不正（`name` フィールド欠落）
+- `500` サーバーエラー
+
 ---
 
 #### GET `/player/battle-limit`
@@ -339,19 +343,31 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
 [
   {
     "player_id": "uuid",
+    "deck_id": 1,
+    "deck_name": "SHE スターター",
+    "is_valid": true,
     "playmat_no": 1,
     "sleeve_no": 2,
     "deck_cards": [
       {"card_no": 1, "art_no": 0, "count": 3},
       {"card_no": 2, "art_no": 1, "count": 2}
     ],
-    "created_at": "timestamp",
-    "updated_at": "timestamp"
+    "created_at": "2026-01-15T10:00:00Z",
+    "updated_at": "2026-01-15T10:00:00Z"
   }
 ]
 ```
 
-`deck_cards` はデッキのカード構成（`card_no`, `art_no`, `count`）の配列。
+| フィールド | 型 | 説明 |
+|---|---|---|
+| `deck_id` | int64 | デッキID（自動採番） |
+| `deck_name` | string | デッキ名 |
+| `is_valid` | bool | バトル使用可能か（都度算出: 30枚 + 全カード所持 + 制限枚数以内） |
+| `deck_cards` | array | デッキのカード構成（`card_no`, `art_no`, `count`） |
+| `playmat_no` | int64? | プレイマット番号（null: デフォルト） |
+| `sleeve_no` | int64? | スリーブ番号（null: デフォルト） |
+
+> **Note:** `is_valid` は DB に保存せず、リクエストごとにサーバーが算出する。所持カードの変動や制限改定を即座に反映するため。
 
 
 ---
@@ -457,18 +473,25 @@ NPC 対戦開始。即座にゲームが作成される（マッチメイキン�
 ```json
 {
   "type": "npc_battle_start",
-  "deckId": 1,
-  "npcFaction": "SHE|Tenki|Sugar|Tuners"
+  "data": {
+    "deck_id": 1,
+    "npc_faction": "SHE|Tenki|Sugar|Tuners"
+  }
 }
 ```
+
+サーバーはゲーム作成前にデッキバリデーションを実行する（内容は `matchmaking_start` と同一）。
+バリデーション失敗時は `error` (code: `npc_battle_error`, retryable: `false`) を返す。
 
 **レスポンス:** `npc_battle_created` (Server → Client)
 ```json
 {
   "type": "npc_battle_created",
-  "gameId": "ULID",
-  "player1Id": "uuid",
-  "player2Id": "npc_..."
+  "data": {
+    "game_id": "ULID",
+    "player1_id": "uuid",
+    "player2_id": "npc_..."
+  }
 }
 ```
 
@@ -720,7 +743,13 @@ GET /ws?token={token}
 - サーバーが FirebaseUID → PlayerID (UUID) に解決
 - ローカルでは未登録 uid に対してプレイヤーを自動作成
 
-接続後、サーバーは 15 秒間隔で WebSocket Ping を送信。クライアントは Pong を返す必要がある（ブラウザは自動応答）。
+接続後、サーバーは 15 秒間隔で WebSocket Ping を送信。クライアントは Pong を返す必要がある（ブラウザは自動応答）。Pong が 5 秒以内に返らない場合、サーバーは接続を切断する。
+
+### 切断とタイムアウト
+
+- **切断タイムアウト:** ゲーム中にプレイヤーが切断した場合、60 秒以内に再接続しないと自動フォーフェイト（敗北扱い）となる
+- **ターンタイムアウト:** 各ターンにはタイムバンク制限がある。超過すると自動フォーフェイトとなる
+- **再接続:** 再接続時はクライアントが `game_enter` を送信し、通常の `game_state` + `turn_controls` を受け取る
 
 ### メッセージフォーマット
 
@@ -745,6 +774,13 @@ GET /ws?token={token}
 ```
 
 **応答:** `matchmaking_started` / `error` (code: `matchmaking_error`)
+
+サーバーはキューに入る前にデッキバリデーションを実行する:
+- 枚数チェック（ちょうど30枚）
+- 所持チェック（全カードを必要枚数所持しているか）
+- 制限チェック（unlimited ≤ 3、semi_limited ≤ 2、limited ≤ 1）
+
+バリデーション失敗時は `error` (code: `matchmaking_error`, retryable: `false`) を返す。
 
 冪等: 既にマッチメイキング中の場合はデッキを更新して成功。
 
@@ -984,22 +1020,23 @@ GET /ws?token={token}
 {
   "type": "error",
   "data": {
-    "error_code": "invalid_message|invalid_data|matchmaking_error|select_error",
+    "error_code": "string",
     "message": "エラー詳細",
     "retryable": true
   }
 }
 ```
 
-#### `game_state_restore` — 再接続時のゲーム状態復元
-```json
-{
-  "type": "game_state_restore",
-  "data": { /* game_state と同じ構造 */ }
-}
-```
+**エラーコード一覧:**
 
-再接続時にサーバーが最新のゲーム状態を送信する。`game_state` と同じ構造だがメッセージタイプで区別できる。再接続時は `turn_controls` も併せて送信される。
+| コード | 発生タイミング | retryable | 説明 |
+|---|---|---|---|
+| `invalid_message` | メッセージ受信時 | `false` | JSON パース失敗 |
+| `invalid_data` | メッセージ受信時 | `false` | ペイロードのデシリアライズ失敗 |
+| `matchmaking_error` | `matchmaking_start` | `true`/`false` | デッキバリデーション失敗、バトル上限超過、キュー登録失敗 |
+| `npc_battle_error` | `npc_battle_start` | `true`/`false` | デッキバリデーション失敗、バトル上限超過、ゲーム作成失敗 |
+| `game_state_error` | `game_enter` / ゲーム中 | `true` | バトルサーバーからの状態取得失敗 |
+| `turn_controls_error` | ゲーム中 | `true` | ターン制御情報の取得失敗 |
 
 ---
 
@@ -1174,7 +1211,7 @@ NPC 表示名:
 | **Game Log** | GET | `/games/{gameId}/log` | 要 | 要 | ゲームログ取得 |
 | | GET | `/games/{gameId}/log/text` | 要 | 要 | ゲームログ（テキスト） |
 | **Spectate** | GET | `/spectate/games` | 要 | 要 | 観戦可能ゲーム一覧 |
-| | WS | `spectate_join` | 要 | 要 | 観戦参加（WebSocket） |
+| | WS | `spectate_join` | 要 | 要 | 観戦参加（WebSocket）<!-- TODO: spectate WS メッセージの詳細ドキュメントを追加 --> |
 | | WS | `spectate_leave` | - | - | 観戦離脱（WebSocket） |
 | | WS | `spectate_stamp` | - | - | 観戦スタンプ送信（WebSocket） |
 | **NPC** | WS | `npc_battle_start` | 要 | 要 | NPC 対戦開始（WebSocket） |

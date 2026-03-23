@@ -8,12 +8,14 @@
   "exports": {
     ".": "./dist/index.js",
     "./constants": "./dist/constants.js",
-    "./eventData": "./dist/eventData.js"
+    "./eventData": "./dist/eventData.js",
+    "./wsMessages": "./dist/wsMessages.js"
   },
   "typesVersions": {
     "*": {
       "constants": ["dist/constants.d.ts"],
-      "eventData": ["dist/eventData.d.ts"]
+      "eventData": ["dist/eventData.d.ts"],
+      "wsMessages": ["dist/wsMessages.d.ts"]
     }
   },
   "scripts": {

@@ -279,7 +279,7 @@ PlayerCards テーブル
 陣営ルール適合？ → No → エラー「陣営ルール違反」
     │ Yes
     ▼
-is_valid = true で保存
+デッキを保存（is_valid は DB に保存せず、API レスポンス時に都度算出）
 ```
 
 ---

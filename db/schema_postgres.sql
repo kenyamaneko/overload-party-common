@@ -147,7 +147,6 @@ CREATE TABLE decks (
   player_id   UUID NOT NULL REFERENCES players(player_id) ON DELETE CASCADE,
   deck_id     BIGINT NOT NULL GENERATED ALWAYS AS IDENTITY,
   deck_name   VARCHAR(50) NOT NULL,
-  is_valid    BOOLEAN NOT NULL,
   playmat_no  BIGINT,
   sleeve_no   BIGINT,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),

@@ -394,8 +394,9 @@ stats フィールドなし（Platform の場合、`deploy_turns` はトップ�
 | `player_id` | UUID | No | 親テーブル参照 |
 | `deck_id` | BIGINT (IDENTITY) | No | デッキID（自動採番） |
 | `deck_name` | VARCHAR(50) | No | デッキ名 |
-| `is_valid` | BOOLEAN | No | 有効デッキフラグ (30枚ルール適合) |
 | `playmat_no` | BIGINT | Yes | プレイマット番号（`CosmeticItems` 参照。NULL: デフォルト） |
+
+> **Note:** `is_valid` は DB に保存せず、API レスポンス時にサービス層が都度算出する（所持カード・制限改定に追従するため）。
 | `sleeve_no` | BIGINT | Yes | スリーブ番号（`CosmeticItems` 参照。NULL: デフォルト） |
 | `created_at` | TIMESTAMPTZ | No | 作成日時 |
 | `updated_at` | TIMESTAMPTZ | No | 更新日時 |
