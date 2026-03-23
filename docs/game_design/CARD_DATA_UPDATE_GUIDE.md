@@ -161,10 +161,10 @@ python3 packages/generate_from_yaml.py --gen-dir packages/
 | 生成ファイル | 用途 |
 |-------------|------|
 | `docs/game_design/CARDS.md` | カード一覧ドキュメント（目視確認用） |
-| `packages/go/cache/cards_gen.json` | Gateway サーバー用カードデータ |
-| `packages/go/model/*_gen.go` | Gateway サーバー用 Go 型定義 |
-| `packages/go/constants/constants_gen.go` | Gateway サーバー用定数 |
-| `packages/go/cardno/cardno_gen.go` | カード番号定数（Go） |
+| `packages/gamedata/cache/cards_gen.json` | Gateway サーバー用カードデータ |
+| `packages/gamedata/model/*_gen.go` | Gateway サーバー用 Go 型定義 |
+| `packages/gamedata/constants/constants_gen.go` | Gateway サーバー用定数 |
+| `packages/gamedata/cardno/cardno_gen.go` | カード番号定数（Go） |
 | `packages/dotnet/GameConstants_gen.cs` | Battle サーバー用定数 |
 | `packages/dotnet/EventData_gen.cs` | Battle サーバー用イベント型 |
 | `packages/dotnet/cache/cards_gen.json` | Battle サーバー用カードデータ |
@@ -219,7 +219,7 @@ gh workflow run "Publish GameData Packages" --ref <ブランチ名>
 
 | パッケージ | 参照元 |
 |-----------|--------|
-| Go モジュール（`packages/go/vX.Y.Z` タグ） | Gateway サーバー |
+| Go モジュール（`packages/gamedata/vX.Y.Z` タグ） | Gateway サーバー |
 | NuGet `OverloadParty.GameData` | Battle サーバー |
 | npm `@overload-party/generated` | クライアント |
 
@@ -231,7 +231,7 @@ gh workflow run "Publish GameData Packages" --ref <ブランチ名>
 
 ```bash
 # Gateway（Go）
-go get github.com/kenyamaneko/overload-party-common/packages/go@latest
+go get github.com/kenyamaneko/overload-party-common/packages/gamedata@latest
 
 # Battle（.NET） - NuGet の最新バージョンを指定
 dotnet add package OverloadParty.GameData

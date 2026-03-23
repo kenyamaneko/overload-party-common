@@ -100,10 +100,10 @@ overload-party-common/          # 共有データ・定義の SSoT
 
 overload-party-gateway/         # Go API サーバー
 ├── internal/
-│   ├── model/gen.go            # packages/go/model の re-export
-│   ├── constants/gen.go        # packages/go/constants の re-export
+│   ├── model/gen.go            # packages/gamedata/model の re-export
+│   ├── constants/gen.go        # packages/gamedata/constants の re-export
 │   └── ...
-└── go.mod                      # packages/go モジュールを依存
+└── go.mod                      # packages/gamedata モジュールを依存
 
 overload-party-battle/          # C# 対戦エンジン
 ├── src/
@@ -125,11 +125,11 @@ overload-party-client/          # React + Capacitor クライアント
 | 入力 | 出力先 | パッケージ |
 |------|--------|-----------|
 | `data/cards/*.yaml` | `docs/CARDS.md` | — |
-| `data/cards/*.yaml` | `packages/go/cardno/cardno_gen.go` | Go module |
-| `data/cards/*.yaml` | `packages/go/cache/cards_gen.json` | Go module (embed) |
+| `data/cards/*.yaml` | `packages/gamedata/cardno/cardno_gen.go` | Go module |
+| `data/cards/*.yaml` | `packages/gamedata/cache/cards_gen.json` | Go module (embed) |
 | `data/cards/*.yaml` | `packages/dotnet/cache/cards_gen.json` | NuGet (EmbeddedResource) |
-| `data/models.yaml` | `packages/go/model/*_gen.go` | Go module |
-| `data/constants.json` | `packages/go/constants/constants_gen.go` | Go module |
+| `data/models.yaml` | `packages/gamedata/model/*_gen.go` | Go module |
+| `data/constants.json` | `packages/gamedata/constants/constants_gen.go` | Go module |
 | `data/constants.json` | `packages/dotnet/GameConstants_gen.cs` | NuGet (`OverloadParty.GameData`) |
 | `data/constants.json` | `packages/npm/src/constants.ts` | npm (`@kenyamaneko/overload-party-gamedata`) |
 | `data/event_schemas.json` | `packages/dotnet/EventData_gen.cs` | NuGet |

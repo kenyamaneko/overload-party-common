@@ -47,7 +47,7 @@ psql -U postgres overload_party < db/seed/stamps.sql
 
 | パッケージ | 内容 | 利用リポ |
 |-----------|------|---------|
-| Go module (`packages/go/`) | model, constants, cardno, cards_gen.json (embed) | gateway |
+| Go module (`packages/gamedata/`) | model, constants, cardno, cards_gen.json (embed) | gateway |
 | NuGet `OverloadParty.GameData` (`packages/dotnet/`) | GameConstants, EventData, cards_gen.json | battle |
 | npm `@kenyamaneko/overload-party-gamedata` (`packages/npm/`) | constants.ts, eventData.ts | client |
 
@@ -71,6 +71,6 @@ main への push 時に CI (`publish-packages.yaml`) が自動で生成・publis
 2. `python3 packages/generate_from_yaml.py --gen-dir packages/` を実行
 3. main に push → CI が自動でパッケージ publish
 4. 各リポでパッケージを更新:
-   - gateway: `go get github.com/kenyamaneko/overload-party-common/packages/go@latest`
+   - gateway: `go get github.com/kenyamaneko/overload-party-common/packages/gamedata@latest`
    - battle: `dotnet restore`
    - client: `npm install`

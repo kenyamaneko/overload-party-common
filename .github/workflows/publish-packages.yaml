@@ -32,7 +32,7 @@ jobs:
       - name: Check for changes since last publish
         id: check
         run: |
-          LAST_TAG=$(git tag -l 'packages/go/v*' | sort -V | tail -1)
+          LAST_TAG=$(git tag -l 'packages/gamedata/v*' | sort -V | tail -1)
           if [ -z "$LAST_TAG" ]; then
             echo "publish=true" >> "$GITHUB_OUTPUT"
             echo "First publish: no existing tags"
@@ -49,11 +49,11 @@ jobs:
         id: version
         run: |
           # Check ステップと同じタグパターンで最新タグを取得し patch +1
-          LAST_TAG=$(git tag -l 'packages/go/v*' | sort -V | tail -1)
+          LAST_TAG=$(git tag -l 'packages/gamedata/v*' | sort -V | tail -1)
           if [ -z "$LAST_TAG" ]; then
             VERSION="0.1.0"
           else
-            CURRENT=$(echo "$LAST_TAG" | sed 's|packages/go/v||')
+            CURRENT=$(echo "$LAST_TAG" | sed 's|packages/gamedata/v||')
             MAJOR=$(echo "$CURRENT" | cut -d. -f1)
             MINOR=$(echo "$CURRENT" | cut -d. -f2)
             PATCH=$(echo "$CURRENT" | cut -d. -f3)
@@ -64,8 +64,8 @@ jobs:
       - name: Tag Go module
         if: steps.check.outputs.publish == 'true'
         run: |
-          git tag "packages/go/v${{ steps.version.outputs.version }}"
-          git push origin "packages/go/v${{ steps.version.outputs.version }}"
+          git tag "packages/gamedata/v${{ steps.version.outputs.version }}"
+          git push origin "packages/gamedata/v${{ steps.version.outputs.version }}"
 
       - name: Publish NuGet package
         if: steps.check.outputs.publish == 'true'

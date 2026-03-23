@@ -3,7 +3,7 @@
 
 This script lives in overload-party-common and generates outputs for:
   - common: docs/CARDS.md, cardno/cardno_gen.go
-  - packages/go/: cache/cards_gen.json, model/*_gen.go, constants/constants_gen.go, cardno/cardno_gen.go
+  - packages/gamedata/: cache/cards_gen.json, model/*_gen.go, constants/constants_gen.go, cardno/cardno_gen.go
   - packages/dotnet/: GameConstants_gen.cs, EventData_gen.cs, cache/cards_gen.json
   - packages/npm/: src/constants.ts, src/eventData.ts
 
@@ -1184,7 +1184,7 @@ def main():
     rel = gen_dir.relative_to(COMMON_ROOT)
 
     # Go package
-    go_dir = gen_dir / "go"
+    go_dir = gen_dir / "gamedata"
     go_count = generate_go_cardno(cards, faction_data, out_path=go_dir / "cardno" / "cardno_gen.go")
     print(f"Generated {go_count} constants → {rel}/go/cardno/cardno_gen.go", file=sys.stderr)
 
