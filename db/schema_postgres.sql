@@ -111,6 +111,7 @@ CREATE TABLE player_daily_battle (
 
 CREATE TABLE card_definitions (
   card_no        BIGINT NOT NULL,
+  card_id        VARCHAR(10) NOT NULL,
   card_name      VARCHAR(100) NOT NULL,
   resource_label VARCHAR(30) NOT NULL DEFAULT '',
   faction        VARCHAR(20) NOT NULL,
@@ -124,7 +125,8 @@ CREATE TABLE card_definitions (
   is_active      BOOLEAN NOT NULL,
   created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
-  PRIMARY KEY (card_no)
+  PRIMARY KEY (card_no),
+  UNIQUE (card_id)
 );
 
 CREATE INDEX idx_cards_faction ON card_definitions(faction, card_type);

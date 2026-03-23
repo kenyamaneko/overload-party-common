@@ -113,6 +113,7 @@ def validate(cards):
     errors = []
     seen_nos = {}
     seen_consts = {}
+    seen_card_ids = {}
 
     for card in cards:
         card_no = card.get("card_no")
@@ -122,9 +123,9 @@ def validate(cards):
         # Required fields (Log cards don't need stats, resizable, elastic)
         is_log = card.get("card_type") in LOG_TYPES
         if is_log:
-            required = ["card_no", "card_name", "const_name", "card_type", "restriction", "is_active"]
+            required = ["card_no", "card_id", "card_name", "const_name", "card_type", "restriction", "is_active"]
         else:
-            required = ["card_no", "card_name", "const_name", "card_type", "resizable", "elastic", "restriction", "is_active", "stats"]
+            required = ["card_no", "card_id", "card_name", "const_name", "card_type", "resizable", "elastic", "restriction", "is_active", "stats"]
         for field in required:
             if field not in card:
                 errors.append(f"{label}: missing required field '{field}'")
@@ -137,6 +138,16 @@ def validate(cards):
             errors.append(f"{label}: duplicate card_no (also used by {seen_nos[card_no]})")
         else:
             seen_nos[card_no] = card_name
+
+        # card_id format and uniqueness
+        card_id = card.get("card_id", "")
+        if card_id:
+            if not re.match(r"^(SH|TK|SL|TN|NT)-\d{4}$", card_id):
+                errors.append(f"{label}: card_id '{card_id}' must match XX-NNNN format (SH/TK/SL/TN/NT)")
+            if card_id in seen_card_ids:
+                errors.append(f"{label}: duplicate card_id '{card_id}' (also used by #{seen_card_ids[card_id]})")
+            else:
+                seen_card_ids[card_id] = card_no
 
         # Duplicate const_name
         const_name = card.get("const_name", "")
@@ -236,6 +247,7 @@ def generate_json(cards, *, out_path):
         deploy_turns = card.get("deploy_turns", 0)
         entry = {
             "card_no": card["card_no"],
+            "card_id": card["card_id"],
             "card_name": card["card_name"],
             "resource_label": card.get("resource_label", ""),
             "faction": card["faction"],
@@ -311,6 +323,22 @@ def generate_go_cardno(cards, faction_data, *, out_path=None):
     lines.append("var CardNames = map[int64]string{")
     for card in all_sorted:
         lines.append(f'\t{card["card_no"]}: "{card["card_name"]}",')
+    lines.append("}")
+    lines.append("")
+
+    # CardIDs map (card_no → card_id)
+    lines.append("// CardIDs maps card number to card ID (e.g. \"SH-0001\").")
+    lines.append("var CardIDs = map[int64]string{")
+    for card in all_sorted:
+        lines.append(f'\t{card["card_no"]}: "{card["card_id"]}",')
+    lines.append("}")
+    lines.append("")
+
+    # CardNoByID map (card_id → card_no)
+    lines.append("// CardNoByID maps card ID to card number.")
+    lines.append("var CardNoByID = map[string]int64{")
+    for card in all_sorted:
+        lines.append(f'\t"{card["card_id"]}": {card["card_no"]},')
     lines.append("}")
     lines.append("")
 
@@ -1071,39 +1099,39 @@ def generate_md(cards, faction_data, *, out_path=None):
 
             if is_compute:
                 # "元ネタ" column is excluded to prevent copyright concerns
-                lines.append("| # | カード名 | タイプ | スループット | 可用性 | 維持コスト | デプロイT | SLAペナルティ | 効果 |")
-                lines.append("|---|---------|-------|-----|-----|-----|-----|-----|------|")
+                lines.append("| ID | カード名 | タイプ | スループット | 可用性 | 維持コスト | デプロイT | SLAペナルティ | 効果 |")
+                lines.append("|------|---------|-------|-----|-----|-----|-----|-----|------|")
                 for c in cat_cards:
                     dt = c.get("deploy_turns", 0)
                     lines.append(
-                        f"| {c['card_no']} | {c['card_name']} | {_scalability_display(c)} "
+                        f"| {c['card_id']} | {c['card_name']} | {_scalability_display(c)} "
                         f"| {_tp_display(c)} | {c['stats']['availability']} "
                         f"| {c['stats']['maintenance_cost']} | {dt} "
                         f"| {c['stats']['sla_penalty']} | {_effect_display(c)} |"
                     )
             elif is_data:
                 # "元ネタ" column is excluded to prevent copyright concerns
-                lines.append("| # | カード名 | タイプ | Yield | 可用性 | 維持コスト | デプロイT | SLAペナルティ | 効果 |")
-                lines.append("|---|---------|-------|-----|-----|-----|-----|-----|------|")
+                lines.append("| ID | カード名 | タイプ | Yield | 可用性 | 維持コスト | デプロイT | SLAペナルティ | 効果 |")
+                lines.append("|------|---------|-------|-----|-----|-----|-----|-----|------|")
                 for c in cat_cards:
                     dt = c.get("deploy_turns", 0)
                     lines.append(
-                        f"| {c['card_no']} | {c['card_name']} | {_scalability_display(c)} "
+                        f"| {c['card_id']} | {c['card_name']} | {_scalability_display(c)} "
                         f"| {_yield_display(c)} | {c['stats']['availability']} "
                         f"| {c['stats']['maintenance_cost']} | {dt} "
                         f"| {c['stats']['sla_penalty']} | {_effect_display(c)} |"
                     )
             elif is_support:
                 # "元ネタ" column is excluded to prevent copyright concerns
-                lines.append("| # | カード名 | 効果 |")
-                lines.append("|---|---------|------|")
+                lines.append("| ID | カード名 | 効果 |")
+                lines.append("|------|---------|------|")
                 for c in cat_cards:
-                    lines.append(f"| {c['card_no']} | {c['card_name']} | {_effect_display(c)} |")
+                    lines.append(f"| {c['card_id']} | {c['card_name']} | {_effect_display(c)} |")
             elif cat_types & LOG_TYPES:
-                lines.append("| # | カード名 | 効果 |")
-                lines.append("|---|---------|------|")
+                lines.append("| ID | カード名 | 効果 |")
+                lines.append("|------|---------|------|")
                 for c in cat_cards:
-                    lines.append(f"| {c['card_no']} | {c['card_name']} | {_effect_display(c)} |")
+                    lines.append(f"| {c['card_id']} | {c['card_name']} | {_effect_display(c)} |")
 
             lines.append("")
 

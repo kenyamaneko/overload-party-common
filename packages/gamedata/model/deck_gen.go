@@ -18,6 +18,7 @@ type PlayerCard struct {
 // PlayerCardWithDef is a PlayerCard enriched with card definition fields for API responses.
 type PlayerCardWithDef struct {
 	CardNo      int64           `json:"card_no"`
+	CardID      string          `json:"card_id"`
 	ArtNo       int64           `json:"art_no"`
 	Count       int             `json:"count"`
 	CardName    string          `json:"card_name"`

@@ -255,7 +255,8 @@
 
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
-| `card_no` | BIGINT | No | カード番号（`CARDS.md` の `#` に対応） |
+| `card_no` | BIGINT | No | カード番号（レガシー、将来的に `card_id` へ移行予定） |
+| `card_id` | VARCHAR(10) | No | カード識別子（例: `SH-0001`）。UNIQUE制約あり |
 | `card_name` | VARCHAR(100) | No | カード名 |
 | `faction` | VARCHAR(20) | No | 陣営 (`SHE`, `Tenki`, `Sugar`, `Tuners`, `Neutral`) |
 | `card_type` | VARCHAR(30) | No | カードタイプ (`Compute`, `Container`, `Orchestrator`, `Serverless`, `AI_ML`, `Database`, `ObjectStorage`, `CacheDB`, `Platform`, `Attachment`, `Strategy`, `Incident`, `Reactive`) |

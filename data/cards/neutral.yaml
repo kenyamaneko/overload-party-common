@@ -7,6 +7,7 @@ cards:
   # === Attachment (5 cards) =========================================
 
   - card_no: 91
+    card_id: "NT-0001"
     card_name: "ロードバランサー"
     const_name: NeutralLoadBalancer
     card_type: Attachment
@@ -20,6 +21,7 @@ cards:
     effect_text: "自分のフロントエンドに装備できる。自分のフィールドにこのカードの装備先以外のフロントエンドリソースが 1体以上いる限り、相手はこのカードの装備先を攻撃対象に選択できない。"
 
   - card_no: 92
+    card_id: "NT-0002"
     card_name: "オートスケーラー"
     const_name: NeutralAutoScaler
     card_type: Attachment
@@ -33,6 +35,7 @@ cards:
     effect_text: "自分の Elasticでない コンピュート系リソースに装備できる。装備先カードが相手の攻撃を受けた次のターン、装備先のカードのスループットを +300 する。"
 
   - card_no: 93
+    card_id: "NT-0003"
     card_name: "プライベートサブネット"
     const_name: NeutralPrivateSubnet
     card_type: Attachment
@@ -46,6 +49,7 @@ cards:
     effect_text: "自分の コンピュート系リソース または DB系リソースに装備できる。装備先のカードはインシデントカードの効果の対象にならない"
 
   - card_no: 94
+    card_id: "NT-0004"
     card_name: "マルチ AZ"
     const_name: NeutralMultiAZ
     card_type: Attachment
@@ -66,6 +70,7 @@ cards:
   # === Platform (2 cards) ===========================================
 
   - card_no: 96
+    card_id: "NT-0005"
     card_name: "ISMS認証"
     const_name: NeutralISMS
     card_type: Platform
@@ -79,6 +84,7 @@ cards:
     effect_text: "インシデントカードによる自分のリソースへのダメージを -200 する。"
 
   - card_no: 97
+    card_id: "NT-0006"
     card_name: "SOC2認証"
     const_name: NeutralSOC2
     card_type: Platform
@@ -94,6 +100,7 @@ cards:
   # === Strategy (8 cards) ===========================================
 
   - card_no: 98
+    card_id: "NT-0007"
     card_name: "クラウドエンジニア"
     const_name: NeutralCloudEngineer
     card_type: Strategy
@@ -108,6 +115,7 @@ cards:
     effect_text: "リポジトリから1枚ドローし手札に加える。ただし、引いたカードが 調律部 カードならトラッシュに送る"
 
   - card_no: 99
+    card_id: "NT-0008"
     card_name: "クラウドアーキテクト"
     const_name: NeutralCloudArchitect
     card_type: Strategy
@@ -122,6 +130,7 @@ cards:
     effect_text: "リポジトリから2枚ドローし、選択した1枚を手札に加える。残り1枚はトラッシュに送る。ただし、引いた 調律部 カードは全てトラッシュに送る"
 
   - card_no: 100
+    card_id: "NT-0009"
     card_name: "寺リフォーム"
     const_name: NeutralTeraReform
     card_type: Strategy
@@ -136,6 +145,7 @@ cards:
     effect_text: "Budget 200 を払って発動できる。リポジトリからリソース1枚を選んで手札に加える"
 
   - card_no: 101
+    card_id: "NT-0010"
     card_name: "プロジェクトマネージャー"
     const_name: NeutralProjectManager
     card_type: Strategy
@@ -149,6 +159,7 @@ cards:
     effect_text: "自分の Budget を +400 する。"
 
   - card_no: 102
+    card_id: "NT-0011"
     card_name: "クラウドファンディング"
     const_name: NeutralCloudFunding
     card_type: Strategy
@@ -162,6 +173,7 @@ cards:
     effect_text: "自分の最初のターンのみ発動できる。自分の Budget を +1000 する。"
 
   - card_no: 103
+    card_id: "NT-0012"
     card_name: "オープンソースマイグレーション"
     const_name: NeutralOSSMigration
     card_type: Strategy
@@ -177,6 +189,7 @@ cards:
   # === Incident (9 cards) ===========================================
 
   - card_no: 104
+    card_id: "NT-0013"
     card_name: "DDoS 攻撃"
     const_name: NeutralDDoSAttack
     card_type: Incident
@@ -190,6 +203,7 @@ cards:
     effect_text: "Budget 400 を払って発動できる。相手のフロントエンドから選択した1体に 500 ダメージを与える"
 
   - card_no: 105
+    card_id: "NT-0014"
     card_name: "データ流出"
     const_name: NeutralDataBreach
     card_type: Incident
@@ -203,6 +217,7 @@ cards:
     effect_text: "Budget 600 を払って発動できる。相手のDB系リソースまたはオブジェクトストレージから選択した1体に 600 ダメージを与え、相手の Budget を -300 する"
 
   - card_no: 106
+    card_id: "NT-0015"
     card_name: "設定ミス"
     const_name: NeutralMisconfiguration
     card_type: Incident
@@ -216,6 +231,7 @@ cards:
     effect_text: "Budget 200 を払って発動できる。相手のフロントエンドから選択した1体のスループットを次ターン終了まで 0 にする"
 
   - card_no: 107
+    card_id: "NT-0016"
     card_name: "データスクレイピング"
     const_name: NeutralDataScraping
     card_type: Incident
@@ -229,6 +245,7 @@ cards:
     effect_text: "Budget 300 を払って発動できる。相手の Insight を 600 吸収する。"
 
   - card_no: 108
+    card_id: "NT-0017"
     card_name: "クローラーボット"
     const_name: NeutralCrawlerBot
     card_type: Incident
@@ -242,6 +259,7 @@ cards:
     effect_text: "Budget 100 を払って発動できる。相手の Insight を 300 吸収する。"
 
   - card_no: 109
+    card_id: "NT-0018"
     card_name: "リージョン障害"
     const_name: NeutralRegionOutage
     card_type: Incident
@@ -255,6 +273,7 @@ cards:
     effect_text: "Budget 600 を払って発動できる。フィールドの全てのリソースに 500 ダメージを与える"
 
   - card_no: 110
+    card_id: "NT-0019"
     card_name: "クリプトマイニング"
     const_name: NeutralCryptoMining
     card_type: Incident
@@ -268,6 +287,7 @@ cards:
     effect_text: "Budget 200 を払って発動できる。相手のフロントエンドから選択した1体に 400 ダメージを与え、自分の Budget を +500 する"
 
   - card_no: 111
+    card_id: "NT-0020"
     card_name: "ランサムウェア"
     const_name: NeutralRansomware
     card_type: Incident
@@ -282,6 +302,7 @@ cards:
     effect_text: "Budget 800 を払って発動できる。相手の Resource 1体を選択。次の相手ターン終了まで機能停止（Yield 0, スループット 0, 攻撃不可）"
 
   - card_no: 112
+    card_id: "NT-0021"
     card_name: "コンプライアンス監査"
     const_name: NeutralComplianceAudit
     card_type: Incident
@@ -297,6 +318,7 @@ cards:
   # === Reactive (6 cards) ===========================================
 
   - card_no: 113
+    card_id: "NT-0022"
     card_name: "レートリミット"
     const_name: NeutralRateLimit
     card_type: Reactive
@@ -310,6 +332,7 @@ cards:
     effect_text: "相手がスループット 900 以上のコンピュート系/AI・ML系リソースをデプロイした時に自動発動する。そのリソースをこのターン機能停止にする。"
 
   - card_no: 115
+    card_id: "NT-0023"
     card_name: "フェイルオーバー"
     const_name: NeutralFailover
     card_type: Reactive
@@ -323,6 +346,7 @@ cards:
     effect_text: "自分のリソースが破壊された時に発動できる。手札から同じカード名のリソースをデプロイコストなしでデプロイできる。"
 
   - card_no: 117
+    card_id: "NT-0024"
     card_name: "カオスエンジニアリング"
     const_name: NeutralChaosEngineering
     card_type: Reactive
@@ -336,6 +360,7 @@ cards:
     effect_text: "相手が自分のリソースを攻撃した時に発動できる。その攻撃を無効にする。さらに、相手が選択した相手のフロントエンドに、攻撃したリソースのスループット分のダメージを与える（フロントエンドが1枚しかない場合は、攻撃したリソース自身が対象になる）"
 
   - card_no: 119
+    card_id: "NT-0025"
     card_name: "DB スナップショット"
     const_name: NeutralDBSnapshot
     card_type: Attachment
@@ -349,6 +374,7 @@ cards:
     effect_text: "自分の DB系リソースに装備できる。自分のフィールドにオブジェクトストレージがある場合、装備先への攻撃ダメージを -400 する。"
 
   - card_no: 120
+    card_id: "NT-0026"
     card_name: "ベンチャーキャピタル"
     const_name: NeutralVentureCapital
     card_type: Strategy
@@ -362,6 +388,7 @@ cards:
     effect_text: "自分の Budget が 1000 以下の時のみ使用できる。自分の Budget を +900 する。"
 
   - card_no: 122
+    card_id: "NT-0027"
     card_name: "気象異変"
     const_name: NeutralWeatherAnomaly
     card_type: Reactive
@@ -375,6 +402,7 @@ cards:
     effect_text: "相手の 天気使い リソースが攻撃した時に発動できる。その攻撃を無効にする。次の相手のターン終了まで、全ての 天気使い リソースは攻撃できない。"
 
   - card_no: 123
+    card_id: "NT-0028"
     card_name: "天気使いの更新"
     const_name: NeutralTenkiUpdate
     card_type: Reactive
@@ -388,6 +416,7 @@ cards:
     effect_text: "相手が自分のリソースを攻撃した時に発動できる。フィールドの全ての 天気使い リソースに 400 ダメージを与える。"
 
   - card_no: 126
+    card_id: "NT-0029"
     card_name: "ITストラテジスト"
     const_name: NeutralITStrategist
     card_type: Strategy
@@ -403,6 +432,7 @@ cards:
   # === Compute-type Resources (2 cards) =============================
 
   - card_no: 127
+    card_id: "NT-0030"
     card_name: "リラックスペンギン"
     resource_label: "On-premises"
     const_name: NeutralOnpremLinux
@@ -423,6 +453,7 @@ cards:
   # === DB-type Resources (2 cards) ==================================
 
   - card_no: 128
+    card_id: "NT-0031"
     card_name: "エレファントDB"
     resource_label: "On-premises"
     const_name: NeutralOnpremElephantDB
@@ -441,6 +472,7 @@ cards:
     effect_text: "—"
 
   - card_no: 129
+    card_id: "NT-0032"
     card_name: "天気使いサーバー"
     resource_label: "On-premises"
     const_name: NeutralOnpremTenki
@@ -459,6 +491,7 @@ cards:
     effect_text: "**Cloud First:** このカードはスターティングリソースとしてのみデプロイできる。\n**Cloud Shift:** 手札から 天気使い コンピュート系リソースをデプロイコスト -500 でデプロイできる。その後、このカードをトラッシュに送る。"
 
   - card_no: 130
+    card_id: "NT-0033"
     card_name: "調律部 DB"
     resource_label: "On-premises"
     const_name: NeutralOnpremTunersDB
@@ -477,6 +510,7 @@ cards:
     effect_text: "**Cloud First:** このカードはスターティングリソースとしてのみデプロイできる。\n**Cloud Shift:** 手札から 調律部 DB系リソースをデプロイコスト -500 でデプロイできる。その後、このカードをトラッシュに送る。"
 
   - card_no: 135
+    card_id: "NT-0034"
     card_name: "スロットリング"
     const_name: NeutralThrottling
     card_type: Reactive

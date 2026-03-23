@@ -7,6 +7,7 @@ cards:
   # ── コンピュート系リソース (5枚) ──────────────────────────────
 
   - card_no: 23
+    card_id: "TK-0001"
     card_name: "ソラ"
     resource_label: "VM"
     const_name: TenkiVMSora
@@ -25,6 +26,7 @@ cards:
     effect_text: "—"
 
   - card_no: 24
+    card_id: "TK-0002"
     card_name: "アサギリ"
     resource_label: "PaaS"
     const_name: TenkiPaaSAsagiri
@@ -43,6 +45,7 @@ cards:
     effect_text: "**Auto Patch:** 相手がインシデントカードを使った時に発動できる。このカードが受けるダメージを半分にする。"
 
   - card_no: 25
+    card_id: "TK-0003"
     card_name: "コウテン"
     resource_label: "Container"
     const_name: TenkiContainerKouten
@@ -64,6 +67,7 @@ cards:
     effect_text: "—"
 
   - card_no: 26
+    card_id: "TK-0004"
     card_name: "空即蒼色"
     resource_label: "Orchestrator"
     const_name: TenkiOrchestratorKusoku
@@ -85,6 +89,7 @@ cards:
     effect_text: "—"
 
   - card_no: 27
+    card_id: "TK-0005"
     card_name: "智の解放者<オープナー>"
     resource_label: "AI"
     const_name: TenkiAIOpener
@@ -109,6 +114,7 @@ cards:
           multi_model_cards: [32]
 
   - card_no: 28
+    card_id: "TK-0006"
     card_name: "ライ"
     resource_label: "Functions"
     const_name: TenkiFunctionsRai
@@ -135,6 +141,7 @@ cards:
   # ── DB系リソース (4枚) ───────────────────────────────────────
 
   - card_no: 29
+    card_id: "TK-0007"
     card_name: "シグレ"
     resource_label: "RDB"
     const_name: TenkiRDBShigure
@@ -153,6 +160,7 @@ cards:
     effect_text: "—"
 
   - card_no: 30
+    card_id: "TK-0008"
     card_name: "ハヤテ"
     resource_label: "DB"
     const_name: TenkiDBHayate
@@ -171,6 +179,7 @@ cards:
     effect_text: "**嵐の後の虹:** 自分のバックエンドの他の 天気使い DB系リソースが破壊された時、2ターンの間、このカードの Yield を +400 する。"
 
   - card_no: 31
+    card_id: "TK-0009"
     card_name: "フブキ"
     resource_label: "Storage"
     const_name: TenkiStorageFubuki
@@ -189,6 +198,7 @@ cards:
     effect_text: "—"
 
   - card_no: 32
+    card_id: "TK-0010"
     card_name: "百花の天穹<コスモ>"
     resource_label: "NoSQL"
     const_name: TenkiDBCosmo
@@ -210,6 +220,7 @@ cards:
     effect_text: "**百花の形:** このカードが 天気使い DB系リソースとして効果の対象になる時、このカードは2枚分として数える。\n**百花繚乱:** このカードをデプロイした時に発動できる。リポジトリから「天気使い NoSQL - 秩序の蒼<コスモ>」1枚をコストなしでデプロイする。この効果は1ターン中に1回のみ使用できる"
 
   - card_no: 33
+    card_id: "TK-0011"
     card_name: "シュウウ"
     resource_label: "Cache"
     const_name: TenkiCacheReiu
@@ -230,6 +241,7 @@ cards:
   # ── プラットフォーム (3枚) ───────────────────────────────────
 
   - card_no: 34
+    card_id: "TK-0012"
     card_name: "天気使い DevOps"
     const_name: TenkiDevOps
     card_type: Platform
@@ -248,6 +260,7 @@ cards:
           reduction: 200
 
   - card_no: 35
+    card_id: "TK-0013"
     card_name: "天気使い CDN"
     const_name: TenkiCDN
     card_type: Platform
@@ -267,6 +280,7 @@ cards:
           bonus: 200
 
   - card_no: 37
+    card_id: "TK-0014"
     card_name: "天気使い Protection"
     const_name: TenkiProtection
     card_type: Platform
@@ -282,6 +296,7 @@ cards:
   # ── アタッチメント (5枚) ─────────────────────────────────────
 
   - card_no: 38
+    card_id: "TK-0015"
     card_name: "天気使い Backup"
     const_name: TenkiBackup
     card_type: Attachment
@@ -295,6 +310,7 @@ cards:
     effect_text: "自分のリソースに装備できる。装備先が破壊された時に発動できる。次の自分のターンに、装備先のカードを可用性を半分にしてデプロイコストなしでデプロイする。この効果は1ゲーム中に1回のみ使用できる"
 
   - card_no: 39
+    card_id: "TK-0016"
     card_name: "天気使い 空の入口"
     const_name: TenkiEntra
     card_type: Attachment
@@ -308,6 +324,7 @@ cards:
     effect_text: "自分のリソースに装備できる。装備先へのインシデントカードによるダメージを -200 する。"
 
   - card_no: 40
+    card_id: "TK-0017"
     card_name: "天気使い Vault"
     const_name: TenkiVault
     card_type: Attachment
@@ -321,6 +338,7 @@ cards:
     effect_text: "自分のバックエンドリソースに装備できる。装備先は「データ流出」の効果を受けない。"
 
   - card_no: 41
+    card_id: "TK-0018"
     card_name: "天気使い Recovery"
     const_name: TenkiRecovery
     card_type: Attachment
@@ -334,6 +352,7 @@ cards:
     effect_text: "自分のリソースに装備できる。装備先が破壊された時に発動できる。リポジトリから装備先と同名のカードを可用性 200 でデプロイコストなしでデプロイする。この効果は1ゲーム中に1回のみ使用できる"
 
   - card_no: 132
+    card_id: "TK-0019"
     card_name: "天気使い ブロックストレージ"
     const_name: TenkiBlockStorage
     card_type: Attachment
@@ -349,6 +368,7 @@ cards:
   # ── ストラテジー (3枚) ───────────────────────────────────────
 
   - card_no: 42
+    card_id: "TK-0020"
     card_name: "天気使い Template"
     const_name: TenkiTemplate
     card_type: Strategy
@@ -362,6 +382,7 @@ cards:
     effect_text: "Budget 200 を払って発動できる。リポジトリから 天気使い リソース1枚を選択して手札に加える。"
 
   - card_no: 43
+    card_id: "TK-0021"
     card_name: "天気使い Migration"
     const_name: TenkiMigration
     card_type: Strategy
@@ -375,6 +396,7 @@ cards:
     effect_text: "Budget 100 を払って発動できる。トラッシュから 天気使い リソース1枚を選択して手札に加える。"
 
   - card_no: 44
+    card_id: "TK-0022"
     card_name: "天気使い Policy"
     const_name: TenkiPolicy
     card_type: Strategy
@@ -390,6 +412,7 @@ cards:
   # ── リアクティブ (3枚) ───────────────────────────────────────
 
   - card_no: 45
+    card_id: "TK-0023"
     card_name: "天気使い お守り傘"
     const_name: TenkiOmamoriGasa
     card_type: Reactive
@@ -403,6 +426,7 @@ cards:
     effect_text: "相手がインシデントカードを使用した時に発動できる。そのインシデントを無効化する。"
 
   - card_no: 46
+    card_id: "TK-0024"
     card_name: "天気使い Traffic"
     const_name: TenkiTraffic
     card_type: Reactive
@@ -416,6 +440,7 @@ cards:
     effect_text: "自分の 天気使い コンピュート系リソースが破壊された時に発動できる。手札から 天気使い コンピュート系リソース1枚をデプロイコストなしでデプロイする。"
 
   - card_no: 36
+    card_id: "TK-0025"
     card_name: "天気使い ファンネル"
     const_name: TenkiFunnel
     card_type: Reactive

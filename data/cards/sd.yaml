@@ -5,6 +5,7 @@ faction: SHE
 display_name: "SHE（Smile Horizon Express）"
 cards:
   - card_no: 1
+    card_id: "SH-0001"
     card_name: "えくぼ"
     resource_label: "Compute"
     const_name: SHEComputeEkubo
@@ -23,6 +24,7 @@ cards:
     effect_text: "—"
 
   - card_no: 3
+    card_id: "SH-0002"
     card_name: "アリゲーテナ"
     resource_label: "Container"
     const_name: SHEContainerAlligator
@@ -44,6 +46,7 @@ cards:
     effect_text: "—"
 
   - card_no: 4
+    card_id: "SH-0003"
     card_name: "クジラの統率者<クジランティス>"
     resource_label: "Orchestrator"
     const_name: SHEOrchestratorKujirantis
@@ -65,6 +68,7 @@ cards:
     effect_text: "—"
 
   - card_no: 5
+    card_id: "SH-0004"
     card_name: "ラフメイカー"
     resource_label: "ML"
     const_name: SHEMLRoughmaker
@@ -83,6 +87,7 @@ cards:
     effect_text: "—"
 
   - card_no: 6
+    card_id: "SH-0005"
     card_name: "むらた"
     resource_label: "Serverless"
     const_name: SHEServerlessRamune
@@ -111,6 +116,7 @@ cards:
           flat_bonus: 200
 
   - card_no: 7
+    card_id: "SH-0006"
     card_name: "アデリース"
     resource_label: "RDB"
     const_name: SHERDBAdeliece
@@ -129,6 +135,7 @@ cards:
     effect_text: "**予約契約:** このカードのデプロイ時に発動できる。デプロイ時のコストを -200 する。この効果を使用してデプロイした場合、他のリソースをデプロイするためにこのカードをトラッシュすることはできない。"
 
   - card_no: 8
+    card_id: "SH-0007"
     card_name: "オオロバ"
     resource_label: "DistributedDB"
     const_name: SHEDistributedDBOoroba
@@ -153,6 +160,7 @@ cards:
           exclude_self: true
 
   - card_no: 9
+    card_id: "SH-0008"
     card_name: "えりり"
     resource_label: "Storage"
     const_name: SHEStorageEris
@@ -171,6 +179,7 @@ cards:
     effect_text: "**Versioning:** 自分のフィールドの SHEのDB系リソース が破壊された時に発動できる。そのカードを自分の手札に戻す。"
 
   - card_no: 10
+    card_id: "SH-0009"
     card_name: "ダイノ"
     resource_label: "NoSQL"
     const_name: SHEDBDinosaur
@@ -198,6 +207,7 @@ cards:
           flat_bonus: 200
 
   - card_no: 11
+    card_id: "SH-0010"
     card_name: "メリーモ"
     resource_label: "Cache"
     const_name: SHECacheMerry
@@ -216,6 +226,7 @@ cards:
     effect_text: "**Cache Engine:** デプロイ時に選択以下のいずれかの効果を選択する。**Memcached:** Budget を +400 する。**Redis:** このカードの Yield を +200 する"
 
   - card_no: 12
+    card_id: "SH-0011"
     card_name: "SHE Pipeline"
     const_name: SHEPipeline
     card_type: Platform
@@ -234,6 +245,7 @@ cards:
           reduction: 200
 
   - card_no: 13
+    card_id: "SH-0012"
     card_name: "SHE Front"
     const_name: SHEFront
     card_type: Platform
@@ -258,6 +270,7 @@ cards:
           bonus: 200
 
   - card_no: 14
+    card_id: "SH-0013"
     card_name: "SHE Guard"
     const_name: SHEGuard
     card_type: Platform
@@ -271,6 +284,7 @@ cards:
     effect_text: "相手フィールドのサポートゾーンの裏側のカード 1枚を選択して確認する。"
 
   - card_no: 15
+    card_id: "SH-0014"
     card_name: "SHE Firewall"
     const_name: SHEFirewall
     card_type: Platform
@@ -284,6 +298,7 @@ cards:
     effect_text: "相手の DDoS Attack と Data Breach を無効化する。"
 
   - card_no: 16
+    card_id: "SH-0015"
     card_name: "SHE Queue"
     const_name: SHEQueue
     card_type: Attachment
@@ -297,6 +312,7 @@ cards:
     effect_text: "フロントエンドリソースに装備できる。装備したリソースのスループットをメインフェーズのみ +600 する。この効果は1ターン中に1回のみ使用できる"
 
   - card_no: 17
+    card_id: "SH-0016"
     card_name: "SHE Gateway"
     const_name: SHEGateway
     card_type: Attachment
@@ -315,6 +331,7 @@ cards:
           bonus: 200
 
   - card_no: 18
+    card_id: "SH-0017"
     card_name: "SHE Keys"
     const_name: SHEKeys
     card_type: Attachment
@@ -328,6 +345,7 @@ cards:
     effect_text: "バックエンドリソースに装備できる。装備したリソースは「データ流出」の効果を受けない。"
 
   - card_no: 19
+    card_id: "SH-0018"
     card_name: "SHE Formation"
     const_name: SHEFormation
     card_type: Strategy
@@ -341,6 +359,7 @@ cards:
     effect_text: "Budget を 200 払って発動できる。リポジトリから SHE Resource カード1枚を選択して手札に加える。"
 
   - card_no: 20
+    card_id: "SH-0019"
     card_name: "SHE Marketplace"
     const_name: SHEMarketplace
     card_type: Strategy
@@ -354,6 +373,7 @@ cards:
     effect_text: "自分のフィールドに SHE カードが3枚以上ある時に発動できる。自分の Budget を +600 する。"
 
   - card_no: 21
+    card_id: "SH-0020"
     card_name: "SHE 料金見積もり"
     const_name: SHERyoukinMitsumori
     card_type: Strategy
@@ -367,6 +387,7 @@ cards:
     effect_text: "このターン、自分の全ての SHE カードの開発コストを -200 する。"
 
   - card_no: 22
+    card_id: "SH-0021"
     card_name: "Smile Recovery"
     const_name: SmileRecovery
     card_type: Reactive
@@ -380,6 +401,7 @@ cards:
     effect_text: "自分の SHE リソースの可用性が 400 以下になった時に発動できる。そのリソースの可用性を +500 する。"
 
   - card_no: 118
+    card_id: "SH-0022"
     card_name: "SHE Ecosystem"
     const_name: SHEEcosystem
     card_type: Strategy
@@ -393,6 +415,7 @@ cards:
     effect_text: "自分のフィールドに SHE カードが3枚以上ある時に使用できる。このターン、自分のフロントエンドの全ての SHE カードのスループットを +200 する。"
 
   - card_no: 121
+    card_id: "SH-0023"
     card_name: "SHE Smile Horizon Express"
     const_name: SHESmileHorizonExpress
     card_type: Strategy
@@ -406,6 +429,7 @@ cards:
     effect_text: "Budget を 200 払って発動できる。手札の SHE リソースを1枚を選択し、デプロイコストを払わずにデプロイできる。"
 
   - card_no: 124
+    card_id: "SH-0024"
     card_name: "だっくん"
     resource_label: "Cache"
     const_name: SHECacheDakkun
@@ -424,6 +448,7 @@ cards:
     effect_text: "**キャッシュブースト:** 自分のフィールドの全ての SHE NoSQL - ダイノの Yield を +200 する。"
 
   - card_no: 131
+    card_id: "SH-0025"
     card_name: "SHE Block Storage"
     const_name: SHEBlockStorage
     card_type: Attachment

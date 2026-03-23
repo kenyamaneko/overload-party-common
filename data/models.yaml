@@ -50,6 +50,7 @@ files:
         comment: "PlayerCardWithDef is a PlayerCard enriched with card definition fields for API responses."
         fields:
           - {name: CardNo, type: int64, json: "card_no"}
+          - {name: CardID, type: string, json: "card_id"}
           - {name: ArtNo, type: int64, json: "art_no"}
           - {name: Count, type: int, json: "count"}
           - {name: CardName, type: string, json: "card_name"}
@@ -91,6 +92,7 @@ files:
       - name: CardDefinition
         fields:
           - {name: CardNo, type: int64, json: "card_no"}
+          - {name: CardID, type: string, json: "card_id"}
           - {name: CardName, type: string, json: "card_name"}
           - {name: ResourceLabel, type: string, json: "resource_label"}
           - {name: Faction, type: string, json: "faction"}

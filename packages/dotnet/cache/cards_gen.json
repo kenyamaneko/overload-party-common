@@ -1,6 +1,7 @@
 [
   {
     "card_no": 1,
+    "card_id": "SH-0001",
     "card_name": "えくぼ",
     "resource_label": "Compute",
     "faction": "SHE",
@@ -23,6 +24,7 @@
   },
   {
     "card_no": 3,
+    "card_id": "SH-0002",
     "card_name": "アリゲーテナ",
     "resource_label": "Container",
     "faction": "SHE",
@@ -45,6 +47,7 @@
   },
   {
     "card_no": 4,
+    "card_id": "SH-0003",
     "card_name": "クジラの統率者<クジランティス>",
     "resource_label": "Orchestrator",
     "faction": "SHE",
@@ -67,6 +70,7 @@
   },
   {
     "card_no": 5,
+    "card_id": "SH-0004",
     "card_name": "ラフメイカー",
     "resource_label": "ML",
     "faction": "SHE",
@@ -89,6 +93,7 @@
   },
   {
     "card_no": 6,
+    "card_id": "SH-0005",
     "card_name": "むらた",
     "resource_label": "Serverless",
     "faction": "SHE",
@@ -123,6 +128,7 @@
   },
   {
     "card_no": 7,
+    "card_id": "SH-0006",
     "card_name": "アデリース",
     "resource_label": "RDB",
     "faction": "SHE",
@@ -145,6 +151,7 @@
   },
   {
     "card_no": 8,
+    "card_id": "SH-0007",
     "card_name": "オオロバ",
     "resource_label": "DistributedDB",
     "faction": "SHE",
@@ -177,6 +184,7 @@
   },
   {
     "card_no": 9,
+    "card_id": "SH-0008",
     "card_name": "えりり",
     "resource_label": "Storage",
     "faction": "SHE",
@@ -199,6 +207,7 @@
   },
   {
     "card_no": 10,
+    "card_id": "SH-0009",
     "card_name": "ダイノ",
     "resource_label": "NoSQL",
     "faction": "SHE",
@@ -232,6 +241,7 @@
   },
   {
     "card_no": 11,
+    "card_id": "SH-0010",
     "card_name": "メリーモ",
     "resource_label": "Cache",
     "faction": "SHE",
@@ -254,6 +264,7 @@
   },
   {
     "card_no": 12,
+    "card_id": "SH-0011",
     "card_name": "SHE Pipeline",
     "resource_label": "",
     "faction": "SHE",
@@ -280,6 +291,7 @@
   },
   {
     "card_no": 13,
+    "card_id": "SH-0012",
     "card_name": "SHE Front",
     "resource_label": "",
     "faction": "SHE",
@@ -313,6 +325,7 @@
   },
   {
     "card_no": 14,
+    "card_id": "SH-0013",
     "card_name": "SHE Guard",
     "resource_label": "",
     "faction": "SHE",
@@ -330,6 +343,7 @@
   },
   {
     "card_no": 15,
+    "card_id": "SH-0014",
     "card_name": "SHE Firewall",
     "resource_label": "",
     "faction": "SHE",
@@ -347,6 +361,7 @@
   },
   {
     "card_no": 16,
+    "card_id": "SH-0015",
     "card_name": "SHE Queue",
     "resource_label": "",
     "faction": "SHE",
@@ -364,6 +379,7 @@
   },
   {
     "card_no": 17,
+    "card_id": "SH-0016",
     "card_name": "SHE Gateway",
     "resource_label": "",
     "faction": "SHE",
@@ -390,6 +406,7 @@
   },
   {
     "card_no": 18,
+    "card_id": "SH-0017",
     "card_name": "SHE Keys",
     "resource_label": "",
     "faction": "SHE",
@@ -407,6 +424,7 @@
   },
   {
     "card_no": 19,
+    "card_id": "SH-0018",
     "card_name": "SHE Formation",
     "resource_label": "",
     "faction": "SHE",
@@ -424,6 +442,7 @@
   },
   {
     "card_no": 20,
+    "card_id": "SH-0019",
     "card_name": "SHE Marketplace",
     "resource_label": "",
     "faction": "SHE",
@@ -441,6 +460,7 @@
   },
   {
     "card_no": 21,
+    "card_id": "SH-0020",
     "card_name": "SHE 料金見積もり",
     "resource_label": "",
     "faction": "SHE",
@@ -458,6 +478,7 @@
   },
   {
     "card_no": 22,
+    "card_id": "SH-0021",
     "card_name": "Smile Recovery",
     "resource_label": "",
     "faction": "SHE",
@@ -475,6 +496,7 @@
   },
   {
     "card_no": 23,
+    "card_id": "TK-0001",
     "card_name": "ソラ",
     "resource_label": "VM",
     "faction": "Tenki",
@@ -497,6 +519,7 @@
   },
   {
     "card_no": 24,
+    "card_id": "TK-0002",
     "card_name": "アサギリ",
     "resource_label": "PaaS",
     "faction": "Tenki",
@@ -519,6 +542,7 @@
   },
   {
     "card_no": 25,
+    "card_id": "TK-0003",
     "card_name": "コウテン",
     "resource_label": "Container",
     "faction": "Tenki",
@@ -541,6 +565,7 @@
   },
   {
     "card_no": 26,
+    "card_id": "TK-0004",
     "card_name": "空即蒼色",
     "resource_label": "Orchestrator",
     "faction": "Tenki",
@@ -563,6 +588,7 @@
   },
   {
     "card_no": 27,
+    "card_id": "TK-0005",
     "card_name": "智の解放者<オープナー>",
     "resource_label": "AI",
     "faction": "Tenki",
@@ -597,6 +623,7 @@
   },
   {
     "card_no": 28,
+    "card_id": "TK-0006",
     "card_name": "ライ",
     "resource_label": "Functions",
     "faction": "Tenki",
@@ -619,6 +646,7 @@
   },
   {
     "card_no": 29,
+    "card_id": "TK-0007",
     "card_name": "シグレ",
     "resource_label": "RDB",
     "faction": "Tenki",
@@ -641,6 +669,7 @@
   },
   {
     "card_no": 30,
+    "card_id": "TK-0008",
     "card_name": "ハヤテ",
     "resource_label": "DB",
     "faction": "Tenki",
@@ -663,6 +692,7 @@
   },
   {
     "card_no": 31,
+    "card_id": "TK-0009",
     "card_name": "フブキ",
     "resource_label": "Storage",
     "faction": "Tenki",
@@ -685,6 +715,7 @@
   },
   {
     "card_no": 32,
+    "card_id": "TK-0010",
     "card_name": "百花の天穹<コスモ>",
     "resource_label": "NoSQL",
     "faction": "Tenki",
@@ -707,6 +738,7 @@
   },
   {
     "card_no": 33,
+    "card_id": "TK-0011",
     "card_name": "シュウウ",
     "resource_label": "Cache",
     "faction": "Tenki",
@@ -729,6 +761,7 @@
   },
   {
     "card_no": 34,
+    "card_id": "TK-0012",
     "card_name": "天気使い DevOps",
     "resource_label": "",
     "faction": "Tenki",
@@ -755,6 +788,7 @@
   },
   {
     "card_no": 35,
+    "card_id": "TK-0013",
     "card_name": "天気使い CDN",
     "resource_label": "",
     "faction": "Tenki",
@@ -788,6 +822,7 @@
   },
   {
     "card_no": 36,
+    "card_id": "TK-0025",
     "card_name": "天気使い ファンネル",
     "resource_label": "",
     "faction": "Tenki",
@@ -805,6 +840,7 @@
   },
   {
     "card_no": 37,
+    "card_id": "TK-0014",
     "card_name": "天気使い Protection",
     "resource_label": "",
     "faction": "Tenki",
@@ -822,6 +858,7 @@
   },
   {
     "card_no": 38,
+    "card_id": "TK-0015",
     "card_name": "天気使い Backup",
     "resource_label": "",
     "faction": "Tenki",
@@ -839,6 +876,7 @@
   },
   {
     "card_no": 39,
+    "card_id": "TK-0016",
     "card_name": "天気使い 空の入口",
     "resource_label": "",
     "faction": "Tenki",
@@ -856,6 +894,7 @@
   },
   {
     "card_no": 40,
+    "card_id": "TK-0017",
     "card_name": "天気使い Vault",
     "resource_label": "",
     "faction": "Tenki",
@@ -873,6 +912,7 @@
   },
   {
     "card_no": 41,
+    "card_id": "TK-0018",
     "card_name": "天気使い Recovery",
     "resource_label": "",
     "faction": "Tenki",
@@ -890,6 +930,7 @@
   },
   {
     "card_no": 42,
+    "card_id": "TK-0020",
     "card_name": "天気使い Template",
     "resource_label": "",
     "faction": "Tenki",
@@ -907,6 +948,7 @@
   },
   {
     "card_no": 43,
+    "card_id": "TK-0021",
     "card_name": "天気使い Migration",
     "resource_label": "",
     "faction": "Tenki",
@@ -924,6 +966,7 @@
   },
   {
     "card_no": 44,
+    "card_id": "TK-0022",
     "card_name": "天気使い Policy",
     "resource_label": "",
     "faction": "Tenki",
@@ -941,6 +984,7 @@
   },
   {
     "card_no": 45,
+    "card_id": "TK-0023",
     "card_name": "天気使い お守り傘",
     "resource_label": "",
     "faction": "Tenki",
@@ -958,6 +1002,7 @@
   },
   {
     "card_no": 46,
+    "card_id": "TK-0024",
     "card_name": "天気使い Traffic",
     "resource_label": "",
     "faction": "Tenki",
@@ -975,6 +1020,7 @@
   },
   {
     "card_no": 47,
+    "card_id": "SL-0001",
     "card_name": "ジューシィ・いちご",
     "resource_label": "Compute",
     "faction": "Sugar",
@@ -997,6 +1043,7 @@
   },
   {
     "card_no": 48,
+    "card_id": "SL-0002",
     "card_name": "スポンジット",
     "resource_label": "Spot",
     "faction": "Sugar",
@@ -1019,6 +1066,7 @@
   },
   {
     "card_no": 49,
+    "card_id": "SL-0003",
     "card_name": "クラン",
     "resource_label": "Container",
     "faction": "Sugar",
@@ -1041,6 +1089,7 @@
   },
   {
     "card_no": 50,
+    "card_id": "SL-0004",
     "card_name": "クーヘンバウムティス",
     "resource_label": "Orchestrator",
     "faction": "Sugar",
@@ -1063,6 +1112,7 @@
   },
   {
     "card_no": 51,
+    "card_id": "SL-0006",
     "card_name": "バター君",
     "resource_label": "AI",
     "faction": "Sugar",
@@ -1085,6 +1135,7 @@
   },
   {
     "card_no": 52,
+    "card_id": "SL-0007",
     "card_name": "Dr. テンソルベ",
     "resource_label": "AI",
     "faction": "Sugar",
@@ -1107,6 +1158,7 @@
   },
   {
     "card_no": 53,
+    "card_id": "SL-0005",
     "card_name": "クラン",
     "resource_label": "Functions",
     "faction": "Sugar",
@@ -1129,6 +1181,7 @@
   },
   {
     "card_no": 54,
+    "card_id": "SL-0008",
     "card_name": "エクレアーエル",
     "resource_label": "RDB",
     "faction": "Sugar",
@@ -1151,6 +1204,7 @@
   },
   {
     "card_no": 55,
+    "card_id": "SL-0009",
     "card_name": "スーパーバナナ",
     "resource_label": "DistributedDB",
     "faction": "Sugar",
@@ -1173,6 +1227,7 @@
   },
   {
     "card_no": 56,
+    "card_id": "SL-0013",
     "card_name": "シュトレーンジ",
     "resource_label": "Storage",
     "faction": "Sugar",
@@ -1195,6 +1250,7 @@
   },
   {
     "card_no": 57,
+    "card_id": "SL-0010",
     "card_name": "トーストア",
     "resource_label": "NoSQL",
     "faction": "Sugar",
@@ -1217,6 +1273,7 @@
   },
   {
     "card_no": 58,
+    "card_id": "SL-0011",
     "card_name": "アイスクエリム",
     "resource_label": "Datawarehouse",
     "faction": "Sugar",
@@ -1239,6 +1296,7 @@
   },
   {
     "card_no": 59,
+    "card_id": "SL-0014",
     "card_name": "しゅがーらぼ Build",
     "resource_label": "",
     "faction": "Sugar",
@@ -1265,6 +1323,7 @@
   },
   {
     "card_no": 60,
+    "card_id": "SL-0015",
     "card_name": "しゅがーらぼ CDN",
     "resource_label": "",
     "faction": "Sugar",
@@ -1298,6 +1357,7 @@
   },
   {
     "card_no": 61,
+    "card_id": "SL-0016",
     "card_name": "しゅがーらぼ アイスクエリム Analytics",
     "resource_label": "",
     "faction": "Sugar",
@@ -1315,6 +1375,7 @@
   },
   {
     "card_no": 62,
+    "card_id": "SL-0017",
     "card_name": "しゅがーらぼ Profiler",
     "resource_label": "",
     "faction": "Sugar",
@@ -1341,6 +1402,7 @@
   },
   {
     "card_no": 63,
+    "card_id": "SL-0018",
     "card_name": "しゅがーらぼ ぱくぱくサブレ",
     "resource_label": "",
     "faction": "Sugar",
@@ -1358,6 +1420,7 @@
   },
   {
     "card_no": 64,
+    "card_id": "SL-0019",
     "card_name": "しゅがーらぼ だんごフロー",
     "resource_label": "",
     "faction": "Sugar",
@@ -1391,6 +1454,7 @@
   },
   {
     "card_no": 65,
+    "card_id": "SL-0021",
     "card_name": "しゅがーらぼ Deployment",
     "resource_label": "",
     "faction": "Sugar",
@@ -1408,6 +1472,7 @@
   },
   {
     "card_no": 66,
+    "card_id": "SL-0022",
     "card_name": "しゅがーらぼ バター君 Batch",
     "resource_label": "",
     "faction": "Sugar",
@@ -1425,6 +1490,7 @@
   },
   {
     "card_no": 67,
+    "card_id": "SL-0023",
     "card_name": "しゅがーらぼ Knowledge",
     "resource_label": "",
     "faction": "Sugar",
@@ -1442,6 +1508,7 @@
   },
   {
     "card_no": 68,
+    "card_id": "SL-0024",
     "card_name": "しゅがーらぼ Error Budget",
     "resource_label": "",
     "faction": "Sugar",
@@ -1459,6 +1526,7 @@
   },
   {
     "card_no": 70,
+    "card_id": "TN-0001",
     "card_name": "コンタータ",
     "resource_label": "Compute",
     "faction": "Tuners",
@@ -1481,6 +1549,7 @@
   },
   {
     "card_no": 72,
+    "card_id": "TN-0002",
     "card_name": "ベア太",
     "resource_label": "Bare Metal",
     "faction": "Tuners",
@@ -1503,6 +1572,7 @@
   },
   {
     "card_no": 73,
+    "card_id": "TN-0003",
     "card_name": "テナ",
     "resource_label": "Container",
     "faction": "Tuners",
@@ -1525,6 +1595,7 @@
   },
   {
     "card_no": 74,
+    "card_id": "TN-0004",
     "card_name": "コンダクティス",
     "resource_label": "Orchestrator",
     "faction": "Tuners",
@@ -1553,6 +1624,7 @@
   },
   {
     "card_no": 75,
+    "card_id": "TN-0005",
     "card_name": "ファンファーレクション",
     "resource_label": "Functions",
     "faction": "Tuners",
@@ -1575,6 +1647,7 @@
   },
   {
     "card_no": 76,
+    "card_id": "TN-0006",
     "card_name": "アピエッタ",
     "resource_label": "Low-Code",
     "faction": "Tuners",
@@ -1610,6 +1683,7 @@
   },
   {
     "card_no": 77,
+    "card_id": "TN-0007",
     "card_name": "音の魔術師〈マジシャン・オブ・ミュージック〉",
     "resource_label": "DB",
     "faction": "Tuners",
@@ -1632,6 +1706,7 @@
   },
   {
     "card_no": 78,
+    "card_id": "TN-0008",
     "card_name": "エクサノーツ",
     "resource_label": "DB",
     "faction": "Tuners",
@@ -1654,6 +1729,7 @@
   },
   {
     "card_no": 79,
+    "card_id": "TN-0009",
     "card_name": "スコアージ",
     "resource_label": "Storage",
     "faction": "Tuners",
@@ -1676,6 +1752,7 @@
   },
   {
     "card_no": 81,
+    "card_id": "TN-0010",
     "card_name": "カプリッシュ",
     "resource_label": "Cache",
     "faction": "Tuners",
@@ -1698,6 +1775,7 @@
   },
   {
     "card_no": 82,
+    "card_id": "TN-0011",
     "card_name": "調律部 DevOps",
     "resource_label": "",
     "faction": "Tuners",
@@ -1724,6 +1802,7 @@
   },
   {
     "card_no": 83,
+    "card_id": "TN-0012",
     "card_name": "調律部 Guard",
     "resource_label": "",
     "faction": "Tuners",
@@ -1741,6 +1820,7 @@
   },
   {
     "card_no": 84,
+    "card_id": "TN-0013",
     "card_name": "調律部 WAF",
     "resource_label": "",
     "faction": "Tuners",
@@ -1758,6 +1838,7 @@
   },
   {
     "card_no": 85,
+    "card_id": "TN-0014",
     "card_name": "調律部 ノーツガード",
     "resource_label": "",
     "faction": "Tuners",
@@ -1775,6 +1856,7 @@
   },
   {
     "card_no": 86,
+    "card_id": "TN-0015",
     "card_name": "調律部 リアル・アンサンブル・クラスター",
     "resource_label": "",
     "faction": "Tuners",
@@ -1801,6 +1883,7 @@
   },
   {
     "card_no": 89,
+    "card_id": "TN-0017",
     "card_name": "調律部 License",
     "resource_label": "",
     "faction": "Tuners",
@@ -1818,6 +1901,7 @@
   },
   {
     "card_no": 90,
+    "card_id": "TN-0018",
     "card_name": "調律部 Failback",
     "resource_label": "",
     "faction": "Tuners",
@@ -1835,6 +1919,7 @@
   },
   {
     "card_no": 91,
+    "card_id": "NT-0001",
     "card_name": "ロードバランサー",
     "resource_label": "",
     "faction": "Neutral",
@@ -1852,6 +1937,7 @@
   },
   {
     "card_no": 92,
+    "card_id": "NT-0002",
     "card_name": "オートスケーラー",
     "resource_label": "",
     "faction": "Neutral",
@@ -1869,6 +1955,7 @@
   },
   {
     "card_no": 93,
+    "card_id": "NT-0003",
     "card_name": "プライベートサブネット",
     "resource_label": "",
     "faction": "Neutral",
@@ -1886,6 +1973,7 @@
   },
   {
     "card_no": 94,
+    "card_id": "NT-0004",
     "card_name": "マルチ AZ",
     "resource_label": "",
     "faction": "Neutral",
@@ -1912,6 +2000,7 @@
   },
   {
     "card_no": 96,
+    "card_id": "NT-0005",
     "card_name": "ISMS認証",
     "resource_label": "",
     "faction": "Neutral",
@@ -1929,6 +2018,7 @@
   },
   {
     "card_no": 97,
+    "card_id": "NT-0006",
     "card_name": "SOC2認証",
     "resource_label": "",
     "faction": "Neutral",
@@ -1946,6 +2036,7 @@
   },
   {
     "card_no": 98,
+    "card_id": "NT-0007",
     "card_name": "クラウドエンジニア",
     "resource_label": "",
     "faction": "Neutral",
@@ -1963,6 +2054,7 @@
   },
   {
     "card_no": 99,
+    "card_id": "NT-0008",
     "card_name": "クラウドアーキテクト",
     "resource_label": "",
     "faction": "Neutral",
@@ -1980,6 +2072,7 @@
   },
   {
     "card_no": 100,
+    "card_id": "NT-0009",
     "card_name": "寺リフォーム",
     "resource_label": "",
     "faction": "Neutral",
@@ -1997,6 +2090,7 @@
   },
   {
     "card_no": 101,
+    "card_id": "NT-0010",
     "card_name": "プロジェクトマネージャー",
     "resource_label": "",
     "faction": "Neutral",
@@ -2014,6 +2108,7 @@
   },
   {
     "card_no": 102,
+    "card_id": "NT-0011",
     "card_name": "クラウドファンディング",
     "resource_label": "",
     "faction": "Neutral",
@@ -2031,6 +2126,7 @@
   },
   {
     "card_no": 103,
+    "card_id": "NT-0012",
     "card_name": "オープンソースマイグレーション",
     "resource_label": "",
     "faction": "Neutral",
@@ -2048,6 +2144,7 @@
   },
   {
     "card_no": 104,
+    "card_id": "NT-0013",
     "card_name": "DDoS 攻撃",
     "resource_label": "",
     "faction": "Neutral",
@@ -2065,6 +2162,7 @@
   },
   {
     "card_no": 105,
+    "card_id": "NT-0014",
     "card_name": "データ流出",
     "resource_label": "",
     "faction": "Neutral",
@@ -2082,6 +2180,7 @@
   },
   {
     "card_no": 106,
+    "card_id": "NT-0015",
     "card_name": "設定ミス",
     "resource_label": "",
     "faction": "Neutral",
@@ -2099,6 +2198,7 @@
   },
   {
     "card_no": 107,
+    "card_id": "NT-0016",
     "card_name": "データスクレイピング",
     "resource_label": "",
     "faction": "Neutral",
@@ -2116,6 +2216,7 @@
   },
   {
     "card_no": 108,
+    "card_id": "NT-0017",
     "card_name": "クローラーボット",
     "resource_label": "",
     "faction": "Neutral",
@@ -2133,6 +2234,7 @@
   },
   {
     "card_no": 109,
+    "card_id": "NT-0018",
     "card_name": "リージョン障害",
     "resource_label": "",
     "faction": "Neutral",
@@ -2150,6 +2252,7 @@
   },
   {
     "card_no": 110,
+    "card_id": "NT-0019",
     "card_name": "クリプトマイニング",
     "resource_label": "",
     "faction": "Neutral",
@@ -2167,6 +2270,7 @@
   },
   {
     "card_no": 111,
+    "card_id": "NT-0020",
     "card_name": "ランサムウェア",
     "resource_label": "",
     "faction": "Neutral",
@@ -2184,6 +2288,7 @@
   },
   {
     "card_no": 112,
+    "card_id": "NT-0021",
     "card_name": "コンプライアンス監査",
     "resource_label": "",
     "faction": "Neutral",
@@ -2201,6 +2306,7 @@
   },
   {
     "card_no": 113,
+    "card_id": "NT-0022",
     "card_name": "レートリミット",
     "resource_label": "",
     "faction": "Neutral",
@@ -2218,6 +2324,7 @@
   },
   {
     "card_no": 115,
+    "card_id": "NT-0023",
     "card_name": "フェイルオーバー",
     "resource_label": "",
     "faction": "Neutral",
@@ -2235,6 +2342,7 @@
   },
   {
     "card_no": 117,
+    "card_id": "NT-0024",
     "card_name": "カオスエンジニアリング",
     "resource_label": "",
     "faction": "Neutral",
@@ -2252,6 +2360,7 @@
   },
   {
     "card_no": 118,
+    "card_id": "SH-0022",
     "card_name": "SHE Ecosystem",
     "resource_label": "",
     "faction": "SHE",
@@ -2269,6 +2378,7 @@
   },
   {
     "card_no": 119,
+    "card_id": "NT-0025",
     "card_name": "DB スナップショット",
     "resource_label": "",
     "faction": "Neutral",
@@ -2286,6 +2396,7 @@
   },
   {
     "card_no": 120,
+    "card_id": "NT-0026",
     "card_name": "ベンチャーキャピタル",
     "resource_label": "",
     "faction": "Neutral",
@@ -2303,6 +2414,7 @@
   },
   {
     "card_no": 121,
+    "card_id": "SH-0023",
     "card_name": "SHE Smile Horizon Express",
     "resource_label": "",
     "faction": "SHE",
@@ -2320,6 +2432,7 @@
   },
   {
     "card_no": 122,
+    "card_id": "NT-0027",
     "card_name": "気象異変",
     "resource_label": "",
     "faction": "Neutral",
@@ -2337,6 +2450,7 @@
   },
   {
     "card_no": 123,
+    "card_id": "NT-0028",
     "card_name": "天気使いの更新",
     "resource_label": "",
     "faction": "Neutral",
@@ -2354,6 +2468,7 @@
   },
   {
     "card_no": 124,
+    "card_id": "SH-0024",
     "card_name": "だっくん",
     "resource_label": "Cache",
     "faction": "SHE",
@@ -2376,6 +2491,7 @@
   },
   {
     "card_no": 125,
+    "card_id": "SL-0012",
     "card_name": "メレンゲスト",
     "resource_label": "Cache",
     "faction": "Sugar",
@@ -2398,6 +2514,7 @@
   },
   {
     "card_no": 126,
+    "card_id": "NT-0029",
     "card_name": "ITストラテジスト",
     "resource_label": "",
     "faction": "Neutral",
@@ -2415,6 +2532,7 @@
   },
   {
     "card_no": 127,
+    "card_id": "NT-0030",
     "card_name": "リラックスペンギン",
     "resource_label": "On-premises",
     "faction": "Neutral",
@@ -2437,6 +2555,7 @@
   },
   {
     "card_no": 128,
+    "card_id": "NT-0031",
     "card_name": "エレファントDB",
     "resource_label": "On-premises",
     "faction": "Neutral",
@@ -2459,6 +2578,7 @@
   },
   {
     "card_no": 129,
+    "card_id": "NT-0032",
     "card_name": "天気使いサーバー",
     "resource_label": "On-premises",
     "faction": "Neutral",
@@ -2481,6 +2601,7 @@
   },
   {
     "card_no": 130,
+    "card_id": "NT-0033",
     "card_name": "調律部 DB",
     "resource_label": "On-premises",
     "faction": "Neutral",
@@ -2503,6 +2624,7 @@
   },
   {
     "card_no": 131,
+    "card_id": "SH-0025",
     "card_name": "SHE Block Storage",
     "resource_label": "",
     "faction": "SHE",
@@ -2520,6 +2642,7 @@
   },
   {
     "card_no": 132,
+    "card_id": "TK-0019",
     "card_name": "天気使い ブロックストレージ",
     "resource_label": "",
     "faction": "Tenki",
@@ -2537,6 +2660,7 @@
   },
   {
     "card_no": 133,
+    "card_id": "SL-0020",
     "card_name": "しゅがーらぼ ブロックストレージ",
     "resource_label": "",
     "faction": "Sugar",
@@ -2554,6 +2678,7 @@
   },
   {
     "card_no": 134,
+    "card_id": "TN-0016",
     "card_name": "調律部 Block Volume",
     "resource_label": "",
     "faction": "Tuners",
@@ -2571,6 +2696,7 @@
   },
   {
     "card_no": 135,
+    "card_id": "NT-0034",
     "card_name": "スロットリング",
     "resource_label": "",
     "faction": "Neutral",

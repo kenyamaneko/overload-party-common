@@ -7,6 +7,7 @@ cards:
   # === Compute-type Resources (2 cards) ===
 
   - card_no: 70
+    card_id: "TN-0001"
     card_name: "コンタータ"
     resource_label: "Compute"
     const_name: TunersComputeKantata
@@ -25,6 +26,7 @@ cards:
     effect_text: "—"
 
   - card_no: 72
+    card_id: "TN-0002"
     card_name: "ベア太"
     resource_label: "Bare Metal"
     const_name: TunersBareMetal
@@ -45,6 +47,7 @@ cards:
   # === Container (1 card) ===
 
   - card_no: 73
+    card_id: "TN-0003"
     card_name: "テナ"
     resource_label: "Container"
     const_name: TunersContainerTena
@@ -68,6 +71,7 @@ cards:
   # === Orchestrator (1 card) ===
 
   - card_no: 74
+    card_id: "TN-0004"
     card_name: "コンダクティス"
     resource_label: "Orchestrator"
     const_name: TunersOrchestratorConductis
@@ -94,6 +98,7 @@ cards:
   # === Serverless (2 cards) ===
 
   - card_no: 75
+    card_id: "TN-0005"
     card_name: "ファンファーレクション"
     resource_label: "Functions"
     const_name: TunersFunctionsFanfare
@@ -115,6 +120,7 @@ cards:
     effect_text: "—"
 
   - card_no: 76
+    card_id: "TN-0006"
     card_name: "アピエッタ"
     resource_label: "Low-Code"
     const_name: TunersLowCodeApietta
@@ -147,6 +153,7 @@ cards:
   # === DB-type Resources (2 cards) ===
 
   - card_no: 77
+    card_id: "TN-0007"
     card_name: "音の魔術師〈マジシャン・オブ・ミュージック〉"
     resource_label: "DB"
     const_name: TunersDBOtonmajutsushi
@@ -168,6 +175,7 @@ cards:
     effect_text: "—"
 
   - card_no: 78
+    card_id: "TN-0008"
     card_name: "エクサノーツ"
     resource_label: "DB"
     const_name: TunersDBExanotes
@@ -188,6 +196,7 @@ cards:
   # === Object Storage (1 card) ===
 
   - card_no: 79
+    card_id: "TN-0009"
     card_name: "スコアージ"
     resource_label: "Storage"
     const_name: TunersStorageScourge
@@ -208,6 +217,7 @@ cards:
   # === Cache DB (1 card) ===
 
   - card_no: 81
+    card_id: "TN-0010"
     card_name: "カプリッシュ"
     resource_label: "Cache"
     const_name: TunersCacheCaprish
@@ -228,6 +238,7 @@ cards:
   # === Platform (3 cards) ===
 
   - card_no: 82
+    card_id: "TN-0011"
     card_name: "調律部 DevOps"
     const_name: TunersDevOps
     card_type: Platform
@@ -246,6 +257,7 @@ cards:
           reduction: 300
 
   - card_no: 83
+    card_id: "TN-0012"
     card_name: "調律部 Guard"
     const_name: TunersGuard
     card_type: Platform
@@ -259,6 +271,7 @@ cards:
     effect_text: "インシデントカードによる自分の 調律部 リソースへのダメージを -200 する。"
 
   - card_no: 84
+    card_id: "TN-0013"
     card_name: "調律部 WAF"
     const_name: TunersWAF
     card_type: Platform
@@ -274,6 +287,7 @@ cards:
   # === Attachment (3 cards) ===
 
   - card_no: 85
+    card_id: "TN-0014"
     card_name: "調律部 ノーツガード"
     const_name: TunersNotesGuard
     card_type: Attachment
@@ -287,6 +301,7 @@ cards:
     effect_text: "自分の 調律部 DB系リソースに装備できる。装備先が破壊された時に発動できる。リポジトリから 調律部 DB系リソース1枚をデプロイコストなしでデプロイする。この効果は1ゲーム中に1回のみ使用できる。"
 
   - card_no: 86
+    card_id: "TN-0015"
     card_name: "調律部 リアル・アンサンブル・クラスター"
     const_name: TunersRAC
     card_type: Attachment
@@ -305,6 +320,7 @@ cards:
           bonus: 400
 
   - card_no: 134
+    card_id: "TN-0016"
     card_name: "調律部 Block Volume"
     const_name: TunersBlockVolume
     card_type: Attachment
@@ -320,6 +336,7 @@ cards:
   # === Strategy (1 card) ===
 
   - card_no: 89
+    card_id: "TN-0017"
     card_name: "調律部 License"
     const_name: TunersLicense
     card_type: Strategy
@@ -335,6 +352,7 @@ cards:
   # === Reactive (1 card) ===
 
   - card_no: 90
+    card_id: "TN-0018"
     card_name: "調律部 Failback"
     const_name: TunersFailback
     card_type: Reactive

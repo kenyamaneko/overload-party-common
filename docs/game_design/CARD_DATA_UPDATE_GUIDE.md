@@ -39,6 +39,7 @@
 
 ```yaml
 - card_no: 1                    # カード番号（全カードで一意、変更しない）
+  card_id: "SH-0001"            # カード識別子（ファクション接頭辞 + 連番、変更しない）
   card_name: "えくぼ"            # カード名
   resource_label: "Compute"     # 画面に表示するリソース種別ラベル
   const_name: SHEComputeEkubo   # プログラム内部の識別子（変更しない）
@@ -250,7 +251,8 @@ npm install @overload-party/generated@latest
 
 ## 注意事項
 
-- `card_no` と `const_name` はプログラム内部で使われる識別子なので変更しない
+- `card_no`、`card_id`、`const_name` はプログラム内部で使われる識別子なので変更しない
+- `card_id` はファクション接頭辞（SH/TK/SL/TN/NT）+ ハイフン + 4桁連番（例: `SH-0001`）。新規カード追加時は各ファクション内の最大番号の次を振る
 - `origin` フィールドは開発者向けの参考情報で、ゲーム画面には表示されない
 - `CARDS.md` は自動生成なので直接編集しない（YAML を編集してコマンドを実行する）
 - YAML の書式エラー（インデントずれ、コロン抜け等）があるとコマンドが失敗する。エラーメッセージを確認して修正する
