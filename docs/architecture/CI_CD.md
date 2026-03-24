@@ -122,8 +122,8 @@ Service Account (用途別)
 
 | シークレット | 保持リポ | 用途 |
 |-------------|---------|------|
-| `OPS_DISPATCH_TOKEN` | common | ops への repository_dispatch |
-| `COMMON_REPO_TOKEN` | ops | common の sparse-checkout |
+| `OPS_DISPATCH_TOKEN` | common | ops への repository_dispatch（PAT: `common-ci-dispatch`） |
+| `DB_MIGRATE_TOKEN` | ops | common の sparse-checkout（PAT: `db-migrate`） |
 | `CROSS_REPO_TOKEN` | common | ~~廃止予定~~ 旧 codegen-check 用（現在は不要） |
 | `CF_API_TOKEN` | k8s | Cloudflare DNS 更新 |
 
