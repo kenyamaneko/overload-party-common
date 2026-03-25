@@ -14,9 +14,11 @@
 | 用途 | 方式 | 配置場所 | 取得方法 |
 |------|------|----------|----------|
 | ナビゲーションストーリー（intro 等） | クライアントバンドル | `src/features/story/data/scripts/{lang}/` | Vite `?raw` import → `scripts.ts` レジストリ |
-| シナリオストーリー（陣営別 + 最終話） | サーバー配信 | GCS バケット or ローカルファイルシステム | `GET /api/v1/scenarios/{episodeId}/script` |
+| シナリオストーリー（陣営別 + 最終話） | サーバー配信 | サーバーが管理（ストレージ方式はサーバー実装依存） | `GET /api/v1/scenarios/{episodeId}/script` |
 
 **ナビゲーションストーリー** はアプリ起動直後に使用され、ネットワーク遅延を避けるためバンドルに含める。**シナリオストーリー** はエピソード数が多く（21話）、アンロック判定が必要なためサーバー配信とする。
+
+> **注:** スクリプト（テキスト）はサーバーAPI経由、スクリプト内で参照される画像・音声アセットは Firebase Hosting から直接取得する2層構造。詳細は [ARCHITECTURE.md §14.4](ARCHITECTURE.md) を参照。
 
 サーバー配信のスクリプトパスは `scenario_episodes.script_path` に `stories/{lang}/she_ep1.ks` の形式で格納され、`{lang}` が実際の言語コードに置換される。未対応言語は `ja` にフォールバックする。
 
@@ -249,12 +251,12 @@ scripts/en/intro.ks    ← 英語版
 
 陣営別ストーリー等、アンロック判定が必要なストーリー向け。
 
-1. **スクリプトファイルを作成し GCS にアップロード**
+1. **スクリプトファイルを作成しサーバーに配置**
    ```
    stories/ja/my_episode.ks
    stories/en/my_episode.ks
    ```
-   GCS バケットの `stories/{lang}/` 配下に配置する。
+   サーバーが参照するストレージの `stories/{lang}/` 配下に配置する。
 
 2. **シードデータに追加**
    `db/seed/scenarios.sql` にエピソード定義を追加:

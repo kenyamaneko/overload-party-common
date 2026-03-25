@@ -1148,7 +1148,7 @@ GCPリソースは **Terraform** で管理する。
 | Cloud SQL インスタンス・DB | `google_sql_database_instance`, `google_sql_database` | 各環境 |
 | Cloud SQL IAM ユーザー | `google_sql_user` (CLOUD_IAM_SERVICE_ACCOUNT) | 各環境 |
 | External HTTP(S) LB | `google_compute_*` | shared |
-| Cloud Storage バケット | `google_storage_bucket` | 各環境 |
+| Firebase Hosting サイト | `google_firebase_hosting_site` | 各環境 |
 | IAM / Service Account | `google_service_account`, `google_project_iam_*` | 各環境 |
 | Workload Identity 連携 | `google_service_account_iam_member` | 各環境（shared GKE → 環境 GSA） |
 
@@ -1214,33 +1214,40 @@ overload-party-infra/
 | maxSurge | 25% | 新旧Pod共存時の最大増分 |
 | Region | asia-northeast1 | 日本ユーザー向け低レイテンシ |
 
-### 14.4 アセット配信（Cloud Storage）
+### 14.4 アセット配信（Firebase Hosting）
 
-カードイラスト等のゲームアセットは **Cloud Storage** で配信する。React アプリのビルドに含めない画像は Cloud Storage から取得し、ブラウザ / Capacitor のキャッシュ機構で管理する。
+ゲームアセットの配信は、コンテンツの性質に応じて2系統に分かれる:
+
+| 種別 | 配信元 | 理由 |
+|------|--------|------|
+| 画像・音声（カードイラスト、BGM、SE、ストーリー背景・立ち絵等） | Firebase Hosting | バイナリファイルは CDN 配信が効率的。認証不要（スクリプトなしでは意味をなさない） |
+| ストーリースクリプト（.ks） | ゲームサーバー API (`GET /api/v1/scenarios/{id}/script`) | エピソードのアンロック判定・言語切替をサーバー側で制御する必要がある。テキストなので転送コストは無視できる |
+
+Firebase Hosting はグローバル CDN を内蔵しており、固定費なしの従量課金で利用できる。React アプリのビルドに含めない画像・音声は Firebase Hosting から取得し、ブラウザ / Capacitor のキャッシュ機構で管理する。
 
 **構成:**
 
 | コンポーネント | 役割 |
 |--------------|------|
-| Cloud Storage | アセットファイル（イラスト・音声等）のホスティング |
+| Firebase Hosting | アセットファイル（イラスト・音声等）のホスティング + CDN 配信 |
+| ゲームサーバー API | ストーリースクリプトの配信（認証・アンロック制御付き） |
 | Service Worker | クライアント側キャッシュ管理（Cache API） |
 
-> **Cloud CDN は初期段階では不要。** Service Worker + Cache API でクライアント端末にアセットをキャッシュするため、同一ユーザーが同じアセットを再DLすることはない。ユーザー規模拡大後、ダウンロード集中が問題になった場合に CDN を前段に追加する（URL 差し替えのみで対応可能な構成にしておく）。
->
-> **CDN 導入時は Cloudflare Free を推奨。** Google Cloud CDN は HTTP(S) LB の固定費（~$18/月）がかかるため、小〜中規模では割高。Cloudflare Free なら CDN 自体は無料で、GCS エグレスを ~90% 削減できる。ただし Free プランでは Origin Rules（Host Header Override）が使えないため、GCS バケット名をサブドメイン名に合わせる必要がある（例: `assets-dev.keyandnotes.com`）。
+> **制約:** 1 ファイルあたり 2 GB / 無料枠はストレージ 10 GB・転送量 360 MB/日。上限が近づいたら GCS + Cloud CDN 構成への移行を検討する。
 
 **配信フロー:**
 
 ```
-ビルドパイプライン                    Cloud Storage          Client (React)
+CI (GitHub Actions)                Firebase Hosting (CDN)    Client (React)
      │                                   │                      │
      │  1. アセット最適化                 │                      │
      │     (WebP変換 + マニフェスト生成)  │                      │
-     │  2. アップロード                   │                      │
+     │  2. firebase deploy               │                      │
      ├──────────────────────────────────>│                      │
      │                                   │  3. マニフェスト取得   │
      │                                   │<─────────────────────┤
      │                                   │  4. 差分アセットDL     │
+     │                                   │  (CDN キャッシュ経由)  │
      │                                   │<─────────────────────┤
      │                                   │  5. Cache API で     │
      │                                   │     ローカル保存       │
@@ -1250,8 +1257,8 @@ overload-party-infra/
 
 | シナリオ | 対応 |
 |---------|------|
-| 新カード追加 | 新アセット + マニフェスト更新を Cloud Storage にアップロード。クライアントは次回起動時に差分DL |
-| 既存イラスト差し替え | 該当ファイルを上書き。マニフェストのハッシュが変わるため、クライアントが自動検知して再DL |
+| 新カード追加 | 新アセット + マニフェスト更新を `firebase deploy` でデプロイ。クライアントは次回起動時に差分DL |
+| 既存イラスト差し替え | 該当ファイルを差し替えて再デプロイ。マニフェストのハッシュが変わるため、クライアントが自動検知して再DL |
 | アプリ本体更新 | Capacitor ネイティブ部分の変更のみストア審査が必要。Web 部分は OTA 更新可能 |
 
 ---
