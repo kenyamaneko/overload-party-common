@@ -263,6 +263,8 @@ def generate_json(cards, *, out_path):
         }
         if card.get("effect_text"):
             entry["effect_text"] = card["effect_text"]
+        if card.get("effects"):
+            entry["effects"] = card["effects"]
         if card.get("passive_effects"):
             entry["passive_effects"] = card["passive_effects"]
         if card.get("platform_effects"):

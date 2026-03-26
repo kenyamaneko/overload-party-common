@@ -107,13 +107,18 @@ cards:
       sla_penalty: 200
       maintenance_cost: 0
     effect_text: "**えりり Trigger:** 自分のフィールドに「SHE Storage - えりり」がいる場合、このカードのスループットを +200 する"
-    passive_effects:
-      - type: tp_if_card_type_on_field
-        params:
-          faction: SHE
-          card_types:
-            - ObjectStorage
-          flat_bonus: 200
+    effects:
+      - trigger: passive
+        guard:
+          - count:
+              selector: { owner: self, faction: SHE, card_type: ObjectStorage }
+              min: 1
+        ops:
+          - apply_buff:
+              selector: source
+              buff: tp
+              amount: 200
+              duration: permanent
 
   - card_no: 7
     card_id: "SH-0006"
@@ -133,6 +138,17 @@ cards:
       sla_penalty: 500
       maintenance_cost: 150
     effect_text: "**予約契約:** このカードのデプロイ時に発動できる。デプロイ時のコストを -200 する。この効果を使用してデプロイした場合、他のリソースをデプロイするためにこのカードをトラッシュすることはできない。"
+    effects:
+      - trigger: deploy
+        choice:
+          use:
+            - gain_budget: { target: self, amount: 200 }
+            - apply_buff:
+                selector: source
+                buff: reserved_instance
+                amount: 1
+                duration: permanent
+          skip: []
 
   - card_no: 8
     card_id: "SH-0007"
@@ -152,12 +168,17 @@ cards:
       sla_penalty: 500
       maintenance_cost: 200
     effect_text: "**星の連鎖:** 自分のバックエンドのこのカード以外の SHEのDB系リソース1体につき、このカードの Yield を +200 する"
-    passive_effects:
-      - type: dv_per_other_db
-        params:
-          faction: SHE
-          bonus_per_card: 200
-          exclude_self: true
+    effects:
+      - trigger: passive
+        ops:
+          - apply_buff:
+              selector: source
+              buff: yield
+              amount:
+                base: 0
+                per:
+                  count: { owner: self, zone: backend, faction: SHE, card_type: Database, exclude: source }
+                  value: 200
 
   - card_no: 9
     card_id: "SH-0008"
@@ -177,6 +198,15 @@ cards:
       sla_penalty: 300
       maintenance_cost: 50
     effect_text: "**Versioning:** 自分のフィールドの SHEのDB系リソース が破壊された時に発動できる。そのカードを自分の手札に戻す。"
+    effects:
+      - trigger: on_destroy
+        guard:
+          - match:
+              selector: target
+              faction: SHE
+        ops:
+          - add_to_hand: {}
+          - cancel_action: {}
 
   - card_no: 10
     card_id: "SH-0009"
@@ -199,12 +229,29 @@ cards:
       sla_penalty: 400
       maintenance_cost: 50
     effect_text: "**On-Demand:** Budget 400 を払って発動できる。このターン、このカードの Yield を2倍にする。この効果は1ターン中に1回のみ使用できる"
-    passive_effects:
-      - type: dv_if_card_on_field
-        params:
-          specific_card_ids:
-            - "SH-0024"
-          flat_bonus: 200
+    effects:
+      - trigger: activate
+        use_limit: once_per_turn
+        guard:
+          - stat: { selector: self, stat: budget, min: 400 }
+        ops:
+          - lose_budget: { target: self, amount: 400 }
+          - apply_buff:
+              selector: source
+              buff: yield
+              amount: { ref: source.yield, multiply: 1 }
+              duration: this_turn
+      - trigger: passive
+        guard:
+          - count:
+              selector: { owner: self, card_id: SH-0024 }
+              min: 1
+        ops:
+          - apply_buff:
+              selector: source
+              buff: yield
+              amount: 200
+              duration: permanent
 
   - card_no: 11
     card_id: "SH-0010"
@@ -224,6 +271,17 @@ cards:
       sla_penalty: 100
       maintenance_cost: 100
     effect_text: "**Cache Engine:** デプロイ時に選択以下のいずれかの効果を選択する。**Memcached:** Budget を +400 する。**Redis:** このカードの Yield を +200 する"
+    effects:
+      - trigger: deploy
+        choice:
+          memcached:
+            - gain_budget: { target: self, amount: 400 }
+          redis:
+            - apply_buff:
+                selector: source
+                buff: yield
+                amount: 200
+                duration: permanent
 
   - card_no: 12
     card_id: "SH-0011"
@@ -238,11 +296,14 @@ cards:
     is_active: true
     stats:
     effect_text: "自分のフィールドの SHE リソースのスケールアップのための開発コストを -200 する。"
-    platform_effects:
-      - type: scale_cost_reduction
-        params:
-          target_faction: SHE
-          reduction: 200
+    effects:
+      - trigger: passive
+        ops:
+          - apply_buff:
+              selector: { owner: self, faction: SHE }
+              buff: scale_cost_reduction
+              amount: 200
+              duration: permanent
 
   - card_no: 13
     card_id: "SH-0012"
@@ -257,17 +318,14 @@ cards:
     is_active: true
     stats:
     effect_text: "自分のフィールドの全ての SHE コンピュート系リソースのスループットを +200 する。"
-    platform_effects:
-      - type: tp_bonus
-        params:
-          target_faction: SHE
-          target_card_types:
-            - Compute
-            - "AI/ML"
-            - Orchestrator
-            - Container
-            - Serverless
-          bonus: 200
+    effects:
+      - trigger: passive
+        ops:
+          - apply_buff:
+              selector: { owner: self, faction: SHE, card_type: [Compute, "AI/ML", Orchestrator, Container, Serverless] }
+              buff: tp
+              amount: 200
+              duration: permanent
 
   - card_no: 14
     card_id: "SH-0013"
@@ -282,6 +340,11 @@ cards:
     is_active: true
     stats:
     effect_text: "相手フィールドのサポートゾーンの裏側のカード 1枚を選択して確認する。"
+    effects:
+      - trigger: activate
+        use_limit: once_per_turn
+        ops:
+          - reveal_reactive: {}
 
   - card_no: 15
     card_id: "SH-0014"
@@ -296,6 +359,10 @@ cards:
     is_active: true
     stats:
     effect_text: "相手の DDoS Attack と Data Breach を無効化する。"
+    effects:
+      - trigger: reactive
+        ops:
+          - cancel_action: {}
 
   - card_no: 16
     card_id: "SH-0015"
@@ -310,6 +377,15 @@ cards:
     is_active: true
     stats:
     effect_text: "フロントエンドリソースに装備できる。装備したリソースのスループットをメインフェーズのみ +600 する。この効果は1ターン中に1回のみ使用できる"
+    effects:
+      - trigger: activate
+        use_limit: once_per_turn
+        ops:
+          - apply_buff:
+              selector: source
+              buff: tp
+              amount: 600
+              duration: this_turn
 
   - card_no: 17
     card_id: "SH-0016"
@@ -324,11 +400,14 @@ cards:
     is_active: true
     stats:
     effect_text: "フロントエンドリソースに装備できる。装備したリソースのスループットを +200 する。"
-    attachment_effects:
-      - type: stat_bonus
-        params:
-          stat_type: tp
-          bonus: 200
+    effects:
+      - trigger: passive
+        ops:
+          - apply_buff:
+              selector: source
+              buff: tp
+              amount: 200
+              duration: permanent
 
   - card_no: 18
     card_id: "SH-0017"
@@ -343,6 +422,10 @@ cards:
     is_active: true
     stats:
     effect_text: "バックエンドリソースに装備できる。装備したリソースは「データ流出」の効果を受けない。"
+    effects:
+      - trigger: reactive
+        ops:
+          - cancel_action: {}
 
   - card_no: 19
     card_id: "SH-0018"
@@ -357,6 +440,11 @@ cards:
     is_active: true
     stats:
     effect_text: "Budget を 200 払って発動できる。リポジトリから SHE Resource カード1枚を選択して手札に加える。"
+    effects:
+      - trigger: activate
+        use_limit: once_per_turn
+        ops:
+          - search_repo: { faction: SHE }
 
   - card_no: 20
     card_id: "SH-0019"
@@ -371,6 +459,15 @@ cards:
     is_active: true
     stats:
     effect_text: "自分のフィールドに SHE カードが3枚以上ある時に発動できる。自分の Budget を +600 する。"
+    effects:
+      - trigger: activate
+        use_limit: once_per_turn
+        guard:
+          - count:
+              selector: { owner: self, faction: SHE }
+              min: 3
+        ops:
+          - gain_budget: { target: self, amount: 600 }
 
   - card_no: 21
     card_id: "SH-0020"
@@ -385,6 +482,15 @@ cards:
     is_active: true
     stats:
     effect_text: "このターン、自分の全ての SHE カードの開発コストを -200 する。"
+    effects:
+      - trigger: activate
+        use_limit: once_per_turn
+        ops:
+          - apply_buff:
+              selector: { owner: self }
+              buff: deploy_discount
+              amount: 200
+              duration: this_turn
 
   - card_no: 22
     card_id: "SH-0021"
@@ -399,6 +505,19 @@ cards:
     is_active: true
     stats:
     effect_text: "自分の SHE リソースの可用性が 400 以下になった時に発動できる。そのリソースの可用性を +500 する。"
+    effects:
+      - trigger: reactive
+        guard:
+          - match:
+              selector: target
+              faction: SHE
+          - stat:
+              selector: target
+              stat: av
+              max: 400
+        ops:
+          - heal_damage: { selector: target, amount: 500 }
+          - cancel_action: {}
 
   - card_no: 118
     card_id: "SH-0022"
@@ -413,6 +532,19 @@ cards:
     is_active: true
     stats:
     effect_text: "自分のフィールドに SHE カードが3枚以上ある時に使用できる。このターン、自分のフロントエンドの全ての SHE カードのスループットを +200 する。"
+    effects:
+      - trigger: activate
+        use_limit: once_per_turn
+        guard:
+          - count:
+              selector: { owner: self, faction: SHE }
+              min: 3
+        ops:
+          - apply_buff:
+              selector: { owner: self, zone: frontend, faction: SHE }
+              buff: tp
+              amount: 200
+              duration: this_turn
 
   - card_no: 121
     card_id: "SH-0023"
@@ -427,6 +559,11 @@ cards:
     is_active: true
     stats:
     effect_text: "Budget を 200 払って発動できる。手札の SHE リソースを1枚を選択し、デプロイコストを払わずにデプロイできる。"
+    effects:
+      - trigger: activate
+        use_limit: once_per_turn
+        ops:
+          - deploy_from_hand: {}
 
   - card_no: 124
     card_id: "SH-0024"
@@ -446,6 +583,14 @@ cards:
       sla_penalty: 100
       maintenance_cost: 100
     effect_text: "**キャッシュブースト:** 自分のフィールドの全ての SHE NoSQL - ダイノの Yield を +200 する。"
+    effects:
+      - trigger: passive
+        ops:
+          - apply_buff:
+              selector: { owner: self, card_id: SH-0009 }
+              buff: yield
+              amount: 200
+              duration: permanent
 
   - card_no: 131
     card_id: "SH-0025"
@@ -460,3 +605,11 @@ cards:
     is_active: true
     stats:
     effect_text: "自分の「SHE Compute - えくぼ」にのみ装備できる。装備先の可用性を +500 する。"
+    effects:
+      - trigger: passive
+        ops:
+          - apply_buff:
+              selector: source
+              buff: av
+              amount: 500
+              duration: permanent

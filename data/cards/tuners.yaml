@@ -43,6 +43,10 @@ cards:
       sla_penalty: 500
       maintenance_cost: 200
     effect_text: "**No Virtualization:** 攻撃時、このカードに 300 ダメージを与える"
+    effects:
+      - trigger: on_attack
+        ops:
+          - deal_damage: { selector: source, amount: 300 }
 
   # === Container (1 card) ===
 
@@ -91,9 +95,12 @@ cards:
       sla_penalty: 500
       maintenance_cost: 100
     effect_text: "**初回無料:** small → medium の Scale Cost 0"
-    passive_effects:
-      - type: scale_cost_free
-        params: {}
+    effects:
+      - trigger: passive
+        custom: free_first_scale
+        meta:
+          categories: [buff]
+          target: self
 
   # === Serverless (2 cards) ===
 
@@ -141,14 +148,18 @@ cards:
       sla_penalty: 200
       maintenance_cost: 0
     effect_text: "**Low-Code:** 自分のフィールドに 調律部 DB がある時、このカードのスループットを +400 する。"
-    passive_effects:
-      - type: tp_if_card_type_on_field
-        params:
-          faction: Tuners
-          card_types:
-            - Database
-            - CacheDB
-          flat_bonus: 400
+    effects:
+      - trigger: passive
+        guard:
+          - count:
+              selector: { owner: self, faction: Tuners, card_type: [Database, CacheDB] }
+              min: 1
+        ops:
+          - apply_buff:
+              selector: source
+              buff: tp
+              amount: 400
+              duration: permanent
 
   # === DB-type Resources (2 cards) ===
 
@@ -250,11 +261,14 @@ cards:
     is_active: true
     stats:
     effect_text: "自分のフィールドの 調律部 リソースのスケールアップコストを -300 する。"
-    platform_effects:
-      - type: scale_cost_reduction
-        params:
-          target_faction: Tuners
-          reduction: 300
+    effects:
+      - trigger: passive
+        ops:
+          - apply_buff:
+              selector: { owner: self, faction: Tuners }
+              buff: scale_cost_reduction
+              amount: 300
+              duration: permanent
 
   - card_no: 83
     card_id: "TN-0012"
@@ -269,6 +283,23 @@ cards:
     is_active: true
     stats:
     effect_text: "インシデントカードによる自分の 調律部 リソースへのダメージを -200 する。"
+    effects:
+      - trigger: activate
+        use_limit: once_per_turn
+        ops:
+          - reveal_reactive: {}
+      - trigger: activate
+        use_limit: once_per_turn
+        guard:
+          - count:
+              selector: { owner: self, faction: Tuners }
+              min: 3
+        ops:
+          - apply_buff:
+              selector: { owner: self }
+              buff: incident_reduction
+              amount: 200
+              duration: this_turn
 
   - card_no: 84
     card_id: "TN-0013"
@@ -283,6 +314,10 @@ cards:
     is_active: true
     stats:
     effect_text: "自分のフィールドの 調律部 リソースは相手の「DDoS攻撃」と「データ流出」の効果を受けない。"
+    effects:
+      - trigger: reactive
+        ops:
+          - cancel_action: {}
 
   # === Attachment (3 cards) ===
 
@@ -299,6 +334,13 @@ cards:
     is_active: true
     stats:
     effect_text: "自分の 調律部 DB系リソースに装備できる。装備先が破壊された時に発動できる。リポジトリから 調律部 DB系リソース1枚をデプロイコストなしでデプロイする。この効果は1ゲーム中に1回のみ使用できる。"
+    effects:
+      - trigger: on_destroy
+        use_limit: once_per_game
+        ops:
+          - deploy_from_repo:
+              filter: { faction: Tuners, card_type: Database }
+              override_av: 200
 
   - card_no: 86
     card_id: "TN-0015"
@@ -313,11 +355,14 @@ cards:
     is_active: true
     stats:
     effect_text: "自分の 調律部 DB系リソースに装備できる。装備先の可用性を +400 する。装備先へのインシデントカードによるダメージを -200 する。"
-    attachment_effects:
-      - type: stat_bonus
-        params:
-          stat_type: av
-          bonus: 400
+    effects:
+      - trigger: passive
+        ops:
+          - apply_buff:
+              selector: source
+              buff: av
+              amount: 400
+              duration: permanent
 
   - card_no: 134
     card_id: "TN-0016"
@@ -332,6 +377,19 @@ cards:
     is_active: true
     stats:
     effect_text: "自分の「調律部 Compute - コンタータ」または「調律部 Bare Metal - ベア太」にのみ装備できる。装備先の可用性を +800 する。装備先へのインシデントカードによるダメージを -100 する。"
+    effects:
+      - trigger: passive
+        ops:
+          - apply_buff:
+              selector: source
+              buff: av
+              amount: 800
+              duration: permanent
+          - apply_buff:
+              selector: source
+              buff: incident_reduction
+              amount: 100
+              duration: permanent
 
   # === Strategy (1 card) ===
 
@@ -348,6 +406,18 @@ cards:
     is_active: true
     stats:
     effect_text: "Budget 100 を払って発動できる。自分の 調律部 DB系リソース1体の可用性を最大値まで回復する。"
+    effects:
+      - trigger: activate
+        use_limit: once_per_turn
+        ops:
+          - heal_damage:
+              selector:
+                owner: self
+                zone: backend
+                faction: Tuners
+                card_type: Database
+                pick: choice
+              amount: { ref: target.max_av, multiply: 1 }
 
   # === Reactive (1 card) ===
 
@@ -364,3 +434,8 @@ cards:
     is_active: true
     stats:
     effect_text: "自分の 調律部 DB系リソースが破壊された時に発動できる。手札から 調律部 DB系リソース1枚をデプロイコストなしでデプロイする。"
+    effects:
+      - trigger: reactive
+        ops:
+          - deploy_from_hand:
+              filter: { faction: Tuners, card_type: Database }
