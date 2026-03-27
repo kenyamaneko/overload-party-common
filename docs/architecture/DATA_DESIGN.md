@@ -8,7 +8,7 @@
 
 1. [ゲーム管理](#1-ゲーム管理-game-management)
 2. [ゲーム状態管理](#2-ゲーム状態管理-game-state-management)
-3. [ゲームイベント管理](#3-ゲームイベント管理-game-event-management)
+3. [ゲームイベント・アクション管理](#3-ゲームイベントアクション管理-game-event--action-management)
 4. [対戦履歴管理](#4-対戦履歴管理-match-history)
 5. [プレイヤー管理](#5-プレイヤー管理-player-management)
 6. [カード定義マスター](#6-カード定義マスター-card-definitions)
@@ -40,6 +40,8 @@
 | `winner_id` | UUID | Yes | 勝者 ID |
 | `created_at` | TIMESTAMPTZ | No | 作成日時 (DEFAULT now()) |
 | `updated_at` | TIMESTAMPTZ | No | 更新日時 (DEFAULT now()) |
+| `engine_version` | TEXT | Yes | バトルエンジンバージョン（ゲーム作成時に記録） |
+| `card_data_version` | TEXT | Yes | カードデータバージョン（ゲーム作成時に記録） |
 | `finished_at` | TIMESTAMPTZ | Yes | 終了日時 |
 
 ### 1.2 JSONスキーマ (Deck Snapshot)
@@ -49,7 +51,7 @@
 | フィールド | 型 | 説明 |
 |---|---|---|
 | `deckId` | string | 元になったデッキID |
-| `cards` | Array[int64] | デッキに含まれる card_no のリスト（順序はシャッフル前） |
+| `cards` | Array[object] | デッキに含まれるカードのリスト（`cardId` を持つオブジェクト配列、順序はシャッフル前） |
 
 ### 1.3 関連インデックス
 
@@ -84,6 +86,7 @@
 | `player2_...` | ... | No | Player 2 各種ステータス（構成は Player 1 と同じ。`player2_insight_pool` 等） |
 | `chain_stack` | JSONB | Yes | 現在積まれているチェーンスタック |
 | `current_action_timer`| BIGINT | Yes | アクションタイマー |
+| `initial_state` | JSONB | Yes | ゲーム作成時の初期 GameState スナップショット（作成後は上書きされない） |
 | `updated_at` | TIMESTAMPTZ | No | 更新日時 (DEFAULT now()) |
 
 > **フェーズについて:** ゲームフェーズは `draw`, `main`, `battle`, `end` の4つ。Yield（Insight）生成は End フェーズ中に処理される。
@@ -108,6 +111,8 @@
 |--------|-----|------|
 | `instanceId` | string | フィールド上のインスタンス固有ID |
 | `cardId` | string | カード定義ID |
+| `artNo` | int | アート番号 |
+| `faceDown` | bool | 裏向きか否か |
 | `rank` | string | `"small"` / `"medium"` / `"large"` |
 | `instanceFamily` | string等 | `"M"` / `"C"` / `"R"` / null |
 | `currentAV` | int | 現在耐久値 |
@@ -117,7 +122,7 @@
 | `currentYield` | int? | 現在Yield量（コンピュート系リソースは null） |
 | `maxYield` | int? | Yield最大値（コンピュート系リソースは null。Elastic カードは `nil`＝上限なし） |
 | `damage` | int | 蓄積ダメージ量 |
-| `attachments` | array | アタッチメントリスト（instanceId + cardId） |
+| `attachments` | array | アタッチメントリスト（instanceId + cardId + artNo） |
 | `temporaryEffects` | array | 一時効果リスト |
 | `monetizedAmount` | int | このターンに収益化済みのTP量（ターン終了時リセット） |
 | `hasAttacked` | bool | そのターン攻撃済みか |
@@ -137,6 +142,7 @@
 |--------|-----|------|
 | `instanceId` | string | インスタンス固有ID |
 | `cardId` | string | カード定義ID |
+| `artNo` | int | アート番号 |
 | `faceDown` | bool | 裏向きか否か |
 
 **チェーンスタック (`GameStates.chain_stack`)**
@@ -154,7 +160,7 @@
 
 ---
 
-## 3. ゲームイベント管理 (Game Event Management)
+## 3. ゲームイベント・アクション管理 (Game Event & Action Management)
 
 リプレイや監査のためのログデータ。
 
@@ -176,6 +182,23 @@
 **イベントデータの例:**
 - `attack`: `{ "sourceId": "...", "targetId": "...", "damage": 500 }`
 - `deploy`: `{ "cardId": "...", "position": 0, "cost": 300 }`
+
+### 3.2 PostgreSQL スキーマ (game_actions)
+
+**GameActions** (プレイヤーアクション入力ログ・追記専用)
+- **Primary Key:** `game_id`, `seq`
+- **Foreign Key:** `game_id REFERENCES games(game_id) ON DELETE CASCADE`
+
+| カラム名 | 型 | Nullable | 説明 |
+|---|---|---|---|
+| `game_id` | VARCHAR(26) | No | 親テーブル参照 |
+| `seq` | BIGINT | No | アクション連番 |
+| `player_id` | UUID | No | アクション実行プレイヤー |
+| `action_type` | VARCHAR(50) | No | アクション種別（`play_card`, `attack`, `scale_up` 等） |
+| `action_data` | JSONB | No | アクションの入力データ（プレイヤーが送信したペイロード） |
+| `created_at` | TIMESTAMPTZ | No | 記録日時 (DEFAULT now()) |
+
+> **設計意図:** `game_events` がサーバー側で生成されるイベントログであるのに対し、`game_actions` はプレイヤーの入力をそのまま記録する追記専用テーブル。`initial_state` + `game_actions` を順に再生することでゲームを再現できる。
 
 ---
 
@@ -251,12 +274,11 @@
 ### 6.1 PostgreSQL スキーマ (card_definitions)
 
 **CardDefinitions** (カード定義マスター)
-- **Primary Key:** `card_no`
+- **Primary Key:** `card_id`
 
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
-| `card_no` | BIGINT | No | カード番号（レガシー、将来的に `card_id` へ移行予定） |
-| `card_id` | VARCHAR(10) | No | カード識別子（例: `SH-0001`）。UNIQUE制約あり |
+| `card_id` | VARCHAR(10) | No | カード識別子（例: `SH-0001`） |
 | `card_name` | VARCHAR(100) | No | カード名 |
 | `faction` | VARCHAR(20) | No | 陣営 (`SHE`, `Tenki`, `Sugar`, `Tuners`, `Neutral`) |
 | `card_type` | VARCHAR(30) | No | カードタイプ (`Compute`, `Container`, `Orchestrator`, `Serverless`, `AI_ML`, `Database`, `ObjectStorage`, `CacheDB`, `Platform`, `Attachment`, `Strategy`, `Incident`, `Reactive`) |
@@ -311,7 +333,7 @@
 >   - `intrinsicStat = base × rank_multiplier × family_multiplier + effectiveElasticBonus`（外部バフを除く固有ステータス）
 >   - `free_tier` はランクで変動しない固定値
 >   - Serverless（`cost_per_request=0`）は常に MC=0
-> - Elastic カードは MaxTP / MaxYield を持たない（ResourceInstance 上は `nil`）
+> - Elastic カードは MaxTP / MaxYield を持たない（DeployedResource 上は `nil`）
 
 **その他のカードタイプ（Platform, Attachment, Strategy, Incident, Reactive）:**
 
@@ -328,7 +350,7 @@ stats フィールドなし（Platform の場合、`deploy_turns` はトップ�
 
 | 用途 | 参照方法 |
 |------|----------|
-| ゲーム中の効果計算 | サーバー起動時に `CardDefinitions` を全件メモリにキャッシュ。`card_no` → 定義データの `map` で O(1) 参照 |
+| ゲーム中の効果計算 | サーバー起動時に `CardDefinitions` を全件メモリにキャッシュ。`card_id` → 定義データの `map` で O(1) 参照 |
 | デッキ構築画面 | REST API `GET /api/v1/cards` で全カード定義を返却。クライアントはローカルキャッシュ |
 | カードバランス更新 | Admin Dashboard からカード定義を更新後、キャッシュリフレッシュを実行 |
 
@@ -376,14 +398,14 @@ stats フィールドなし（Platform の場合、`deploy_turns` はトップ�
 ### 7.1 PostgreSQL スキーマ (player_cards, decks, deck_cards)
 
 **PlayerCards** (所持カード)
-- **Primary Key:** `(player_id, card_no, illustration_variant)`
+- **Primary Key:** `(player_id, card_id, art_no)`
 - **Foreign Key:** `player_id REFERENCES players(player_id) ON DELETE CASCADE`
 
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
 | `player_id` | UUID | No | 親テーブル参照 |
-| `card_no` | BIGINT | No | `CARDS.md` のカード番号 |
-| `illustration_variant`| BIGINT | No | イラスト違いID (Default: 0) |
+| `card_id` | VARCHAR(10) | No | カード識別子（例: `SH-0001`） |
+| `art_no` | BIGINT | No | アート番号 (Default: 0) |
 | `count` | INT | No | 所持枚数 (Default: 1) |
 
 **Decks** (デッキ定義)
@@ -403,20 +425,20 @@ stats フィールドなし（Platform の場合、`deploy_turns` はトップ�
 | `updated_at` | TIMESTAMPTZ | No | 更新日時 |
 
 **DeckCards** (デッキ内カード)
-- **Primary Key:** `(player_id, deck_id, card_no, illustration_variant)`
+- **Primary Key:** `(player_id, deck_id, card_id, art_no)`
 - **Foreign Key:** `(player_id, deck_id) REFERENCES decks(player_id, deck_id) ON DELETE CASCADE`
 
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
 | `player_id` | UUID | No | ルート親参照 |
 | `deck_id` | BIGINT | No | 親テーブル参照 |
-| `card_no` | BIGINT | No | カード番号 |
-| `illustration_variant`| BIGINT | No | イラスト違いID (Default: 0) |
+| `card_id` | VARCHAR(10) | No | カード識別子 |
+| `art_no` | BIGINT | No | アート番号 (Default: 0) |
 | `count` | INT | No | 枚数 (Default: 1) |
 
 ### 7.2 関連インデックス
 
-- `PlayerCardsByCardNo`: `PlayerCards(player_id, card_no)`
+- `PlayerCardsByCardId`: `PlayerCards(player_id, card_id)`
 - `DecksByPlayer`: `Decks(player_id, updated_at DESC)`
 
 ---

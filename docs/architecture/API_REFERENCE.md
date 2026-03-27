@@ -315,7 +315,7 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
 ```json
 [
   {
-    "card_no": 1,
+    "card_id": "SH-0001",
     "art_no": 0,
     "count": 3,
     "card_name": "EC2 Instance",
@@ -349,8 +349,8 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
     "playmat_no": 1,
     "sleeve_no": 2,
     "deck_cards": [
-      {"card_no": 1, "art_no": 0, "count": 3},
-      {"card_no": 2, "art_no": 1, "count": 2}
+      {"card_id": "SH-0001", "art_no": 0, "count": 3},
+      {"card_id": "SH-0002", "art_no": 1, "count": 2}
     ],
     "created_at": "2026-01-15T10:00:00Z",
     "updated_at": "2026-01-15T10:00:00Z"
@@ -363,7 +363,7 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
 | `deck_id` | int64 | デッキID（自動採番） |
 | `deck_name` | string | デッキ名 |
 | `is_valid` | bool | バトル使用可能か（都度算出: 30枚 + 全カード所持 + 制限枚数以内） |
-| `deck_cards` | array | デッキのカード構成（`card_no`, `art_no`, `count`） |
+| `deck_cards` | array | デッキのカード構成（`card_id`, `art_no`, `count`） |
 | `playmat_no` | int64? | プレイマット番号（null: デフォルト） |
 | `sleeve_no` | int64? | スリーブ番号（null: デフォルト） |
 
@@ -384,7 +384,7 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
     {
       "player_id": "uuid",
       "deck_id": 1,
-      "card_no": 1,
+      "card_id": "SH-0001",
       "art_no": 0,
       "count": 3
     }
@@ -403,8 +403,8 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
 {
   "deck_name": "string",
   "cards": [
-    { "card_no": 1, "art_no": 0, "count": 3 },
-    { "card_no": 2, "art_no": 0, "count": 2 }
+    { "card_id": "SH-0001", "art_no": 0, "count": 3 },
+    { "card_id": "SH-0002", "art_no": 0, "count": 2 }
   ],
   "playmat_no": 1,
   "sleeve_no": 2
@@ -441,7 +441,7 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
 ```json
 [
   {
-    "card_no": 1,
+    "card_id": "SH-0001",
     "card_name": "string",
     "faction": "SHE|Tenki|Sugar|Tuners|Neutral",
     "card_type": "resource|support|action",
@@ -903,7 +903,7 @@ GET /ws?token={token}
         "support": [null, null, null]
       },
       "hand": [
-        { "instanceId": "i0001", "cardId": 1 }
+        { "instanceId": "i0001", "cardId": 1, "artNo": 0 }
       ],
       "repoCount": 20,
       "trashCount": 0
@@ -927,12 +927,12 @@ GET /ws?token={token}
         "support": [null, null, null]
       },
       "hand": [
-        { "instanceId": "i0001", "cardId": 1 }
+        { "instanceId": "i0001", "cardId": 1, "artNo": 0 }
       ],
       "repoCount": 20,
       "trashCount": 0,
       "available_actions": [
-        { "type": "play_card", "hand_instance_id": "i0001", "card_id": 1, "valid_zones": ["frontend_0", "frontend_1", "frontend_2", "backend_0", "backend_1", "backend_2"] }
+        { "type": "play_card", "hand_instance_id": "i0001", "card_id": 1, "art_no": 0, "valid_zones": ["frontend_0", "frontend_1", "frontend_2", "backend_0", "backend_1", "backend_2"] }
       ]
     },
     "opponent": { ... }
@@ -953,7 +953,7 @@ GET /ws?token={token}
 |------|--------------|------|
 | `play_card` | `hand_instance_id`, `card_id`, `valid_zones?`, `valid_targets?` | 手札からカードをデプロイ。デプロイターン 0 なら即表向き、1以上なら裏向き配置。`valid_zones` はゾーン+スロット (例: `"frontend_0"`)。Attachment の場合は `valid_targets` にリソース ID |
 | `attack` | `source_instance_id`, `valid_targets` | フロントの表向き Compute で攻撃。相手フロントに表向きリソースあり→フロントのみ対象 |
-| `scale_up` | `source_instance_id`, `target_rank`, `needs_family` | リソースをスケールアップ（無料）。`needs_family=true` なら S→M でファミリー選択が必要 |
+| `scale_up` | `source_instance_id`, `target_rank`, `needs_family`, `required_count` | リソースをスケールアップ（無料）。`needs_family=true` なら S→M でファミリー選択が必要。`required_count` はスケールアップに必要なリソース数 |
 | `migrate` | `source_instance_id`, `target_instance_id` | 新リソース(source)から旧リソース(target)へマイグレーション開始。新.deploy_turns >= 旧.deploy_turns が必要 |
 | `monetize` | `source_instance_id`, `remaining_capacity` | バックエンド Compute に Insight を配分。`remaining_capacity` は残りスループット |
 | `activate_effect` | `source_instance_id`, `effect_target_type`, `valid_targets?` | アクティブ効果を発動。`effect_target_type`: `"none"`, `"choice"`, `"all_opp"`, `"self"` |

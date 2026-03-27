@@ -179,10 +179,10 @@ DB管理: `CosmeticItems`（定義）+ `PlayerItems`（所持）テーブル（`
 
 ```
 PlayerCards テーブル
-├── card_no: 1 (えくぼ 通常版)
-│   └── illustration_variant: 0
-└── card_no: 1 (えくぼ 別イラスト版)
-    └── illustration_variant: 1
+├── card_id: SH-0001 (えくぼ 通常版)
+│   └── art_no: 0
+└── card_id: SH-0001 (えくぼ 別イラスト版)
+    └── art_no: 1
 ```
 
 - デッキ構築時にどちらのイラストを使うか選択可能
