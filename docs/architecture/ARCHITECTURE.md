@@ -154,7 +154,7 @@ overload-party-client/          # React + Capacitor クライアント
 | K8s マニフェストの変更 | k8s (`k8s/overlays/`) | `deploy.yaml` を手動 dispatch | — |
 | DB マイグレーション（手動） | ops | `db-migrate.yaml` を手動 dispatch | — |
 | 環境の起動 | k8s | Slack コマンド (`/gke-up`) → `env-lifecycle.yaml` | infra（Cloud SQL 起動） |
-| 環境の停止 | — | 毎日 2:00 AM JST に自動実行 | k8s, infra（Ingress 削除、DNS 変更） |
+| 環境の停止 | — | 毎日 2:00 AM JST に自動実行 | k8s（Ingress 削除、DNS 変更、Cloud SQL 停止） |
 | 分析パイプラインの変更 | analytics | `scripts/deploy.sh` で手動デプロイ | — |
 | ニュースフィードの変更 | newsfeed | Docker build → Cloud Run にデプロイ | — |
 
@@ -1121,6 +1121,7 @@ pgxpool で接続プールを管理。Pod あたりの接続数を制限し、Cl
 - 静的 IP は使用しない（コスト削減）。代わりに GitHub Actions で Cloudflare DNS を自動更新:
   - **起動時** (`env-lifecycle.yaml`): Ingress の外部 IP 取得後、Cloudflare API で A レコードを更新
   - **停止時** (`nightly-shutdown.yaml`): DNS を `127.0.0.1` に変更し、予約済み IP を削除
+- Cloudflare 認証情報は `CLOUDFLARE_` プレフィックスで統一。API トークン (`CLOUDFLARE_API_TOKEN`) は secrets、ゾーン ID 等 (`CLOUDFLARE_ZONE_ID`, `CLOUDFLARE_ZONE_NAME`) は variables で管理
 
 ---
 
@@ -1166,13 +1167,13 @@ GCPリソースは **Terraform** で管理する。
 | Workload Identity | — | KSA `overload-party-app` → GSA `overload-party-app@..dev` | 同パターン | 同パターン |
 
 
-> dev/stg は毎日 2:00 JST に自動停止してコストを最小化する。Cloud SQL 操作はインフラリポジトリ (Cloud Scheduler / Terraform)、K8s 操作は K8s リポジトリ (GitHub Actions) に責務を分離している。
+> dev/stg は毎日 2:00 JST に自動停止してコストを最小化する。Cloud SQL・K8s ともに K8s リポジトリの GitHub Actions (`nightly-shutdown.yaml`) で一元管理している。
 
 **自動停止の仕組み (2:00 AM JST):**
 
 | 対象 | 方式 | 管理場所 |
 |------|------|---------|
-| Cloud SQL | Cloud Scheduler → sqladmin API 直接呼び出し (OAuth) | infra: `modules/scheduler/` |
+| Cloud SQL | `gcloud sql instances patch --activation-policy=NEVER` | k8s: `.github/workflows/nightly-shutdown.yaml` |
 | K8s (Ingress, Pod) | GitHub Actions cron | k8s: `.github/workflows/nightly-shutdown.yaml` |
 
 **手動操作:**
@@ -1181,8 +1182,8 @@ GCPリソースは **Terraform** で管理する。
 |------|---------------|---------------------------|------|
 | Cloud SQL 起動 | `/db-start dev` | — (sqladmin API 直接呼び出し) | Cloud SQL 起動 (RUNNABLE 待ち) |
 | Cloud SQL 停止 | `/db-stop dev` | — (sqladmin API 直接呼び出し) | Cloud SQL 停止 |
-| 環境起動 | `/gke-up dev` | `env-lifecycle.yaml` | Cloud SQL 起動 → Pod スケール 1 → Ingress 適用 → DNS 更新 |
-| 環境停止 | `/gke-down dev` | `env-lifecycle.yaml` | Ingress 削除 → Pod スケール 0 → DNS 変更 → Cloud SQL 停止 |
+| 環境起動 | `/gke-up dev` | `env-lifecycle.yaml` | Namespace 存在確認 → Cloud SQL 起動 → Pod スケール 1 → Ingress 適用 → DNS 更新 |
+| 環境停止 | `/gke-down dev` | `env-lifecycle.yaml` | Namespace 存在確認 → Ingress 削除 → Pod スケール 0 → DNS 変更 → Cloud SQL 停止 |
 
 **ディレクトリ構成:**
 
@@ -1195,7 +1196,8 @@ overload-party-infra/
 ├── modules/
 │   ├── cloudsql/     # Cloud SQL PostgreSQL インスタンス + DB
 │   ├── iam/          # GSA + Cloud SQL role + Workload Identity binding
-│   └── scheduler/    # Cloud Scheduler: Cloud SQL 自動停止 (sqladmin API)
+│   ├── network/      # VPC, サブネット
+│   └── newsfeed/     # Cloud Run (newsfeed サービス)
 └── (scripts/ は削除済み — Slack コマンド経由で操作)
 ```
 

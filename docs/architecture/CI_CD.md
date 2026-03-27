@@ -44,9 +44,9 @@ overload-party-k8s
   ├─ workflow_dispatch ──── deploy.yaml
   │                          └→ kustomize edit set image → kubectl apply
   ├─ workflow_dispatch ──── env-lifecycle.yaml
-  │                          └→ 環境起動/停止 (PSC → Pod → Ingress → DNS / 逆順停止)
+  │                          └→ 環境起動/停止 (namespace 存在確認 → PSC → Pod → Ingress → DNS / 逆順停止)
   ├─ cron (2:00 JST) ──── nightly-shutdown.yaml
-  │                          └→ Ingress 削除 → IP 解放 → DNS 無効化 → Pod スケール 0
+  │                          └→ Ingress 削除 → IP 解放 → DNS 無効化 → Pod スケール 0 → Cloud SQL 停止
   └─ push / PR ──── terraform.yaml
                       └→ GKE / AR / WIF の Terraform plan/apply
 
@@ -106,26 +106,31 @@ Service Account (用途別)
 |----|---------|---------------|
 | `github-ci` (CI) | infra | `environments/platform/` → `modules/ci-cd/` |
 | `terraform-deployer` (TF) | infra | 同上 |
-| `github-deploy` (Deploy) | k8s | `terraform/environments/platform/` → `modules/ci-cd/` |
+| `github-deploy` (Deploy) | k8s | `terraform/environments/platform/` → `modules/ci-cd/`（cloudsql.admin 含む） |
 | WIF プール・プロバイダ | infra | 同上 |
 
-**GitHub Secrets（全リポ共通）:**
+**GitHub Actions Variables（全リポ共通、`vars.` で参照）:**
 
-| シークレット | 用途 |
-|-------------|------|
+| 変数 | 用途 |
+|------|------|
 | `WIF_PROVIDER` | Workload Identity Provider URI |
 | `CI_SERVICE_ACCOUNT` | ビルド・push 用 SA |
 | `TF_SERVICE_ACCOUNT` | Terraform 用 SA |
 | `DEPLOY_SERVICE_ACCOUNT` | K8s デプロイ用 SA |
+| `PSC_SA_LINK_DEV` | PSC ServiceAttachment リンク (dev) |
+| `PSC_SA_LINK_STG` | PSC ServiceAttachment リンク (stg) |
+| `CLOUDFLARE_ZONE_ID` | Cloudflare Zone ID |
+| `CLOUDFLARE_DNS_RECORD_ID_DEV` | Cloudflare DNS レコード ID (dev) |
+| `CLOUDFLARE_DNS_RECORD_ID_STG` | Cloudflare DNS レコード ID (stg) |
 
-**リポ間アクセス用トークン:**
+**GitHub Secrets（トークン・Webhook のみ）:**
 
 | シークレット | 保持リポ | 用途 |
 |-------------|---------|------|
 | `OPS_DISPATCH_TOKEN` | common | ops への repository_dispatch（PAT: `common-ci-dispatch`） |
 | `DB_MIGRATE_TOKEN` | ops | common の sparse-checkout（PAT: `db-migrate`） |
-| `CROSS_REPO_TOKEN` | common | ~~廃止予定~~ 旧 codegen-check 用（現在は不要） |
-| `CF_API_TOKEN` | k8s | Cloudflare DNS 更新 |
+| `CLOUDFLARE_DNS_TOKEN` | k8s | Cloudflare DNS 更新 |
+| `SLACK_WEBHOOK_URL` | k8s | Slack 通知 |
 
 ## Artifact Registry
 
@@ -167,8 +172,7 @@ Cloud Scheduler が Cloud Run Job を起動する。イメージ更新は CI で
 | cost-monitor | 8:00 (毎日) | ops terraform |
 | drift-monitor | 7:00 (毎日) | ops terraform |
 | newsfeed | 2時間ごと | infra terraform |
-| Cloud SQL 停止 (dev/stg) | 2:00 | infra terraform |
-| K8s シャットダウン (dev/stg) | 2:00 | k8s cron workflow |
+| K8s + Cloud SQL シャットダウン (dev/stg) | 2:00 | k8s cron workflow |
 
 ## 環境戦略
 
