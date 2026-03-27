@@ -62,7 +62,7 @@ Overload Party は 9 つの独立した Git リポジトリで構成される。
 | **client** | モバイル/Web フロントエンド | React 19, TypeScript, Vite, Capacitor | lint → typecheck → test |
 | **infra** | GCP リソース管理 | Terraform | plan → apply（パス変更時のみ） |
 | **k8s** | GKE デプロイ・運用 | Kustomize, GitHub Actions | deploy / startup / shutdown / scale |
-| **ops** | DB マイグレーションジョブ | Docker, Cloud Run | 手動 dispatch |
+| **ops** | DB マイグレーション・監視ジョブ・Slack コマンド | Docker, Cloud Run, Python | CI + 手動 dispatch |
 | **analytics** | Spanner → BigQuery エクスポート | Go, Cloud Functions | 手動デプロイ |
 | **newsfeed** | ニュースフィード生成 | Python, Vertex AI | 手動デプロイ |
 
@@ -84,7 +84,7 @@ overload-party-common/          # 共有データ・定義の SSoT
 ├── docs/                       # 全ドキュメント
 ├── packages/
 │   ├── generate_from_yaml.py   # カード＆定数のコード生成スクリプト
-│   ├── go/                     # Go パッケージ (gateway 用)
+│   ├── gamedata/               # Go パッケージ (gateway 用)
 │   │   ├── model/              # 生成: Go モデル
 │   │   ├── constants/          # 生成: ゲーム定数
 │   │   ├── cardno/             # 生成: カード番号定数
@@ -1121,7 +1121,7 @@ pgxpool で接続プールを管理。Pod あたりの接続数を制限し、Cl
 - 静的 IP は使用しない（コスト削減）。代わりに GitHub Actions で Cloudflare DNS を自動更新:
   - **起動時** (`env-lifecycle.yaml`): Ingress の外部 IP 取得後、Cloudflare API で A レコードを更新
   - **停止時** (`nightly-shutdown.yaml`): DNS を `127.0.0.1` に変更し、予約済み IP を削除
-- Cloudflare 認証情報は `CLOUDFLARE_` プレフィックスで統一。API トークン (`CLOUDFLARE_API_TOKEN`) は secrets、ゾーン ID 等 (`CLOUDFLARE_ZONE_ID`, `CLOUDFLARE_ZONE_NAME`) は variables で管理
+- Cloudflare 認証情報は `CLOUDFLARE_` プレフィックスで統一。DNS トークン (`CLOUDFLARE_DNS_TOKEN`) は secrets、ゾーン ID (`CLOUDFLARE_ZONE_ID`) は variables で管理
 
 ---
 
@@ -1157,9 +1157,9 @@ GCPリソースは **Terraform** で管理する。
 
 | リソース | shared | dev | staging | prod |
 |---------|--------|-----|---------|------|
-| GKE クラスタ | `overload-party`（1クラスタ） | — | — | — |
+| GKE クラスタ | `keyandnotes-shared`（1クラスタ） | — | — | — |
 | Artifact Registry | `overload-party`（Docker） | — | — | — |
-| GKE Namespace | — | `dev` | `staging` | `prod` |
+| GKE Namespace | — | `overload-party-dev` | `overload-party-stg` | `overload-party-prod` |
 | gateway Pods | — | 0（開発時のみ起動） | 0（開発時のみ起動） | TBD（常時稼働） |
 | battle Pods | — | 0（開発時のみ起動） | 0（開発時のみ起動） | TBD（常時稼働） |
 | Cloud SQL インスタンス | — | `overload-party-db` | `overload-party-db` | `overload-party-db` |
@@ -1190,18 +1190,21 @@ GCPリソースは **Terraform** で管理する。
 ```
 overload-party-infra/
 ├── environments/
+│   ├── platform/     # GKE, Artifact Registry, WIF, CI SA
 │   ├── dev/          # Cloud SQL, IAM (Workload Identity)
 │   ├── stg/
 │   └── prod/
 ├── modules/
-│   ├── cloudsql/     # Cloud SQL PostgreSQL インスタンス + DB
-│   ├── iam/          # GSA + Cloud SQL role + Workload Identity binding
+│   ├── assets/       # Firebase Hosting, GCS バケット
+│   ├── ci-cd/        # WIF, CI SA
+│   ├── database/     # Cloud SQL インスタンス + DB + IAM
+│   ├── db-migration/ # Cloud Run Job (psqldef)
 │   ├── network/      # VPC, サブネット
 │   └── newsfeed/     # Cloud Run (newsfeed サービス)
 └── (scripts/ は削除済み — Slack コマンド経由で操作)
 ```
 
-**Terraform state:** `gs://overload-party-tf-state` に GCS backend で管理。prefix で `terraform/platform`, `terraform/dev` 等に分離。
+**Terraform state:** `gs://keyandnotes-tf-state` に GCS backend で管理。prefix で `terraform/platform`, `terraform/dev` 等に分離。
 
 ### 14.2 CI/CD
 
