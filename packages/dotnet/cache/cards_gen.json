@@ -3711,15 +3711,23 @@
     "stats": {},
     "restriction": "unlimited",
     "is_active": true,
-    "effect_text": "相手が手札からインシデントカードを使用した時に発動できる。そのインシデントのリクエストコスト（Budget）を +500 する。",
+    "effect_text": "相手のインシデントカードによって自分のBudgetが減少する時に発動できる。そのインシデントによって発生する自分のBudgetの減少を-300する",
     "effects": [
       {
-        "trigger": "reactive",
+        "trigger": "activate",
+        "use_limit": "once_per_turn",
         "ops": [
           {
-            "lose_budget": {
-              "target": "opponent",
-              "amount": 500
+            "reveal_reactive": {}
+          },
+          {
+            "apply_buff": {
+              "selector": {
+                "owner": "self"
+              },
+              "buff": "incident_reduction",
+              "amount": 300,
+              "duration": "this_turn"
             }
           }
         ]

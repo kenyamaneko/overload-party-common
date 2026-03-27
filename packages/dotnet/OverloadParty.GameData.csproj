@@ -8,7 +8,4 @@
     <Description>Auto-generated game constants, event data types, and card definitions for Overload Party.</Description>
     <RepositoryUrl>https://github.com/kenyamaneko/overload-party-common</RepositoryUrl>
   </PropertyGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="cache/cards_gen.json" />
-  </ItemGroup>
 </Project>
