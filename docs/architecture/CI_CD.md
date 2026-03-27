@@ -59,9 +59,11 @@ overload-party-ops
   ├─ push (main) ──── drift-monitor.yaml   (drift-monitor/** 変更時)
   │     └→ 共通: build-deploy-job.yaml (reusable workflow)
   │          └→ build → AR push → Cloud Run Job イメージ更新
-  └─ push (main) ──── slack-commands.yaml  (slack-commands/** 変更時)
-        └→ build-deploy-service.yaml (reusable workflow)
-             └→ build → AR push → Cloud Run Service イメージ更新
+  ├─ push (main) ──── slack-commands.yaml  (slack-commands/** 変更時)
+  │     └→ build-deploy-service.yaml (reusable workflow)
+  │          └→ build → AR push → Cloud Run Service イメージ更新
+  └─ push (main) ──── slack-commands-worker.yaml  (slack-commands-worker/** 変更時)
+        └→ npm ci → wrangler deploy (Cloudflare Worker)
 
 overload-party-newsfeed
   └─ push (main) ──── ci.yaml
@@ -122,6 +124,7 @@ Service Account (用途別)
 | `CLOUDFLARE_ZONE_ID` | Cloudflare Zone ID |
 | `CLOUDFLARE_DNS_RECORD_ID_DEV` | Cloudflare DNS レコード ID (dev) |
 | `CLOUDFLARE_DNS_RECORD_ID_STG` | Cloudflare DNS レコード ID (stg) |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare Account ID (Workers デプロイ用) |
 
 **GitHub Secrets（トークン・Webhook のみ）:**
 
@@ -131,6 +134,7 @@ Service Account (用途別)
 | `DB_MIGRATE_TOKEN` | ops | common の sparse-checkout（PAT: `db-migrate`） |
 | `CLOUDFLARE_DNS_TOKEN` | k8s | Cloudflare DNS 更新 |
 | `SLACK_WEBHOOK_URL` | k8s | Slack 通知 |
+| `CLOUDFLARE_WORKERS_API_TOKEN` | ops | Cloudflare Workers デプロイ |
 
 ## Artifact Registry
 
@@ -158,6 +162,7 @@ Service Account (用途別)
 | cost-monitor | Cloud Run Job | gcloud run jobs update | main push で自動 |
 | drift-monitor | Cloud Run Job | gcloud run jobs update | main push で自動 |
 | slack-commands | Cloud Run Service | gcloud run services update | main push で自動 |
+| slack-commands-worker | Cloudflare Worker | wrangler deploy | main push で自動 |
 | newsfeed | Cloud Run Job | gcloud run jobs update | main push で自動 |
 | analytics | Cloud Function Gen2 | gcloud functions deploy | main push で自動 |
 | infra | Terraform | terraform apply | main push で自動 |
