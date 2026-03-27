@@ -62,7 +62,7 @@ Overload Party は 9 つの独立した Git リポジトリで構成される。
 | **client** | モバイル/Web フロントエンド | React 19, TypeScript, Vite, Capacitor | lint → typecheck → test |
 | **infra** | GCP リソース管理 | Terraform | plan → apply（パス変更時のみ） |
 | **k8s** | GKE デプロイ・運用 | Kustomize, GitHub Actions | deploy / startup / shutdown / scale |
-| **ops** | DB マイグレーション・監視ジョブ・Slack コマンド | Docker, Cloud Run, Python | CI + 手動 dispatch |
+| **ops** | DB マイグレーション・監視ジョブ・Slack コマンド | Docker, Cloud Run, Cloudflare Workers, Python | CI + 手動 dispatch |
 | **analytics** | Spanner → BigQuery エクスポート | Go, Cloud Functions | 手動デプロイ |
 | **newsfeed** | ニュースフィード生成 | Python, Vertex AI | 手動デプロイ |
 
@@ -1175,6 +1175,18 @@ GCPリソースは **Terraform** で管理する。
 |------|------|---------|
 | Cloud SQL | `gcloud sql instances patch --activation-policy=NEVER` | k8s: `.github/workflows/nightly-shutdown.yaml` |
 | K8s (Ingress, Pod) | GitHub Actions cron | k8s: `.github/workflows/nightly-shutdown.yaml` |
+
+**Slack コマンドの経路:**
+
+```
+Slack → Cloudflare Worker (即時応答 + 署名検証)
+         ↓ Bearer token 認証
+       Cloud Run (FastAPI: コマンド処理)
+         ↓ GitHub API / sqladmin API 等
+       各バックエンド
+```
+
+Cloudflare Worker が Slack の 3 秒タイムアウトを吸収し、Cloud Run のコールドスタートの影響を回避する（詳細: [ADR-009](../adr/009-slack-commands-gke-via-github-actions.md)）。
 
 **手動操作:**
 
