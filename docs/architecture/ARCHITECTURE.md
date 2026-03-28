@@ -491,7 +491,7 @@ Player A (Client)   Gateway Pod          Battle Pod           Cloud SQL      Pla
 PostgreSQL をデータストアとして使用。テーブル構成、カラム仕様、JSONスキーマの詳細は **[DATA_DESIGN.md](DATA_DESIGN.md)** を参照。
 
 主要テーブル:
-- **games / game_states / game_events** — ゲームライフサイクル・状態・イベントログ
+- **games / game_states / game_events / game_actions** — ゲームライフサイクル・状態・イベントログ・アクション入力ログ
 - **players / player_daily_battle** — プレイヤー管理・デイリーバトル制限
 - **card_definitions** — カード定義マスター（起動時にメモリキャッシュ）
 - **player_cards / decks / deck_cards** — 所持カード・デッキ構築
@@ -909,7 +909,7 @@ draw → yield → main → battle → end → (ActivePlayer切替) → draw ...
 |------|---------------|
 | `play_card` | `HandInstanceID`, `CardID`, `ValidZones`, `ValidTargets`, `Cost` |
 | `attack` | `SourceInstanceID`, `ValidTargets` |
-| `scale_up` | `SourceInstanceID`, `Cost`, `TargetRank`, `NeedsFamily` |
+| `scale_up` | `SourceInstanceID`, `Cost`, `TargetRank`, `NeedsFamily`, `RequiredCount` |
 | `monetize` | `SourceInstanceID`, `RemainingCapacity` |
 | `activate_effect` | `SourceInstanceID`, `ValidTargets`, `EffectTargetType` |
 | `set_reactive` | `SourceInstanceID` |

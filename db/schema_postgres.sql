@@ -24,6 +24,8 @@ CREATE TABLE games (
   player1_deck_snapshot JSONB NOT NULL,
   player2_deck_snapshot JSONB NOT NULL,
   status             VARCHAR(20) NOT NULL,
+  engine_version     TEXT NOT NULL DEFAULT '',
+  card_data_version  TEXT NOT NULL DEFAULT '',
   winner_id          UUID,
   created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -38,6 +40,7 @@ CREATE TRIGGER trg_games_updated_at BEFORE UPDATE ON games FOR EACH ROW EXECUTE 
 
 CREATE TABLE game_states (
   game_id              VARCHAR(26) PRIMARY KEY REFERENCES games(game_id) ON DELETE CASCADE,
+  initial_state        JSONB NOT NULL DEFAULT '{}',
   version              BIGINT NOT NULL,
   current_turn         BIGINT NOT NULL,
   current_phase        VARCHAR(20) NOT NULL,
@@ -62,6 +65,18 @@ CREATE TABLE game_states (
   updated_at           TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE TRIGGER trg_game_states_updated_at BEFORE UPDATE ON game_states FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- 4.2b Game Actions (child of games, append-only action log)
+
+CREATE TABLE game_actions (
+  game_id     VARCHAR(26) NOT NULL REFERENCES games(game_id) ON DELETE CASCADE,
+  seq         INT NOT NULL,
+  player_id   TEXT NOT NULL,
+  action_type TEXT NOT NULL,
+  action_data JSONB NOT NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (game_id, seq)
+);
 
 -- 4.3 Game Events (child of games)
 

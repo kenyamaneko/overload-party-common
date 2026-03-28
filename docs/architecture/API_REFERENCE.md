@@ -932,7 +932,7 @@ GET /ws?token={token}
       "repoCount": 20,
       "trashCount": 0,
       "available_actions": [
-        { "type": "play_card", "hand_instance_id": "i0001", "card_id": 1, "art_no": 0, "valid_zones": ["frontend_0", "frontend_1", "frontend_2", "backend_0", "backend_1", "backend_2"] }
+        { "type": "play_card", "hand_instance_id": "i0001", "card_id": 1, "valid_zones": ["frontend_0", "frontend_1", "frontend_2", "backend_0", "backend_1", "backend_2"] }
       ]
     },
     "opponent": { ... }
