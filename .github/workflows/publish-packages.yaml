@@ -3,6 +3,13 @@
 name: Publish GameData Packages
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/**"
+      - "data/constants.json"
+      - "data/event_schemas.json"
+      - "data/cards/**"
   workflow_dispatch:
 
 permissions:
