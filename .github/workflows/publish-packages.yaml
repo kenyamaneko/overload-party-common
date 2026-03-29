@@ -11,6 +11,16 @@ on:
       - "data/event_schemas.json"
       - "data/cards/**"
   workflow_dispatch:
+    inputs:
+      bump:
+        description: "Version bump level"
+        required: false
+        default: "patch"
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
 
 permissions:
   contents: write
@@ -55,7 +65,7 @@ jobs:
         if: steps.check.outputs.publish == 'true'
         id: version
         run: |
-          # Check ステップと同じタグパターンで最新タグを取得し patch +1
+          BUMP="${{ inputs.bump || 'patch' }}"
           LAST_TAG=$(git tag -l 'packages/gamedata/v*' | sort -V | tail -1)
           if [ -z "$LAST_TAG" ]; then
             VERSION="0.1.0"
@@ -64,7 +74,11 @@ jobs:
             MAJOR=$(echo "$CURRENT" | cut -d. -f1)
             MINOR=$(echo "$CURRENT" | cut -d. -f2)
             PATCH=$(echo "$CURRENT" | cut -d. -f3)
-            VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
+            case "$BUMP" in
+              major) VERSION="$((MAJOR + 1)).0.0" ;;
+              minor) VERSION="${MAJOR}.$((MINOR + 1)).0" ;;
+              *)     VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))" ;;
+            esac
           fi
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
