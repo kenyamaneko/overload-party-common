@@ -66,12 +66,12 @@ CREATE TABLE game_states (
 );
 CREATE TRIGGER trg_game_states_updated_at BEFORE UPDATE ON game_states FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
--- 4.2b Game Actions (child of games, append-only action log)
+-- Game Actions (child of games, append-only action log)
 
 CREATE TABLE game_actions (
   game_id     VARCHAR(26) NOT NULL REFERENCES games(game_id) ON DELETE CASCADE,
   seq         INT NOT NULL,
-  player_id   TEXT NOT NULL,
+  player_id   UUID NOT NULL,
   action_type TEXT NOT NULL,
   action_data JSONB NOT NULL,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),

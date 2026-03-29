@@ -108,7 +108,7 @@ cards:
       maintenance_cost: 0
     effect_text: "**えりり Trigger:** 自分のフィールドに「SHE Storage - えりり」がいる場合、このカードのスループットを +200 する"
     effects:
-      - trigger: passive
+      - trigger: on_field_change
         guard:
           - count:
               selector: { owner: self, faction: SHE, card_type: ObjectStorage }
@@ -118,7 +118,7 @@ cards:
               selector: source
               buff: tp
               amount: 200
-              duration: permanent
+              duration: this_turn
 
   - card_no: 7
     card_id: "SH-0006"
@@ -169,7 +169,7 @@ cards:
       maintenance_cost: 200
     effect_text: "**星の連鎖:** 自分のバックエンドのこのカード以外の SHEのDB系リソース1体につき、このカードの Yield を +200 する"
     effects:
-      - trigger: passive
+      - trigger: on_field_change
         ops:
           - apply_buff:
               selector: source
@@ -179,6 +179,7 @@ cards:
                 per:
                   count: { owner: self, zone: backend, faction: SHE, card_type: Database, exclude: source }
                   value: 200
+              duration: this_turn
 
   - card_no: 9
     card_id: "SH-0008"
@@ -241,7 +242,7 @@ cards:
               buff: yield
               amount: { ref: source.yield, multiply: 1 }
               duration: this_turn
-      - trigger: passive
+      - trigger: on_field_change
         guard:
           - count:
               selector: { owner: self, card_id: SH-0024 }
@@ -251,7 +252,7 @@ cards:
               selector: source
               buff: yield
               amount: 200
-              duration: permanent
+              duration: this_turn
 
   - card_no: 11
     card_id: "SH-0010"
@@ -297,13 +298,13 @@ cards:
     stats:
     effect_text: "自分のフィールドの SHE リソースのスケールアップのための開発コストを -200 する。"
     effects:
-      - trigger: passive
+      - trigger: deploy
         ops:
           - apply_buff:
               selector: { owner: self, faction: SHE }
               buff: scale_cost_reduction
               amount: 200
-              duration: permanent
+              duration: while_on_field
 
   - card_no: 13
     card_id: "SH-0012"
@@ -319,13 +320,13 @@ cards:
     stats:
     effect_text: "自分のフィールドの全ての SHE コンピュート系リソースのスループットを +200 する。"
     effects:
-      - trigger: passive
+      - trigger: deploy
         ops:
           - apply_buff:
               selector: { owner: self, faction: SHE, card_type: [Compute, "AI/ML", Orchestrator, Container, Serverless] }
               buff: tp
               amount: 200
-              duration: permanent
+              duration: while_on_field
 
   - card_no: 14
     card_id: "SH-0013"
@@ -401,13 +402,13 @@ cards:
     stats:
     effect_text: "フロントエンドリソースに装備できる。装備したリソースのスループットを +200 する。"
     effects:
-      - trigger: passive
+      - trigger: deploy
         ops:
           - apply_buff:
               selector: source
               buff: tp
               amount: 200
-              duration: permanent
+              duration: while_on_field
 
   - card_no: 18
     card_id: "SH-0017"
@@ -584,13 +585,13 @@ cards:
       maintenance_cost: 100
     effect_text: "**キャッシュブースト:** 自分のフィールドの全ての SHE NoSQL - ダイノの Yield を +200 する。"
     effects:
-      - trigger: passive
+      - trigger: on_field_change
         ops:
           - apply_buff:
               selector: { owner: self, card_id: SH-0009 }
               buff: yield
               amount: 200
-              duration: permanent
+              duration: this_turn
 
   - card_no: 131
     card_id: "SH-0025"
@@ -606,10 +607,10 @@ cards:
     stats:
     effect_text: "自分の「SHE Compute - えくぼ」にのみ装備できる。装備先の可用性を +500 する。"
     effects:
-      - trigger: passive
+      - trigger: deploy
         ops:
           - apply_buff:
               selector: source
               buff: av
               amount: 500
-              duration: permanent
+              duration: while_on_field

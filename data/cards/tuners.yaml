@@ -94,13 +94,19 @@ cards:
       availability: 1600
       sla_penalty: 500
       maintenance_cost: 100
-    effect_text: "**初回無料:** small → medium の Scale Cost 0"
+    effect_text: "自分のフィールドの調律部リソースが3体以下の場合、このカードの維持費を -100 する。"
     effects:
-      - trigger: passive
-        custom: free_first_scale
-        meta:
-          categories: [buff]
-          target: self
+      - trigger: on_field_change
+        guard:
+          - count:
+              selector: { owner: self, faction: Tuners }
+              max: 3
+        ops:
+          - apply_buff:
+              selector: source
+              buff: maintenance_reduction
+              amount: 100
+              duration: this_turn
 
   # === Serverless (2 cards) ===
 
@@ -149,7 +155,7 @@ cards:
       maintenance_cost: 0
     effect_text: "**Low-Code:** 自分のフィールドに 調律部 DB がある時、このカードのスループットを +400 する。"
     effects:
-      - trigger: passive
+      - trigger: on_field_change
         guard:
           - count:
               selector: { owner: self, faction: Tuners, card_type: [Database, CacheDB] }
@@ -159,7 +165,7 @@ cards:
               selector: source
               buff: tp
               amount: 400
-              duration: permanent
+              duration: this_turn
 
   # === DB-type Resources (2 cards) ===
 
@@ -262,13 +268,13 @@ cards:
     stats:
     effect_text: "自分のフィールドの 調律部 リソースのスケールアップコストを -300 する。"
     effects:
-      - trigger: passive
+      - trigger: deploy
         ops:
           - apply_buff:
               selector: { owner: self, faction: Tuners }
               buff: scale_cost_reduction
               amount: 300
-              duration: permanent
+              duration: while_on_field
 
   - card_no: 83
     card_id: "TN-0012"
@@ -356,13 +362,18 @@ cards:
     stats:
     effect_text: "自分の 調律部 DB系リソースに装備できる。装備先の可用性を +400 する。装備先へのインシデントカードによるダメージを -200 する。"
     effects:
-      - trigger: passive
+      - trigger: deploy
         ops:
           - apply_buff:
               selector: source
               buff: av
               amount: 400
-              duration: permanent
+              duration: while_on_field
+          - apply_buff:
+              selector: source
+              buff: incident_reduction
+              amount: 200
+              duration: while_on_field
 
   - card_no: 134
     card_id: "TN-0016"
@@ -378,18 +389,18 @@ cards:
     stats:
     effect_text: "自分の「調律部 Compute - コンタータ」または「調律部 Bare Metal - ベア太」にのみ装備できる。装備先の可用性を +800 する。装備先へのインシデントカードによるダメージを -100 する。"
     effects:
-      - trigger: passive
+      - trigger: deploy
         ops:
           - apply_buff:
               selector: source
               buff: av
               amount: 800
-              duration: permanent
+              duration: while_on_field
           - apply_buff:
               selector: source
               buff: incident_reduction
               amount: 100
-              duration: permanent
+              duration: while_on_field
 
   # === Strategy (1 card) ===
 

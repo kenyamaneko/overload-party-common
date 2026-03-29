@@ -45,7 +45,7 @@ cards:
       maintenance_cost: 50
     effect_text: "**期間限定:** デプロイから2ターン後のエンドフェーズに発動する。このカードを破壊する（SLAペナルティは適用される）"
     effects:
-      - trigger: passive
+      - trigger: on_end_phase
         custom: spot_expiry
         meta:
           categories: [self_destruct]
@@ -100,17 +100,18 @@ cards:
       availability: 1300
       sla_penalty: 600
       maintenance_cost: 100
-    effect_text: "**自動操縦:** このカードをデプロイした時に発動できる。開発コストなしで medium にスケールアップする。\n**大艦隊:** 自分のフィールドに他の「しゅがーらぼ Orchestrator - クーヘンバウムティス」がいる時に発動できる。手札からこのカードを、開発コストを払わずにデプロイする。この効果は1ターンに1回のみ使用できる。"
+    effect_text: "デプロイ時に「自動操縦」か「標準」を選択する。自動操縦: デプロイターンを 1 短縮する。標準: 維持費を -200 する。"
     effects:
       - trigger: deploy
-        ops:
-          - scale_to_rank: { rank: medium }
-      - trigger: passive
-        use_limit: once_per_turn
-        custom: fleet_deploy
-        meta:
-          categories: [deploy_free]
-          card_id: SL-0004
+        choice:
+          autopilot:
+            - reduce_deploy_turns: { amount: 1 }
+          standard:
+            - apply_buff:
+                selector: source
+                buff: maintenance_reduction
+                amount: 200
+                duration: while_on_field
 
   - card_no: 53
     card_id: "SL-0005"
@@ -231,13 +232,13 @@ cards:
       maintenance_cost: 100
     effect_text: "**完全同期:** このカードは Incident カードの効果を受けない。"
     effects:
-      - trigger: passive
+      - trigger: deploy
         ops:
           - apply_buff:
               selector: source
               buff: incident_immune
               amount: 1
-              duration: permanent
+              duration: while_on_field
 
   - card_no: 57
     card_id: "SL-0010"
@@ -356,13 +357,13 @@ cards:
     stats:
     effect_text: "自分のフィールドの しゅがーらぼ リソースのスケールアップコストを -200 する。"
     effects:
-      - trigger: passive
+      - trigger: deploy
         ops:
           - apply_buff:
               selector: { owner: self, faction: Sugar }
               buff: scale_cost_reduction
               amount: 200
-              duration: permanent
+              duration: while_on_field
 
   - card_no: 60
     card_id: "SL-0015"
@@ -378,13 +379,13 @@ cards:
     stats:
     effect_text: "自分のフィールドの全ての しゅがーらぼ コンピュート系リソースのスループットを +200 する。"
     effects:
-      - trigger: passive
+      - trigger: deploy
         ops:
           - apply_buff:
               selector: { owner: self, faction: Sugar, card_type: [Compute, "AI/ML", Orchestrator, Container, Serverless] }
               buff: tp
               amount: 200
-              duration: permanent
+              duration: while_on_field
 
   - card_no: 61
     card_id: "SL-0016"
@@ -400,7 +401,7 @@ cards:
     stats:
     effect_text: "毎ターン発動できる。相手の Insight を 300 吸収する。"
     effects:
-      - trigger: passive
+      - trigger: on_end_phase
         ops:
           - absorb_insight: { amount: 300 }
 
@@ -420,13 +421,13 @@ cards:
     stats:
     effect_text: "自分の しゅがーらぼ コンピュート系リソースに装備できる。装備先のスループットを +200 する。"
     effects:
-      - trigger: passive
+      - trigger: deploy
         ops:
           - apply_buff:
               selector: source
               buff: tp
               amount: 200
-              duration: permanent
+              duration: while_on_field
 
   - card_no: 63
     card_id: "SL-0018"
@@ -462,18 +463,18 @@ cards:
     stats:
     effect_text: "自分の しゅがーらぼ DB系リソースに装備できる。装備先の Yield を +400 する。装備先の SLAペナルティを +100 する。"
     effects:
-      - trigger: passive
+      - trigger: deploy
         ops:
           - apply_buff:
               selector: source
               buff: yield
               amount: 300
-              duration: permanent
+              duration: while_on_field
           - apply_buff:
               selector: source
               buff: av
               amount: -200
-              duration: permanent
+              duration: while_on_field
 
   - card_no: 133
     card_id: "SL-0020"
@@ -489,13 +490,13 @@ cards:
     stats:
     effect_text: "自分の「しゅがーらぼ Compute - ジューシィ・いちご」にのみ装備できる。①装備先の可用性を +400 する。②自分のメインフェーズに発動できる。このカードを別の自分の「しゅがーらぼ Compute - ジューシィ・いちご」に付け替える。この効果は1ターン中に1回のみ使用できる。"
     effects:
-      - trigger: passive
+      - trigger: deploy
         ops:
           - apply_buff:
               selector: source
               buff: av
               amount: 400
-              duration: permanent
+              duration: while_on_field
       - trigger: activate
         use_limit: once_per_turn
         custom: reattach

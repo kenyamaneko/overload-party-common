@@ -20,11 +20,8 @@ cards:
     stats:
     effect_text: "自分のフロントエンドに装備できる。自分のフィールドにこのカードの装備先以外のフロントエンドリソースが 1体以上いる限り、相手はこのカードの装備先を攻撃対象に選択できない。"
     effects:
-      - trigger: passive
+      - trigger: deploy
         custom: target_shield
-        meta:
-          categories: [targeting]
-          target: self
 
   - card_no: 92
     card_id: "NT-0002"
@@ -38,15 +35,15 @@ cards:
     restriction: unlimited
     is_active: true
     stats:
-    effect_text: "自分の Elasticでない コンピュート系リソースに装備できる。装備先カードが相手の攻撃を受けた次のターン、装備先のカードのスループットを +300 する。"
+    effect_text: "装備先カードが相手の攻撃を受けた場合、次のターンの終了まで装備先のカードのスループットを +300 する。"
     effects:
-      - trigger: passive
-        custom: buff_on_attacked
-        meta:
-          categories: [buff]
-          target: self
-          buff: tp
-          amount: 300
+      - trigger: on_hit
+        ops:
+          - apply_buff:
+              selector: source
+              buff: tp
+              amount: 300
+              duration: until_next_own_turn_end
 
   - card_no: 93
     card_id: "NT-0003"
@@ -62,13 +59,13 @@ cards:
     stats:
     effect_text: "自分の コンピュート系リソース または DB系リソースに装備できる。装備先のカードはインシデントカードの効果の対象にならない"
     effects:
-      - trigger: passive
+      - trigger: deploy
         ops:
           - apply_buff:
               selector: source
               buff: incident_immune
               amount: 1
-              duration: permanent
+              duration: while_on_field
 
   - card_no: 94
     card_id: "NT-0004"
@@ -84,13 +81,13 @@ cards:
     stats:
     effect_text: "自分のリソースに装備できる。装備先のカードの可用性を +500 する。"
     effects:
-      - trigger: passive
+      - trigger: deploy
         ops:
           - apply_buff:
               selector: source
               buff: av
               amount: 500
-              duration: permanent
+              duration: while_on_field
 
   # === Platform (2 cards) ===========================================
 
@@ -108,13 +105,13 @@ cards:
     stats:
     effect_text: "インシデントカードによる自分のリソースへのダメージを -200 する。"
     effects:
-      - trigger: passive
+      - trigger: deploy
         ops:
           - apply_buff:
               selector: { owner: self }
               buff: incident_reduction
               amount: 200
-              duration: permanent
+              duration: while_on_field
 
   - card_no: 97
     card_id: "NT-0006"
@@ -130,13 +127,13 @@ cards:
     stats:
     effect_text: "自分のリソースのSLAペナルティを -100 する。"
     effects:
-      - trigger: passive
+      - trigger: deploy
         ops:
           - apply_buff:
               selector: { owner: self }
               buff: sla_penalty_reduction
               amount: 100
-              duration: permanent
+              duration: while_on_field
 
   # === Strategy (8 cards) ===========================================
 
@@ -547,7 +544,7 @@ cards:
     stats:
     effect_text: "自分の DB系リソースに装備できる。自分のフィールドにオブジェクトストレージがある場合、装備先への攻撃ダメージを -400 する。"
     effects:
-      - trigger: passive
+      - trigger: on_field_change
         guard:
           - count:
               selector: { owner: self, card_type: ObjectStorage }
@@ -557,7 +554,7 @@ cards:
               selector: source
               buff: attack_damage_reduction
               amount: 400
-              duration: permanent
+              duration: this_turn
 
   - card_no: 120
     card_id: "NT-0026"

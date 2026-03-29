@@ -113,11 +113,17 @@ cards:
       maintenance_cost: 200
     effect_text: "**データの泉:** 自分のバックエンドの 天気使い DB系リソースおよびオブジェクトストレージ1体につき、このカードのスループットを +200 する。"
     effects:
-      - trigger: passive
-        custom: tp_per_backend_data
-        meta:
-          categories: [buff]
-          target: self
+      - trigger: on_field_change
+        ops:
+          - apply_buff:
+              selector: source
+              buff: tp
+              amount:
+                base: 0
+                per:
+                  count: { owner: self, zone: backend, faction: Tenki, card_type: data }
+                  value: 200
+              duration: this_turn
 
   - card_no: 28
     card_id: "TK-0006"
@@ -240,6 +246,13 @@ cards:
     effect_text: "**百花の形:** このカードが 天気使い DB系リソースとして効果の対象になる時、このカードは2枚分として数える。\n**百花繚乱:** このカードをデプロイした時に発動できる。リポジトリから「天気使い NoSQL - 秩序の蒼<コスモ>」1枚をコストなしでデプロイする。この効果は1ターン中に1回のみ使用できる"
     effects:
       - trigger: deploy
+        ops:
+          - apply_buff:
+              selector: source
+              buff: count_multiplier
+              amount: 2
+              duration: while_on_field
+      - trigger: deploy
         use_limit: once_per_turn
         ops:
           - deploy_from_repo:
@@ -280,13 +293,13 @@ cards:
     stats:
     effect_text: "自分のフィールドの 天気使い リソースのスケールアップのコストを -200 する。"
     effects:
-      - trigger: passive
+      - trigger: deploy
         ops:
           - apply_buff:
               selector: { owner: self, faction: Tenki }
               buff: scale_cost_reduction
               amount: 200
-              duration: permanent
+              duration: while_on_field
 
   - card_no: 35
     card_id: "TK-0013"
@@ -302,13 +315,13 @@ cards:
     stats:
     effect_text: "自分のフィールドの全ての 天気使い コンピュート系リソースのスループットを +200 する。"
     effects:
-      - trigger: passive
+      - trigger: deploy
         ops:
           - apply_buff:
               selector: { owner: self, faction: Tenki, card_type: [Compute, "AI/ML", Orchestrator, Container, Serverless] }
               buff: tp
               amount: 200
-              duration: permanent
+              duration: while_on_field
 
   - card_no: 37
     card_id: "TK-0014"
@@ -367,13 +380,13 @@ cards:
     stats:
     effect_text: "自分のリソースに装備できる。装備先へのインシデントカードによるダメージを -200 する。"
     effects:
-      - trigger: passive
+      - trigger: deploy
         ops:
           - apply_buff:
               selector: source
               buff: incident_reduction
               amount: 200
-              duration: permanent
+              duration: while_on_field
 
   - card_no: 40
     card_id: "TK-0017"
@@ -426,18 +439,18 @@ cards:
     stats:
     effect_text: "自分の「天気使い VM - ソラ」にのみ装備できる。装備先の可用性を +300 し、スループットを +200 する。"
     effects:
-      - trigger: passive
+      - trigger: deploy
         ops:
           - apply_buff:
               selector: source
               buff: av
               amount: 300
-              duration: permanent
+              duration: while_on_field
           - apply_buff:
               selector: source
               buff: tp
               amount: 200
-              duration: permanent
+              duration: while_on_field
 
   # ── ストラテジー (3枚) ───────────────────────────────────────
 
@@ -555,14 +568,15 @@ cards:
     restriction: unlimited
     is_active: true
     stats:
-    effect_text: "相手のインシデントカードによって自分のBudgetが減少する時に発動できる。そのインシデントによって発生する自分のBudgetの減少を-300する"
+    effect_text: "①デプロイ時、相手フィールドの裏向きリアクティブカードを1枚選び、確認する。②このカードがフィールドに存在する限り、インシデントカードによる自分のリソースへのダメージを300軽減する"
     effects:
-      - trigger: activate
-        use_limit: once_per_turn
+      - trigger: deploy
         ops:
-          - reveal_reactive: {}
+          - peek_reactive: {}
+      - trigger: deploy
+        ops:
           - apply_buff:
               selector: { owner: self }
               buff: incident_reduction
               amount: 300
-              duration: this_turn
+              duration: while_on_field
