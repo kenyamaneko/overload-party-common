@@ -132,7 +132,8 @@ Service Account (用途別)
 |-------------|---------|------|
 | `OPS_DISPATCH_TOKEN` | common | ops への repository_dispatch（PAT: `common-ci-dispatch`） |
 | `DB_MIGRATE_TOKEN` | ops | common の sparse-checkout（PAT: `db-migrate`） |
-| `CLOUDFLARE_DNS_TOKEN` | k8s | Cloudflare DNS 更新 |
+| `CLOUDFLARE_CDN_API_TOKEN` | infra | Cloudflare CDN 管理（DNS Edit + Zone Rulesets Edit） |
+| `CLOUDFLARE_DNS_API_TOKEN` | k8s | Cloudflare DNS 更新 |
 | `SLACK_WEBHOOK_URL` | k8s | Slack 通知 |
 | `CLOUDFLARE_WORKERS_API_TOKEN` | ops | Cloudflare Workers デプロイ |
 

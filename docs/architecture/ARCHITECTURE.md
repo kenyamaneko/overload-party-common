@@ -911,7 +911,7 @@ draw → yield → main → battle → end → (ActivePlayer切替) → draw ...
 | `attack` | `SourceInstanceID`, `ValidTargets` |
 | `scale_up` | `SourceInstanceID`, `Cost`, `TargetRank`, `NeedsFamily`, `RequiredCount` |
 | `monetize` | `SourceInstanceID`, `RemainingCapacity` |
-| `activate_effect` | `SourceInstanceID`, `ValidTargets`, `EffectTargetType` |
+| `use_effect` | `SourceInstanceID`, `ValidTargets`, `EffectTargetType` |
 | `set_reactive` | `SourceInstanceID` |
 
 ゲームフロー制御（フェーズ終了、手札破棄）は `available_actions` に含めず、`turn_controls` メッセージとして別途送信される。
@@ -1069,7 +1069,7 @@ pgxpool で接続プールを管理。Pod あたりの接続数を制限し、Cl
 | `scale_up` | Main Phase | フィールド上の自リソース（表向き） | — | — | Resizable 属性、現在Rank < 対象Rank |
 | `migrate` | Main Phase | フィールド上の表向き新リソース | 表向き旧リソース | — | 新.deploy_turns >= 旧.deploy_turns |
 | `monetize` | Main Phase | バックエンドのコンピュート | — | — | Insight Pool 残量 ≥ 分配量、TP上限 |
-| `activate_effect` | Main/Battle Phase | 効果を持つカード | 効果の対象 | 効果コスト | 1ターン1回制限 |
+| `use_effect` | Main/Battle Phase | 効果を持つカード | 効果の対象 | 効果コスト | 1ターン1回制限 |
 
 ### 13.2 レート制限
 
@@ -1121,7 +1121,7 @@ pgxpool で接続プールを管理。Pod あたりの接続数を制限し、Cl
 - 静的 IP は使用しない（コスト削減）。代わりに GitHub Actions で Cloudflare DNS を自動更新:
   - **起動時** (`env-lifecycle.yaml`): Ingress の外部 IP 取得後、Cloudflare API で A レコードを更新
   - **停止時** (`nightly-shutdown.yaml`): DNS を `127.0.0.1` に変更し、予約済み IP を削除
-- Cloudflare 認証情報は `CLOUDFLARE_` プレフィックスで統一。DNS トークン (`CLOUDFLARE_DNS_TOKEN`) は secrets、ゾーン ID (`CLOUDFLARE_ZONE_ID`) は variables で管理
+- Cloudflare 認証情報は `CLOUDFLARE_` プレフィックスで統一。DNS トークン (`CLOUDFLARE_DNS_API_TOKEN`) は secrets、ゾーン ID (`CLOUDFLARE_ZONE_ID`) は variables で管理
 
 ---
 
@@ -1149,7 +1149,8 @@ GCPリソースは **Terraform** で管理する。
 | Cloud SQL インスタンス・DB | `google_sql_database_instance`, `google_sql_database` | 各環境 |
 | Cloud SQL IAM ユーザー | `google_sql_user` (CLOUD_IAM_SERVICE_ACCOUNT) | 各環境 |
 | External HTTP(S) LB | `google_compute_*` | shared |
-| Firebase Hosting サイト | `google_firebase_hosting_site` | 各環境 |
+| GCS 公開バケット（アセット） | `google_storage_bucket` + `google_storage_bucket_iam_member` | 各環境 |
+| Cloudflare CDN（CNAME・ルール） | `cloudflare_record`, `cloudflare_ruleset` | infra/cloudflare |
 | IAM / Service Account | `google_service_account`, `google_project_iam_*` | 各環境 |
 | Workload Identity 連携 | `google_service_account_iam_member` | 各環境（shared GKE → 環境 GSA） |
 
@@ -1205,9 +1206,10 @@ overload-party-infra/
 │   ├── platform/     # GKE, Artifact Registry, WIF, CI SA
 │   ├── dev/          # Cloud SQL, IAM (Workload Identity)
 │   ├── stg/
-│   └── prod/
+│   ├── prod/
+│   └── cloudflare/   # CDN (CNAME, Origin Rule, Transform Rule)
 ├── modules/
-│   ├── assets/       # Firebase Hosting, GCS バケット
+│   ├── assets/       # GCS バケット（公開: アセット、非公開: シナリオ）
 │   ├── ci-cd/        # WIF, CI SA
 │   ├── database/     # Cloud SQL インスタンス + DB + IAM
 │   ├── db-migration/ # Cloud Run Job (psqldef)
@@ -1231,50 +1233,64 @@ overload-party-infra/
 | maxSurge | 25% | 新旧Pod共存時の最大増分 |
 | Region | asia-northeast1 | 日本ユーザー向け低レイテンシ |
 
-### 14.4 アセット配信（Firebase Hosting）
+### 14.4 アセット配信（Cloudflare CDN + GCS）
 
 ゲームアセットの配信は、コンテンツの性質に応じて2系統に分かれる:
 
 | 種別 | 配信元 | 理由 |
 |------|--------|------|
-| 画像・音声（カードイラスト、BGM、SE、ストーリー背景・立ち絵等） | Firebase Hosting | バイナリファイルは CDN 配信が効率的。認証不要（スクリプトなしでは意味をなさない） |
+| 画像・音声（カードイラスト、BGM、SE、ストーリー背景・立ち絵等） | GCS 公開バケット + Cloudflare CDN | バイナリファイルは CDN 配信が効率的。認証不要（スクリプトなしでは意味をなさない） |
 | ストーリースクリプト（.ks） | ゲームサーバー API (`GET /api/v1/scenarios/{id}/script`) | エピソードのアンロック判定・言語切替をサーバー側で制御する必要がある。テキストなので転送コストは無視できる |
 
-Firebase Hosting はグローバル CDN を内蔵しており、固定費なしの従量課金で利用できる。React アプリのビルドに含めない画像・音声は Firebase Hosting から取得し、ブラウザ / Capacitor のキャッシュ機構で管理する。
+GCS 公開バケットに Cloudflare CDN を前段に置く構成。Cloudflare Free プランは帯域無制限のため、トラフィック増加時もコストを抑えられる。React アプリのビルドに含めない画像・音声は CDN から取得し、ブラウザ / Capacitor のキャッシュ機構で管理する。
 
 **構成:**
 
 | コンポーネント | 役割 |
 |--------------|------|
-| Firebase Hosting | アセットファイル（イラスト・音声等）のホスティング + CDN 配信 |
+| GCS CNAME バケット (`overload-party-assets-{env}.keyandnotes.com`) | アセットファイルのストレージ。バケット名 = サブドメインにすることで、Host ヘッダから GCS が自動解決 |
+| Cloudflare CDN | CNAME (→ `c.storage.googleapis.com`) + グローバル CDN キャッシュ + HTTPS 終端 |
 | ゲームサーバー API | ストーリースクリプトの配信（認証・アンロック制御付き） |
 | Service Worker | クライアント側キャッシュ管理（Cache API） |
 
-> **制約:** 1 ファイルあたり 2 GB / 無料枠はストレージ 10 GB・転送量 360 MB/日。アセット総量と想定 DAU を考慮すると、少数ユーザーでも初回アセット一括取得で無料枠を超過する可能性が高い。正式リリース前に Blaze プラン（従量課金）への移行、または GCS + Cloud CDN 構成への切替を計画すること。
+> **前提:** Cloudflare の SSL モードは Flexible であること（GCS CNAME バケットは HTTP のみ対応）。
+
+**CDN URL:**
+
+| 環境 | URL |
+|------|-----|
+| dev | `https://overload-party-assets-dev.keyandnotes.com` |
+| stg | `https://overload-party-assets-stg.keyandnotes.com` |
+| prod | `https://overload-party-assets.keyandnotes.com` |
 
 **配信フロー:**
 
 ```
-CI (GitHub Actions)                Firebase Hosting (CDN)    Client (React)
-     │                                   │                      │
-     │  1. アセット最適化                 │                      │
-     │     (WebP変換 + マニフェスト生成)  │                      │
-     │  2. firebase deploy               │                      │
-     ├──────────────────────────────────>│                      │
-     │                                   │  3. マニフェスト取得   │
-     │                                   │<─────────────────────┤
-     │                                   │  4. 差分アセットDL     │
-     │                                   │  (CDN キャッシュ経由)  │
-     │                                   │<─────────────────────┤
-     │                                   │  5. Cache API で     │
-     │                                   │     ローカル保存       │
+CI (GitHub Actions)         Cloudflare CDN    GCS Bucket     Client (React)
+     │                          │                │               │
+     │  1. アセット最適化       │                │               │
+     │     (WebP変換 +          │                │               │
+     │      マニフェスト生成)   │                │               │
+     │  2. gcloud storage cp    │                │               │
+     ├─────────────────────────────────────────>│               │
+     │                          │                │  3. マニフェスト取得
+     │                          │<──────────────────────────────┤
+     │                          │  (cache miss)  │               │
+     │                          ├───────────────>│               │
+     │                          │<───────────────┤               │
+     │                          │───────────────────────────────>│
+     │                          │                │  4. 差分アセットDL
+     │                          │  (cache hit)   │  (CDN キャッシュ経由)
+     │                          │───────────────────────────────>│
+     │                          │                │  5. Cache API で
+     │                          │                │     ローカル保存
 ```
 
 **更新シナリオ:**
 
 | シナリオ | 対応 |
 |---------|------|
-| 新カード追加 | 新アセット + マニフェスト更新を `firebase deploy` でデプロイ。クライアントは次回起動時に差分DL |
+| 新カード追加 | 新アセット + マニフェスト更新を `gcloud storage cp` でデプロイ。クライアントは次回起動時に差分DL |
 | 既存イラスト差し替え | 該当ファイルを差し替えて再デプロイ。マニフェストのハッシュが変わるため、クライアントが自動検知して再DL |
 | アプリ本体更新 | Capacitor ネイティブ部分の変更のみストア審査が必要。Web 部分は OTA 更新可能 |
 
