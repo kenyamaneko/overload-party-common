@@ -1207,7 +1207,7 @@ overload-party-infra/
 │   ├── dev/          # Cloud SQL, IAM (Workload Identity)
 │   ├── stg/
 │   ├── prod/
-│   └── cloudflare/   # CDN (CNAME, Origin Rule, Transform Rule)
+│   └── cloudflare/   # CDN (CNAME)
 ├── modules/
 │   ├── assets/       # GCS バケット（公開: アセット、非公開: シナリオ）
 │   ├── ci-cd/        # WIF, CI SA

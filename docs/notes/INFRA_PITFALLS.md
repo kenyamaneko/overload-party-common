@@ -306,20 +306,13 @@ gh secret set CLOUDSQL_INSTANCE_NAME --body "overload-party-db"
 
 ---
 
-## 18. GCS + CDN はトラフィック規模で判断する
+## 18. アセット CDN は Cloudflare Free + GCS CNAME バケット
 
-**検討**: BGM (MP3, 10 曲 × 1-2 分 ≈ 15-20MB) + SE + カードイラストの配信に CDN が必要か。
+**経緯**: Firebase Hosting は無料枠（360 MB/日）が少なく、Cloud CDN は LB 必須で固定費が高い。
 
-**結論**: 東京リージョンの GCS 直配信で十分。
+**採用構成**: Cloudflare Free + GCS CNAME バケット。バケット名 = サブドメインにして CNAME → `c.storage.googleapis.com` で配信。Cloudflare が CDN キャッシュ + HTTPS 終端を担う。
 
-- GCS の Egress: ~$0.12/GB (Asia)
-- 1000 ユーザーが全 BGM ダウンロード → 20GB → $2.4/月
-- CDN (Cloudflare Pro) は $20/月 — トラフィックが少ない段階ではコスト逆転
-- GCS は東京リージョンなので国内レイテンシは十分低い
-
-**CDN を入れるタイミングの目安**:
-- 月間 Egress が 100GB を超える（ユーザー数千〜万単位）
-- グローバル配信が必要になった
-- DDoS 対策や WAF が欲しい
-
-静的アセットは GCS の既存バケット (`{project}-assets`) にプレフィックスで整理すれば十分。CDN レイヤーは後から被せられる。
+- Cloudflare Free: 帯域無制限
+- GCS ストレージ: ~$0.023/GB/月
+- GCS Egress: キャッシュヒット分は Cloudflare が吸収するため最小限
+- 前提: Cloudflare SSL モードは Flexible（GCS CNAME バケットは HTTP のみ対応）
