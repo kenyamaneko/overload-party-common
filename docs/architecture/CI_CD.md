@@ -10,8 +10,9 @@ overload-party-common
   ├─ db/ push (main) ──── repository_dispatch ────→ ops/db-migrate-on-push.yaml
   │                                                    └→ build → AR push → Cloud Run Job 実行 (dev)
   │
-  ├─ data/ push (main) ──── publish-packages.yaml (workflow_dispatch 対応)
+  ├─ data/packages/ push (main) ── publish-packages.yaml (自動 patch bump)
   │                           └→ 前回タグとの差分検出 → Go tag + NuGet push + npm publish
+  │                           └→ 手動 dispatch: bump level (patch/minor/major) 選択可
   │
   └─ data/ push (PR) ──── codegen-check.yaml
                             └→ packages/ 内の整合性チェック（クロスリポ不要）
@@ -81,7 +82,7 @@ overload-party-analytics
 | 送信側 | 受信側 | メカニズム | イベント |
 |--------|--------|-----------|---------|
 | common | ops | `repository_dispatch` | `db-migrate`（db/ 変更時） |
-| common | GitHub Packages | `publish-packages.yaml` | data/ 変更時にパッケージ publish (Go tag, NuGet, npm) |
+| common | GitHub Packages | `publish-packages.yaml` | data/packages/ 変更時に自動 publish (patch bump)。手動 dispatch で minor/major bump 可 |
 
 `repository_dispatch` は GitHub API 経由でワークフローを起動する仕組み。common の ci.yaml が ops リポに POST し、ops 側の `db-migrate-on-push.yaml` が受信して dev 環境のマイグレーションを自動実行する。
 
@@ -132,8 +133,8 @@ Service Account (用途別)
 |-------------|---------|------|
 | `OPS_DISPATCH_TOKEN` | common | ops への repository_dispatch（PAT: `common-ci-dispatch`） |
 | `DB_MIGRATE_TOKEN` | ops | common の sparse-checkout（PAT: `db-migrate`） |
-| `CLOUDFLARE_CDN_API_TOKEN` | infra | Cloudflare CDN 管理（DNS Edit + Zone Rulesets Edit） |
-| `CLOUDFLARE_DNS_API_TOKEN` | k8s | Cloudflare DNS 更新 |
+| `CLOUDFLARE_CDN_API_TOKEN` | infra | Cloudflare CDN 管理（DNS Edit） |
+| `CLOUDFLARE_DNS_API_TOKEN` | k8s, ops | Cloudflare DNS 更新 |
 | `SLACK_WEBHOOK_URL` | k8s | Slack 通知 |
 | `CLOUDFLARE_WORKERS_API_TOKEN` | ops | Cloudflare Workers デプロイ |
 
