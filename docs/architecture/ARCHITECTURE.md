@@ -1149,8 +1149,8 @@ GCPリソースは **Terraform** で管理する。
 | Cloud SQL インスタンス・DB | `google_sql_database_instance`, `google_sql_database` | 各環境 |
 | Cloud SQL IAM ユーザー | `google_sql_user` (CLOUD_IAM_SERVICE_ACCOUNT) | 各環境 |
 | External HTTP(S) LB | `google_compute_*` | shared |
-| GCS 公開バケット（アセット） | `google_storage_bucket` + `google_storage_bucket_iam_member` | 各環境 |
-| Cloudflare CDN（CNAME・ルール） | `cloudflare_record`, `cloudflare_ruleset` | infra/cloudflare |
+| GCS CNAME バケット（アセット） | `google_storage_bucket` + `google_storage_bucket_iam_member` | 各環境 |
+| Cloudflare CDN（CNAME） | `cloudflare_record` | infra/cloudflare |
 | IAM / Service Account | `google_service_account`, `google_project_iam_*` | 各環境 |
 | Workload Identity 連携 | `google_service_account_iam_member` | 各環境（shared GKE → 環境 GSA） |
 

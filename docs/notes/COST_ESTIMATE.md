@@ -41,6 +41,21 @@ Pod ごとの内訳（730 時間/月で計算）:
 > 無料枠は 1 Autopilot クラスタ分の管理費を billing account ごとに提供。
 > Pod のコンピュート料金は無料枠の対象外。
 
+### Pod レベル丸めに関する注意
+
+Autopilot はコンテナ単位ではなく **Pod 単位** でリソースを集計して課金する。
+バースト非対応クラスタでは CPU が **250m 刻みに切り上げ** られるため、sidecar（cloud-sql-proxy）との合算後の Pod 合計が上表より大きくなる:
+
+| Pod | コンテナ合計 CPU | 丸め後 CPU | コンテナ合計 Mem | 月額 |
+|-----|-----------------|-----------|-----------------|------|
+| gateway + proxy | 350m | **500m** | 640Mi | $28.97 |
+| battle + proxy | 600m | **750m** | 1152Mi | $36.46 |
+| **合計** | | **1250m** | | **$65.43** |
+
+バースト対応クラスタでは 250m 刻みの丸めがないため、上記「Pod ごとの内訳」の $47.68 がそのまま適用される。
+
+> 参考: https://docs.cloud.google.com/kubernetes-engine/docs/concepts/autopilot-resource-requests
+
 ---
 
 ## Cloud SQL
@@ -100,7 +115,22 @@ Pod ごとの内訳（730 時間/月で計算）:
 | env-up/down 運用 (Pod + LB + PSC を使用時のみ起動) | 最大 -$65 | 初期・トラフィックが少ない時期向け |
 | Cloud SQL 夜間停止 (Scheduler で自動 stop/start) | ~-$10 | アクセスがない時間帯を停止 |
 | Spot Pod (gateway のみ) | ~-$8 | battle は WebSocket 長時間接続のため不向き |
+| dev/stg リソースパッチ | ~-50% (dev/stg) | Autopilot は requests ベース課金のため効果大 |
 | db-custom へ移行 + CUD 1 年 | 最大 -52% | トラフィック増加後に検討 |
+
+### dev/stg 環境のリソース削減
+
+Autopilot は requests ベースで課金されるため、dev/stg では requests を下げるリソースパッチが最も効果的。
+k8s overlay にパッチを追加して環境ごとに requests を変える:
+
+| Pod | prod (現行) | dev/stg (推奨) |
+|-----|------------|---------------|
+| gateway | 250m / 512Mi | 100m / 256Mi |
+| battle | 500m / 1Gi | 250m / 512Mi |
+| cloud-sql-proxy | 100m / 128Mi | 50m / 64Mi |
+| **Pod 合計** | **950m / 1.75Gi** | **450m / 832Mi** |
+
+dev/stg 環境の GKE Pod 月額: ~$24（prod $47.68 比で約 50% 削減）
 
 ### env-up/down 運用時の月額目安
 

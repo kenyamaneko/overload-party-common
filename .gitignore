@@ -24,7 +24,6 @@ venv/
 # Docs (local only)
 docs/adr/
 docs/notes/
-docs/archive/
 docs/postmortem/
 docs/STORY/
 
