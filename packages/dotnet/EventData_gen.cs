@@ -110,7 +110,7 @@ public class DiscardHandEventData
     }
 }
 
-public class ActivateEffectEventData
+public class UseEffectEventData
 {
     public required string CardId { get; init; } = "";
     public required string SourceId { get; init; } = "";

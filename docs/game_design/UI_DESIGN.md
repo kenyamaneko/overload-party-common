@@ -503,7 +503,7 @@ stateDiagram-v2
 | play_card | 1200ms |
 | attack | 1800ms（被弾エフェクト + スクリーンシェイク + 破壊演出） |
 | scale_up | 1000ms |
-| activate_effect | 1200ms |
+| use_effect | 1200ms |
 | monetize | 800ms |
 | end_phase | 500ms |
 | discard_hand | 800ms |

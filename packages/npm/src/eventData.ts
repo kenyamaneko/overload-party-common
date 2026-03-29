@@ -36,7 +36,7 @@ export interface DiscardHandEventData {
   discardedIds: string[];
 }
 
-export interface ActivateEffectEventData {
+export interface UseEffectEventData {
   cardId: string;
   sourceId: string;
   targetId?: string;
@@ -95,7 +95,7 @@ export interface EventDataMap {
   scale_up: ScaleUpEventData;
   monetize: MonetizeEventData;
   discard_hand: DiscardHandEventData;
-  activate_effect: ActivateEffectEventData;
+  use_effect: UseEffectEventData;
   migrate: MigrateEventData;
   phase_change: PhaseChangeEventData;
   phase_end: PhaseEndEventData;

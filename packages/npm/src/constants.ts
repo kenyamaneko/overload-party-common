@@ -23,10 +23,10 @@ export type GameStatus = (typeof GAME_STATUS)[number];
 export const WIN_REASONS = ["budget_zero", "system_down", "repository_out", "timeout", "disconnect", "turn_limit", "draw", "launch_failure"] as const;
 export type WinReason = (typeof WIN_REASONS)[number];
 
-export const ACTION_TYPES = ["play_card", "attack", "scale_up", "monetize", "discard_hand", "activate_effect", "set_reactive", "migrate", "end_phase", "forfeit"] as const;
+export const ACTION_TYPES = ["play_card", "attack", "scale_up", "monetize", "discard_hand", "use_effect", "set_reactive", "migrate", "end_phase", "forfeit"] as const;
 export type GameActionType = (typeof ACTION_TYPES)[number];
 
-export const EVENT_TYPES = ["play_card", "attach_card", "attack", "scale_up", "monetize", "discard_hand", "activate_effect", "reactive_revealed", "migrate", "migration_complete", "phase_change", "phase_end", "turn_end", "turn_start", "game_over"] as const;
+export const EVENT_TYPES = ["play_card", "attach_card", "attack", "scale_up", "monetize", "discard_hand", "use_effect", "reactive_revealed", "migrate", "migration_complete", "phase_change", "phase_end", "turn_end", "turn_start", "game_over"] as const;
 export type EventType = (typeof EVENT_TYPES)[number];
 
 export const CARD_TYPES = ["Compute", "Container", "Orchestrator", "Serverless", "AI/ML", "Database", "ObjectStorage", "CacheDB", "Platform", "Attachment", "Strategy", "Reactive", "Incident"] as const;

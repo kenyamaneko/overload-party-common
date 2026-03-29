@@ -30,7 +30,7 @@
     "discardedCount": "int",
     "discardedIds": "string[]"
   },
-  "activate_effect": {
+  "use_effect": {
     "cardId": "string",
     "sourceId": "string",
     "targetId?": "string"
