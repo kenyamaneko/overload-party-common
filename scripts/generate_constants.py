@@ -191,20 +191,8 @@ def generate_csharp_constants(constants, *, out_path, namespace="OverloadParty.G
     ]
 
     iv = constants["initial_values"]
-    iv_map = {
-        "budget": ("long", "InitialBudget"),
-        "insight_pool": ("long", "InitialInsightPool"),
-        "hand_size": ("int", "InitialHandSize"),
-        "hand_limit": ("int", "HandLimit"),
-        "time_bank": ("long", "InitialTimeBank"),
-        "deck_size": ("int", "DeckSize"),
-        "max_attachments": ("int", "MaxAttachments"),
-        "slots_per_zone": ("int", "SlotsPerZone"),
-    }
     lines.append("    // Initial values")
-    for json_key, (cs_type, cs_name) in iv_map.items():
-        val = iv[json_key]
-        lines.append(f"    public const {cs_type} {cs_name} = {val};")
+    lines.append(f"    public const int DeckSize = {iv['deck_size']};")
     lines.append("")
 
     lines.append("    // Factions")
@@ -444,15 +432,6 @@ def generate_ts_constants(constants, *, out_path):
     for key, val in iv.items():
         camel = re.sub(r'_([a-z])', lambda m: m.group(1).upper(), key)
         lines.append(f"  {camel}: {val},")
-    lines.append("} as const;")
-    lines.append("")
-
-    lv = constants["level"]
-    lines.append("export const LEVEL = {")
-    lines.append(f"  expFormula: '{lv['exp_formula']}',")
-    lines.append(f"  expWin: {lv['exp_win']},")
-    lines.append(f"  expLoss: {lv['exp_loss']},")
-    lines.append(f"  expDraw: {lv['exp_draw']},")
     lines.append("} as const;")
     lines.append("")
 

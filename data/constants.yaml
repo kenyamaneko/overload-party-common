@@ -126,16 +126,4 @@ effect_durations:
 - until_next_turn_end
 - until_next_own_turn_end
 initial_values:
-  budget: 5000
-  insight_pool: 0
-  hand_size: 5
-  hand_limit: 6
-  time_bank: 480
   deck_size: 30
-  max_attachments: 2
-  slots_per_zone: 3
-level:
-  exp_formula: 60 * n^2
-  exp_win: 40
-  exp_loss: 20
-  exp_draw: 30

@@ -5,14 +5,7 @@ namespace OverloadParty.GameData;
 public static class GameConstants
 {
     // Initial values
-    public const long InitialBudget = 5000;
-    public const long InitialInsightPool = 0;
-    public const int InitialHandSize = 5;
-    public const int HandLimit = 6;
-    public const long InitialTimeBank = 480;
     public const int DeckSize = 30;
-    public const int MaxAttachments = 2;
-    public const int SlotsPerZone = 3;
 
     // Factions
     public const string FactionSHE = "SHE";

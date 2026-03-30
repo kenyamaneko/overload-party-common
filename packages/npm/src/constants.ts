@@ -83,20 +83,6 @@ export function restrictionCopyCount(restriction: Restriction): number {
 }
 
 export const INITIAL_VALUES = {
-  budget: 5000,
-  insightPool: 0,
-  handSize: 5,
-  handLimit: 6,
-  timeBank: 480,
   deckSize: 30,
-  maxAttachments: 2,
-  slotsPerZone: 3,
-} as const;
-
-export const LEVEL = {
-  expFormula: '60 * n^2',
-  expWin: 40,
-  expLoss: 20,
-  expDraw: 30,
 } as const;
 

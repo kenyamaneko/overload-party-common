@@ -115,17 +115,14 @@ is_active: false   # ゲームから除外される（データは残る）
 
 ### ゲーム定数を変更する
 
-初期予算やデッキサイズなどのゲーム全体の定数は `data/constants.yaml` で管理されている。
+デッキサイズは `data/constants.yaml` で管理されている。
 
 ```yaml
 initial_values:
-  budget: 5000           # 初期予算
-  hand_size: 5           # 初期手札枚数
-  hand_limit: 6          # 手札上限
   deck_size: 30          # デッキ枚数
-  time_bank: 480         # 持ち時間（秒）
-  slots_per_zone: 3      # ゾーンあたりのスロット数
 ```
+
+> **Note:** その他のゲーム定数（budget, hand_limit, time_bank 等）は `game_config` データベーステーブルで管理されており、コードデプロイなしに更新できる。詳細は `db/seed/game_config.sql` を参照。
 
 ゲーム定数を変更した場合は、カード生成ではなく定数生成コマンドを実行する（② を参照）。
 
