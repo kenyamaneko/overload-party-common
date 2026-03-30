@@ -115,18 +115,19 @@ is_active: false   # ゲームから除外される（データは残る）
 
 ### ゲーム定数を変更する
 
-初期予算やデッキサイズなどのゲーム全体の定数は `data/constants.json` で管理されている。
+初期予算やデッキサイズなどのゲーム全体の定数は `data/constants.yaml` で管理されている。
 
-```json
-"initial_values": {
-  "budget": 5000,         // 初期予算
-  "hand_size": 5,         // 初期手札枚数
-  "hand_limit": 6,        // 手札上限
-  "deck_size": 30,        // デッキ枚数
-  "time_bank": 480,       // 持ち時間（秒）
-  "slots_per_zone": 3     // ゾーンあたりのスロット数
-}
+```yaml
+initial_values:
+  budget: 5000           # 初期予算
+  hand_size: 5           # 初期手札枚数
+  hand_limit: 6          # 手札上限
+  deck_size: 30          # デッキ枚数
+  time_bank: 480         # 持ち時間（秒）
+  slots_per_zone: 3      # ゾーンあたりのスロット数
 ```
+
+ゲーム定数を変更した場合は、カード生成ではなく定数生成コマンドを実行する（② を参照）。
 
 ### カード種別の一覧
 
@@ -148,29 +149,44 @@ is_active: false   # ゲームから除外される（データは残る）
 
 ### コマンド
 
-プロジェクトのルートディレクトリで以下を実行する:
+プロジェクトのルートディレクトリで、変更した内容に応じて以下を実行する:
+
+**カードデータ（`data/cards/*.yaml`）を変更した場合:**
 
 ```bash
-python3 packages/generate_from_yaml.py --gen-dir packages/
+python3 scripts/generate_cards.py
+```
+
+**ゲーム定数・イベントスキーマ・モデル定義（`data/constants.yaml`, `data/event_schemas.yaml`, `data/models.yaml`）を変更した場合:**
+
+```bash
+python3 scripts/generate_constants.py
 ```
 
 ### 何が起こるか
 
-このコマンドを実行すると、YAML と constants.json を元に以下のファイルが自動生成される。
 **これらの生成ファイルは直接編集してはいけない。**
+
+#### generate_cards.py の生成物
 
 | 生成ファイル | 用途 |
 |-------------|------|
 | `docs/game_design/CARDS.md` | カード一覧ドキュメント（目視確認用） |
-| `packages/gamedata/cache/cards_gen.json` | Gateway サーバー用カードデータ |
-| `packages/gamedata/model/*_gen.go` | Gateway サーバー用 Go 型定義 |
+| `packages/gamedata/cache/cards_gen.json` | Gateway サーバー用カードデータ（ローカル開発用） |
+| `packages/dotnet/cache/cards_gen.json` | Battle サーバー用カードデータ（ローカル開発用） |
+| `db/seed/cards_seed.sql` | PostgreSQL カード定義 seed（UPSERT） |
+
+#### generate_constants.py の生成物
+
+| 生成ファイル | 用途 |
+|-------------|------|
 | `packages/gamedata/constants/constants_gen.go` | Gateway サーバー用定数 |
-| `packages/gamedata/cardno/cardno_gen.go` | カード番号定数（Go） |
+| `packages/gamedata/model/*_gen.go` | Gateway サーバー用 Go 型定義 |
 | `packages/dotnet/GameConstants_gen.cs` | Battle サーバー用定数 |
 | `packages/dotnet/EventData_gen.cs` | Battle サーバー用イベント型 |
-| `packages/dotnet/cache/cards_gen.json` | Battle サーバー用カードデータ |
 | `packages/npm/src/constants.ts` | クライアント用定数 |
 | `packages/npm/src/eventData.ts` | クライアント用イベント型 |
+| `packages/npm/src/wsMessages.ts` | クライアント用 WS メッセージ型 |
 
 ---
 

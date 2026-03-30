@@ -1,11 +1,11 @@
-# data/ または生成スクリプトが変更されたとき、packages/ の整合性を検証する。
+# data/ または生成スクリプトが変更されたとき、生成ファイルの整合性を検証する。
 name: Codegen Sync Check
 
 on:
   pull_request:
     paths:
       - "data/**"
-      - "packages/generate_from_yaml.py"
+      - "scripts/**"
 
 jobs:
   check-sync:
@@ -22,13 +22,16 @@ jobs:
       - name: Install dependencies
         run: pip install pyyaml
 
-      - name: Run code generation
-        run: python3 packages/generate_from_yaml.py --gen-dir packages/
+      - name: Run card generation
+        run: python3 scripts/generate_cards.py
+
+      - name: Run constants generation
+        run: python3 scripts/generate_constants.py
 
       - name: Check for diffs
         run: |
-          if ! git diff --exit-code -- packages/ docs/game_design/CARDS.md; then
-            echo "::error::Generated files are out of sync. Run: python3 packages/generate_from_yaml.py --gen-dir packages/"
+          if ! git diff --exit-code -- packages/ docs/game_design/CARDS.md db/seed/cards_seed.sql; then
+            echo "::error::Generated files are out of sync. Run: python3 scripts/generate_cards.py && python3 scripts/generate_constants.py"
             git diff --stat
             exit 1
           fi
