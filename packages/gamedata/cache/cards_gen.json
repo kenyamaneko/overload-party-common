@@ -1507,30 +1507,6 @@
             }
           }
         ]
-      },
-      {
-        "trigger": "on_field_change",
-        "guard": [
-          {
-            "count": {
-              "selector": {
-                "owner": "self",
-                "card_id": "SH-0024"
-              },
-              "min": 1
-            }
-          }
-        ],
-        "ops": [
-          {
-            "apply_buff": {
-              "selector": "source",
-              "buff": "yield",
-              "amount": 200,
-              "duration": "this_turn"
-            }
-          }
-        ]
       }
     ]
   },
@@ -2741,15 +2717,15 @@
             "apply_buff": {
               "selector": "source",
               "buff": "yield",
-              "amount": 300,
+              "amount": 400,
               "duration": "while_on_field"
             }
           },
           {
             "apply_buff": {
               "selector": "source",
-              "buff": "av",
-              "amount": -200,
+              "buff": "sla_penalty",
+              "amount": 100,
               "duration": "while_on_field"
             }
           }
@@ -4104,37 +4080,17 @@
     "effect_text": "インシデントカードによる自分の 調律部 リソースへのダメージを -200 する。",
     "effects": [
       {
-        "trigger": "activate",
-        "use_limit": "once_per_turn",
-        "ops": [
-          {
-            "reveal_reactive": {}
-          }
-        ]
-      },
-      {
-        "trigger": "activate",
-        "use_limit": "once_per_turn",
-        "guard": [
-          {
-            "count": {
-              "selector": {
-                "owner": "self",
-                "faction": "Tuners"
-              },
-              "min": 3
-            }
-          }
-        ],
+        "trigger": "deploy",
         "ops": [
           {
             "apply_buff": {
               "selector": {
-                "owner": "self"
+                "owner": "self",
+                "faction": "Tuners"
               },
               "buff": "incident_reduction",
               "amount": 200,
-              "duration": "this_turn"
+              "duration": "while_on_field"
             }
           }
         ]

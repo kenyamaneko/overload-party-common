@@ -468,12 +468,12 @@ cards:
           - apply_buff:
               selector: source
               buff: yield
-              amount: 300
+              amount: 400
               duration: while_on_field
           - apply_buff:
               selector: source
-              buff: av
-              amount: -200
+              buff: sla_penalty
+              amount: 100
               duration: while_on_field
 
   - card_no: 133

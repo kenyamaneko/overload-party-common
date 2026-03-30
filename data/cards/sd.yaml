@@ -242,17 +242,6 @@ cards:
               buff: yield
               amount: { ref: source.yield, multiply: 1 }
               duration: this_turn
-      - trigger: on_field_change
-        guard:
-          - count:
-              selector: { owner: self, card_id: SH-0024 }
-              min: 1
-        ops:
-          - apply_buff:
-              selector: source
-              buff: yield
-              amount: 200
-              duration: this_turn
 
   - card_no: 11
     card_id: "SH-0010"

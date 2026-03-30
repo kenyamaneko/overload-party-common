@@ -290,22 +290,13 @@ cards:
     stats:
     effect_text: "インシデントカードによる自分の 調律部 リソースへのダメージを -200 する。"
     effects:
-      - trigger: activate
-        use_limit: once_per_turn
-        ops:
-          - reveal_reactive: {}
-      - trigger: activate
-        use_limit: once_per_turn
-        guard:
-          - count:
-              selector: { owner: self, faction: Tuners }
-              min: 3
+      - trigger: deploy
         ops:
           - apply_buff:
-              selector: { owner: self }
+              selector: { owner: self, faction: Tuners }
               buff: incident_reduction
               amount: 200
-              duration: this_turn
+              duration: while_on_field
 
   - card_no: 84
     card_id: "TN-0013"
