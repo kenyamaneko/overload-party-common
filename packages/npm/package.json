@@ -13,9 +13,15 @@
   },
   "typesVersions": {
     "*": {
-      "constants": ["dist/constants.d.ts"],
-      "eventData": ["dist/eventData.d.ts"],
-      "wsMessages": ["dist/wsMessages.d.ts"]
+      "constants": [
+        "dist/constants.d.ts"
+      ],
+      "eventData": [
+        "dist/eventData.d.ts"
+      ],
+      "wsMessages": [
+        "dist/wsMessages.d.ts"
+      ]
     }
   },
   "scripts": {
