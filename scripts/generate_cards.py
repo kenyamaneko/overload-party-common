@@ -316,6 +316,7 @@ def generate_seed_sql(cards, *, out_path):
     sql_out.parent.mkdir(parents=True, exist_ok=True)
     with open(sql_out, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
+        f.write("\n")
 
     return len(sorted_cards)
 
@@ -525,8 +526,8 @@ def main():
     # cards_gen.json (Go + dotnet)
     go_count = generate_json(cards, out_path=GO_JSON_OUT)
     print(f"Generated {go_count} cards → {GO_JSON_OUT.relative_to(ROOT)}", file=sys.stderr)
-    generate_json(cards, out_path=DOTNET_JSON_OUT)
-    print(f"Generated {go_count} cards → {DOTNET_JSON_OUT.relative_to(ROOT)}", file=sys.stderr)
+    dotnet_count = generate_json(cards, out_path=DOTNET_JSON_OUT)
+    print(f"Generated {dotnet_count} cards → {DOTNET_JSON_OUT.relative_to(ROOT)}", file=sys.stderr)
 
     # CARDS.md
     md_count = generate_md(cards, faction_data, out_path=MD_OUT)

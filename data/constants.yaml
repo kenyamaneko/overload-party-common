@@ -126,4 +126,6 @@ effect_durations:
 - until_next_turn_end
 - until_next_own_turn_end
 initial_values:
+  # deck_size は gateway / battle / client の 3 リポジトリから静的に参照されるため
+  # パッケージ定数として配信する。その他のゲーム定数は game_config テーブルで管理。
   deck_size: 30

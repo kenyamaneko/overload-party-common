@@ -777,3 +777,4 @@ ON CONFLICT (card_id) DO UPDATE SET
   restriction    = EXCLUDED.restriction,
   is_active      = EXCLUDED.is_active,
   updated_at     = now();
+
