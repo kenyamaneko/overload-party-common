@@ -472,6 +472,13 @@ files:
           - {name: SpectatorID, type: string, json: "spectator_id"}
           - {name: StampNo, type: int64, json: "stamp_no"}
 
+      # Opponent connection status (Server → Client, no payload)
+      - name: OpponentDisconnectedMessage
+        fields: []
+
+      - name: OpponentReconnectedMessage
+        fields: []
+
   # ─── Game Config (Battle only) ─────────────────────────
   - name: game_config
     target: both

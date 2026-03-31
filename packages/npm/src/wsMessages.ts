@@ -111,3 +111,9 @@ export interface SpectateStampBroadcastMessage {
   stamp_no: number;
 }
 
+export interface OpponentDisconnectedMessage {
+}
+
+export interface OpponentReconnectedMessage {
+}
+

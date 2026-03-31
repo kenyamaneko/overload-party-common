@@ -117,3 +117,9 @@ type SpectateStampBroadcastMessage struct {
 	StampNo     int64  `json:"stamp_no"`
 }
 
+type OpponentDisconnectedMessage struct {
+}
+
+type OpponentReconnectedMessage struct {
+}
+
