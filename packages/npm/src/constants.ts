@@ -20,14 +20,56 @@ export const FACTION_DISPLAY_NAMES: Record<string, string> = { "SHE": "SHE（Smi
 export const GAME_STATUS = ["waiting", "playing", "finished"] as const;
 export type GameStatus = (typeof GAME_STATUS)[number];
 
-export const WIN_REASONS = ["budget_zero", "system_down", "repository_out", "timeout", "disconnect", "turn_limit", "draw", "launch_failure"] as const;
+export const WIN_REASONS = ["budget_zero", "system_down", "repository_out", "turn_timeout", "disconnect", "turn_limit", "draw", "launch_failure", "surrender"] as const;
 export type WinReason = (typeof WIN_REASONS)[number];
 
-export const ACTION_TYPES = ["play_card", "attack", "scale_up", "monetize", "discard_hand", "use_effect", "set_reactive", "migrate", "end_phase", "forfeit"] as const;
+export const ACTION_TYPES = ["play_card", "attack", "scale_up", "monetize", "discard_hand", "use_effect", "set_reactive", "migrate", "end_phase", "forfeit", "select_slot", "reactive"] as const;
 export type GameActionType = (typeof ACTION_TYPES)[number];
 
-export const EVENT_TYPES = ["play_card", "attach_card", "attack", "scale_up", "monetize", "discard_hand", "use_effect", "reactive_revealed", "migrate", "migration_complete", "phase_change", "phase_end", "turn_end", "turn_start", "game_over"] as const;
+export const EVENT_TYPES = ["play_card", "attach_card", "attack", "scale_up", "monetize", "discard_hand", "use_effect", "reactive_revealed", "migrate", "migration_complete", "phase_change", "phase_end", "turn_end", "turn_start", "game_over", "battle_start"] as const;
 export type EventType = (typeof EVENT_TYPES)[number];
+
+export const EFFECT_DURATIONS = ["this_turn", "until_next_turn_end", "until_next_own_turn_end", "while_on_field", "permanent", "next_turn"] as const;
+export type EffectDuration = (typeof EFFECT_DURATIONS)[number];
+
+export const RESTRICTION_VALUES = ["unlimited", "limited", "semi_limited", "forbidden"] as const;
+export type Restriction = (typeof RESTRICTION_VALUES)[number];
+
+export const TRIGGER_TYPES = ["deploy", "activate", "passive", "on_end_phase", "on_field_change", "on_scale_up", "on_attack", "on_hit", "on_destroy", "reactive", "on_enemy_deploy"] as const;
+export type TriggerType = (typeof TRIGGER_TYPES)[number];
+
+export const EFFECT_OPS = ["gain_budget", "lose_budget", "deal_damage", "heal_damage", "destroy_check", "survive_destruction", "apply_buff", "draw", "search_repo", "add_to_hand", "trash_to_hand", "deploy_from_hand", "deploy_from_repo", "deploy_from_repo_same_card", "destroy_platform", "scale_to_rank", "cancel_action", "reveal_reactive", "peek_reactive", "reduce_deploy_turns", "absorb_insight", "gain_insight"] as const;
+export type EffectOp = (typeof EFFECT_OPS)[number];
+
+export const BUFF_TYPES = ["tp", "yield", "av", "cannot_attack", "incident_immune", "incident_block", "incident_reduction", "ransomware", "reserved_instance", "scale_cost_reduction", "deploy_discount", "maintenance_reduction", "pending_revival", "attack_damage_reduction", "count_multiplier", "sla_penalty", "sla_penalty_reduction", "tp_suppressed"] as const;
+export type BuffType = (typeof BUFF_TYPES)[number];
+
+export const CUSTOM_EFFECTS = ["cancel_nth_deploy", "chain_attack_bonus", "cloud_shift", "deploy_same_type_from_hand", "disable_high_tp_deploy", "halve_incident_damage", "reattach", "redirect_attack", "scale_to_zero", "spot_expiry", "target_shield"] as const;
+export type CustomEffect = (typeof CUSTOM_EFFECTS)[number];
+
+export const EFFECT_CATEGORIES = ["budget_gain", "budget_penalty", "insight_absorb", "insight_gain", "single_damage", "aoe_damage", "buff", "debuff", "heal", "draw", "search", "deploy_free", "recover_card", "reveal_reactive", "destroy_platform", "cancel_action", "survive"] as const;
+export type EffectCategory = (typeof EFFECT_CATEGORIES)[number];
+
+export const EFFECT_TARGET_TYPES = ["none", "choice", "all_opp", "self"] as const;
+export type EffectTargetType = (typeof EFFECT_TARGET_TYPES)[number];
+
+export const PLAYER_REFS = ["self", "opponent", "both"] as const;
+export type PlayerRef = (typeof PLAYER_REFS)[number];
+
+export const USE_LIMITS = ["once_per_turn", "once_per_game"] as const;
+export type UseLimit = (typeof USE_LIMITS)[number];
+
+export const MATCH_TYPES = ["pvp", "npc"] as const;
+export type MatchType = (typeof MATCH_TYPES)[number];
+
+export const STAT_TYPES = ["tp", "yield", "av"] as const;
+export type StatType = (typeof STAT_TYPES)[number];
+
+export const GUARD_TYPES = ["count", "stat", "match", "not_same"] as const;
+export type GuardType = (typeof GUARD_TYPES)[number];
+
+export const SELECTOR_PICK_MODES = ["all", "choice"] as const;
+export type SelectorPickMode = (typeof SELECTOR_PICK_MODES)[number];
 
 export const CARD_TYPES = ["Compute", "Container", "Orchestrator", "Serverless", "AI/ML", "Database", "ObjectStorage", "CacheDB", "Platform", "Attachment", "Strategy", "Reactive", "Incident"] as const;
 export type CardType = (typeof CARD_TYPES)[number];
@@ -60,16 +102,10 @@ export function isAttachmentType(cardType: string): boolean {
   return cardType === 'Attachment';
 }
 
-export const WS_SERVER_MSG_TYPES = ["game_state", "game_over", "error", "game_entered", "matchmaking_started", "matchmaking_cancelled", "action_rejected", "stamp_used", "pong", "match_found", "action_performed", "turn_controls", "npc_battle_created"] as const;
+export const WS_SERVER_MSG_TYPES = ["game_state", "game_over", "error", "game_entered", "matchmaking_started", "matchmaking_cancelled", "action_rejected", "stamp_used", "pong", "match_found", "action_performed", "turn_controls", "npc_battle_created", "opponent_disconnected", "opponent_reconnected", "spectate_joined", "spectate_error", "spectate_update", "spectate_ended", "spectate_stamp_broadcast", "game_state_restore"] as const;
 export type WSServerMsgType = (typeof WS_SERVER_MSG_TYPES)[number];
-export const WS_CLIENT_MSG_TYPES = ["game_enter", "matchmaking_start", "matchmaking_cancel", "game_action", "use_stamp", "ping", "npc_battle_start"] as const;
+export const WS_CLIENT_MSG_TYPES = ["game_enter", "matchmaking_start", "matchmaking_cancel", "game_action", "use_stamp", "ping", "npc_battle_start", "spectate_join", "spectate_leave", "spectate_stamp"] as const;
 export type WSClientMsgType = (typeof WS_CLIENT_MSG_TYPES)[number];
-
-export const EFFECT_DURATIONS = ["this_turn", "until_next_turn_end", "until_next_own_turn_end"] as const;
-export type EffectDuration = (typeof EFFECT_DURATIONS)[number];
-
-export const RESTRICTION_VALUES = ["unlimited", "limited", "semi_limited", "forbidden"] as const;
-export type Restriction = (typeof RESTRICTION_VALUES)[number];
 
 /** Returns the maximum number of copies allowed in a deck for a given restriction. */
 export function restrictionCopyCount(restriction: Restriction): number {

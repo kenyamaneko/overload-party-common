@@ -66,11 +66,12 @@ win_reasons:
 - budget_zero
 - system_down
 - repository_out
-- timeout
+- turn_timeout
 - disconnect
 - turn_limit
 - draw
 - launch_failure
+- surrender
 action_types:
 - play_card
 - attack
@@ -82,6 +83,8 @@ action_types:
 - migrate
 - end_phase
 - forfeit
+- select_slot
+- reactive
 event_types:
 - play_card
 - attach_card
@@ -98,6 +101,7 @@ event_types:
 - turn_end
 - turn_start
 - game_over
+- battle_start
 ws_message_types:
   server:
   - game_state
@@ -113,6 +117,14 @@ ws_message_types:
   - action_performed
   - turn_controls
   - npc_battle_created
+  - opponent_disconnected
+  - opponent_reconnected
+  - spectate_joined
+  - spectate_error
+  - spectate_update
+  - spectate_ended
+  - spectate_stamp_broadcast
+  - game_state_restore
   client:
   - game_enter
   - matchmaking_start
@@ -121,10 +133,127 @@ ws_message_types:
   - use_stamp
   - ping
   - npc_battle_start
+  - spectate_join
+  - spectate_leave
+  - spectate_stamp
 effect_durations:
 - this_turn
 - until_next_turn_end
 - until_next_own_turn_end
+- while_on_field
+- permanent
+- next_turn
+trigger_types:
+- deploy
+- activate
+- passive
+- on_end_phase
+- on_field_change
+- on_scale_up
+- on_attack
+- on_hit
+- on_destroy
+- reactive
+- on_enemy_deploy
+effect_ops:
+- gain_budget
+- lose_budget
+- deal_damage
+- heal_damage
+- destroy_check
+- survive_destruction
+- apply_buff
+- draw
+- search_repo
+- add_to_hand
+- trash_to_hand
+- deploy_from_hand
+- deploy_from_repo
+- deploy_from_repo_same_card
+- destroy_platform
+- scale_to_rank
+- cancel_action
+- reveal_reactive
+- peek_reactive
+- reduce_deploy_turns
+- absorb_insight
+- gain_insight
+buff_types:
+- tp
+- yield
+- av
+- cannot_attack
+- incident_immune
+- incident_block
+- incident_reduction
+- ransomware
+- reserved_instance
+- scale_cost_reduction
+- deploy_discount
+- maintenance_reduction
+- pending_revival
+- attack_damage_reduction
+- count_multiplier
+- sla_penalty
+- sla_penalty_reduction
+- tp_suppressed
+custom_effects:
+- cancel_nth_deploy
+- chain_attack_bonus
+- cloud_shift
+- deploy_same_type_from_hand
+- disable_high_tp_deploy
+- halve_incident_damage
+- reattach
+- redirect_attack
+- scale_to_zero
+- spot_expiry
+- target_shield
+effect_categories:
+- budget_gain
+- budget_penalty
+- insight_absorb
+- insight_gain
+- single_damage
+- aoe_damage
+- buff
+- debuff
+- heal
+- draw
+- search
+- deploy_free
+- recover_card
+- reveal_reactive
+- destroy_platform
+- cancel_action
+- survive
+effect_target_types:
+- none
+- choice
+- all_opp
+- self
+player_refs:
+- self
+- opponent
+- both
+use_limits:
+- once_per_turn
+- once_per_game
+match_types:
+- pvp
+- npc
+stat_types:
+- tp
+- yield
+- av
+guard_types:
+- count
+- stat
+- match
+- not_same
+selector_pick_modes:
+- all
+- choice
 initial_values:
   # deck_size は gateway / battle / client の 3 リポジトリから静的に参照されるため
   # パッケージ定数として配信する。その他のゲーム定数は game_config テーブルで管理。

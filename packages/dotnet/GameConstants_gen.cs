@@ -4,19 +4,369 @@ namespace OverloadParty.GameData;
 
 public static class GameConstants
 {
-    // Initial values
     public const int DeckSize = 30;
+}
 
-    // Factions
-    public const string FactionSHE = "SHE";
-    public const string FactionTenki = "Tenki";
-    public const string FactionSugar = "Sugar";
-    public const string FactionTuners = "Tuners";
-    public const string FactionNeutral = "Neutral";
+public static class Factions
+{
+    public const string SHE = "SHE";
+    public const string Tenki = "Tenki";
+    public const string Sugar = "Sugar";
+    public const string Tuners = "Tuners";
+    public const string Neutral = "Neutral";
+}
 
-    // Zones (wire format)
-    public const string ZoneFrontend = "frontend";
-    public const string ZoneBackend = "backend";
-    public const string ZoneSupport = "support";
+public static class SelectableFactions
+{
+    public static readonly string[] All = [
+        Factions.SHE,
+        Factions.Tenki,
+        Factions.Sugar,
+        Factions.Tuners,
+    ];
+}
+
+public static class Phases
+{
+    public const string Draw = "draw";
+    public const string Main = "main";
+    public const string Battle = "battle";
+    public const string End = "end";
+}
+
+public static class Zones
+{
+    public const string Frontend = "frontend";
+    public const string Backend = "backend";
+    public const string Support = "support";
+}
+
+public static class Ranks
+{
+    public const string Small = "small";
+    public const string Medium = "medium";
+    public const string Large = "large";
+}
+
+public static class InstanceFamilies
+{
+    public const string M = "M";
+    public const string C = "C";
+    public const string R = "R";
+}
+
+public static class GameStatus
+{
+    public const string Waiting = "waiting";
+    public const string Playing = "playing";
+    public const string Finished = "finished";
+}
+
+public static class WinReasons
+{
+    public const string BudgetZero = "budget_zero";
+    public const string SystemDown = "system_down";
+    public const string RepositoryOut = "repository_out";
+    public const string TurnTimeout = "turn_timeout";
+    public const string Disconnect = "disconnect";
+    public const string TurnLimit = "turn_limit";
+    public const string Draw = "draw";
+    public const string LaunchFailure = "launch_failure";
+    public const string Surrender = "surrender";
+}
+
+public static class ActionTypes
+{
+    public const string PlayCard = "play_card";
+    public const string Attack = "attack";
+    public const string ScaleUp = "scale_up";
+    public const string Monetize = "monetize";
+    public const string DiscardHand = "discard_hand";
+    public const string UseEffect = "use_effect";
+    public const string SetReactive = "set_reactive";
+    public const string Migrate = "migrate";
+    public const string EndPhase = "end_phase";
+    public const string Forfeit = "forfeit";
+    public const string SelectSlot = "select_slot";
+    public const string Reactive = "reactive";
+}
+
+public static class EventTypes
+{
+    public const string PlayCard = "play_card";
+    public const string AttachCard = "attach_card";
+    public const string Attack = "attack";
+    public const string ScaleUp = "scale_up";
+    public const string Monetize = "monetize";
+    public const string DiscardHand = "discard_hand";
+    public const string UseEffect = "use_effect";
+    public const string ReactiveRevealed = "reactive_revealed";
+    public const string Migrate = "migrate";
+    public const string MigrationComplete = "migration_complete";
+    public const string PhaseChange = "phase_change";
+    public const string PhaseEnd = "phase_end";
+    public const string TurnEnd = "turn_end";
+    public const string TurnStart = "turn_start";
+    public const string GameOver = "game_over";
+    public const string BattleStart = "battle_start";
+}
+
+public static class EffectDurations
+{
+    public const string ThisTurn = "this_turn";
+    public const string UntilNextTurnEnd = "until_next_turn_end";
+    public const string UntilNextOwnTurnEnd = "until_next_own_turn_end";
+    public const string WhileOnField = "while_on_field";
+    public const string Permanent = "permanent";
+    public const string NextTurn = "next_turn";
+}
+
+public static class RestrictionValues
+{
+    public const string Unlimited = "unlimited";
+    public const string Limited = "limited";
+    public const string SemiLimited = "semi_limited";
+    public const string Forbidden = "forbidden";
+}
+
+public static class TriggerTypes
+{
+    public const string Deploy = "deploy";
+    public const string Activate = "activate";
+    public const string Passive = "passive";
+    public const string OnEndPhase = "on_end_phase";
+    public const string OnFieldChange = "on_field_change";
+    public const string OnScaleUp = "on_scale_up";
+    public const string OnAttack = "on_attack";
+    public const string OnHit = "on_hit";
+    public const string OnDestroy = "on_destroy";
+    public const string Reactive = "reactive";
+    public const string OnEnemyDeploy = "on_enemy_deploy";
+}
+
+public static class EffectOps
+{
+    public const string GainBudget = "gain_budget";
+    public const string LoseBudget = "lose_budget";
+    public const string DealDamage = "deal_damage";
+    public const string HealDamage = "heal_damage";
+    public const string DestroyCheck = "destroy_check";
+    public const string SurviveDestruction = "survive_destruction";
+    public const string ApplyBuff = "apply_buff";
+    public const string Draw = "draw";
+    public const string SearchRepo = "search_repo";
+    public const string AddToHand = "add_to_hand";
+    public const string TrashToHand = "trash_to_hand";
+    public const string DeployFromHand = "deploy_from_hand";
+    public const string DeployFromRepo = "deploy_from_repo";
+    public const string DeployFromRepoSameCard = "deploy_from_repo_same_card";
+    public const string DestroyPlatform = "destroy_platform";
+    public const string ScaleToRank = "scale_to_rank";
+    public const string CancelAction = "cancel_action";
+    public const string RevealReactive = "reveal_reactive";
+    public const string PeekReactive = "peek_reactive";
+    public const string ReduceDeployTurns = "reduce_deploy_turns";
+    public const string AbsorbInsight = "absorb_insight";
+    public const string GainInsight = "gain_insight";
+}
+
+public static class BuffTypes
+{
+    public const string Tp = "tp";
+    public const string Yield = "yield";
+    public const string Av = "av";
+    public const string CannotAttack = "cannot_attack";
+    public const string IncidentImmune = "incident_immune";
+    public const string IncidentBlock = "incident_block";
+    public const string IncidentReduction = "incident_reduction";
+    public const string Ransomware = "ransomware";
+    public const string ReservedInstance = "reserved_instance";
+    public const string ScaleCostReduction = "scale_cost_reduction";
+    public const string DeployDiscount = "deploy_discount";
+    public const string MaintenanceReduction = "maintenance_reduction";
+    public const string PendingRevival = "pending_revival";
+    public const string AttackDamageReduction = "attack_damage_reduction";
+    public const string CountMultiplier = "count_multiplier";
+    public const string SlaPenalty = "sla_penalty";
+    public const string SlaPenaltyReduction = "sla_penalty_reduction";
+    public const string TpSuppressed = "tp_suppressed";
+}
+
+public static class CustomEffects
+{
+    public const string CancelNthDeploy = "cancel_nth_deploy";
+    public const string ChainAttackBonus = "chain_attack_bonus";
+    public const string CloudShift = "cloud_shift";
+    public const string DeploySameTypeFromHand = "deploy_same_type_from_hand";
+    public const string DisableHighTpDeploy = "disable_high_tp_deploy";
+    public const string HalveIncidentDamage = "halve_incident_damage";
+    public const string Reattach = "reattach";
+    public const string RedirectAttack = "redirect_attack";
+    public const string ScaleToZero = "scale_to_zero";
+    public const string SpotExpiry = "spot_expiry";
+    public const string TargetShield = "target_shield";
+}
+
+public static class EffectCategories
+{
+    public const string BudgetGain = "budget_gain";
+    public const string BudgetPenalty = "budget_penalty";
+    public const string InsightAbsorb = "insight_absorb";
+    public const string InsightGain = "insight_gain";
+    public const string SingleDamage = "single_damage";
+    public const string AoeDamage = "aoe_damage";
+    public const string Buff = "buff";
+    public const string Debuff = "debuff";
+    public const string Heal = "heal";
+    public const string Draw = "draw";
+    public const string Search = "search";
+    public const string DeployFree = "deploy_free";
+    public const string RecoverCard = "recover_card";
+    public const string RevealReactive = "reveal_reactive";
+    public const string DestroyPlatform = "destroy_platform";
+    public const string CancelAction = "cancel_action";
+    public const string Survive = "survive";
+}
+
+public static class EffectTargetTypes
+{
+    public const string None = "none";
+    public const string Choice = "choice";
+    public const string AllOpp = "all_opp";
+    public const string Self = "self";
+}
+
+public static class PlayerRefs
+{
+    public const string Self = "self";
+    public const string Opponent = "opponent";
+    public const string Both = "both";
+}
+
+public static class UseLimits
+{
+    public const string OncePerTurn = "once_per_turn";
+    public const string OncePerGame = "once_per_game";
+}
+
+public static class MatchTypes
+{
+    public const string Pvp = "pvp";
+    public const string Npc = "npc";
+}
+
+public static class StatTypes
+{
+    public const string Tp = "tp";
+    public const string Yield = "yield";
+    public const string Av = "av";
+}
+
+public static class GuardTypes
+{
+    public const string Count = "count";
+    public const string Stat = "stat";
+    public const string Match = "match";
+    public const string NotSame = "not_same";
+}
+
+public static class SelectorPickModes
+{
+    public const string All = "all";
+    public const string Choice = "choice";
+}
+
+public static class WSServerMsgTypes
+{
+    public const string GameState = "game_state";
+    public const string GameOver = "game_over";
+    public const string Error = "error";
+    public const string GameEntered = "game_entered";
+    public const string MatchmakingStarted = "matchmaking_started";
+    public const string MatchmakingCancelled = "matchmaking_cancelled";
+    public const string ActionRejected = "action_rejected";
+    public const string StampUsed = "stamp_used";
+    public const string Pong = "pong";
+    public const string MatchFound = "match_found";
+    public const string ActionPerformed = "action_performed";
+    public const string TurnControls = "turn_controls";
+    public const string NpcBattleCreated = "npc_battle_created";
+    public const string OpponentDisconnected = "opponent_disconnected";
+    public const string OpponentReconnected = "opponent_reconnected";
+    public const string SpectateJoined = "spectate_joined";
+    public const string SpectateError = "spectate_error";
+    public const string SpectateUpdate = "spectate_update";
+    public const string SpectateEnded = "spectate_ended";
+    public const string SpectateStampBroadcast = "spectate_stamp_broadcast";
+    public const string GameStateRestore = "game_state_restore";
+}
+
+public static class WSClientMsgTypes
+{
+    public const string GameEnter = "game_enter";
+    public const string MatchmakingStart = "matchmaking_start";
+    public const string MatchmakingCancel = "matchmaking_cancel";
+    public const string GameAction = "game_action";
+    public const string UseStamp = "use_stamp";
+    public const string Ping = "ping";
+    public const string NpcBattleStart = "npc_battle_start";
+    public const string SpectateJoin = "spectate_join";
+    public const string SpectateLeave = "spectate_leave";
+    public const string SpectateStamp = "spectate_stamp";
+}
+
+public static class CardTypes
+{
+    public const string Compute = "Compute";
+    public const string Container = "Container";
+    public const string Orchestrator = "Orchestrator";
+    public const string Serverless = "Serverless";
+    public const string AIML = "AI/ML";
+    public const string Database = "Database";
+    public const string ObjectStorage = "ObjectStorage";
+    public const string CacheDB = "CacheDB";
+    public const string Platform = "Platform";
+    public const string Attachment = "Attachment";
+    public const string Strategy = "Strategy";
+    public const string Reactive = "Reactive";
+    public const string Incident = "Incident";
+
+    public static readonly string[] ComputeTypes = [Compute, Container, Orchestrator, Serverless, AIML];
+    public static readonly string[] DataTypes = [Database, ObjectStorage, CacheDB];
+    public static readonly string[] SupportTypes = [Platform, Strategy, Reactive, Incident];
+
+    public static bool IsResourceType(string cardType) =>
+        Array.IndexOf(ComputeTypes, cardType) >= 0 || Array.IndexOf(DataTypes, cardType) >= 0;
+
+    public static bool IsFrontendEligible(string cardType) =>
+        Array.IndexOf(ComputeTypes, cardType) >= 0 || cardType == ObjectStorage;
+
+    public static bool IsBackendEligible(string cardType) =>
+        Array.IndexOf(DataTypes, cardType) >= 0 || Array.IndexOf(ComputeTypes, cardType) >= 0;
+
+    public static bool IsSupportType(string cardType) =>
+        Array.IndexOf(SupportTypes, cardType) >= 0;
+
+    public static bool IsAttachmentType(string cardType) =>
+        cardType == Attachment;
+
+    public static string GetCategory(string cardType)
+    {
+        if (Array.IndexOf(ComputeTypes, cardType) >= 0) return "compute";
+        if (Array.IndexOf(DataTypes, cardType) >= 0) return "data";
+        if (Array.IndexOf(SupportTypes, cardType) >= 0 || cardType == Attachment) return "support";
+        return "unknown";
+    }
+}
+
+public static class RestrictionHelper
+{
+    public static int CopyCount(string restriction) => restriction switch
+    {
+        RestrictionValues.Forbidden => 0,
+        RestrictionValues.Limited => 1,
+        RestrictionValues.SemiLimited => 2,
+        _ => 3,
+    };
 }
 
