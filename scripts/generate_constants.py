@@ -871,10 +871,24 @@ def generate_ts_variant_types(variant_types, *, out_path):
     """
     ts_out = Path(out_path)
 
+    # Collect ref types across all variant types for import generation.
+    ref_types: set[str] = set()
+    for vt in variant_types:
+        for variant in vt.get("variants", []):
+            for field in variant.get("fields", []):
+                ref = field.get("ref")
+                if ref:
+                    ref_types.add(ref)
+
     lines = [
         _GENERATED_HEADER,
         "",
     ]
+
+    if ref_types:
+        sorted_refs = sorted(ref_types)
+        lines.append(f"import type {{ {', '.join(sorted_refs)} }} from './constants';")
+        lines.append("")
 
     for vt in variant_types:
         name = vt["name"]
@@ -889,7 +903,8 @@ def generate_ts_variant_types(variant_types, *, out_path):
             fields = [f"{discriminator}: '{value}'"]
             for field in variant.get("fields", []):
                 fname = field["name"]
-                ts_type = _TS_TYPE_MAP[field["type"]]
+                ref = field.get("ref")
+                ts_type = ref if ref else _TS_TYPE_MAP[field["type"]]
                 opt = "?" if field.get("optional") else ""
                 fields.append(f"{fname}{opt}: {ts_type}")
             variant_lines.append("  | { " + "; ".join(fields) + " }")

@@ -520,8 +520,8 @@ variant_types:
       - value: scale_up
         fields:
           - {name: source_instance_id, type: string}
-          - {name: target_rank, type: string}
-          - {name: instance_family, type: string, optional: true}
+          - {name: target_rank, type: string, ref: Rank}
+          - {name: instance_family, type: string, ref: InstanceFamily, optional: true}
           - {name: needs_family, type: bool}
 
       - value: monetize
