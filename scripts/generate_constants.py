@@ -31,7 +31,6 @@ CONSTANTS_YAML = ROOT / "data" / "constants.yaml"
 EVENT_SCHEMAS_YAML = ROOT / "data" / "event_schemas.yaml"
 MODELS_YAML = ROOT / "data" / "models.yaml"
 
-# Output paths
 GO_DIR = ROOT / "packages" / "gamedata"
 DOTNET_DIR = ROOT / "packages" / "dotnet"
 NPM_DIR = ROOT / "packages" / "npm"
@@ -128,7 +127,6 @@ def generate_go_constants(constants, *, out_path):
     lines.append(")")
     lines.append("")
 
-    # Selectable factions as a slice.
     lines.append("// SelectableFactions is the list of factions players can choose.")
     lines.append("var SelectableFactions = []string{")
     for f in constants["selectable_factions"]:
@@ -136,7 +134,6 @@ def generate_go_constants(constants, *, out_path):
     lines.append("}")
     lines.append("")
 
-    # Simple list constants.
     for yaml_key, go_prefix, go_comment, _, _, _ in _SIMPLE_LIST_KEYS:
         values = constants.get(yaml_key)
         if values is None:
@@ -158,7 +155,6 @@ def generate_go_constants(constants, *, out_path):
     lines.append(")")
     lines.append("")
 
-    # Card types (flat + category helpers).
     ct = constants["card_types"]
     all_types = ct["compute"] + ct["data"] + ct["support"]
     lines.append("// Card types.")
@@ -168,7 +164,6 @@ def generate_go_constants(constants, *, out_path):
     lines.append(")")
     lines.append("")
 
-    # Card type category helper functions.
     compute_set = ", ".join(f'CardType{_to_pascal(v)}' for v in ct["compute"])
     data_set = ", ".join(f'CardType{_to_pascal(v)}' for v in ct["data"])
     support_non_attach = [t for t in ct["support"] if t != "Attachment"]
@@ -220,7 +215,6 @@ def generate_go_constants(constants, *, out_path):
     lines.append("}")
     lines.append("")
 
-    # restrictionCopyCount helper.
     lines.append("// RestrictionCopyCount returns the maximum number of copies allowed in a deck.")
     lines.append("func RestrictionCopyCount(restriction string) int {")
     lines.append("\tswitch restriction {")
@@ -375,7 +369,6 @@ def generate_csharp_constants(constants, *, out_path, namespace="OverloadParty.G
         "",
     ]
 
-    # GameConstants: initial values.
     iv = constants["initial_values"]
     lines.append("public static class GameConstants")
     lines.append("{")
@@ -391,7 +384,6 @@ def generate_csharp_constants(constants, *, out_path, namespace="OverloadParty.G
     lines.append("}")
     lines.append("")
 
-    # Selectable factions.
     lines.append("public static class SelectableFactions")
     lines.append("{")
     lines.append("    public static readonly string[] All = [")
@@ -401,14 +393,12 @@ def generate_csharp_constants(constants, *, out_path, namespace="OverloadParty.G
     lines.append("}")
     lines.append("")
 
-    # Simple list constants.
     for yaml_key, _, _, cs_class, _, _ in _SIMPLE_LIST_KEYS:
         values = constants.get(yaml_key)
         if values is None:
             continue
         lines.extend(_cs_static_class(cs_class, values))
 
-    # WS message types.
     ws = constants["ws_message_types"]
     lines.append("public static class WSServerMsgTypes")
     lines.append("{")
@@ -423,7 +413,6 @@ def generate_csharp_constants(constants, *, out_path, namespace="OverloadParty.G
     lines.append("}")
     lines.append("")
 
-    # Card types.
     ct = constants["card_types"]
     all_types = ct["compute"] + ct["data"] + ct["support"]
     lines.append("public static class CardTypes")
@@ -432,7 +421,6 @@ def generate_csharp_constants(constants, *, out_path, namespace="OverloadParty.G
         lines.append(f'    public const string {_to_pascal(v)} = "{v}";')
     lines.append("")
 
-    # Category arrays.
     compute_refs = ", ".join(_to_pascal(v) for v in ct["compute"])
     data_refs = ", ".join(_to_pascal(v) for v in ct["data"])
     support_non_attach = [t for t in ct["support"] if t != "Attachment"]
@@ -459,7 +447,6 @@ def generate_csharp_constants(constants, *, out_path, namespace="OverloadParty.G
     lines.append(f"        cardType == Attachment;")
     lines.append("")
 
-    # GetCategory.
     lines.append('    public static string GetCategory(string cardType)')
     lines.append("    {")
     lines.append("        if (Array.IndexOf(ComputeTypes, cardType) >= 0) return \"compute\";")
@@ -471,7 +458,6 @@ def generate_csharp_constants(constants, *, out_path, namespace="OverloadParty.G
     lines.append("}")
     lines.append("")
 
-    # RestrictionValues helper.
     lines.append("public static class RestrictionHelper")
     lines.append("{")
     lines.append("    public static int CopyCount(string restriction) => restriction switch")
@@ -595,16 +581,13 @@ def generate_ts_constants(constants, *, out_path):
     # Phases (special: includes 'selecting' in union type).
     lines.extend(_ts_const_array("PHASES", "GamePhase", constants["phases"], extra_union="'selecting'"))
 
-    # Zones.
     lines.extend(_ts_const_array("ZONES", "Zone", constants["zones"]))
 
-    # Ranks.
     lines.extend(_ts_const_array("RANKS", "Rank", constants["ranks"]))
 
     # Instance families (special: includes '' in union type).
     lines.extend(_ts_const_array("INSTANCE_FAMILIES", "InstanceFamily", constants["instance_families"], extra_union="''"))
 
-    # Factions + selectable factions.
     lines.append(f"export const FACTIONS = {json.dumps(constants['factions'])} as const;")
     lines.append(f"export const SELECTABLE_FACTIONS = {json.dumps(constants['selectable_factions'])} as const;")
     lines.append("export type FactionId = (typeof SELECTABLE_FACTIONS)[number];")
@@ -613,7 +596,6 @@ def generate_ts_constants(constants, *, out_path):
     lines.append(f"export const FACTION_DISPLAY_NAMES: Record<string, string> = {{ {display_entries} }};")
     lines.append("")
 
-    # Simple list constants (skip keys handled individually above).
     _ts_skip = {"phases", "zones", "ranks", "instance_families"}
     for yaml_key, _, _, _, ts_const, ts_type in _SIMPLE_LIST_KEYS:
         if yaml_key in _ts_skip:
@@ -623,7 +605,6 @@ def generate_ts_constants(constants, *, out_path):
             continue
         lines.extend(_ts_const_array(ts_const, ts_type, values))
 
-    # Card types (flat, excluding log category).
     ct = constants["card_types"]
     all_card_types = ct["compute"] + ct["data"] + ct["support"]
     lines.append(f"export const CARD_TYPES = {json.dumps(all_card_types)} as const;")
@@ -668,7 +649,6 @@ def generate_ts_constants(constants, *, out_path):
     lines.append("}")
     lines.append("")
 
-    # WS message types.
     ws_types = constants["ws_message_types"]
     lines.append(f"export const WS_SERVER_MSG_TYPES = {json.dumps(ws_types['server'])} as const;")
     lines.append("export type WSServerMsgType = (typeof WS_SERVER_MSG_TYPES)[number];")
@@ -676,7 +656,6 @@ def generate_ts_constants(constants, *, out_path):
     lines.append("export type WSClientMsgType = (typeof WS_CLIENT_MSG_TYPES)[number];")
     lines.append("")
 
-    # Restriction copy count helper.
     lines.append("/** Returns the maximum number of copies allowed in a deck for a given restriction. */")
     lines.append("export function restrictionCopyCount(restriction: Restriction): number {")
     lines.append("  switch (restriction) {")
@@ -689,7 +668,6 @@ def generate_ts_constants(constants, *, out_path):
     lines.append("}")
     lines.append("")
 
-    # Initial values.
     iv = constants["initial_values"]
     lines.append("export const INITIAL_VALUES = {")
     for key, val in iv.items():
@@ -838,7 +816,6 @@ def generate_csharp_variant_types(variant_types, *, out_path, namespace="Overloa
         # Discriminator field (always required string).
         lines.append(f'    public required string {disc_prop} {{ get; init; }} = "";')
 
-        # Collect all unique fields across variants.
         seen = {}  # field_name -> (cs_prop, cs_nullable_type)
         for variant in vt["variants"]:
             for field in variant.get("fields", []):
@@ -871,7 +848,6 @@ def generate_ts_variant_types(variant_types, *, out_path):
     """
     ts_out = Path(out_path)
 
-    # Collect ref types across all variant types for import generation.
     ref_types: set[str] = set()
     for vt in variant_types:
         for variant in vt.get("variants", []):
@@ -912,7 +888,6 @@ def generate_ts_variant_types(variant_types, *, out_path):
         lines.append(f"export type {name} =")
         for vl in variant_lines:
             lines.append(vl)
-        # Replace trailing space with semicolon.
         lines[-1] = lines[-1] + ";"
         lines.append("")
 
