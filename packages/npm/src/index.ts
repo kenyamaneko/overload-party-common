@@ -2,3 +2,4 @@
 export * from './constants';
 export * from './eventData';
 export * from './wsMessages';
+export * from './variantTypes';

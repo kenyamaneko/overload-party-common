@@ -490,3 +490,53 @@ files:
           - {name: Key, type: string, json: "key", db: "key"}
           - {name: Value, type: string, json: "value", db: "value"}
           - {name: UpdatedAt, type: time.Time, json: "updated_at", db: "updated_at"}
+
+# ─── Variant Types (C# flat class + TS discriminated union) ───
+# generate_constants.py reads this section and outputs:
+#   - packages/dotnet/VariantTypes_gen.cs
+#   - packages/npm/src/variantTypes.ts
+#
+# Field types: string, int, long, bool, string[]
+# Optional fields are nullable in C# and have ? in TS.
+variant_types:
+  - name: AvailableAction
+    comment: "Available action that a player can perform during their turn."
+    discriminator: type
+    variants:
+      - value: play_card
+        fields:
+          - {name: hand_instance_id, type: string}
+          - {name: card_id, type: string}
+          - {name: valid_zones, type: "string[]", optional: true}
+          - {name: valid_targets, type: "string[]", optional: true}
+          - {name: cost, type: int, optional: true}
+          - {name: choice_options, type: "string[]", optional: true}
+
+      - value: attack
+        fields:
+          - {name: source_instance_id, type: string}
+          - {name: valid_targets, type: "string[]"}
+
+      - value: scale_up
+        fields:
+          - {name: source_instance_id, type: string}
+          - {name: target_rank, type: string}
+          - {name: instance_family, type: string, optional: true}
+          - {name: needs_family, type: bool}
+
+      - value: monetize
+        fields:
+          - {name: source_instance_id, type: string}
+          - {name: remaining_capacity, type: long}
+
+      - value: use_effect
+        fields:
+          - {name: source_instance_id, type: string}
+          - {name: valid_targets, type: "string[]", optional: true}
+          - {name: effect_target_type, type: string}
+          - {name: required_count, type: int}
+
+      - value: migrate
+        fields:
+          - {name: source_instance_id, type: string}
+          - {name: valid_targets, type: "string[]"}

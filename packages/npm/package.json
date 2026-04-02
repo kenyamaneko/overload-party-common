@@ -9,7 +9,8 @@
     ".": "./dist/index.js",
     "./constants": "./dist/constants.js",
     "./eventData": "./dist/eventData.js",
-    "./wsMessages": "./dist/wsMessages.js"
+    "./wsMessages": "./dist/wsMessages.js",
+    "./variantTypes": "./dist/variantTypes.js"
   },
   "typesVersions": {
     "*": {
@@ -21,6 +22,9 @@
       ],
       "wsMessages": [
         "dist/wsMessages.d.ts"
+      ],
+      "variantTypes": [
+        "dist/variantTypes.d.ts"
       ]
     }
   },

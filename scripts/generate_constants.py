@@ -808,12 +808,115 @@ def generate_ts_ws_messages(*, out_path):
         f.write("\n")
 
 
+# ─── Generate C# (variant types) ─────────────────────────
+def generate_csharp_variant_types(variant_types, *, out_path, namespace="OverloadParty.GameData"):
+    """Generate VariantTypes_gen.cs from variant_types in models.yaml.
+
+    Each variant type becomes a flat C# class where the discriminator field
+    is required and all variant-specific fields are nullable.
+    """
+    cs_out = Path(out_path)
+
+    lines = [
+        _GENERATED_HEADER,
+        "",
+        f"namespace {namespace};",
+        "",
+    ]
+
+    for vt in variant_types:
+        name = vt["name"]
+        discriminator = vt["discriminator"]
+        disc_prop = _snake_to_pascal(discriminator)
+
+        if vt.get("comment"):
+            lines.append(f"/// <summary>{vt['comment']}</summary>")
+
+        lines.append(f"public class {name}")
+        lines.append("{")
+
+        # Discriminator field (always required string).
+        lines.append(f'    public required string {disc_prop} {{ get; init; }} = "";')
+
+        # Collect all unique fields across variants.
+        seen = {}  # field_name -> (cs_prop, cs_nullable_type)
+        for variant in vt["variants"]:
+            for field in variant.get("fields", []):
+                fname = field["name"]
+                if fname in seen:
+                    continue
+                cs_prop = _snake_to_pascal(fname)
+                raw_type = field["type"]
+                cs_type = _CS_NULLABLE_DEFAULTS[raw_type]
+                seen[fname] = (cs_prop, cs_type)
+
+        for cs_prop, cs_type in seen.values():
+            lines.append(f"    public {cs_type} {cs_prop} {{ get; init; }}")
+
+        lines.append("}")
+        lines.append("")
+
+    cs_out.parent.mkdir(parents=True, exist_ok=True)
+    with open(cs_out, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+        f.write("\n")
+
+
+# ─── Generate TypeScript (variant types) ─────────────────
+def generate_ts_variant_types(variant_types, *, out_path):
+    """Generate variantTypes.ts from variant_types in models.yaml.
+
+    Each variant type becomes a TS discriminated union where the
+    discriminator field has a string literal type per variant.
+    """
+    ts_out = Path(out_path)
+
+    lines = [
+        _GENERATED_HEADER,
+        "",
+    ]
+
+    for vt in variant_types:
+        name = vt["name"]
+        discriminator = vt["discriminator"]
+
+        if vt.get("comment"):
+            lines.append(f"/** {vt['comment']} */")
+
+        variant_lines = []
+        for variant in vt["variants"]:
+            value = variant["value"]
+            fields = [f"{discriminator}: '{value}'"]
+            for field in variant.get("fields", []):
+                fname = field["name"]
+                ts_type = _TS_TYPE_MAP[field["type"]]
+                opt = "?" if field.get("optional") else ""
+                fields.append(f"{fname}{opt}: {ts_type}")
+            variant_lines.append("  | { " + "; ".join(fields) + " }")
+
+        lines.append(f"export type {name} =")
+        for vl in variant_lines:
+            lines.append(vl)
+        # Replace trailing space with semicolon.
+        lines[-1] = lines[-1] + ";"
+        lines.append("")
+
+    ts_out.parent.mkdir(parents=True, exist_ok=True)
+    with open(ts_out, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+        f.write("\n")
+
+
 # ─── Main ──────────────────────────────────────────────
 def main():
     with open(CONSTANTS_YAML, "r", encoding="utf-8") as f:
         constants = yaml.safe_load(f)
     with open(EVENT_SCHEMAS_YAML, "r", encoding="utf-8") as f:
         event_schemas = yaml.safe_load(f)
+    with open(MODELS_YAML, "r", encoding="utf-8") as f:
+        models = yaml.safe_load(f)
+
+    variant_types = models.get("variant_types", [])
 
     # Go
     generate_go_constants(constants, out_path=GO_DIR / "constants" / "constants_gen.go")
@@ -829,6 +932,10 @@ def main():
     generate_csharp_event_data(event_schemas, out_path=DOTNET_DIR / "EventData_gen.cs")
     print("Generated → packages/dotnet/EventData_gen.cs", file=sys.stderr)
 
+    if variant_types:
+        generate_csharp_variant_types(variant_types, out_path=DOTNET_DIR / "VariantTypes_gen.cs")
+        print("Generated → packages/dotnet/VariantTypes_gen.cs", file=sys.stderr)
+
     # TypeScript
     generate_ts_constants(constants, out_path=NPM_DIR / "src" / "constants.ts")
     print("Generated → packages/npm/src/constants.ts", file=sys.stderr)
@@ -838,6 +945,10 @@ def main():
 
     generate_ts_ws_messages(out_path=NPM_DIR / "src" / "wsMessages.ts")
     print("Generated → packages/npm/src/wsMessages.ts", file=sys.stderr)
+
+    if variant_types:
+        generate_ts_variant_types(variant_types, out_path=NPM_DIR / "src" / "variantTypes.ts")
+        print("Generated → packages/npm/src/variantTypes.ts", file=sys.stderr)
 
 
 if __name__ == "__main__":
