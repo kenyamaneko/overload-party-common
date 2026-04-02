@@ -1310,6 +1310,36 @@ CI (GitHub Actions)         Cloudflare CDN    GCS Bucket     Client (React)
 | 既存イラスト差し替え | 該当ファイルを差し替えて再デプロイ。マニフェストのハッシュが変わるため、クライアントが自動検知して再DL |
 | アプリ本体更新 | Capacitor ネイティブ部分の変更のみストア審査が必要。Web 部分は OTA 更新可能 |
 
+### 14.5 スケーリング指針
+
+#### 現状の構成
+
+- Gateway: Deployment (replicas: 1) — WebSocket 接続・ゲームセッションをインメモリで保持
+- Battle: Deployment (replicas: 1, strategy: Recreate) — ゲームロジックはステートレス（状態は PostgreSQL）
+
+#### 同時接続数の目安
+
+| 接続数 | 対応 |
+|--------|------|
+| 〜200 | 現状のまま（replicas: 1）で十分 |
+| 200〜1,000 | Gateway の垂直スケーリング（CPU / メモリ増強） |
+| 1,000〜 | Gateway の水平スケール検討（下記参照） |
+
+Go の goroutine モデル上、1 Pod で数千 WebSocket 接続は処理可能。
+ボトルネックになるのは接続数よりも、ゲームアクション処理時の Battle Server への HTTP 往復。
+
+#### Gateway を水平スケールする場合
+
+Gateway はインメモリでゲームセッション（ConnectionHub, GameRelay, SpectateRelay）を持つため、
+同じゲームの全プレイヤーが同一 Pod に接続している必要がある。
+
+水平スケールに必要な変更:
+
+1. **セッション状態の外部化** — Redis 等にゲームルーム情報を移し、どの Pod からでもセッションを参照可能にする
+2. **ルーム単位ルーティング** — Gateway を StatefulSet + Headless Service にし、Ingress または別の Gateway 層で room ID ベースのルーティングを行う
+
+どちらもアプリケーション側の変更を伴うため、必要になった時点で検討する。
+
 ---
 
 ## 15. モニタリング
