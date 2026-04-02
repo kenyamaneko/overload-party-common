@@ -94,6 +94,114 @@ def load_all_cards():
 
 
 # ─── Validate ──────────────────────────────────────────
+def _validate_required_fields(card, label, errors):
+    is_log = card.get("card_type") in LOG_TYPES
+    if is_log:
+        required = ["card_no", "card_id", "card_name", "const_name", "card_type", "restriction", "is_active"]
+    else:
+        required = ["card_no", "card_id", "card_name", "const_name", "card_type", "resizable", "elastic", "restriction", "is_active", "stats"]
+    for field in required:
+        if field not in card:
+            errors.append(f"{label}: missing required field '{field}'")
+
+
+def _validate_uniqueness(card, label, seen_nos, seen_consts, seen_card_ids, errors):
+    card_no = card.get("card_no")
+    card_name = card.get("card_name", "???")
+
+    if card_no in seen_nos:
+        errors.append(f"{label}: duplicate card_no (also used by {seen_nos[card_no]})")
+    else:
+        seen_nos[card_no] = card_name
+
+    card_id = card.get("card_id", "")
+    if card_id:
+        if not re.match(r"^(SH|TK|SL|TN|NT)-\d{4}$", card_id):
+            errors.append(f"{label}: card_id '{card_id}' must match XX-NNNN format (SH/TK/SL/TN/NT)")
+        if card_id in seen_card_ids:
+            errors.append(f"{label}: duplicate card_id '{card_id}' (also used by #{seen_card_ids[card_id]})")
+        else:
+            seen_card_ids[card_id] = card_no
+
+    const_name = card.get("const_name", "")
+    if const_name:
+        if const_name in seen_consts:
+            errors.append(f"{label}: duplicate const_name '{const_name}' (also used by #{seen_consts[const_name]})")
+        else:
+            seen_consts[const_name] = card_no
+        if not re.match(r"^[A-Z][a-zA-Z0-9]*$", const_name):
+            errors.append(f"{label}: const_name '{const_name}' is not a valid Go identifier (must be ASCII PascalCase)")
+
+
+def _validate_types_and_values(card, label, errors):
+    card_type = card.get("card_type", "")
+    if card_type and card_type not in ALL_CARD_TYPES:
+        errors.append(f"{label}: invalid card_type '{card_type}'")
+
+    for bf in ("resizable", "elastic"):
+        val = card.get(bf)
+        if val is not None and not isinstance(val, bool):
+            errors.append(f"{label}: '{bf}' must be a boolean, got {type(val).__name__}")
+
+    restriction = card.get("restriction", "")
+    if restriction and restriction not in VALID_RESTRICTION:
+        errors.append(f"{label}: invalid restriction '{restriction}'")
+
+    faction = card.get("faction", "")
+    if faction and faction not in VALID_FACTIONS:
+        errors.append(f"{label}: invalid faction '{faction}'")
+
+    is_active = card.get("is_active")
+    if is_active is not None and not isinstance(is_active, bool):
+        errors.append(f"{label}: 'is_active' must be a boolean, got {type(is_active).__name__}")
+
+    card_no = card.get("card_no")
+    if card_no is not None:
+        if not isinstance(card_no, int) or card_no <= 0:
+            errors.append(f"{label}: card_no must be a positive integer, got {card_no}")
+
+    deploy_turns = card.get("deploy_turns")
+    if deploy_turns is not None:
+        if not isinstance(deploy_turns, int) or deploy_turns not in (0, 1, 2):
+            errors.append(f"{label}: deploy_turns must be 0, 1, or 2, got {deploy_turns}")
+
+
+def _validate_stats(card, label, errors):
+    card_type = card.get("card_type", "")
+    stats = card.get("stats", {})
+    if not (card_type and stats):
+        return
+
+    if card_type in COMPUTE_TYPES:
+        missing = COMPUTE_STAT_KEYS - set(stats.keys())
+        if missing:
+            errors.append(f"{label}: compute card missing stats: {missing}")
+    elif card_type in DATA_TYPES:
+        missing = DATA_STAT_KEYS - set(stats.keys())
+        if missing:
+            errors.append(f"{label}: data card missing stats: {missing}")
+
+    for stat_key, stat_val in stats.items():
+        if not isinstance(stat_val, (int, float)):
+            errors.append(f"{label}: stat '{stat_key}' must be a number, got {type(stat_val).__name__}")
+        elif stat_val < 0:
+            errors.append(f"{label}: stat '{stat_key}' must be non-negative, got {stat_val}")
+
+
+def _validate_elastic(card, label, errors):
+    if not card.get("elastic"):
+        return
+
+    for ef in ("free_tier", "cost_per_request"):
+        if ef not in card:
+            errors.append(f"{label}: elastic card missing required field '{ef}'")
+
+    for ef in ("elastic_increment", "free_tier", "cost_per_request"):
+        val = card.get(ef)
+        if val is not None and (not isinstance(val, (int, float)) or val < 0):
+            errors.append(f"{label}: '{ef}' must be a non-negative number, got {val}")
+
+
 def validate(cards):
     """Run all validation checks. Returns list of error strings."""
     errors = []
@@ -106,97 +214,13 @@ def validate(cards):
         card_name = card.get("card_name", "???")
         label = f"#{card_no} {card_name}"
 
-        is_log = card.get("card_type") in LOG_TYPES
-        if is_log:
-            required = ["card_no", "card_id", "card_name", "const_name", "card_type", "restriction", "is_active"]
-        else:
-            required = ["card_no", "card_id", "card_name", "const_name", "card_type", "resizable", "elastic", "restriction", "is_active", "stats"]
-        for field in required:
-            if field not in card:
-                errors.append(f"{label}: missing required field '{field}'")
-
+        _validate_required_fields(card, label, errors)
         if card_no is None:
             continue
-
-        if card_no in seen_nos:
-            errors.append(f"{label}: duplicate card_no (also used by {seen_nos[card_no]})")
-        else:
-            seen_nos[card_no] = card_name
-
-        card_id = card.get("card_id", "")
-        if card_id:
-            if not re.match(r"^(SH|TK|SL|TN|NT)-\d{4}$", card_id):
-                errors.append(f"{label}: card_id '{card_id}' must match XX-NNNN format (SH/TK/SL/TN/NT)")
-            if card_id in seen_card_ids:
-                errors.append(f"{label}: duplicate card_id '{card_id}' (also used by #{seen_card_ids[card_id]})")
-            else:
-                seen_card_ids[card_id] = card_no
-
-        const_name = card.get("const_name", "")
-        if const_name:
-            if const_name in seen_consts:
-                errors.append(f"{label}: duplicate const_name '{const_name}' (also used by #{seen_consts[const_name]})")
-            else:
-                seen_consts[const_name] = card_no
-            if not re.match(r"^[A-Z][a-zA-Z0-9]*$", const_name):
-                errors.append(f"{label}: const_name '{const_name}' is not a valid Go identifier (must be ASCII PascalCase)")
-
-        card_type = card.get("card_type", "")
-        if card_type and card_type not in ALL_CARD_TYPES:
-            errors.append(f"{label}: invalid card_type '{card_type}'")
-
-        for bf in ("resizable", "elastic"):
-            val = card.get(bf)
-            if val is not None and not isinstance(val, bool):
-                errors.append(f"{label}: '{bf}' must be a boolean, got {type(val).__name__}")
-
-        restriction = card.get("restriction", "")
-        if restriction and restriction not in VALID_RESTRICTION:
-            errors.append(f"{label}: invalid restriction '{restriction}'")
-
-        if card.get("elastic"):
-            for ef in ("free_tier", "cost_per_request"):
-                if ef not in card:
-                    errors.append(f"{label}: elastic card missing required field '{ef}'")
-
-        stats = card.get("stats", {})
-        if card_type and stats:
-            if card_type in COMPUTE_TYPES:
-                missing = COMPUTE_STAT_KEYS - set(stats.keys())
-                if missing:
-                    errors.append(f"{label}: compute card missing stats: {missing}")
-            elif card_type in DATA_TYPES:
-                missing = DATA_STAT_KEYS - set(stats.keys())
-                if missing:
-                    errors.append(f"{label}: data card missing stats: {missing}")
-            for stat_key, stat_val in stats.items():
-                if not isinstance(stat_val, (int, float)):
-                    errors.append(f"{label}: stat '{stat_key}' must be a number, got {type(stat_val).__name__}")
-                elif stat_val < 0:
-                    errors.append(f"{label}: stat '{stat_key}' must be non-negative, got {stat_val}")
-
-        deploy_turns = card.get("deploy_turns")
-        if deploy_turns is not None:
-            if not isinstance(deploy_turns, int) or deploy_turns not in (0, 1, 2):
-                errors.append(f"{label}: deploy_turns must be 0, 1, or 2, got {deploy_turns}")
-
-        if card.get("elastic"):
-            for ef in ("elastic_increment", "free_tier", "cost_per_request"):
-                val = card.get(ef)
-                if val is not None and (not isinstance(val, (int, float)) or val < 0):
-                    errors.append(f"{label}: '{ef}' must be a non-negative number, got {val}")
-
-        faction = card.get("faction", "")
-        if faction and faction not in VALID_FACTIONS:
-            errors.append(f"{label}: invalid faction '{faction}'")
-
-        is_active = card.get("is_active")
-        if is_active is not None and not isinstance(is_active, bool):
-            errors.append(f"{label}: 'is_active' must be a boolean, got {type(is_active).__name__}")
-
-        if card_no is not None:
-            if not isinstance(card_no, int) or card_no <= 0:
-                errors.append(f"{label}: card_no must be a positive integer, got {card_no}")
+        _validate_uniqueness(card, label, seen_nos, seen_consts, seen_card_ids, errors)
+        _validate_types_and_values(card, label, errors)
+        _validate_stats(card, label, errors)
+        _validate_elastic(card, label, errors)
 
     return errors
 
@@ -336,14 +360,6 @@ def _scalability_display(card):
     return display_type
 
 
-def _tp_display(card):
-    return str(card["stats"].get("throughput", 0))
-
-
-def _yield_display(card):
-    return str(card["stats"].get("yield", 0))
-
-
 def _effect_display(card):
     text = card.get("effect_text", "")
     if not text:
@@ -351,21 +367,34 @@ def _effect_display(card):
     return text.replace("\n", "<br>")
 
 
-def generate_md(cards, faction_data, *, out_path):
-    """Generate docs/CARDS.md."""
-    md_out = Path(out_path)
-    total = len(cards)
+def _md_resource_table(cards, primary_stat_label, primary_stat_key):
+    """Generate a Markdown table for compute or data resource cards."""
     lines = []
+    lines.append(f"| ID | カード名 | タイプ | {primary_stat_label} | 可用性 | 維持コスト | デプロイT | SLAペナルティ | 効果 |")
+    lines.append("|------|---------|-------|-----|-----|-----|-----|-----|------|")
+    for c in cards:
+        dt = c.get("deploy_turns", 0)
+        lines.append(
+            f"| {c['card_id']} | {c['card_name']} | {_scalability_display(c)} "
+            f"| {c['stats'].get(primary_stat_key, 0)} | {c['stats']['availability']} "
+            f"| {c['stats']['maintenance_cost']} | {dt} "
+            f"| {c['stats']['sla_penalty']} | {_effect_display(c)} |"
+        )
+    return lines
 
-    lines.append("<!-- This file is auto-generated by scripts/generate_cards.py. DO NOT EDIT. -->")
-    lines.append("")
-    lines.append("# Overload Party — Card List")
-    lines.append("")
-    lines.append(f"**全 {total} 枚**")
-    lines.append("")
-    lines.append("---")
-    lines.append("")
 
+def _md_support_table(cards):
+    """Generate a Markdown table for support/log cards."""
+    lines = []
+    lines.append("| ID | カード名 | 効果 |")
+    lines.append("|------|---------|------|")
+    for c in cards:
+        lines.append(f"| {c['card_id']} | {c['card_name']} | {_effect_display(c)} |")
+    return lines
+
+
+def _md_restriction_section(faction_data, lines):
+    """Append restriction card tables (limited / semi-limited)."""
     limited = []
     semi_limited = []
     for f in FACTION_ORDER:
@@ -374,18 +403,17 @@ def generate_md(cards, faction_data, *, out_path):
         fd = faction_data[f]
         for c in fd["cards"]:
             if c.get("restriction") == "limited":
-                limited.append((c, fd))
+                limited.append(c)
             elif c.get("restriction") == "semi_limited":
-                semi_limited.append((c, fd))
+                semi_limited.append(c)
 
     if limited:
         lines.append("### 制限カード（1枚制限）")
         lines.append("")
         lines.append("| カード名 | 理由 |")
         lines.append("|---------|------|")
-        for card, _ in limited:
-            reason = card.get("restriction_reason", "")
-            lines.append(f"| {card['card_name']} | {reason} |")
+        for card in limited:
+            lines.append(f"| {card['card_name']} | {card.get('restriction_reason', '')} |")
         lines.append("")
 
     if semi_limited:
@@ -393,9 +421,8 @@ def generate_md(cards, faction_data, *, out_path):
         lines.append("")
         lines.append("| カード名 | 理由 |")
         lines.append("|---------|------|")
-        for card, _ in semi_limited:
-            reason = card.get("restriction_reason", "")
-            lines.append(f"| {card['card_name']} | {reason} |")
+        for card in semi_limited:
+            lines.append(f"| {card['card_name']} | {card.get('restriction_reason', '')} |")
         lines.append("")
 
     lines.append("**上記以外のカードはすべて 3枚まで投入可能。**")
@@ -403,6 +430,9 @@ def generate_md(cards, faction_data, *, out_path):
     lines.append("---")
     lines.append("")
 
+
+def _md_faction_sections(faction_data, lines):
+    """Append per-faction card tables. Returns summary dict for the summary table."""
     summary = {}
 
     for faction in FACTION_ORDER:
@@ -410,10 +440,9 @@ def generate_md(cards, faction_data, *, out_path):
             continue
         fd = faction_data[faction]
         faction_cards = fd["cards"]
-        faction_total = len(faction_cards)
         display = fd["display_name"]
 
-        lines.append(f"## {display}— {faction_total}枚")
+        lines.append(f"## {display}— {len(faction_cards)}枚")
         lines.append("")
 
         summary[faction] = {}
@@ -423,53 +452,30 @@ def generate_md(cards, faction_data, *, out_path):
                 [c for c in faction_cards if c["card_type"] in cat_types],
                 key=lambda c: c["card_id"]
             )
-            if not cat_cards:
-                summary[faction][cat_name] = 0
-                continue
-
             summary[faction][cat_name] = len(cat_cards)
+            if not cat_cards:
+                continue
 
             lines.append(f"### {cat_name}（{len(cat_cards)}枚）")
             lines.append("")
 
-            is_compute = cat_types & COMPUTE_TYPES
-            is_data = cat_types & DATA_TYPES
-            is_support = cat_types & SUPPORT_TYPES
-
-            if is_compute:
-                lines.append("| ID | カード名 | タイプ | スループット | 可用性 | 維持コスト | デプロイT | SLAペナルティ | 効果 |")
-                lines.append("|------|---------|-------|-----|-----|-----|-----|-----|------|")
-                for c in cat_cards:
-                    dt = c.get("deploy_turns", 0)
-                    lines.append(
-                        f"| {c['card_id']} | {c['card_name']} | {_scalability_display(c)} "
-                        f"| {_tp_display(c)} | {c['stats']['availability']} "
-                        f"| {c['stats']['maintenance_cost']} | {dt} "
-                        f"| {c['stats']['sla_penalty']} | {_effect_display(c)} |"
-                    )
-            elif is_data:
-                lines.append("| ID | カード名 | タイプ | Yield | 可用性 | 維持コスト | デプロイT | SLAペナルティ | 効果 |")
-                lines.append("|------|---------|-------|-----|-----|-----|-----|-----|------|")
-                for c in cat_cards:
-                    dt = c.get("deploy_turns", 0)
-                    lines.append(
-                        f"| {c['card_id']} | {c['card_name']} | {_scalability_display(c)} "
-                        f"| {_yield_display(c)} | {c['stats']['availability']} "
-                        f"| {c['stats']['maintenance_cost']} | {dt} "
-                        f"| {c['stats']['sla_penalty']} | {_effect_display(c)} |"
-                    )
-            elif is_support or (cat_types & LOG_TYPES):
-                lines.append("| ID | カード名 | 効果 |")
-                lines.append("|------|---------|------|")
-                for c in cat_cards:
-                    lines.append(f"| {c['card_id']} | {c['card_name']} | {_effect_display(c)} |")
+            if cat_types & COMPUTE_TYPES:
+                lines.extend(_md_resource_table(cat_cards, "スループット", "throughput"))
+            elif cat_types & DATA_TYPES:
+                lines.extend(_md_resource_table(cat_cards, "Yield", "yield"))
+            else:
+                lines.extend(_md_support_table(cat_cards))
 
             lines.append("")
 
         lines.append("---")
         lines.append("")
 
-    # Summary table
+    return summary
+
+
+def _md_summary_table(faction_data, summary, lines):
+    """Append the card count summary table."""
     lines.append("## カード総数サマリ")
     lines.append("")
     header_names = [faction_data[f]["display_name"] if f in faction_data else f for f in FACTION_ORDER]
@@ -496,6 +502,26 @@ def generate_md(cards, faction_data, *, out_path):
     row += f"| **{all_total}** |"
     lines.append(row)
     lines.append("")
+
+
+def generate_md(cards, faction_data, *, out_path):
+    """Generate docs/CARDS.md."""
+    md_out = Path(out_path)
+    total = len(cards)
+    lines = []
+
+    lines.append("<!-- This file is auto-generated by scripts/generate_cards.py. DO NOT EDIT. -->")
+    lines.append("")
+    lines.append("# Overload Party — Card List")
+    lines.append("")
+    lines.append(f"**全 {total} 枚**")
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+
+    _md_restriction_section(faction_data, lines)
+    summary = _md_faction_sections(faction_data, lines)
+    _md_summary_table(faction_data, summary, lines)
 
     md_out.parent.mkdir(parents=True, exist_ok=True)
     with open(md_out, "w", encoding="utf-8") as f:
