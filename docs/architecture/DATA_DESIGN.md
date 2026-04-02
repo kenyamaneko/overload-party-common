@@ -126,7 +126,6 @@
 | `currentYield` | int? | 現在Yield量（コンピュート系リソースは null） |
 | `maxYield` | int? | Yield最大値（コンピュート系リソースは null。Elastic カードは `nil`＝上限なし） |
 | `damage` | int | 蓄積ダメージ量 |
-| `attachments` | array | アタッチメントリスト（instanceId + cardId + artNo） |
 | `temporaryEffects` | array | 一時効果リスト |
 | `monetizedAmount` | int | このターンに収益化済みのTP量（ターン終了時リセット） |
 | `hasAttacked` | bool | そのターン攻撃済みか |
@@ -148,6 +147,7 @@
 | `cardId` | string | カード定義ID |
 | `artNo` | int | アート番号 |
 | `faceDown` | bool | 裏向きか否か |
+| `targetInstanceId` | string? | アタッチメントの場合、対象リソースの instanceId。プラットフォーム・リアクティブは `null` |
 
 **チェーンスタック (`GameStates.chain_stack`)**
 
@@ -390,7 +390,7 @@ stats フィールドなし（Platform の場合、`deploy_turns` はトップ�
 | `hand_limit` | int | 6 | 手札上限 |
 | `time_bank` | int | 480 | タイムバンク（秒） |
 | `deck_size` | int | 30 | デッキ枚数 |
-| `max_attachments` | int | 2 | リソースあたりの最大アタッチメント数 |
+| `max_attachments` | int | 2 | 1体のリソースを対象にできる最大アタッチメント数 |
 | `slots_per_zone` | int | 3 | ゾーンあたりのスロット数 |
 
 ---
