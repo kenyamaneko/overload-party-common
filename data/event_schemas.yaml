@@ -28,11 +28,6 @@ use_effect:
   cardId: string
   sourceId: string
   targetId?: string
-migrate:
-  sourceInstanceId: string
-  targetInstanceId: string
-  sourceCardId: string
-  targetCardId: string
 phase_change:
   previousPhase: string
   currentPhase: string
@@ -50,11 +45,6 @@ turn_start:
 reactive_revealed:
   instanceId: string
   cardId: string
-migration_complete:
-  sourceInstanceId: string
-  targetInstanceId: string
-  sourceCardId: string
-  targetCardId: string
 game_over:
   winnerNum: long
   winReason: string

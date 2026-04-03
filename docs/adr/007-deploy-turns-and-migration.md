@@ -117,9 +117,11 @@ Attachment / Strategy / Incident / Reactive は従来通り即時。
 
 > ストーリー: 投資家から 3 ターン分の猶予をもらったが、サービスを立ち上げられなかった。資金は引き上げられ、スタートアップは解散。
 
-### 6. マイグレーション（リソース移行）
+### 6. ~~マイグレーション（リソース移行）~~ — 廃止
 
-既存リソースを SLA ペナルティなしで安全に退役させる仕組み。
+> **廃止 (2026-04):** サポート張り替え（占有スロットへのサポートカード配置）の導入に伴い、マイグレーションは廃止された。`migrate` アクション・イベントおよび関連フィールドは全て削除済み。
+
+~~既存リソースを SLA ペナルティなしで安全に退役させる仕組み。~~
 
 #### 前提条件
 
@@ -191,8 +193,8 @@ Attachment / Strategy / Incident / Reactive は従来通り即時。
 - `deploying_turns_left` フィールド（ResourceInstance: 残りデプロイターン）
 - `face_up` フラグ（ResourceInstance / SupportInstance (Platform)）
 - `has_had_active_resource` フラグ（GameState: per-player）
-- `migrate` アクション（メインフェーズ）
-- `migrating_from` フィールド（ResourceInstance: マイグレーション元の参照）
+- ~~`migrate` アクション（メインフェーズ）~~ — 廃止
+- ~~`migrating_from` フィールド（ResourceInstance: マイグレーション元の参照）~~ — 廃止
 - 裏向き→表向き自動遷移（ドローフェーズまたはターン開始時）
 
 ### 変更するもの

@@ -295,9 +295,6 @@ files:
           - {name: EffectUsedThisTurn, type: bool, json: "effectUsedThisTurn,omitempty"}
           - {name: DeployedOnTurn, type: int64, json: "deployedOnTurn,omitempty"}
           - {name: DeployOrder, type: int64, json: "deployOrder,omitempty"}
-          - {name: MigratingFrom, type: "*string", json: "migratingFrom,omitempty"}
-          - {name: MigrationTarget, type: "*string", json: "migrationTarget,omitempty"}
-          - {name: MigratingOnTurn, type: int64, json: "migratingOnTurn,omitempty"}
           - {name: ElasticBonus, type: int64, json: "elasticBonus,omitempty"}
 
       - name: AttachmentRef
@@ -536,7 +533,3 @@ variant_types:
           - {name: effect_target_type, type: string}
           - {name: required_count, type: int}
 
-      - value: migrate
-        fields:
-          - {name: source_instance_id, type: string}
-          - {name: valid_targets, type: "string[]"}

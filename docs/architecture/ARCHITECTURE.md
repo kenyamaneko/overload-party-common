@@ -1083,7 +1083,6 @@ pgxpool で接続プールを管理。Pod あたりの接続数を制限し、Cl
 | `play_card` | Main Phase | 手札に存在 | 配置先が空き | — | デプロイターン 0 なら即表向き、1以上なら裏向き配置 |
 | `attack` | Battle Phase | フィールド上の自コンピュート（表向き） | 相手フィールド上の表向きリソース | — | 攻撃済みでない |
 | `scale_up` | Main Phase | フィールド上の自リソース（表向き） | — | — | Resizable 属性、現在Rank < 対象Rank |
-| `migrate` | Main Phase | フィールド上の表向き新リソース | 表向き旧リソース | — | 新.deploy_turns >= 旧.deploy_turns |
 | `monetize` | Main Phase | バックエンドのコンピュート | — | — | Insight Pool 残量 ≥ 分配量、TP上限 |
 | `use_effect` | Main/Battle Phase | 効果を持つカード | 効果の対象 | 効果コスト | 1ターン1回制限 |
 

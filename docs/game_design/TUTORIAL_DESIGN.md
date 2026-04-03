@@ -472,7 +472,7 @@ DB の Yield が高いほど、Compute のスループットが高いほど、�
 @trigger after_step
 @action tap_to_continue
 まだまだ教えてないことは山ほどある。
-Elastic の自動スケーリング、マイグレーション、リアクティブ、チェーン……。
+Elastic の自動スケーリング、リアクティブ、チェーン……。
 でもそれは、自分で確かめた方がいいよ。
 ---
 @trigger after_step

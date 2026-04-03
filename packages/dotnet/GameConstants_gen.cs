@@ -84,7 +84,6 @@ public static class ActionTypes
     public const string DiscardHand = "discard_hand";
     public const string UseEffect = "use_effect";
     public const string SetReactive = "set_reactive";
-    public const string Migrate = "migrate";
     public const string EndPhase = "end_phase";
     public const string Forfeit = "forfeit";
     public const string SelectSlot = "select_slot";
@@ -101,8 +100,6 @@ public static class EventTypes
     public const string DiscardHand = "discard_hand";
     public const string UseEffect = "use_effect";
     public const string ReactiveRevealed = "reactive_revealed";
-    public const string Migrate = "migrate";
-    public const string MigrationComplete = "migration_complete";
     public const string PhaseChange = "phase_change";
     public const string PhaseEnd = "phase_end";
     public const string TurnEnd = "turn_end";

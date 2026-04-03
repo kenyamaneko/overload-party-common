@@ -8,6 +8,5 @@ export type AvailableAction =
   | { type: 'attack'; source_instance_id: string; valid_targets: string[] }
   | { type: 'scale_up'; source_instance_id: string; target_rank: Rank; instance_family?: InstanceFamily; needs_family: boolean }
   | { type: 'monetize'; source_instance_id: string; remaining_capacity: number }
-  | { type: 'use_effect'; source_instance_id: string; valid_targets?: string[]; effect_target_type: string; required_count: number }
-  | { type: 'migrate'; source_instance_id: string; valid_targets: string[] };
+  | { type: 'use_effect'; source_instance_id: string; valid_targets?: string[]; effect_target_type: string; required_count: number };
 

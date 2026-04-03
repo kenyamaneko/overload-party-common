@@ -42,13 +42,6 @@ export interface UseEffectEventData {
   targetId?: string;
 }
 
-export interface MigrateEventData {
-  sourceInstanceId: string;
-  targetInstanceId: string;
-  sourceCardId: string;
-  targetCardId: string;
-}
-
 export interface PhaseChangeEventData {
   previousPhase: string;
   currentPhase: string;
@@ -76,13 +69,6 @@ export interface ReactiveRevealedEventData {
   cardId: string;
 }
 
-export interface MigrationCompleteEventData {
-  sourceInstanceId: string;
-  targetInstanceId: string;
-  sourceCardId: string;
-  targetCardId: string;
-}
-
 export interface GameOverEventData {
   winnerNum: number;
   winReason: string;
@@ -96,13 +82,11 @@ export interface EventDataMap {
   monetize: MonetizeEventData;
   discard_hand: DiscardHandEventData;
   use_effect: UseEffectEventData;
-  migrate: MigrateEventData;
   phase_change: PhaseChangeEventData;
   phase_end: PhaseEndEventData;
   turn_end: TurnEndEventData;
   turn_start: TurnStartEventData;
   reactive_revealed: ReactiveRevealedEventData;
-  migration_complete: MigrationCompleteEventData;
   game_over: GameOverEventData;
 }
 

@@ -954,7 +954,6 @@ GET /ws?token={token}
 | `play_card` | `hand_instance_id`, `card_id`, `valid_zones?`, `valid_targets?` | 手札からカードをデプロイ。デプロイターン 0 なら即表向き、1以上なら裏向き配置。`valid_zones` はゾーン+スロット (例: `"frontend_0"`)。Attachment の場合は `valid_zones` にサポートゾーンスロット (例: `"support_0"`)、`valid_targets` に対象リソースの instanceId が入る |
 | `attack` | `source_instance_id`, `valid_targets` | フロントの表向き Compute で攻撃。相手フロントに表向きリソースあり→フロントのみ対象 |
 | `scale_up` | `source_instance_id`, `target_rank`, `needs_family`, `required_count` | リソースをスケールアップ（無料）。`needs_family=true` なら S→M でファミリー選択が必要。`required_count` はスケールアップに必要なリソース数 |
-| `migrate` | `source_instance_id`, `target_instance_id` | 新リソース(source)から旧リソース(target)へマイグレーション開始。新.deploy_turns >= 旧.deploy_turns が必要 |
 | `monetize` | `source_instance_id`, `remaining_capacity` | バックエンド Compute に Insight を配分。`remaining_capacity` は残りスループット |
 | `use_effect` | `source_instance_id`, `effect_target_type`, `valid_targets?` | アクティブ効果を発動。`effect_target_type`: `"none"`, `"choice"`, `"all_opp"`, `"self"` |
 

@@ -80,7 +80,6 @@ action_types:
 - discard_hand
 - use_effect
 - set_reactive
-- migrate
 - end_phase
 - forfeit
 - select_slot
@@ -94,8 +93,6 @@ event_types:
 - discard_hand
 - use_effect
 - reactive_revealed
-- migrate
-- migration_complete
 - phase_change
 - phase_end
 - turn_end
