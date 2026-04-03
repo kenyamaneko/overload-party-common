@@ -474,12 +474,14 @@ NPC モデル一覧取得。Gateway が Battle Server の内部 API にプロキ
     {
       "model": "SHE-easy",
       "faction": "SHE",
-      "difficulty": "easy"
+      "difficulty": "easy",
+      "display_name": "研修中配達員"
     },
     {
       "model": "SHE-hard",
       "faction": "SHE",
-      "difficulty": "hard"
+      "difficulty": "hard",
+      "display_name": "エース配達員"
     }
   ]
 }
@@ -490,6 +492,7 @@ NPC モデル一覧取得。Gateway が Battle Server の内部 API にプロキ
 | `model` | string | NPC モデル ID。`npc_battle_start` で使用する |
 | `faction` | string | ファクション名 |
 | `difficulty` | string | 難易度（`easy` / `hard`） |
+| `display_name` | string | NPC の表示名。クライアントは「{faction} {display_name}」の形式で表示する |
 
 **内部 API:** Gateway → Battle `GET http://battle:9002/api/v1/npc/models`
 

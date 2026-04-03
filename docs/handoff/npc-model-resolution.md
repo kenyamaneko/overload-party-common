@@ -23,8 +23,8 @@ NPC モデル一覧を API で返し、クライアントはハードコード�
 ```json
 {
   "models": [
-    { "model": "SHE-easy", "faction": "SHE", "difficulty": "easy" },
-    { "model": "SHE-hard", "faction": "SHE", "difficulty": "hard" }
+    { "model": "SHE-easy", "faction": "SHE", "difficulty": "easy", "display_name": "研修中配達員" },
+    { "model": "SHE-hard", "faction": "SHE", "difficulty": "hard", "display_name": "エース配達員" }
   ]
 }
 ```
@@ -32,8 +32,11 @@ NPC モデル一覧を API で返し、クライアントはハードコード�
 - `model`: `AiConfig.Model`（YAML の `model` フィールド、例: `SHE-easy`）
 - `faction`: `AiConfig.Faction`（YAML の `faction` フィールド）
 - `difficulty`: model から faction を除いた部分（`SHE-easy` → `easy`）
+- `display_name`: NPC の表示名。NPC YAML に `display_name` フィールドを追加して定義する
 
 実装方針:
+- `AiConfig` に `DisplayName` プロパティを追加
+- 各 NPC YAML に `display_name` フィールドを追加（例: `display_name: 研修中配達員`）
 - `AiConfigLoader` がロード済みの全 `AiConfig` を保持しているので、それを列挙して返す
 - Program.cs に `MapGet("/api/v1/npc/models", ...)` を追加
 
