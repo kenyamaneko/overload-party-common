@@ -1,0 +1,150 @@
+# Shop products definition (SSoT)
+# Generated outputs:
+#   - packages/gamedata/cache/products_gen.json  (Go embedded, local dev)
+#   - db/seed/products.sql                       (PostgreSQL UPSERT seed)
+#
+# Usage: python3 scripts/generate_products.py
+
+products:
+  # ── カードパック (faction_set) ──────────────────────────
+  - product_id: pack-she
+    name: SHEカードパック
+    type: faction_set
+    price: 480
+    content:
+      faction: SHE
+    description: SHEファクションの全カードが手に入るパック。
+    image_url: /assets/shop/pack-she.webp
+    is_active: true
+
+  - product_id: pack-tenki
+    name: 天気使いカードパック
+    type: faction_set
+    price: 480
+    content:
+      faction: Tenki
+    description: 天気使いファクションの全カードが手に入るパック。
+    image_url: /assets/shop/pack-tenki.webp
+    is_active: true
+
+  - product_id: pack-sugar
+    name: しゅがーらぼカードパック
+    type: faction_set
+    price: 480
+    content:
+      faction: Sugar
+    description: しゅがーらぼファクションの全カードが手に入るパック。
+    image_url: /assets/shop/pack-sugar.webp
+    is_active: true
+
+  - product_id: pack-tuners
+    name: 調律部カードパック
+    type: faction_set
+    price: 480
+    content:
+      faction: Tuners
+    description: 調律部ファクションの全カードが手に入るパック。
+    image_url: /assets/shop/pack-tuners.webp
+    is_active: true
+
+  # ── カードスリーブ (cosmetic/sleeve) ────────────────────
+  - product_id: sleeve-a
+    name: カードスリーブA
+    type: cosmetic
+    price: 300
+    content:
+      item_type: sleeve
+      item_no: 1
+    description: シンプルなデザインのカードスリーブ。
+    image_url: /assets/shop/sleeve-a.webp
+    is_active: true
+
+  - product_id: sleeve-b
+    name: カードスリーブB
+    type: cosmetic
+    price: 300
+    content:
+      item_type: sleeve
+      item_no: 2
+    description: メタリックなデザインのカードスリーブ。
+    image_url: /assets/shop/sleeve-b.webp
+    is_active: true
+
+  - product_id: sleeve-c
+    name: カードスリーブC
+    type: cosmetic
+    price: 300
+    content:
+      item_type: sleeve
+      item_no: 3
+    description: ホログラムデザインのカードスリーブ。
+    image_url: /assets/shop/sleeve-c.webp
+    is_active: true
+
+  # ── プレイマット (cosmetic/playmat) ─────────────────────
+  - product_id: playmat-a
+    name: プレイマットA
+    type: cosmetic
+    price: 500
+    content:
+      item_type: playmat
+      item_no: 1
+    description: クラウドインフラをモチーフにしたプレイマット。
+    image_url: /assets/shop/playmat-a.webp
+    is_active: true
+
+  - product_id: playmat-b
+    name: プレイマットB
+    type: cosmetic
+    price: 500
+    content:
+      item_type: playmat
+      item_no: 2
+    description: サーバールームをモチーフにしたプレイマット。
+    image_url: /assets/shop/playmat-b.webp
+    is_active: true
+
+  - product_id: playmat-c
+    name: プレイマットC
+    type: cosmetic
+    price: 500
+    content:
+      item_type: playmat
+      item_no: 3
+    description: ネットワーク回路をモチーフにしたプレイマット。
+    image_url: /assets/shop/playmat-c.webp
+    is_active: true
+
+  # ── スタンプセット (cosmetic/stamp) ─────────────────────
+  - product_id: stamp-a
+    name: スタンプセットA
+    type: cosmetic
+    price: 200
+    content:
+      item_type: stamp
+      item_no: 1
+    description: 基本の表情スタンプ8種セット。
+    image_url: /assets/shop/stamp-a.webp
+    is_active: true
+
+  - product_id: stamp-b
+    name: スタンプセットB
+    type: cosmetic
+    price: 200
+    content:
+      item_type: stamp
+      item_no: 2
+    description: クラウド用語スタンプ8種セット。
+    image_url: /assets/shop/stamp-b.webp
+    is_active: true
+
+  # ── サブスクリプション ──────────────────────────────────
+  - product_id: premium-pass
+    name: プレミアムパス
+    type: subscription
+    price: 980
+    content:
+      duration_days: 30
+    description: 30日間のプレミアム特典。デイリーログインボーナス増量＋バトル回数無制限。
+    image_url: /assets/shop/premium-pass.webp
+    is_active: true

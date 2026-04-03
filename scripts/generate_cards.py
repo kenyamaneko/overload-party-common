@@ -27,7 +27,7 @@ ROOT = Path(__file__).resolve().parent.parent
 YAML_DIR = ROOT / "data" / "cards"
 MD_OUT = ROOT / "docs" / "game_design" / "CARDS.md"
 SEED_OUT = ROOT / "db" / "seed" / "cards_seed.sql"
-GO_JSON_OUT = ROOT / "packages" / "gamedata" / "cache" / "cards_gen.json"
+GO_JSON_OUT = ROOT / "packages" / "devdata" / "cache" / "cards_gen.json"
 DOTNET_JSON_OUT = ROOT / "packages" / "dotnet" / "cache" / "cards_gen.json"
 
 # ─── Constants ──────────────────────────────────────────

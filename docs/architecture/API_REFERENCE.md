@@ -153,7 +153,7 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
 [
   {
     "article_id": "string (ULID)",
-    "source": "aws|gcp|azure|oci",
+    "source": "aws|google-cloud|azure|oci|other",
     "title": "string",
     "summary": "string (nullable)",
     "tags": ["aws", "storage"],
@@ -166,7 +166,7 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
 | フィールド | 型 | 説明 |
 |-----------|-----|------|
 | `article_id` | string | 記事 ULID |
-| `source` | string | ソース。`aws` / `gcp` / `azure` / `oci` のいずれか |
+| `source` | string | ソース。`aws` / `google-cloud` / `azure` / `oci` / `other` のいずれか |
 | `title` | string | 記事タイトル |
 | `summary` | string? | AI 要約（未完了の場合 null） |
 | `tags` | string[] | タグ配列 |
@@ -645,6 +645,8 @@ NPC 対戦開始。即座にゲームが作成される（マッチメイキン�
       "type": "faction_set|cosmetic|subscription",
       "price": 999,
       "content": {},
+      "description": "string|null",
+      "image_url": "string|null",
       "is_active": true,
       "is_owned": false
     }

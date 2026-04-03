@@ -187,12 +187,14 @@ CREATE TABLE deck_cards (
 -- =============================================================================
 
 CREATE TABLE products (
-  product_id VARCHAR(50) NOT NULL,
-  name       VARCHAR(100) NOT NULL,
-  type       VARCHAR(20) NOT NULL,
-  price      BIGINT NOT NULL,
-  content    JSONB NOT NULL,
-  is_active  BOOLEAN NOT NULL,
+  product_id  VARCHAR(50) NOT NULL,
+  name        VARCHAR(100) NOT NULL,
+  type        VARCHAR(20) NOT NULL,
+  price       BIGINT NOT NULL,
+  content     JSONB NOT NULL,
+  description VARCHAR(500),
+  image_url   VARCHAR(200),
+  is_active   BOOLEAN NOT NULL,
   PRIMARY KEY (product_id)
 );
 
@@ -270,7 +272,7 @@ CREATE TRIGGER trg_game_config_updated_at BEFORE UPDATE ON game_config FOR EACH 
 
 CREATE TABLE news_articles (
   article_id   VARCHAR(26) NOT NULL,              -- ULID
-  source       VARCHAR(20) NOT NULL,              -- 'aws' | 'azure' | 'gcp' | 'oci'
+  source       VARCHAR(20) NOT NULL,              -- 'aws' | 'google-cloud' | 'azure' | 'oci' | 'other'
   source_url   TEXT NOT NULL,
   title        TEXT NOT NULL,
   summary      TEXT,                              -- NULL = AI要約未完了（次回リトライ対象）
