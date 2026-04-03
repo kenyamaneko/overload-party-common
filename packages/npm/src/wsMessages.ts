@@ -11,7 +11,7 @@ export interface GameEnterMessage {
 
 export interface NPCBattleStartMessage {
   deck_id: number;
-  npc_faction: string;
+  npc_model: string;
 }
 
 export interface GameActionMessage {
