@@ -367,7 +367,7 @@ files:
       - name: NPCBattleStartMessage
         fields:
           - {name: DeckID, type: int64, json: "deck_id"}
-          - {name: NPCFaction, type: string, json: "npc_faction"}
+          - {name: NPCModel, type: string, json: "npc_model"}
 
       - name: GameActionMessage
         fields:

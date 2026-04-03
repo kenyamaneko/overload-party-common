@@ -461,11 +461,41 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
 
 ---
 
-### 3.5 NPC Battle (WebSocket)
+### 3.5 NPC Battle
 
-NPC バトルは WebSocket 経由で処理される。REST エンドポイントは存在しない。
+#### GET `/npc/models`
 
-#### `npc_battle_start` (Client → Server)
+NPC モデル一覧取得。Gateway が Battle Server の内部 API にプロキシする。
+
+**レスポンス (200):**
+```json
+{
+  "models": [
+    {
+      "model": "SHE-easy",
+      "faction": "SHE",
+      "difficulty": "easy"
+    },
+    {
+      "model": "SHE-hard",
+      "faction": "SHE",
+      "difficulty": "hard"
+    }
+  ]
+}
+```
+
+| フィールド | 型 | 説明 |
+|-----------|------|------|
+| `model` | string | NPC モデル ID。`npc_battle_start` で使用する |
+| `faction` | string | ファクション名 |
+| `difficulty` | string | 難易度（`easy` / `hard`） |
+
+**内部 API:** Gateway → Battle `GET http://battle:9002/api/v1/npc/models`
+
+---
+
+#### `npc_battle_start` (Client → Server, WebSocket)
 
 NPC 対戦開始。即座にゲームが作成される（マッチメイキング不要）。
 
@@ -475,13 +505,19 @@ NPC 対戦開始。即座にゲームが作成される（マッチメイキン�
   "type": "npc_battle_start",
   "data": {
     "deck_id": 1,
-    "npc_faction": "SHE|Tenki|Sugar|Tuners"
+    "npc_model": "SHE-easy"
   }
 }
 ```
 
+| フィールド | 型 | 説明 |
+|-----------|------|------|
+| `deck_id` | int | プレイヤーのデッキ ID |
+| `npc_model` | string | `/npc/models` で取得した NPC モデル ID |
+
 サーバーはゲーム作成前にデッキバリデーションを実行する（内容は `matchmaking_start` と同一）。
 バリデーション失敗時は `error` (code: `npc_battle_error`, retryable: `false`) を返す。
+存在しない `npc_model` を指定した場合も同様にエラーを返す。
 
 **レスポンス:** `npc_battle_created` (Server → Client)
 ```json
@@ -1215,7 +1251,8 @@ NPC 表示名:
 | | WS | `spectate_join` | 要 | 要 | 観戦参加（WebSocket）<!-- TODO: spectate WS メッセージの詳細ドキュメントを追加 --> |
 | | WS | `spectate_leave` | - | - | 観戦離脱（WebSocket） |
 | | WS | `spectate_stamp` | - | - | 観戦スタンプ送信（WebSocket） |
-| **NPC** | WS | `npc_battle_start` | 要 | 要 | NPC 対戦開始（WebSocket） |
+| **NPC** | GET | `/npc/models` | 要 | 要 | NPC モデル一覧 |
+| | WS | `npc_battle_start` | 要 | 要 | NPC 対戦開始（WebSocket） |
 | | WS | `npc_battle_created` | - | - | NPC 対戦作成通知（Server→Client） |
 | **Scenario** | GET | `/scenarios` | 要 | 要 | エピソード一覧 |
 | | GET | `/scenarios/{episodeId}/script` | 要 | 要 | スクリプト取得 |

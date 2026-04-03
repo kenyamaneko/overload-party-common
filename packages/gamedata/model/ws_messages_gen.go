@@ -16,8 +16,8 @@ type GameEnterMessage struct {
 }
 
 type NPCBattleStartMessage struct {
-	DeckID     int64  `json:"deck_id"`
-	NPCFaction string `json:"npc_faction"`
+	DeckID   int64  `json:"deck_id"`
+	NPCModel string `json:"npc_model"`
 }
 
 type GameActionMessage struct {
