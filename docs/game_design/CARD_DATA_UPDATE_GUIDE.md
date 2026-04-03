@@ -169,9 +169,16 @@ python3 scripts/generate_constants.py
 | 生成ファイル | 用途 |
 |-------------|------|
 | `docs/game_design/CARDS.md` | カード一覧ドキュメント（目視確認用） |
-| `packages/gamedata/cache/cards_gen.json` | Gateway サーバー用カードデータ（ローカル開発用） |
+| `packages/devdata/cache/cards_gen.json` | Gateway サーバー用カードデータ（ローカル開発用） |
 | `packages/dotnet/cache/cards_gen.json` | Battle サーバー用カードデータ（ローカル開発用） |
 | `db/seed/cards_seed.sql` | PostgreSQL カード定義 seed（UPSERT） |
+
+#### generate_products.py の生成物
+
+| 生成ファイル | 用途 |
+|-------------|------|
+| `packages/devdata/cache/products_gen.json` | Gateway サーバー用商品データ（ローカル開発用） |
+| `db/seed/products.sql` | PostgreSQL 商品定義 seed（UPSERT） |
 
 #### generate_constants.py の生成物
 

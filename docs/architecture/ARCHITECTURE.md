@@ -83,12 +83,12 @@ overload-party-common/          # 共有データ・定義の SSoT
 │   └── grant_iam.sql           # IAM 認証権限付与
 ├── docs/                       # 全ドキュメント
 ├── packages/
-│   ├── generate_from_yaml.py   # カード＆定数のコード生成スクリプト
-│   ├── gamedata/               # Go パッケージ (gateway 用)
+│   ├── gamedata/               # Go パッケージ 本番用 (型・定数のみ)
 │   │   ├── model/              # 生成: Go モデル
 │   │   ├── constants/          # 生成: ゲーム定数
-│   │   ├── cardno/             # 生成: カード番号定数
-│   │   └── cache/              # 生成: cards_gen.json (embed)
+│   │   └── cardno/             # 生成: カード番号定数
+│   ├── devdata/                # Go パッケージ 開発用 (ローカルモック用データ)
+│   │   └── cache/              # 生成: cards_gen.json, products_gen.json (embed)
 │   ├── dotnet/                 # NuGet パッケージ (battle 用)
 │   │   ├── GameConstants_gen.cs
 │   │   └── EventData_gen.cs
@@ -96,7 +96,8 @@ overload-party-common/          # 共有データ・定義の SSoT
 │       └── src/constants.ts, eventData.ts
 └── .github/workflows/
     ├── ci.yaml                 # DB マイグレーション CI
-    └── publish-packages.yaml   # data/ 変更時にパッケージ publish
+    ├── publish-packages.yaml   # gamedata/dotnet/npm パッケージ publish
+    └── publish-devdata.yaml    # devdata パッケージ publish
 
 overload-party-gateway/         # Go API サーバー
 ├── internal/
@@ -120,22 +121,24 @@ overload-party-client/          # React + Capacitor クライアント
 
 ### 2.3 コード生成パイプライン
 
-`python3 packages/generate_from_yaml.py --gen-dir packages/` を実行すると、common の `packages/` 以下にパッケージとして生成される。main への push 時に CI が自動で publish する。
+各 codegen スクリプトを実行すると、`packages/` 以下にパッケージとして生成される。main への push 時に CI が自動で publish する。
 
-| 入力 | 出力先 | パッケージ |
-|------|--------|-----------|
-| `data/cards/*.yaml` | `docs/CARDS.md` | — |
-| `data/cards/*.yaml` | `packages/gamedata/cardno/cardno_gen.go` | Go module |
-| `data/cards/*.yaml` | `packages/gamedata/cache/cards_gen.json` | Go module (embed) |
-| `data/cards/*.yaml` | `packages/dotnet/cache/cards_gen.json` | NuGet (EmbeddedResource) |
-| `data/models.yaml` | `packages/gamedata/model/*_gen.go` | Go module |
-| `data/constants.json` | `packages/gamedata/constants/constants_gen.go` | Go module |
-| `data/constants.json` | `packages/dotnet/GameConstants_gen.cs` | NuGet (`OverloadParty.GameData`) |
-| `data/constants.json` | `packages/npm/src/constants.ts` | npm (`@kenyamaneko/overload-party-gamedata`) |
-| `data/event_schemas.json` | `packages/dotnet/EventData_gen.cs` | NuGet |
-| `data/event_schemas.json` | `packages/npm/src/eventData.ts` | npm |
+| 入力 | スクリプト | 出力先 | パッケージ |
+|------|-----------|--------|-----------|
+| `data/cards/*.yaml` | `generate_cards.py` | `docs/CARDS.md` | — |
+| `data/cards/*.yaml` | `generate_cards.py` | `packages/devdata/cache/cards_gen.json` | Go devdata (embed) |
+| `data/cards/*.yaml` | `generate_cards.py` | `packages/dotnet/cache/cards_gen.json` | NuGet (EmbeddedResource) |
+| `data/cards/*.yaml` | `generate_cards.py` | `db/seed/cards_seed.sql` | — |
+| `data/products.yaml` | `generate_products.py` | `packages/devdata/cache/products_gen.json` | Go devdata (embed) |
+| `data/products.yaml` | `generate_products.py` | `db/seed/products.sql` | — |
+| `data/models.yaml` | `generate_constants.py` | `packages/gamedata/model/*_gen.go` | Go gamedata |
+| `data/constants.json` | `generate_constants.py` | `packages/gamedata/constants/constants_gen.go` | Go gamedata |
+| `data/constants.json` | `generate_constants.py` | `packages/dotnet/GameConstants_gen.cs` | NuGet (`OverloadParty.GameData`) |
+| `data/constants.json` | `generate_constants.py` | `packages/npm/src/constants.ts` | npm (`@kenyamaneko/overload-party-gamedata`) |
+| `data/event_schemas.json` | `generate_constants.py` | `packages/dotnet/EventData_gen.cs` | NuGet |
+| `data/event_schemas.json` | `generate_constants.py` | `packages/npm/src/eventData.ts` | npm |
 
-各リポはパッケージをインストールして使う（gateway: `go get`, battle: NuGet, client: npm）。生成されたファイルには `DO NOT EDIT` コメントが付く。
+各リポはパッケージをインストールして使う（gateway: `go get gamedata` + `go get devdata`, battle: NuGet, client: npm）。生成されたファイルには `DO NOT EDIT` コメントが付く。
 
 ### 2.4 作業別クロスリファレンス
 
