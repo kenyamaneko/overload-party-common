@@ -251,6 +251,16 @@ guard_types:
 selector_pick_modes:
 - all
 - choice
+cloud_news_sources:
+- aws
+- google-cloud
+- azure
+- oci
+- other
+product_types:
+- faction_set
+- cosmetic
+- subscription
 initial_values:
   # deck_size は gateway / battle / client の 3 リポジトリから静的に参照されるため
   # パッケージ定数として配信する。その他のゲーム定数は game_config テーブルで管理。

@@ -93,6 +93,8 @@ _SIMPLE_LIST_KEYS = [
     ("stat_types", "StatType", "Stat types", "StatTypes", "STAT_TYPES", "StatType"),
     ("guard_types", "GuardType", "Guard types", "GuardTypes", "GUARD_TYPES", "GuardType"),
     ("selector_pick_modes", "SelectorPickMode", "Selector pick modes", "SelectorPickModes", "SELECTOR_PICK_MODES", "SelectorPickMode"),
+    ("cloud_news_sources", "CloudNewsSource", "Cloud news sources", "CloudNewsSources", "CLOUD_NEWS_SOURCES", "CloudNewsSource"),
+    ("product_types", "ProductType", "Product types", "ProductTypes", "PRODUCT_TYPES", "ProductType"),
 ]
 
 
@@ -888,6 +890,19 @@ def generate_ts_ws_messages(*, out_path):
         "",
     ]
 
+    # Collect ts_imports for ws_messages section.
+    ws_imports: dict[str, list[str]] = {}
+    for imp in ws_file.get("ts_imports", []):
+        from_path = imp["from"]
+        for name in imp["names"]:
+            ws_imports.setdefault(from_path, []).append(name)
+
+    for from_path, names in sorted(ws_imports.items()):
+        sorted_names = sorted(set(names))
+        lines.append(f"import type {{ {', '.join(sorted_names)} }} from '{from_path}';")
+    if ws_imports:
+        lines.append("")
+
     for td in ws_file.get("types", []):
         name = td["name"]
         if td.get("comment"):
@@ -899,6 +914,10 @@ def generate_ts_ws_messages(*, out_path):
             json_key = json_tag.split(",")[0]
             go_type = str(field["type"])
             ts_type = _GO_TO_TS_TYPE.get(go_type, "unknown")
+            if "ts_type" in field:
+                ts_type = field["ts_type"]
+            if "ts_optional" in field:
+                optional = field["ts_optional"]
             opt = "?" if optional else ""
             lines.append(f"  {json_key}{opt}: {ts_type};")
         lines.append("}")
@@ -1018,6 +1037,12 @@ def generate_ts_models(*, out_path, pkg_filter=None):
     for file_def in matching_files:
         file_nullable_as_optional = file_def.get("nullable_as_optional", False)
 
+        # TS-only type aliases (e.g., CardStats = ComputeStats | DataStats)
+        for ta in file_def.get("ts_type_aliases", []):
+            lines.append(f"export type {ta['name']} = {ta['value']};")
+        if file_def.get("ts_type_aliases"):
+            lines.append("")
+
         for td in file_def.get("types", []):
             name = td["name"]
             if td.get("comment"):
@@ -1030,6 +1055,10 @@ def generate_ts_models(*, out_path, pkg_filter=None):
                     go_type, json_tag, alias_map,
                     nullable_as_optional=file_nullable_as_optional,
                 )
+                if "ts_type" in field:
+                    ts_type = field["ts_type"]
+                if "ts_optional" in field:
+                    optional = field["ts_optional"]
                 opt = "?" if optional else ""
                 lines.append(f"  {json_key}{opt}: {ts_type};")
             lines.append("}")

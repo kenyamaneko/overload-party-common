@@ -71,6 +71,12 @@ export type GuardType = (typeof GUARD_TYPES)[number];
 export const SELECTOR_PICK_MODES = ["all", "choice"] as const;
 export type SelectorPickMode = (typeof SELECTOR_PICK_MODES)[number];
 
+export const CLOUD_NEWS_SOURCES = ["aws", "google-cloud", "azure", "oci", "other"] as const;
+export type CloudNewsSource = (typeof CLOUD_NEWS_SOURCES)[number];
+
+export const PRODUCT_TYPES = ["faction_set", "cosmetic", "subscription"] as const;
+export type ProductType = (typeof PRODUCT_TYPES)[number];
+
 export const CARD_TYPES = ["Compute", "Container", "Orchestrator", "Serverless", "AI/ML", "Database", "ObjectStorage", "CacheDB", "Platform", "Attachment", "Strategy", "Reactive", "Incident"] as const;
 export type CardType = (typeof CARD_TYPES)[number];
 

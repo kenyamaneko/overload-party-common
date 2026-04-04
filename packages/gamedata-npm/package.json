@@ -9,7 +9,8 @@
     ".": "./dist/index.js",
     "./constants": "./dist/constants.js",
     "./eventData": "./dist/eventData.js",
-    "./variantTypes": "./dist/variantTypes.js"
+    "./variantTypes": "./dist/variantTypes.js",
+    "./models": "./dist/models.js"
   },
   "typesVersions": {
     "*": {
@@ -21,6 +22,9 @@
       ],
       "variantTypes": [
         "dist/variantTypes.d.ts"
+      ],
+      "models": [
+        "dist/models.d.ts"
       ]
     }
   },

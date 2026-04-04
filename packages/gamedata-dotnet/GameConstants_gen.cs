@@ -273,6 +273,22 @@ public static class SelectorPickModes
     public const string Choice = "choice";
 }
 
+public static class CloudNewsSources
+{
+    public const string Aws = "aws";
+    public const string Google-Cloud = "google-cloud";
+    public const string Azure = "azure";
+    public const string Oci = "oci";
+    public const string Other = "other";
+}
+
+public static class ProductTypes
+{
+    public const string FactionSet = "faction_set";
+    public const string Cosmetic = "cosmetic";
+    public const string Subscription = "subscription";
+}
+
 public static class WSServerMsgTypes
 {
     public const string GameState = "game_state";

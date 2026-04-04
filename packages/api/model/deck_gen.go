@@ -10,17 +10,19 @@ import (
 
 // PlayerCardWithDef is a PlayerCard enriched with card definition fields for API responses.
 type PlayerCardWithDef struct {
-	CardID      string          `json:"card_id"`
-	ArtNo       int64           `json:"art_no"`
-	Count       int             `json:"count"`
-	CardName    string          `json:"card_name"`
-	Faction     string          `json:"faction"`
-	CardType    string          `json:"card_type"`
-	Resizable   bool            `json:"resizable"`
-	Elastic     bool            `json:"elastic"`
-	Stats       json.RawMessage `json:"stats"`
-	EffectText  *string         `json:"effect_text,omitempty"`
-	Restriction string          `json:"restriction"`
+	CardID        string          `json:"card_id"`
+	ArtNo         int64           `json:"art_no"`
+	Count         int             `json:"count"`
+	CardName      string          `json:"card_name"`
+	ResourceLabel string          `json:"resource_label"`
+	Faction       string          `json:"faction"`
+	CardType      string          `json:"card_type"`
+	DeployTurns   int64           `json:"deploy_turns"`
+	Resizable     bool            `json:"resizable"`
+	Elastic       bool            `json:"elastic"`
+	Stats         json.RawMessage `json:"stats"`
+	EffectText    *string         `json:"effect_text,omitempty"`
+	Restriction   string          `json:"restriction"`
 }
 
 // Deck is the API response for a player's deck with optional card list.

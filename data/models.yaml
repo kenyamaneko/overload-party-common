@@ -17,6 +17,9 @@ files:
     imports:
       - encoding/json
       - time
+    ts_imports:
+      - {names: [CardType, FactionId, Restriction], from: "@kenyamaneko/overload-party-gamedata/constants"}
+      - {names: [CardStats], from: "@kenyamaneko/overload-party-gamedata/models"}
     types:
       - name: PlayerCardWithDef
         comment: "PlayerCardWithDef is a PlayerCard enriched with card definition fields for API responses."
@@ -25,13 +28,15 @@ files:
           - {name: ArtNo, type: int64, json: "art_no"}
           - {name: Count, type: int, json: "count"}
           - {name: CardName, type: string, json: "card_name"}
-          - {name: Faction, type: string, json: "faction"}
-          - {name: CardType, type: string, json: "card_type"}
+          - {name: ResourceLabel, type: string, json: "resource_label"}
+          - {name: Faction, type: string, json: "faction", ts_type: "FactionId | 'Neutral'"}
+          - {name: CardType, type: string, json: "card_type", ts_type: CardType}
+          - {name: DeployTurns, type: int64, json: "deploy_turns"}
           - {name: Resizable, type: bool, json: "resizable"}
           - {name: Elastic, type: bool, json: "elastic"}
-          - {name: Stats, type: json.RawMessage, json: "stats"}
+          - {name: Stats, type: json.RawMessage, json: "stats", ts_type: CardStats}
           - {name: EffectText, type: "*string", json: "effect_text,omitempty"}
-          - {name: Restriction, type: string, json: "restriction"}
+          - {name: Restriction, type: string, json: "restriction", ts_type: Restriction}
 
       - name: Deck
         comment: "Deck is the API response for a player's deck with optional card list."
@@ -74,14 +79,14 @@ files:
           - {name: Resizable, type: bool, json: "resizable"}
           - {name: Elastic, type: bool, json: "elastic"}
           - {name: ElasticIncrement, type: int64, json: "elastic_increment,omitempty"}
-          - {name: FreeTier, type: int64, json: "free_tier,omitempty"}
+          - {name: FreeTier, type: int64, json: "free_tier,omitempty", ts_type: boolean, ts_optional: false}
           - {name: CostPerRequest, type: int64, json: "cost_per_request,omitempty"}
-          - {name: Stats, type: json.RawMessage, json: "stats"}
-          - {name: EffectText, type: "*string", json: "effect_text,omitempty"}
-          - {name: Effects, type: json.RawMessage, json: "effects,omitempty"}
-          - {name: PassiveEffects, type: "[]PassiveEffect", json: "passive_effects,omitempty"}
-          - {name: PlatformEffects, type: "[]PlatformEffect", json: "platform_effects,omitempty"}
-          - {name: AttachmentEffects, type: "[]AttachmentEffect", json: "attachment_effects,omitempty"}
+          - {name: Stats, type: json.RawMessage, json: "stats", ts_type: CardStats}
+          - {name: EffectText, type: "*string", json: "effect_text,omitempty", ts_type: string, ts_optional: false}
+          - {name: Effects, type: json.RawMessage, json: "effects,omitempty", ts_type: "string[]", ts_optional: false}
+          - {name: PassiveEffects, type: "[]PassiveEffect", json: "passive_effects,omitempty", ts_type: "string[]", ts_optional: false}
+          - {name: PlatformEffects, type: "[]PlatformEffect", json: "platform_effects,omitempty", ts_type: "string[]", ts_optional: false}
+          - {name: AttachmentEffects, type: "[]AttachmentEffect", json: "attachment_effects,omitempty", ts_type: "string[]", ts_optional: false}
           - {name: Restriction, type: string, json: "restriction"}
           - {name: IsActive, type: bool, json: "is_active"}
           - {name: CreatedAt, type: time.Time, json: "created_at"}
@@ -91,6 +96,8 @@ files:
   - name: card_stats
     target: both
     pkg: gamedata
+    ts_type_aliases:
+      - {name: CardStats, value: "ComputeStats | DataStats"}
     types:
       - name: ComputeStats
         comment: "ComputeStats for Compute, Container, Orchestrator, Serverless, AI/ML card types."
@@ -185,6 +192,8 @@ files:
     pkg: api
     imports:
       - encoding/json
+    ts_imports:
+      - {names: [ClientGameState], from: "@kenyamaneko/overload-party-gamedata/models"}
     types:
       # Client -> Server
       - name: MatchmakingStartMessage
@@ -243,7 +252,7 @@ files:
           - {name: Sequence, type: int64, json: "sequence"}
           - {name: ActionType, type: string, json: "action_type"}
           - {name: ActionData, type: json.RawMessage, json: "action_data"}
-          - {name: State, type: json.RawMessage, json: "state"}
+          - {name: State, type: json.RawMessage, json: "state", ts_type: ClientGameState}
 
       - name: StampUsedMessage
         fields:
@@ -277,7 +286,7 @@ files:
           - {name: GameID, type: string, json: "game_id"}
           - {name: Player1ID, type: string, json: "player1_id"}
           - {name: Player2ID, type: string, json: "player2_id"}
-          - {name: State, type: json.RawMessage, json: "state"}
+          - {name: State, type: json.RawMessage, json: "state", ts_type: ClientGameState}
 
       - name: SpectateErrorMessage
         fields:
@@ -310,6 +319,8 @@ files:
     imports:
       - encoding/json
       - time
+    ts_imports:
+      - {names: [CloudNewsSource, ProductType], from: "@kenyamaneko/overload-party-gamedata/constants"}
     types:
       # ── Response types ──
       - name: PlayerResponse
@@ -351,7 +362,7 @@ files:
         fields:
           - {name: ProductID, type: string, json: "product_id"}
           - {name: Name, type: string, json: "name"}
-          - {name: Type, type: string, json: "type"}
+          - {name: Type, type: string, json: "type", ts_type: ProductType}
           - {name: Price, type: int64, json: "price"}
           - {name: Content, type: json.RawMessage, json: "content"}
           - {name: Description, type: "*string", json: "description,omitempty"}
@@ -374,7 +385,7 @@ files:
       - name: LockReason
         comment: "LockReason describes a single unmet unlock condition for an episode."
         fields:
-          - {name: Type, type: string, json: "type"}
+          - {name: Type, type: string, json: "type", ts_type: "'level' | 'faction' | 'episode'"}
           - {name: Required, type: "interface{}", json: "required"}
           - {name: Current, type: "interface{}", json: "current,omitempty"}
 
@@ -382,7 +393,7 @@ files:
         comment: "NewsArticle is the API response for a news article."
         fields:
           - {name: ArticleID, type: string, json: "article_id"}
-          - {name: Source, type: string, json: "source"}
+          - {name: Source, type: string, json: "source", ts_type: CloudNewsSource}
           - {name: Title, type: string, json: "title"}
           - {name: Summary, type: "*string", json: "summary,omitempty"}
           - {name: Tags, type: "[]string", json: "tags"}
@@ -395,9 +406,9 @@ files:
           - {name: ID, type: string, json: "id"}
           - {name: Title, type: string, json: "title"}
           - {name: Body, type: string, json: "body"}
-          - {name: Type, type: string, json: "type"}
-          - {name: PublishedAt, type: time.Time, json: "publishedAt"}
-          - {name: ExpiresAt, type: time.Time, json: "expiresAt"}
+          - {name: Type, type: string, json: "type", ts_type: "'info' | 'warning' | 'maintenance'"}
+          - {name: PublishedAt, type: time.Time, json: "published_at"}
+          - {name: ExpiresAt, type: "*time.Time", json: "expires_at,omitempty"}
 
       - name: DailyTip
         comment: "DailyTip represents a single daily tip entry."
@@ -465,12 +476,13 @@ files:
       - time
     ts_imports:
       - {names: [AvailableAction], from: "./variantTypes"}
+      - {names: [EffectDuration, GamePhase, InstanceFamily, Rank], from: "./constants"}
     types:
       - name: ClientGameState
         fields:
           - {name: GameID, type: string, json: "gameID"}
           - {name: CurrentTurn, type: int64, json: "currentTurn"}
-          - {name: CurrentPhase, type: string, json: "currentPhase"}
+          - {name: CurrentPhase, type: string, json: "currentPhase", ts_type: GamePhase}
           - {name: ActivePlayer, type: int64, json: "activePlayer"}
           - {name: IsMyTurn, type: bool, json: "isMyTurn"}
           - {name: TurnStartedAt, type: time.Time, json: "turnStartedAt"}
@@ -521,8 +533,8 @@ files:
           - {name: InstanceID, type: string, json: "instanceID"}
           - {name: CardID, type: string, json: "cardID"}
           - {name: ArtNo, type: int64, json: "artNo"}
-          - {name: Rank, type: "*string", json: "rank"}
-          - {name: InstanceFamily, type: "*string", json: "instanceFamily"}
+          - {name: Rank, type: "*string", json: "rank", ts_type: Rank}
+          - {name: InstanceFamily, type: "*string", json: "instanceFamily", ts_type: InstanceFamily}
           - {name: FaceUp, type: bool, json: "faceUp"}
           - {name: DeployingTurnsLeft, type: int64, json: "deployingTurnsLeft"}
           - {name: CurrentAV, type: int64, json: "currentAV"}
@@ -573,7 +585,7 @@ files:
         fields:
           - {name: EffectType, type: string, json: "effectType"}
           - {name: Value, type: int64, json: "value"}
-          - {name: Duration, type: string, json: "duration"}
+          - {name: Duration, type: string, json: "duration", ts_type: EffectDuration}
           - {name: SourceID, type: string, json: "sourceID"}
 
       - name: TurnControlsMessage
@@ -605,23 +617,23 @@ variant_types:
       - value: attack
         fields:
           - {name: sourceInstanceID, type: string}
-          - {name: validTargets, type: "string[]"}
+          - {name: validTargets, type: "string[]", optional: true}
 
       - value: scale_up
         fields:
           - {name: sourceInstanceID, type: string}
           - {name: targetRank, type: string, ref: Rank}
           - {name: instanceFamily, type: string, ref: InstanceFamily, optional: true}
-          - {name: needsFamily, type: bool}
+          - {name: needsFamily, type: bool, optional: true}
 
       - value: monetize
         fields:
           - {name: sourceInstanceID, type: string}
-          - {name: remainingCapacity, type: long}
+          - {name: remainingCapacity, type: long, optional: true}
 
       - value: use_effect
         fields:
           - {name: sourceInstanceID, type: string}
           - {name: validTargets, type: "string[]", optional: true}
-          - {name: effectTargetType, type: string}
-          - {name: requiredCount, type: int}
+          - {name: effectTargetType, type: string, optional: true}
+          - {name: requiredCount, type: int, optional: true}

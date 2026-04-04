@@ -87,12 +87,12 @@ type NewsArticle struct {
 
 // Announcement represents a single announcement entry.
 type Announcement struct {
-	ID          string    `json:"id"`
-	Title       string    `json:"title"`
-	Body        string    `json:"body"`
-	Type        string    `json:"type"`
-	PublishedAt time.Time `json:"publishedAt"`
-	ExpiresAt   time.Time `json:"expiresAt"`
+	ID          string     `json:"id"`
+	Title       string     `json:"title"`
+	Body        string     `json:"body"`
+	Type        string     `json:"type"`
+	PublishedAt time.Time  `json:"published_at"`
+	ExpiresAt   *time.Time `json:"expires_at,omitempty"`
 }
 
 // DailyTip represents a single daily tip entry.
