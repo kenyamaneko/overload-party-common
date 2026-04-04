@@ -34,6 +34,7 @@ files:
           - {name: Restriction, type: string, json: "restriction"}
 
       - name: Deck
+        comment: "Deck is the API response for a player's deck with optional card list."
         fields:
           - {name: PlayerID, type: string, json: "player_id"}
           - {name: DeckID, type: int64, json: "deck_id"}
@@ -46,6 +47,7 @@ files:
           - {name: DeckCards, type: "[]DeckCard", json: "deck_cards,omitempty", comment: "Populated by the service layer for API responses."}
 
       - name: DeckCard
+        comment: "DeckCard is a single card entry within a deck."
         fields:
           - {name: PlayerID, type: string, json: "player_id"}
           - {name: DeckID, type: int64, json: "deck_id"}

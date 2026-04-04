@@ -15,6 +15,7 @@ export interface PlayerCardWithDef {
   restriction: string;
 }
 
+/** Deck is the API response for a player's deck with optional card list. */
 export interface Deck {
   player_id: string;
   deck_id: number;
@@ -27,6 +28,7 @@ export interface Deck {
   deck_cards?: DeckCard[];
 }
 
+/** DeckCard is a single card entry within a deck. */
 export interface DeckCard {
   player_id: string;
   deck_id: number;

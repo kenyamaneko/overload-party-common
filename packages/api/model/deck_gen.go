@@ -23,6 +23,7 @@ type PlayerCardWithDef struct {
 	Restriction string          `json:"restriction"`
 }
 
+// Deck is the API response for a player's deck with optional card list.
 type Deck struct {
 	PlayerID  string     `json:"player_id"`
 	DeckID    int64      `json:"deck_id"`
@@ -35,6 +36,7 @@ type Deck struct {
 	DeckCards []DeckCard `json:"deck_cards,omitempty"` // Populated by the service layer for API responses.
 }
 
+// DeckCard is a single card entry within a deck.
 type DeckCard struct {
 	PlayerID string `json:"player_id"`
 	DeckID   int64  `json:"deck_id"`
