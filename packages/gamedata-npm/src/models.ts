@@ -193,3 +193,8 @@ export interface TemporaryEffect {
   sourceID: string;
 }
 
+export interface TurnControlsMessage {
+  canEndPhase: boolean;
+  discardRequired: number;
+}
+

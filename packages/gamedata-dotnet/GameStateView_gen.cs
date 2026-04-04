@@ -122,3 +122,9 @@ public class TemporaryEffect
     public string SourceID { get; init; } = "";
 }
 
+public class TurnControlsMessage
+{
+    public bool CanEndPhase { get; init; }
+    public int DiscardRequired { get; init; }
+}
+

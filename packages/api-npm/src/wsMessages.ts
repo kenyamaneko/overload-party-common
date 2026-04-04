@@ -57,11 +57,6 @@ export interface ActionPerformedMessage {
   state: Record<string, unknown>;
 }
 
-export interface TurnControlsMessage {
-  can_end_phase: boolean;
-  discard_required: number;
-}
-
 export interface StampUsedMessage {
   game_id: string;
   player_id: string;

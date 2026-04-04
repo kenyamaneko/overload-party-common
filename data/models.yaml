@@ -245,11 +245,6 @@ files:
           - {name: ActionData, type: json.RawMessage, json: "action_data"}
           - {name: State, type: json.RawMessage, json: "state"}
 
-      - name: TurnControlsMessage
-        fields:
-          - {name: CanEndPhase, type: bool, json: "can_end_phase"}
-          - {name: DiscardRequired, type: int, json: "discard_required"}
-
       - name: StampUsedMessage
         fields:
           - {name: GameID, type: string, json: "game_id"}
@@ -580,6 +575,11 @@ files:
           - {name: Value, type: int64, json: "value"}
           - {name: Duration, type: string, json: "duration"}
           - {name: SourceID, type: string, json: "sourceID"}
+
+      - name: TurnControlsMessage
+        fields:
+          - {name: CanEndPhase, type: bool, json: "canEndPhase"}
+          - {name: DiscardRequired, type: int, json: "discardRequired"}
 
 # ─── Variant Types (C# flat class + TS discriminated union) ───
 # generate_constants.py reads this section and outputs:
