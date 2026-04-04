@@ -34,9 +34,9 @@
 - `packages/gamedata/` - Go パッケージ（ゲームデータ: カード定義・定数・エフェクト型）
 - `packages/api/` - Go パッケージ（API コントラクト: REST 型・WS メッセージ・デッキ型）
 - `packages/devdata/` - Go パッケージ 開発用（カード・商品 JSON、ローカルモック用）
-- `packages/dotnet/` - NuGet パッケージ（battle 用、GitHub Packages で publish）
-- `packages/npm/` - npm パッケージ gamedata（constants, eventData, variantTypes）
-- `packages/npm-api/` - npm パッケージ api（models, wsMessages）
+- `packages/gamedata-dotnet/` - NuGet パッケージ（battle 用、GitHub Packages で publish）
+- `packages/gamedata-npm/` - npm パッケージ gamedata（constants, eventData, variantTypes）
+- `packages/api-npm/` - npm パッケージ api（models, wsMessages）
 - `docs/architecture/` - システム設計ドキュメント（API, CI/CD, データ設計, i18n 等）
 - `docs/game_design/` - ゲームデザインドキュメント（ルール, カード, UI, チュートリアル等）
 - `docs/business/` - ビジネス・法務ドキュメント（法的表示, マーケ, 収益化, 企画書等）

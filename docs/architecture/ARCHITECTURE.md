@@ -127,16 +127,16 @@ overload-party-client/          # React + Capacitor クライアント
 |------|-----------|--------|-----------|
 | `data/cards/*.yaml` | `generate_cards.py` | `docs/CARDS.md` | — |
 | `data/cards/*.yaml` | `generate_cards.py` | `packages/devdata/cache/cards_gen.json` | Go devdata (embed) |
-| `data/cards/*.yaml` | `generate_cards.py` | `packages/dotnet/cache/cards_gen.json` | NuGet (EmbeddedResource) |
+| `data/cards/*.yaml` | `generate_cards.py` | `packages/gamedata-dotnet/cache/cards_gen.json` | NuGet (EmbeddedResource) |
 | `data/cards/*.yaml` | `generate_cards.py` | `db/seed/cards_seed.sql` | — |
 | `data/products.yaml` | `generate_products.py` | `packages/devdata/cache/products_gen.json` | Go devdata (embed) |
 | `data/products.yaml` | `generate_products.py` | `db/seed/products.sql` | — |
 | `data/models.yaml` | `generate_constants.py` | `packages/gamedata/model/*_gen.go` | Go gamedata |
 | `data/constants.json` | `generate_constants.py` | `packages/gamedata/constants/constants_gen.go` | Go gamedata |
-| `data/constants.json` | `generate_constants.py` | `packages/dotnet/GameConstants_gen.cs` | NuGet (`OverloadParty.GameData`) |
-| `data/constants.json` | `generate_constants.py` | `packages/npm/src/constants.ts` | npm (`@kenyamaneko/overload-party-gamedata`) |
-| `data/event_schemas.json` | `generate_constants.py` | `packages/dotnet/EventData_gen.cs` | NuGet |
-| `data/event_schemas.json` | `generate_constants.py` | `packages/npm/src/eventData.ts` | npm |
+| `data/constants.json` | `generate_constants.py` | `packages/gamedata-dotnet/GameConstants_gen.cs` | NuGet (`OverloadParty.GameData`) |
+| `data/constants.json` | `generate_constants.py` | `packages/gamedata-npm/src/constants.ts` | npm (`@kenyamaneko/overload-party-gamedata`) |
+| `data/event_schemas.json` | `generate_constants.py` | `packages/gamedata-dotnet/EventData_gen.cs` | NuGet |
+| `data/event_schemas.json` | `generate_constants.py` | `packages/gamedata-npm/src/eventData.ts` | npm |
 
 各リポはパッケージをインストールして使う（gateway: `go get gamedata` + `go get devdata`, battle: NuGet, client: npm）。生成されたファイルには `DO NOT EDIT` コメントが付く。
 

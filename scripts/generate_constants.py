@@ -5,15 +5,15 @@ Outputs:
   - packages/gamedata/constants/constants_gen.go  (Go constants)
   - packages/gamedata/model/*_gen.go              (Go model structs, pkg: gamedata)
   - packages/api/model/*_gen.go                   (Go model structs, pkg: api)
-  - packages/dotnet/GameConstants_gen.cs           (C# constants)
-  - packages/dotnet/EventData_gen.cs               (C# event data types)
-  - packages/dotnet/GameStateView_gen.cs           (C# game state view types)
-  - packages/npm/src/constants.ts                  (TS constants)
-  - packages/npm/src/eventData.ts                  (TS event data types)
-  - packages/npm/src/variantTypes.ts               (TS variant types)
-  - packages/npm/src/models.ts                     (TS model interfaces, pkg: gamedata)
-  - packages/npm-api/src/wsMessages.ts             (TS WS message types)
-  - packages/npm-api/src/models.ts                 (TS model interfaces, pkg: api)
+  - packages/gamedata-dotnet/GameConstants_gen.cs   (C# constants)
+  - packages/gamedata-dotnet/EventData_gen.cs       (C# event data types)
+  - packages/gamedata-dotnet/GameStateView_gen.cs   (C# game state view types)
+  - packages/gamedata-npm/src/constants.ts          (TS constants)
+  - packages/gamedata-npm/src/eventData.ts          (TS event data types)
+  - packages/gamedata-npm/src/variantTypes.ts       (TS variant types)
+  - packages/gamedata-npm/src/models.ts             (TS model interfaces, pkg: gamedata)
+  - packages/api-npm/src/wsMessages.ts              (TS WS message types)
+  - packages/api-npm/src/models.ts                  (TS model interfaces, pkg: api)
 
 Usage:
     python3 scripts/generate_constants.py
@@ -38,9 +38,9 @@ MODELS_YAML = ROOT / "data" / "models.yaml"
 
 GO_DIR = ROOT / "packages" / "gamedata"
 API_GO_DIR = ROOT / "packages" / "api"
-DOTNET_DIR = ROOT / "packages" / "dotnet"
-NPM_DIR = ROOT / "packages" / "npm"
-API_NPM_DIR = ROOT / "packages" / "npm-api"
+DOTNET_DIR = ROOT / "packages" / "gamedata-dotnet"
+NPM_DIR = ROOT / "packages" / "gamedata-npm"
+API_NPM_DIR = ROOT / "packages" / "api-npm"
 
 # ─── Helpers ────────────────────────────────────────────
 
@@ -1176,39 +1176,39 @@ def main():
 
     # C#
     generate_csharp_constants(constants, out_path=DOTNET_DIR / "GameConstants_gen.cs")
-    print("Generated → packages/dotnet/GameConstants_gen.cs", file=sys.stderr)
+    print("Generated → packages/gamedata-dotnet/GameConstants_gen.cs", file=sys.stderr)
 
     generate_csharp_event_data(event_schemas, out_path=DOTNET_DIR / "EventData_gen.cs")
-    print("Generated → packages/dotnet/EventData_gen.cs", file=sys.stderr)
+    print("Generated → packages/gamedata-dotnet/EventData_gen.cs", file=sys.stderr)
 
     if variant_types:
         generate_csharp_variant_types(variant_types, out_path=DOTNET_DIR / "VariantTypes_gen.cs")
-        print("Generated → packages/dotnet/VariantTypes_gen.cs", file=sys.stderr)
+        print("Generated → packages/gamedata-dotnet/VariantTypes_gen.cs", file=sys.stderr)
 
     generate_csharp_game_state_view(out_path=DOTNET_DIR / "GameStateView_gen.cs")
-    print("Generated → packages/dotnet/GameStateView_gen.cs", file=sys.stderr)
+    print("Generated → packages/gamedata-dotnet/GameStateView_gen.cs", file=sys.stderr)
 
     # TypeScript (gamedata)
     generate_ts_constants(constants, out_path=NPM_DIR / "src" / "constants.ts")
-    print("Generated → packages/npm/src/constants.ts", file=sys.stderr)
+    print("Generated → packages/gamedata-npm/src/constants.ts", file=sys.stderr)
 
     generate_ts_event_data(event_schemas, out_path=NPM_DIR / "src" / "eventData.ts")
-    print("Generated → packages/npm/src/eventData.ts", file=sys.stderr)
+    print("Generated → packages/gamedata-npm/src/eventData.ts", file=sys.stderr)
 
     if variant_types:
         generate_ts_variant_types(variant_types, out_path=NPM_DIR / "src" / "variantTypes.ts")
-        print("Generated → packages/npm/src/variantTypes.ts", file=sys.stderr)
+        print("Generated → packages/gamedata-npm/src/variantTypes.ts", file=sys.stderr)
 
     # TypeScript (gamedata models)
     generate_ts_models(out_path=NPM_DIR / "src" / "models.ts", pkg_filter="gamedata")
-    print("Generated → packages/npm/src/models.ts", file=sys.stderr)
+    print("Generated → packages/gamedata-npm/src/models.ts", file=sys.stderr)
 
     # TypeScript (api)
     generate_ts_ws_messages(out_path=API_NPM_DIR / "src" / "wsMessages.ts")
-    print("Generated → packages/npm-api/src/wsMessages.ts", file=sys.stderr)
+    print("Generated → packages/api-npm/src/wsMessages.ts", file=sys.stderr)
 
     generate_ts_models(out_path=API_NPM_DIR / "src" / "models.ts", pkg_filter="api")
-    print("Generated → packages/npm-api/src/models.ts", file=sys.stderr)
+    print("Generated → packages/api-npm/src/models.ts", file=sys.stderr)
 
 
 if __name__ == "__main__":

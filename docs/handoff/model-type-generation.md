@@ -343,8 +343,8 @@ TS 側は optional (`?`) として定義する必要がある。
 1. models.yaml から DB モデル（Player with db tags, PlayerDailyBattle, Game, GameState, GameEvent, GameConfig）を削除
 2. REST API レスポンス/リクエスト型をセクション A/B の通り追加
 3. `generate_constants.py` に `generate_ts_models()` を追加
-4. 出力先: `packages/npm/src/models.ts`
-5. `packages/npm/src/index.ts` に `export * from './models'` を追加
+4. 出力先: `packages/gamedata-npm/src/models.ts`
+5. `packages/gamedata-npm/src/index.ts` に `export * from './models'` を追加
 6. Go 型生成を API コントラクト型に対応させる（db タグなし）
 
 #### gateway
@@ -371,8 +371,8 @@ TS 側は optional (`?`) として定義する必要がある。
 2. `generate_constants.py` に C# View 型生成を追加
    - `[JsonPropertyName]` 属性でキー名を制御（ASP.NET CamelCase と一致させる）
    - nullable 型の適切なマッピング
-3. 出力先: `packages/dotnet/` 配下
-4. `packages/npm/src/` にゲームステート TS 型を追加
+3. 出力先: `packages/gamedata-dotnet/` 配下
+4. `packages/gamedata-npm/src/` にゲームステート TS 型を追加
 5. variant_types の AvailableAction フィールドを camelCase に変更
 
 #### battle

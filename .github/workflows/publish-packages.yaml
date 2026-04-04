@@ -7,9 +7,9 @@ on:
     branches: [main]
     paths:
       - "packages/gamedata/**"
-      - "packages/dotnet/**"
-      - "packages/npm/**"
-      - "packages/npm-api/**"
+      - "packages/gamedata-dotnet/**"
+      - "packages/gamedata-npm/**"
+      - "packages/api-npm/**"
       - "data/constants.json"
       - "data/event_schemas.json"
       - "data/cards/**"
@@ -93,7 +93,7 @@ jobs:
 
       - name: Publish NuGet package
         if: steps.check.outputs.publish == 'true'
-        working-directory: packages/dotnet
+        working-directory: packages/gamedata-dotnet
         run: |
           dotnet pack -c Release -p:Version=${{ steps.version.outputs.version }} -o ./nupkg
           dotnet nuget push ./nupkg/*.nupkg \
@@ -102,7 +102,7 @@ jobs:
 
       - name: Publish npm package (gamedata)
         if: steps.check.outputs.publish == 'true'
-        working-directory: packages/npm
+        working-directory: packages/gamedata-npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -112,7 +112,7 @@ jobs:
 
       - name: Publish npm package (api)
         if: steps.check.outputs.publish == 'true'
-        working-directory: packages/npm-api
+        working-directory: packages/api-npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

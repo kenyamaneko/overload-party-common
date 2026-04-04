@@ -170,7 +170,7 @@ python3 scripts/generate_constants.py
 |-------------|------|
 | `docs/game_design/CARDS.md` | カード一覧ドキュメント（目視確認用） |
 | `packages/devdata/cache/cards_gen.json` | Gateway サーバー用カードデータ（ローカル開発用） |
-| `packages/dotnet/cache/cards_gen.json` | Battle サーバー用カードデータ（ローカル開発用） |
+| `packages/gamedata-dotnet/cache/cards_gen.json` | Battle サーバー用カードデータ（ローカル開発用） |
 | `db/seed/cards_seed.sql` | PostgreSQL カード定義 seed（UPSERT） |
 
 #### generate_products.py の生成物
@@ -186,11 +186,11 @@ python3 scripts/generate_constants.py
 |-------------|------|
 | `packages/gamedata/constants/constants_gen.go` | Gateway サーバー用定数 |
 | `packages/gamedata/model/*_gen.go` | Gateway サーバー用 Go 型定義 |
-| `packages/dotnet/GameConstants_gen.cs` | Battle サーバー用定数 |
-| `packages/dotnet/EventData_gen.cs` | Battle サーバー用イベント型 |
-| `packages/npm/src/constants.ts` | クライアント用定数 |
-| `packages/npm/src/eventData.ts` | クライアント用イベント型 |
-| `packages/npm/src/wsMessages.ts` | クライアント用 WS メッセージ型 |
+| `packages/gamedata-dotnet/GameConstants_gen.cs` | Battle サーバー用定数 |
+| `packages/gamedata-dotnet/EventData_gen.cs` | Battle サーバー用イベント型 |
+| `packages/gamedata-npm/src/constants.ts` | クライアント用定数 |
+| `packages/gamedata-npm/src/eventData.ts` | クライアント用イベント型 |
+| `packages/gamedata-npm/src/wsMessages.ts` | クライアント用 WS メッセージ型 |
 
 ---
 

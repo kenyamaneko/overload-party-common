@@ -2,8 +2,8 @@
 # generate_constants.py reads this file and outputs:
 #   - packages/gamedata/model/*_gen.go  (Go structs, pkg: gamedata)
 #   - packages/api/model/*_gen.go       (Go structs, pkg: api)
-#   - packages/npm-api/src/models.ts    (TS interfaces, pkg: api)
-#   - packages/npm-api/src/wsMessages.ts (TS WS message types, pkg: api)
+#   - packages/api-npm/src/models.ts      (TS interfaces, pkg: api)
+#   - packages/api-npm/src/wsMessages.ts   (TS WS message types, pkg: api)
 #
 # target: "both" = gateway + battle, "gateway" = gateway only, "battle" = battle only
 # pkg: "gamedata" = game design types, "api" = API contract types
@@ -581,8 +581,8 @@ files:
 
 # ─── Variant Types (C# flat class + TS discriminated union) ───
 # generate_constants.py reads this section and outputs:
-#   - packages/dotnet/VariantTypes_gen.cs
-#   - packages/npm/src/variantTypes.ts
+#   - packages/gamedata-dotnet/VariantTypes_gen.cs
+#   - packages/gamedata-npm/src/variantTypes.ts
 #
 # Field types: string, int, long, bool, string[]
 # Optional fields are nullable in C# and have ? in TS.

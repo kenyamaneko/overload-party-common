@@ -37,21 +37,21 @@ models.yaml を再構築し、パッケージを gamedata と api に分離し�
 
 **新規パッケージ:**
 - `packages/api/` — Go パッケージ（go.mod + model/）
-- `packages/npm-api/` — npm パッケージ `@kenyamaneko/overload-party-api`（package.json + src/）
+- `packages/api-npm/` — npm パッケージ `@kenyamaneko/overload-party-api`（package.json + src/）
 
 **生成ファイル:**
-- `packages/npm/src/models.ts` — gamedata TS 型（CardDefinition, ComputeStats, ゲームステート型 等）
-- `packages/npm-api/src/models.ts` — api TS 型（PlayerResponse, Deck, UserSettings 等）
-- `packages/npm-api/src/wsMessages.ts` — WS メッセージ TS 型（npm から移動）
-- `packages/dotnet/GameStateView_gen.cs` — C# View 型
+- `packages/gamedata-npm/src/models.ts` — gamedata TS 型（CardDefinition, ComputeStats, ゲームステート型 等）
+- `packages/api-npm/src/models.ts` — api TS 型（PlayerResponse, Deck, UserSettings 等）
+- `packages/api-npm/src/wsMessages.ts` — WS メッセージ TS 型（npm から移動）
+- `packages/gamedata-dotnet/GameStateView_gen.cs` — C# View 型
 - `packages/gamedata/model/game_state_view_gen.go` — Go View 型
 - `packages/api/model/rest_api_gen.go`, `deck_gen.go`, `ws_messages_gen.go` — Go API 型
 
 ### 確認ポイント
 
 - [ ] `python3 scripts/generate_constants.py` を実行して生成結果が正しいか
-- [ ] gamedata npm (`packages/npm/src/models.ts`) に CardDefinition, ComputeStats, ゲームステート型のみ含まれること（REST API 型が混入していないこと）
-- [ ] api npm (`packages/npm-api/src/models.ts`) に REST API 型のみ含まれること（CardDefinition 等が混入していないこと）
+- [ ] gamedata npm (`packages/gamedata-npm/src/models.ts`) に CardDefinition, ComputeStats, ゲームステート型のみ含まれること（REST API 型が混入していないこと）
+- [ ] api npm (`packages/api-npm/src/models.ts`) に REST API 型のみ含まれること（CardDefinition 等が混入していないこと）
 - [ ] `packages/gamedata && go build ./...` が通ること
 - [ ] `packages/api && go build ./...` が通ること
 - [ ] REST API 型のフィールドが gateway の実装と一致しているか（PlayerResponse の level_exp_current 等）
@@ -82,19 +82,20 @@ DB モデルをローカル定義に移動した。
 - `internal/model/player.go` — Player, PlayerDailyBattle, PlayerCard, GameConfig を db タグ付きでローカル定義
 
 **修正:**
-- `internal/model/gen.go` — 上記 4 型のエイリアス削除 + 将来の REST API 型切り替え TODO
+- `internal/model/gen.go` — 上記 4 型のエイリアス削除 + 将来の REST API 型切り替え TODO（14 型を列挙: PlayerResponse, BattleLimitResponse, ProductResponse, UserSettings 等）
 
 **TODO 追加（common パッケージ publish 後に対応）:**
-- player_handler.go, player_service.go, shop_service.go, story.go, news.go, user_settings.go, static_handler.go, spectate_handler.go
+- gen.go, player_service.go, shop_service.go, story.go, news.go, user_settings.go, static_service.go, spectate_handler.go
 
 ### 確認ポイント
 
 - [ ] `go build ./...` が通ること
 - [ ] `go vet ./...` が通ること
+- [ ] `make lint` が通ること
 - [ ] `go test ./internal/...` が通ること
 - [ ] game_relay.go の `battleStateMeta` が必要最小限のフィールドのみ抽出していること（ゲームステート変換ではなく、ターンタイマー管理のためのメタデータ取得）
 - [ ] spectate_relay.go でパススルーが正しく動作すること
-- [ ] DB モデル（player.go）の db タグが既存の DB スキーマと一致すること
+- [ ] DB モデル（player.go）の db タグが既存の DB スキーマと一致すること（overload-party-common/db/migrations/ のマイグレーション SQL と突き合わせ）
 - [ ] gen.go から削除されたエイリアスが他のファイルで直接参照されていないこと
 
 ### 動作確認
