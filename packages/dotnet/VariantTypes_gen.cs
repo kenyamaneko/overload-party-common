@@ -6,13 +6,13 @@ namespace OverloadParty.GameData;
 public class AvailableAction
 {
     public required string Type { get; init; } = "";
-    public string? HandInstanceId { get; init; }
-    public string? CardId { get; init; }
+    public string? HandInstanceID { get; init; }
+    public string? CardID { get; init; }
     public List<string>? ValidZones { get; init; }
     public List<string>? ValidTargets { get; init; }
     public int? Cost { get; init; }
     public List<string>? ChoiceOptions { get; init; }
-    public string? SourceInstanceId { get; init; }
+    public string? SourceInstanceID { get; init; }
     public string? TargetRank { get; init; }
     public string? InstanceFamily { get; init; }
     public bool? NeedsFamily { get; init; }

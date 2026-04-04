@@ -4,9 +4,9 @@ import type { InstanceFamily, Rank } from './constants';
 
 /** Available action that a player can perform during their turn. */
 export type AvailableAction =
-  | { type: 'play_card'; hand_instance_id: string; card_id: string; valid_zones?: string[]; valid_targets?: string[]; cost?: number; choice_options?: string[] }
-  | { type: 'attack'; source_instance_id: string; valid_targets: string[] }
-  | { type: 'scale_up'; source_instance_id: string; target_rank: Rank; instance_family?: InstanceFamily; needs_family: boolean }
-  | { type: 'monetize'; source_instance_id: string; remaining_capacity: number }
-  | { type: 'use_effect'; source_instance_id: string; valid_targets?: string[]; effect_target_type: string; required_count: number };
+  | { type: 'play_card'; handInstanceID: string; cardID: string; validZones?: string[]; validTargets?: string[]; cost?: number; choiceOptions?: string[] }
+  | { type: 'attack'; sourceInstanceID: string; validTargets: string[] }
+  | { type: 'scale_up'; sourceInstanceID: string; targetRank: Rank; instanceFamily?: InstanceFamily; needsFamily: boolean }
+  | { type: 'monetize'; sourceInstanceID: string; remainingCapacity: number }
+  | { type: 'use_effect'; sourceInstanceID: string; validTargets?: string[]; effectTargetType: string; requiredCount: number };
 

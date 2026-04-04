@@ -32,6 +32,8 @@ packages/dotnet/obj/
 packages/dotnet/bin/
 packages/npm/dist/
 packages/npm/node_modules/
+packages/npm-api/dist/
+packages/npm-api/node_modules/
 
 # Secrets / env
 *.env

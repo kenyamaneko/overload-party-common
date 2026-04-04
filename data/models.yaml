@@ -1,51 +1,23 @@
-# Model definitions for Go struct generation.
-# generate_from_yaml.py reads this file and outputs *_gen.go into each repo's internal/model/.
+# Model definitions for API contract types shared across repositories.
+# generate_constants.py reads this file and outputs:
+#   - packages/gamedata/model/*_gen.go  (Go structs, pkg: gamedata)
+#   - packages/api/model/*_gen.go       (Go structs, pkg: api)
+#   - packages/npm-api/src/models.ts    (TS interfaces, pkg: api)
+#   - packages/npm-api/src/wsMessages.ts (TS WS message types, pkg: api)
 #
-# target: "both" = gateway + battle, "battle" = battle only, "gateway" = gateway only
+# target: "both" = gateway + battle, "gateway" = gateway only, "battle" = battle only
+# pkg: "gamedata" = game design types, "api" = API contract types
 # Fields: name (Go name), type (Go type string), json (json tag), db (optional db tag)
 
 files:
-  # ─── Player ────────────────────────────────────────────
-  - name: player
-    target: both
-    imports:
-      - time
-      - cloud.google.com/go/civil
-    types:
-      - name: Player
-        fields:
-          - {name: PlayerID, type: string, json: "player_id", db: "player_id"}
-          - {name: FirebaseUID, type: string, json: "firebase_uid", db: "firebase_uid"}
-          - {name: Username, type: string, json: "username", db: "username"}
-          - {name: Level, type: int64, json: "level", db: "level"}
-          - {name: Exp, type: int64, json: "exp", db: "exp"}
-          - {name: IsPremium, type: bool, json: "is_premium", db: "is_premium"}
-          - {name: EquippedIconNo, type: "*int64", json: "equipped_icon_no,omitempty", db: "equipped_icon_no"}
-          - {name: SelectedFaction, type: "*string", json: "selected_faction,omitempty", db: "selected_faction"}
-          - {name: PremiumExpiresAt, type: "*time.Time", json: "premium_expires_at,omitempty", db: "premium_expires_at"}
-          - {name: CreatedAt, type: time.Time, json: "created_at", db: "created_at"}
-          - {name: UpdatedAt, type: time.Time, json: "updated_at", db: "updated_at"}
-
-      - name: PlayerDailyBattle
-        fields:
-          - {name: PlayerID, type: string, json: "player_id", db: "player_id"}
-          - {name: DailyBattleCount, type: int64, json: "daily_battle_count", db: "daily_battle_count"}
-          - {name: LastResetDate, type: civil.Date, json: "last_reset_date", db: "last_reset_date"}
-
   # ─── Deck ──────────────────────────────────────────────
   - name: deck
     target: both
+    pkg: api
     imports:
       - encoding/json
       - time
     types:
-      - name: PlayerCard
-        fields:
-          - {name: PlayerID, type: string, json: "player_id"}
-          - {name: CardID, type: string, json: "card_id"}
-          - {name: ArtNo, type: int64, json: "art_no"}
-          - {name: Count, type: int, json: "count"}
-
       - name: PlayerCardWithDef
         comment: "PlayerCardWithDef is a PlayerCard enriched with card definition fields for API responses."
         fields:
@@ -84,6 +56,7 @@ files:
   # ─── Card ──────────────────────────────────────────────
   - name: card
     target: both
+    pkg: gamedata
     imports:
       - encoding/json
       - time
@@ -115,6 +88,7 @@ files:
   # ─── Card Stats ────────────────────────────────────────
   - name: card_stats
     target: both
+    pkg: gamedata
     types:
       - name: ComputeStats
         comment: "ComputeStats for Compute, Container, Orchestrator, Serverless, AI/ML card types."
@@ -137,6 +111,7 @@ files:
   # ─── Passive / Platform / Attachment Effects ───────────
   - name: passive_effect
     target: both
+    pkg: gamedata
     type_aliases:
       - {name: PassiveEffectType, base: string}
       - {name: PlatformEffectType, base: string}
@@ -199,162 +174,17 @@ files:
           - {name: StatType, type: string, json: "stat_type"}
           - {name: Bonus, type: int64, json: "bonus"}
 
-  # ─── Game (Battle only) ────────────────────────────────
-  - name: game
-    target: battle
-    imports:
-      - encoding/json
-      - time
-    types:
-      - name: Game
-        comment: "Game maps to the Games table."
-        fields:
-          - {name: GameID, type: string, json: "game_id", db: "game_id"}
-          - {name: Player1ID, type: string, json: "player1_id", db: "player1_id"}
-          - {name: Player2ID, type: string, json: "player2_id", db: "player2_id"}
-          - {name: Player1DeckSnapshot, type: json.RawMessage, json: "player1_deck_snapshot", db: "player1_deck_snapshot"}
-          - {name: Player2DeckSnapshot, type: json.RawMessage, json: "player2_deck_snapshot", db: "player2_deck_snapshot"}
-          - {name: Status, type: string, json: "status", db: "status"}
-          - {name: WinnerID, type: "*string", json: "winner_id,omitempty", db: "winner_id"}
-          - {name: CreatedAt, type: time.Time, json: "created_at", db: "created_at"}
-          - {name: UpdatedAt, type: time.Time, json: "updated_at", db: "updated_at"}
-          - {name: FinishedAt, type: "*time.Time", json: "finished_at,omitempty", db: "finished_at"}
-
-      - name: GameState
-        comment: "GameState maps to the GameStates table."
-        fields:
-          - {name: GameID, type: string, json: "game_id", db: "game_id"}
-          - {name: Version, type: int64, json: "version", db: "version"}
-          - {name: CurrentTurn, type: int64, json: "current_turn", db: "current_turn"}
-          - {name: CurrentPhase, type: string, json: "current_phase", db: "current_phase"}
-          - {name: ActivePlayer, type: int64, json: "active_player", db: "active_player"}
-          - {name: Player1Budget, type: int64, json: "player1_budget", db: "player1_budget"}
-          - {name: Player1InsightPool, type: int64, json: "player1_insight_pool", db: "player1_insight_pool"}
-          - {name: Player1Field, type: json.RawMessage, json: "player1_field", db: "player1_field"}
-          - {name: Player1Hand, type: json.RawMessage, json: "player1_hand", db: "player1_hand"}
-          - {name: Player1Repository, type: json.RawMessage, json: "player1_repository", db: "player1_repository"}
-          - {name: Player1Trash, type: json.RawMessage, json: "player1_trash", db: "player1_trash"}
-          - {name: Player1TimeBank, type: int64, json: "player1_time_bank", db: "player1_time_bank"}
-          - {name: Player2Budget, type: int64, json: "player2_budget", db: "player2_budget"}
-          - {name: Player2InsightPool, type: int64, json: "player2_insight_pool", db: "player2_insight_pool"}
-          - {name: Player2Field, type: json.RawMessage, json: "player2_field", db: "player2_field"}
-          - {name: Player2Hand, type: json.RawMessage, json: "player2_hand", db: "player2_hand"}
-          - {name: Player2Repository, type: json.RawMessage, json: "player2_repository", db: "player2_repository"}
-          - {name: Player2Trash, type: json.RawMessage, json: "player2_trash", db: "player2_trash"}
-          - {name: Player2TimeBank, type: int64, json: "player2_time_bank", db: "player2_time_bank"}
-          - {name: ChainStack, type: json.RawMessage, json: "chain_stack,omitempty", db: "chain_stack"}
-          - {name: CurrentActionTimer, type: "*int64", json: "current_action_timer,omitempty", db: "current_action_timer"}
-          - {name: NextInstanceSeq, type: int64, json: "next_instance_seq", db: "next_instance_seq"}
-          - {name: UpdatedAt, type: time.Time, json: "updated_at", db: "updated_at"}
-
-      - name: GameEvent
-        comment: "GameEvent maps to the GameEvents table."
-        fields:
-          - {name: GameID, type: string, json: "game_id", db: "game_id"}
-          - {name: SequenceNumber, type: int64, json: "sequence_number", db: "sequence_number"}
-          - {name: EventType, type: string, json: "event_type", db: "event_type"}
-          - {name: PlayerID, type: "*string", json: "player_id,omitempty", db: "player_id"}
-          - {name: EventData, type: json.RawMessage, json: "event_data", db: "event_data"}
-          - {name: CreatedAt, type: time.Time, json: "created_at", db: "created_at"}
-
-  # ─── Game State types (Battle only) ────────────────────
-  - name: game_state
-    target: battle
-    imports:
-      - encoding/json
-    types:
-      - name: Field
-        comment: "Field represents one player's complete field layout. Each zone has 3 slots. nil means the slot is empty."
-        fields:
-          - {name: Frontend, type: "[3]*ResourceInstance", json: "frontend"}
-          - {name: Backend, type: "[3]*ResourceInstance", json: "backend"}
-          - {name: Support, type: "[3]*SupportInstance", json: "support"}
-          - {name: IncidentPlayedThisTurn, type: bool, json: "incidentPlayedThisTurn,omitempty"}
-          - {name: HasHadActiveResource, type: bool, json: "hasHadActiveResource,omitempty"}
-
-      - name: ResourceInstance
-        comment: "ResourceInstance is a card deployed on the frontend or backend zone."
-        fields:
-          - {name: InstanceID, type: string, json: "instanceId"}
-          - {name: CardID, type: string, json: "cardId"}
-          - {name: Rank, type: string, json: "rank"}
-          - {name: InstanceFamily, type: "*string", json: "instanceFamily"}
-          - {name: FaceUp, type: bool, json: "faceUp"}
-          - {name: DeployingTurnsLeft, type: int64, json: "deployingTurnsLeft,omitempty"}
-          - {name: CurrentAV, type: int64, json: "currentAV"}
-          - {name: MaxAV, type: int64, json: "maxAV"}
-          - {name: CurrentTP, type: "*int64", json: "currentTP,omitempty"}
-          - {name: MaxTP, type: "*int64", json: "maxTP,omitempty"}
-          - {name: CurrentYield, type: "*int64", json: "currentYield,omitempty"}
-          - {name: MaxYield, type: "*int64", json: "maxYield,omitempty"}
-          - {name: Damage, type: int64, json: "damage"}
-          - {name: Attachments, type: "[]AttachmentRef", json: "attachments"}
-          - {name: TemporaryEffects, type: "[]TemporaryEffect", json: "temporaryEffects"}
-          - {name: MonetizedAmount, type: int64, json: "monetizedAmount"}
-          - {name: HasAttacked, type: bool, json: "hasAttacked"}
-          - {name: EffectUsedThisTurn, type: bool, json: "effectUsedThisTurn,omitempty"}
-          - {name: DeployedOnTurn, type: int64, json: "deployedOnTurn,omitempty"}
-          - {name: DeployOrder, type: int64, json: "deployOrder,omitempty"}
-          - {name: ElasticBonus, type: int64, json: "elasticBonus,omitempty"}
-
-      - name: AttachmentRef
-        comment: "AttachmentRef references an attachment card on a resource."
-        fields:
-          - {name: InstanceID, type: string, json: "instanceId"}
-          - {name: CardID, type: string, json: "cardId"}
-
-      - name: TemporaryEffect
-        comment: "TemporaryEffect is a time-limited modifier on a resource."
-        fields:
-          - {name: EffectType, type: string, json: "effectType"}
-          - {name: Value, type: int64, json: "value"}
-          - {name: Duration, type: string, json: "duration"}
-          - {name: SourceID, type: string, json: "sourceId"}
-
-      - name: SupportInstance
-        comment: "SupportInstance is a Platform or Reactive card in the support zone."
-        fields:
-          - {name: InstanceID, type: string, json: "instanceId"}
-          - {name: CardID, type: string, json: "cardId"}
-          - {name: FaceDown, type: bool, json: "faceDown"}
-          - {name: DeployingTurnsLeft, type: int64, json: "deployingTurnsLeft,omitempty"}
-          - {name: DeployOrder, type: int64, json: "deployOrder,omitempty"}
-          - {name: EffectUsedThisTurn, type: bool, json: "effectUsedThisTurn,omitempty"}
-
-      - name: HandCard
-        comment: "HandCard represents a card in a player's hand."
-        fields:
-          - {name: InstanceID, type: string, json: "instanceId"}
-          - {name: CardID, type: string, json: "cardId"}
-
-      - name: ChainEntry
-        comment: "ChainEntry is one entry in the chain stack."
-        fields:
-          - {name: ChainLevel, type: int64, json: "chainLevel"}
-          - {name: ActionType, type: string, json: "actionType"}
-          - {name: SourcePlayerID, type: string, json: "sourcePlayerId"}
-          - {name: SourceInstanceID, type: string, json: "sourceInstanceId"}
-          - {name: TargetInstanceID, type: string, json: "targetInstanceId"}
-          - {name: TargetChainLevel, type: int64, json: "targetChainLevel"}
-          - {name: EffectData, type: json.RawMessage, json: "effectData,omitempty"}
-          - {name: Resolved, type: bool, json: "resolved"}
-
-      - name: DeckSnapshot
-        comment: "DeckSnapshot is stored in Games.playerN_deck_snapshot."
-        fields:
-          - {name: DeckID, type: string, json: "deckId"}
-          - {name: Cards, type: "[]string", json: "cards"}
-
   # ─── WebSocket Messages (Gateway + Client) ─────────────
   # Shared message payloads for WebSocket communication.
   # Go: used as-is in handler/ws. TS: generated as interfaces.
   # ActionPerformedMessage is excluded (TS uses generics + ClientGameState).
   - name: ws_messages
     target: gateway
+    pkg: api
     imports:
       - encoding/json
     types:
-      # Client → Server
+      # Client -> Server
       - name: MatchmakingStartMessage
         fields:
           - {name: DeckID, type: int64, json: "deck_id"}
@@ -380,7 +210,7 @@ files:
           - {name: GameID, type: string, json: "game_id"}
           - {name: StampNo, type: int64, json: "stamp_no"}
 
-      # Server → Client
+      # Server -> Client
       - name: ErrorMessage
         fields:
           - {name: Code, type: string, json: "error_code"}
@@ -430,7 +260,7 @@ files:
           - {name: Player1ID, type: string, json: "player1_id"}
           - {name: Player2ID, type: string, json: "player2_id"}
 
-      # Spectate: Client → Server
+      # Spectate: Client -> Server
       - name: SpectateJoinMessage
         fields:
           - {name: GameID, type: string, json: "game_id"}
@@ -444,7 +274,7 @@ files:
           - {name: GameID, type: string, json: "game_id"}
           - {name: StampNo, type: int64, json: "stamp_no"}
 
-      # Spectate: Server → Client
+      # Spectate: Server -> Client
       - name: SpectateJoinedMessage
         fields:
           - {name: GameID, type: string, json: "game_id"}
@@ -469,24 +299,285 @@ files:
           - {name: SpectatorID, type: string, json: "spectator_id"}
           - {name: StampNo, type: int64, json: "stamp_no"}
 
-      # Opponent connection status (Server → Client, no payload)
+      # Opponent connection status (Server -> Client, no payload)
       - name: OpponentDisconnectedMessage
         fields: []
 
       - name: OpponentReconnectedMessage
         fields: []
 
-  # ─── Game Config (Battle only) ─────────────────────────
-  - name: game_config
-    target: both
+  # ─── REST API (Gateway -> Client) ────────────────────────
+  - name: rest_api
+    target: gateway
+    pkg: api
     imports:
+      - encoding/json
       - time
     types:
-      - name: GameConfig
+      # ── Response types ──
+      - name: PlayerResponse
+        comment: "PlayerResponse is the API response for GET /player."
         fields:
-          - {name: Key, type: string, json: "key", db: "key"}
-          - {name: Value, type: string, json: "value", db: "value"}
-          - {name: UpdatedAt, type: time.Time, json: "updated_at", db: "updated_at"}
+          - {name: PlayerID, type: string, json: "player_id"}
+          - {name: FirebaseUID, type: string, json: "firebase_uid"}
+          - {name: Username, type: string, json: "username"}
+          - {name: Level, type: int64, json: "level"}
+          - {name: Exp, type: int64, json: "exp"}
+          - {name: IsPremium, type: bool, json: "is_premium"}
+          - {name: EquippedIconNo, type: "*int64", json: "equipped_icon_no,omitempty"}
+          - {name: SelectedFaction, type: "*string", json: "selected_faction,omitempty"}
+          - {name: PremiumExpiresAt, type: "*time.Time", json: "premium_expires_at,omitempty"}
+          - {name: CreatedAt, type: time.Time, json: "created_at"}
+          - {name: UpdatedAt, type: time.Time, json: "updated_at"}
+          - {name: LevelExpCurrent, type: int64, json: "level_exp_current"}
+          - {name: LevelExpRequired, type: int64, json: "level_exp_required"}
+
+      - name: BattleLimitResponse
+        comment: "BattleLimitResponse is the API response for GET /player/battle-limit."
+        fields:
+          - {name: DailyBattleCount, type: int64, json: "daily_battle_count"}
+          - {name: DailyBattleLimit, type: int64, json: "daily_battle_limit"}
+          - {name: CanBattle, type: bool, json: "can_battle"}
+
+      - name: UserSettings
+        comment: "UserSettings holds per-player application settings."
+        fields:
+          - {name: PlayerID, type: string, json: "player_id"}
+          - {name: Language, type: string, json: "language"}
+          - {name: BgmVolume, type: int64, json: "bgm_volume"}
+          - {name: SeVolume, type: int64, json: "se_volume"}
+          - {name: PushEnabled, type: bool, json: "push_enabled"}
+          - {name: UpdatedAt, type: time.Time, json: "updated_at"}
+
+      - name: ProductResponse
+        comment: "ProductResponse is the API response for a purchasable item in the shop."
+        fields:
+          - {name: ProductID, type: string, json: "product_id"}
+          - {name: Name, type: string, json: "name"}
+          - {name: Type, type: string, json: "type"}
+          - {name: Price, type: int64, json: "price"}
+          - {name: Content, type: json.RawMessage, json: "content"}
+          - {name: Description, type: "*string", json: "description,omitempty"}
+          - {name: ImageURL, type: "*string", json: "image_url,omitempty"}
+          - {name: IsActive, type: bool, json: "is_active"}
+          - {name: IsOwned, type: bool, json: "is_owned"}
+
+      - name: EpisodeWithStatus
+        comment: "EpisodeWithStatus is the API response for a single episode with unlock status."
+        fields:
+          - {name: EpisodeID, type: string, json: "episode_id"}
+          - {name: Faction, type: "*string", json: "faction"}
+          - {name: EpisodeNumber, type: int64, json: "episode_number"}
+          - {name: Title, type: string, json: "title"}
+          - {name: ThumbnailURL, type: "*string", json: "thumbnail_url"}
+          - {name: IsUnlocked, type: bool, json: "is_unlocked"}
+          - {name: IsCompleted, type: bool, json: "is_completed"}
+          - {name: LockReasons, type: "[]LockReason", json: "lock_reasons"}
+
+      - name: LockReason
+        comment: "LockReason describes a single unmet unlock condition for an episode."
+        fields:
+          - {name: Type, type: string, json: "type"}
+          - {name: Required, type: "interface{}", json: "required"}
+          - {name: Current, type: "interface{}", json: "current,omitempty"}
+
+      - name: NewsArticle
+        comment: "NewsArticle is the API response for a news article."
+        fields:
+          - {name: ArticleID, type: string, json: "article_id"}
+          - {name: Source, type: string, json: "source"}
+          - {name: Title, type: string, json: "title"}
+          - {name: Summary, type: "*string", json: "summary,omitempty"}
+          - {name: Tags, type: "[]string", json: "tags"}
+          - {name: PublishedAt, type: "*time.Time", json: "published_at,omitempty"}
+          - {name: FetchedAt, type: time.Time, json: "fetched_at"}
+
+      - name: Announcement
+        comment: "Announcement represents a single announcement entry."
+        fields:
+          - {name: ID, type: string, json: "id"}
+          - {name: Title, type: string, json: "title"}
+          - {name: Body, type: string, json: "body"}
+          - {name: Type, type: string, json: "type"}
+          - {name: PublishedAt, type: time.Time, json: "publishedAt"}
+          - {name: ExpiresAt, type: time.Time, json: "expiresAt"}
+
+      - name: DailyTip
+        comment: "DailyTip represents a single daily tip entry."
+        fields:
+          - {name: ID, type: string, json: "id"}
+          - {name: Text, type: string, json: "text"}
+
+      - name: SpectateGameInfo
+        comment: "SpectateGameInfo is the public view of an active game for the spectate list API."
+        fields:
+          - {name: GameID, type: string, json: "game_id"}
+          - {name: Player1ID, type: string, json: "player1_id"}
+          - {name: Player2ID, type: string, json: "player2_id"}
+          - {name: StartedAt, type: time.Time, json: "started_at"}
+
+      # ── Request types ──
+      - name: DeckCardEntry
+        comment: "DeckCardEntry represents a card entry in a deck create/update request."
+        fields:
+          - {name: CardID, type: string, json: "card_id"}
+          - {name: ArtNo, type: int64, json: "art_no"}
+          - {name: Count, type: int, json: "count"}
+
+      - name: DeckCreateRequest
+        comment: "DeckCreateRequest is the request body for POST /decks."
+        fields:
+          - {name: DeckName, type: string, json: "deck_name"}
+          - {name: Cards, type: "[]DeckCardEntry", json: "cards"}
+          - {name: PlaymatNo, type: "*int64", json: "playmat_no,omitempty"}
+          - {name: SleeveNo, type: "*int64", json: "sleeve_no,omitempty"}
+
+      - name: DeckUpdateRequest
+        comment: "DeckUpdateRequest is the request body for PUT /decks/:id."
+        fields:
+          - {name: DeckName, type: string, json: "deck_name"}
+          - {name: Cards, type: "[]DeckCardEntry", json: "cards"}
+          - {name: PlaymatNo, type: "*int64", json: "playmat_no,omitempty"}
+          - {name: SleeveNo, type: "*int64", json: "sleeve_no,omitempty"}
+
+      - name: UpdateSettingsRequest
+        comment: "UpdateSettingsRequest is the request body for PUT /player/settings."
+        fields:
+          - {name: Language, type: string, json: "language"}
+          - {name: BgmVolume, type: int64, json: "bgm_volume"}
+          - {name: SeVolume, type: int64, json: "se_volume"}
+          - {name: PushEnabled, type: bool, json: "push_enabled"}
+
+      - name: PurchaseRequest
+        comment: "PurchaseRequest is the request body for POST /shop/purchase."
+        fields:
+          - {name: ProductID, type: string, json: "product_id"}
+          - {name: Platform, type: string, json: "platform"}
+          - {name: PurchaseToken, type: string, json: "purchase_token"}
+
+  # ─── Game State View (Battle → Client) ─────────────────
+  # JSON keys use C# ASP.NET CamelCase convention (first char lowercase).
+  # Nullable pointer fields without omitempty are emitted as optional in TS
+  # (C# serializes them with WhenWritingNull, so they may be absent).
+  - name: game_state_view
+    target: both
+    pkg: gamedata
+    go_skip: true
+    nullable_as_optional: true
+    imports:
+      - time
+    ts_imports:
+      - {names: [AvailableAction], from: "./variantTypes"}
+    types:
+      - name: ClientGameState
+        fields:
+          - {name: GameID, type: string, json: "gameID"}
+          - {name: CurrentTurn, type: int64, json: "currentTurn"}
+          - {name: CurrentPhase, type: string, json: "currentPhase"}
+          - {name: ActivePlayer, type: int64, json: "activePlayer"}
+          - {name: IsMyTurn, type: bool, json: "isMyTurn"}
+          - {name: TurnStartedAt, type: time.Time, json: "turnStartedAt"}
+          - {name: MyView, type: PlayerView, json: "myView"}
+          - {name: OppView, type: OpponentView, json: "oppView"}
+
+      - name: PlayerView
+        fields:
+          - {name: PlayerNum, type: int64, json: "playerNum"}
+          - {name: Budget, type: int64, json: "budget"}
+          - {name: InsightPool, type: int64, json: "insightPool"}
+          - {name: TimeBank, type: int64, json: "timeBank"}
+          - {name: Field, type: Field, json: "field"}
+          - {name: Hand, type: "[]UndeployedCard", json: "hand"}
+          - {name: RepoCount, type: int, json: "repoCount"}
+          - {name: TrashCount, type: int, json: "trashCount"}
+          - {name: Trash, type: "[]UndeployedCard", json: "trash"}
+          - {name: AvailableActions, type: "[]AvailableAction", json: "availableActions,omitempty"}
+
+      - name: OpponentView
+        fields:
+          - {name: PlayerNum, type: int64, json: "playerNum"}
+          - {name: Budget, type: int64, json: "budget"}
+          - {name: InsightPool, type: int64, json: "insightPool"}
+          - {name: TimeBank, type: int64, json: "timeBank"}
+          - {name: Field, type: OpponentField, json: "field"}
+          - {name: HandCount, type: int, json: "handCount"}
+          - {name: RepoCount, type: int, json: "repoCount"}
+          - {name: TrashCount, type: int, json: "trashCount"}
+          - {name: Trash, type: "[]UndeployedCard", json: "trash"}
+
+      - name: Field
+        comment: "Field represents one player's complete field layout."
+        fields:
+          - {name: Frontend, type: "[]*DeployedResource", json: "frontend"}
+          - {name: Backend, type: "[]*DeployedResource", json: "backend"}
+          - {name: Support, type: "[]*DeployedSupport", json: "support"}
+
+      - name: OpponentField
+        comment: "Opponent's field with reactive cards hidden."
+        fields:
+          - {name: Frontend, type: "[]*DeployedResource", json: "frontend"}
+          - {name: Backend, type: "[]*DeployedResource", json: "backend"}
+          - {name: Support, type: "[]*HiddenDeployedSupport", json: "support"}
+
+      - name: DeployedResource
+        fields:
+          - {name: InstanceID, type: string, json: "instanceID"}
+          - {name: CardID, type: string, json: "cardID"}
+          - {name: ArtNo, type: int64, json: "artNo"}
+          - {name: Rank, type: "*string", json: "rank"}
+          - {name: InstanceFamily, type: "*string", json: "instanceFamily"}
+          - {name: FaceUp, type: bool, json: "faceUp"}
+          - {name: DeployingTurnsLeft, type: int64, json: "deployingTurnsLeft"}
+          - {name: CurrentAV, type: int64, json: "currentAV"}
+          - {name: MaxAV, type: int64, json: "maxAV"}
+          - {name: CurrentTP, type: "*int64", json: "currentTP"}
+          - {name: MaxTP, type: "*int64", json: "maxTP"}
+          - {name: CurrentYield, type: "*int64", json: "currentYield"}
+          - {name: MaxYield, type: "*int64", json: "maxYield"}
+          - {name: Damage, type: int64, json: "damage"}
+          - {name: TemporaryEffects, type: "[]TemporaryEffect", json: "temporaryEffects"}
+          - {name: MonetizedAmount, type: int64, json: "monetizedAmount"}
+          - {name: HasAttacked, type: bool, json: "hasAttacked"}
+          - {name: EffectUsedThisTurn, type: bool, json: "effectUsedThisTurn"}
+          - {name: EffectUsedThisGame, type: bool, json: "effectUsedThisGame"}
+          - {name: DeployedOnTurn, type: int64, json: "deployedOnTurn"}
+          - {name: DeployOrder, type: int64, json: "deployOrder"}
+          - {name: ElasticBonus, type: int64, json: "elasticBonus"}
+          - {name: LastAttackTurn, type: int64, json: "lastAttackTurn"}
+
+      - name: DeployedSupport
+        fields:
+          - {name: InstanceID, type: string, json: "instanceID"}
+          - {name: CardID, type: string, json: "cardID"}
+          - {name: ArtNo, type: int64, json: "artNo"}
+          - {name: FaceUp, type: bool, json: "faceUp"}
+          - {name: DeployingTurnsLeft, type: int64, json: "deployingTurnsLeft"}
+          - {name: DeployOrder, type: int64, json: "deployOrder"}
+          - {name: EffectUsedThisTurn, type: bool, json: "effectUsedThisTurn"}
+          - {name: EffectUsedThisGame, type: bool, json: "effectUsedThisGame"}
+          - {name: TargetInstanceID, type: "*string", json: "targetInstanceID"}
+
+      - name: HiddenDeployedSupport
+        comment: "Support instance with face-down card details hidden."
+        fields:
+          - {name: InstanceID, type: string, json: "instanceID"}
+          - {name: CardID, type: "*string", json: "cardID"}
+          - {name: ArtNo, type: int64, json: "artNo"}
+          - {name: FaceDown, type: bool, json: "faceDown"}
+          - {name: Peeked, type: bool, json: "peeked"}
+
+      - name: UndeployedCard
+        fields:
+          - {name: InstanceID, type: string, json: "instanceID"}
+          - {name: CardID, type: string, json: "cardID"}
+          - {name: ArtNo, type: int64, json: "artNo"}
+
+      - name: TemporaryEffect
+        fields:
+          - {name: EffectType, type: string, json: "effectType"}
+          - {name: Value, type: int64, json: "value"}
+          - {name: Duration, type: string, json: "duration"}
+          - {name: SourceID, type: string, json: "sourceID"}
 
 # ─── Variant Types (C# flat class + TS discriminated union) ───
 # generate_constants.py reads this section and outputs:
@@ -502,34 +593,33 @@ variant_types:
     variants:
       - value: play_card
         fields:
-          - {name: hand_instance_id, type: string}
-          - {name: card_id, type: string}
-          - {name: valid_zones, type: "string[]", optional: true}
-          - {name: valid_targets, type: "string[]", optional: true}
+          - {name: handInstanceID, type: string}
+          - {name: cardID, type: string}
+          - {name: validZones, type: "string[]", optional: true}
+          - {name: validTargets, type: "string[]", optional: true}
           - {name: cost, type: int, optional: true}
-          - {name: choice_options, type: "string[]", optional: true}
+          - {name: choiceOptions, type: "string[]", optional: true}
 
       - value: attack
         fields:
-          - {name: source_instance_id, type: string}
-          - {name: valid_targets, type: "string[]"}
+          - {name: sourceInstanceID, type: string}
+          - {name: validTargets, type: "string[]"}
 
       - value: scale_up
         fields:
-          - {name: source_instance_id, type: string}
-          - {name: target_rank, type: string, ref: Rank}
-          - {name: instance_family, type: string, ref: InstanceFamily, optional: true}
-          - {name: needs_family, type: bool}
+          - {name: sourceInstanceID, type: string}
+          - {name: targetRank, type: string, ref: Rank}
+          - {name: instanceFamily, type: string, ref: InstanceFamily, optional: true}
+          - {name: needsFamily, type: bool}
 
       - value: monetize
         fields:
-          - {name: source_instance_id, type: string}
-          - {name: remaining_capacity, type: long}
+          - {name: sourceInstanceID, type: string}
+          - {name: remainingCapacity, type: long}
 
       - value: use_effect
         fields:
-          - {name: source_instance_id, type: string}
-          - {name: valid_targets, type: "string[]", optional: true}
-          - {name: effect_target_type, type: string}
-          - {name: required_count, type: int}
-
+          - {name: sourceInstanceID, type: string}
+          - {name: validTargets, type: "string[]", optional: true}
+          - {name: effectTargetType, type: string}
+          - {name: requiredCount, type: int}

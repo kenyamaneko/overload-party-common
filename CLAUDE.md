@@ -22,7 +22,7 @@
 - `data/products.yaml` - ショップ商品定義（SSoT）
 - `data/constants.yaml` - ゲーム定数
 - `data/event_schemas.yaml` - イベントデータスキーマ
-- `data/models.yaml` - Go モデル定義
+- `data/models.yaml` - モデル定義（pkg: gamedata/api で振り分け）
 - `db/schema_postgres.sql` - PostgreSQL DDL（全テーブルの SSoT）
 - `db/grant_iam.sql` - IAM 認証権限付与
 - `db/seed/cards_seed.sql` - カード定義の DB seed（自動生成）
@@ -31,10 +31,12 @@
 - `scripts/generate_cards.py` - カードデータ生成スクリプト（YAML → JSON/SQL/Markdown）
 - `scripts/generate_products.py` - 商品データ生成スクリプト（YAML → JSON/SQL）
 - `scripts/generate_constants.py` - 定数・型生成スクリプト（YAML → Go/C#/TS）
-- `packages/gamedata/` - Go パッケージ 本番用（型・定数のみ、`go get` でインストール）
+- `packages/gamedata/` - Go パッケージ（ゲームデータ: カード定義・定数・エフェクト型）
+- `packages/api/` - Go パッケージ（API コントラクト: REST 型・WS メッセージ・デッキ型）
 - `packages/devdata/` - Go パッケージ 開発用（カード・商品 JSON、ローカルモック用）
 - `packages/dotnet/` - NuGet パッケージ（battle 用、GitHub Packages で publish）
-- `packages/npm/` - npm パッケージ（client 用、GitHub Packages で publish）
+- `packages/npm/` - npm パッケージ gamedata（constants, eventData, variantTypes）
+- `packages/npm-api/` - npm パッケージ api（models, wsMessages）
 - `docs/architecture/` - システム設計ドキュメント（API, CI/CD, データ設計, i18n 等）
 - `docs/game_design/` - ゲームデザインドキュメント（ルール, カード, UI, チュートリアル等）
 - `docs/business/` - ビジネス・法務ドキュメント（法的表示, マーケ, 収益化, 企画書等）
@@ -49,7 +51,7 @@
 - CARDS.md、products.sql、cards_seed.sql は自動生成なので直接編集しない
 - DB スキーマを変更したら `db/schema_postgres.sql` のみ編集する（server リポの schema は廃止）
 - 各リポはパッケージをインストールして生成コードを使う:
-  - gateway 本番用: `go get github.com/kenyamaneko/overload-party-common/packages/gamedata@latest`
-  - gateway 開発用: `go get github.com/kenyamaneko/overload-party-common/packages/devdata@latest`
+  - gateway: `go get .../packages/gamedata@latest` + `go get .../packages/api@latest`
+  - gateway 開発用: `go get .../packages/devdata@latest`
   - battle: NuGet `OverloadParty.GameData` パッケージ
-  - client: npm `@kenyamaneko/overload-party-gamedata` パッケージ
+  - client: npm `@kenyamaneko/overload-party-gamedata` + `@kenyamaneko/overload-party-api`

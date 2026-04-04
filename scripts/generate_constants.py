@@ -3,12 +3,17 @@
 
 Outputs:
   - packages/gamedata/constants/constants_gen.go  (Go constants)
-  - packages/gamedata/model/*_gen.go              (Go model structs)
+  - packages/gamedata/model/*_gen.go              (Go model structs, pkg: gamedata)
+  - packages/api/model/*_gen.go                   (Go model structs, pkg: api)
   - packages/dotnet/GameConstants_gen.cs           (C# constants)
   - packages/dotnet/EventData_gen.cs               (C# event data types)
+  - packages/dotnet/GameStateView_gen.cs           (C# game state view types)
   - packages/npm/src/constants.ts                  (TS constants)
   - packages/npm/src/eventData.ts                  (TS event data types)
-  - packages/npm/src/wsMessages.ts                 (TS WS message types)
+  - packages/npm/src/variantTypes.ts               (TS variant types)
+  - packages/npm/src/models.ts                     (TS model interfaces, pkg: gamedata)
+  - packages/npm-api/src/wsMessages.ts             (TS WS message types)
+  - packages/npm-api/src/models.ts                 (TS model interfaces, pkg: api)
 
 Usage:
     python3 scripts/generate_constants.py
@@ -32,8 +37,10 @@ EVENT_SCHEMAS_YAML = ROOT / "data" / "event_schemas.yaml"
 MODELS_YAML = ROOT / "data" / "models.yaml"
 
 GO_DIR = ROOT / "packages" / "gamedata"
+API_GO_DIR = ROOT / "packages" / "api"
 DOTNET_DIR = ROOT / "packages" / "dotnet"
 NPM_DIR = ROOT / "packages" / "npm"
+API_NPM_DIR = ROOT / "packages" / "npm-api"
 
 # ─── Helpers ────────────────────────────────────────────
 
@@ -249,100 +256,116 @@ def _go_type_needs_import(type_str):
     return imports
 
 
-def generate_go_models(*, out_dir):
-    """Generate *_gen.go model files from models.yaml."""
+def _generate_go_model_file(file_def, *, out_path):
+    """Generate a single *_gen.go file from a file definition."""
+    lines = [
+        _GENERATED_HEADER,
+        "",
+        "package model",
+        "",
+    ]
+
+    declared_imports = set(file_def.get("imports", []))
+    for td in file_def.get("types", []):
+        for field in td.get("fields", []):
+            declared_imports |= _go_type_needs_import(str(field["type"]))
+
+    if declared_imports:
+        std_imports = sorted(i for i in declared_imports if "/" not in i)
+        ext_imports = sorted(i for i in declared_imports if "/" in i)
+        lines.append("import (")
+        for imp in std_imports:
+            lines.append(f'\t"{imp}"')
+        if std_imports and ext_imports:
+            lines.append("")
+        for imp in ext_imports:
+            lines.append(f'\t"{imp}"')
+        lines.append(")")
+        lines.append("")
+
+    for ta in file_def.get("type_aliases", []):
+        lines.append(f"type {ta['name']} {ta['base']}")
+    if file_def.get("type_aliases"):
+        lines.append("")
+
+    for cgroup in file_def.get("constants", []):
+        ctype = cgroup["type"]
+        lines.append("const (")
+        for cv in cgroup["values"]:
+            lines.append(f'\t{cv["name"]} {ctype} = "{cv["value"]}"')
+        lines.append(")")
+        lines.append("")
+
+    for td in file_def.get("types", []):
+        if td.get("comment"):
+            lines.append(f"// {td['comment']}")
+        lines.append(f"type {td['name']} struct {{")
+
+        fields = td.get("fields", [])
+        if fields:
+            max_name_len = max(len(f["name"]) for f in fields)
+            max_type_len = max(len(str(f["type"])) for f in fields)
+
+        for field in fields:
+            fname = field["name"]
+            ftype = str(field["type"])
+            tags = []
+            if "json" in field:
+                tags.append(f'json:"{field["json"]}"')
+            if "db" in field:
+                tags.append(f'db:"{field["db"]}"')
+            tag_str = " ".join(tags)
+
+            name_pad = " " * (max_name_len - len(fname) + 1)
+            type_pad = " " * (max_type_len - len(ftype) + 1)
+
+            if tag_str:
+                line = f"\t{fname}{name_pad}{ftype}{type_pad}`{tag_str}`"
+            else:
+                line = f"\t{fname}{name_pad}{ftype}"
+
+            if field.get("comment"):
+                line += f" // {field['comment']}"
+            lines.append(line)
+
+        lines.append("}")
+        lines.append("")
+
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(out_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+        f.write("\n")
+
+
+def generate_go_models(*, gamedata_dir, api_dir):
+    """Generate *_gen.go model files from models.yaml, split by pkg field."""
     with open(MODELS_YAML, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f)
 
-    generated = []
+    gamedata_names = []
+    api_names = []
+
     for file_def in data["files"]:
         file_target = file_def.get("target", "both")
         if file_target != "both" and file_target != "gateway":
             continue
+        if file_def.get("go_skip"):
+            continue
 
         name = file_def["name"]
-        out_path = Path(out_dir) / f"{name}_gen.go"
+        pkg = file_def.get("pkg", "gamedata")
 
-        lines = [
-            _GENERATED_HEADER,
-            "",
-            "package model",
-            "",
-        ]
+        if pkg == "api":
+            out_path = Path(api_dir) / f"{name}_gen.go"
+            _generate_go_model_file(file_def, out_path=out_path)
+            api_names.append(name)
+        else:
+            out_path = Path(gamedata_dir) / f"{name}_gen.go"
+            _generate_go_model_file(file_def, out_path=out_path)
+            gamedata_names.append(name)
 
-        declared_imports = set(file_def.get("imports", []))
-        for td in file_def.get("types", []):
-            for field in td.get("fields", []):
-                declared_imports |= _go_type_needs_import(str(field["type"]))
-
-        if declared_imports:
-            std_imports = sorted(i for i in declared_imports if "/" not in i)
-            ext_imports = sorted(i for i in declared_imports if "/" in i)
-            lines.append("import (")
-            for imp in std_imports:
-                lines.append(f'\t"{imp}"')
-            if std_imports and ext_imports:
-                lines.append("")
-            for imp in ext_imports:
-                lines.append(f'\t"{imp}"')
-            lines.append(")")
-            lines.append("")
-
-        for ta in file_def.get("type_aliases", []):
-            lines.append(f"type {ta['name']} {ta['base']}")
-        if file_def.get("type_aliases"):
-            lines.append("")
-
-        for cgroup in file_def.get("constants", []):
-            ctype = cgroup["type"]
-            lines.append("const (")
-            for cv in cgroup["values"]:
-                lines.append(f'\t{cv["name"]} {ctype} = "{cv["value"]}"')
-            lines.append(")")
-            lines.append("")
-
-        for td in file_def.get("types", []):
-            if td.get("comment"):
-                lines.append(f"// {td['comment']}")
-            lines.append(f"type {td['name']} struct {{")
-
-            fields = td.get("fields", [])
-            if fields:
-                max_name_len = max(len(f["name"]) for f in fields)
-                max_type_len = max(len(str(f["type"])) for f in fields)
-
-            for field in fields:
-                fname = field["name"]
-                ftype = str(field["type"])
-                tags = []
-                if "json" in field:
-                    tags.append(f'json:"{field["json"]}"')
-                if "db" in field:
-                    tags.append(f'db:"{field["db"]}"')
-                tag_str = " ".join(tags)
-
-                name_pad = " " * (max_name_len - len(fname) + 1)
-                type_pad = " " * (max_type_len - len(ftype) + 1)
-
-                if tag_str:
-                    line = f"\t{fname}{name_pad}{ftype}{type_pad}`{tag_str}`"
-                else:
-                    line = f"\t{fname}{name_pad}{ftype}"
-
-                if field.get("comment"):
-                    line += f" // {field['comment']}"
-                lines.append(line)
-
-            lines.append("}")
-            lines.append("")
-
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(out_path, "w", encoding="utf-8") as f:
-            f.write("\n".join(lines))
-            f.write("\n")
-        generated.append(name)
-
-    return generated
+    return gamedata_names, api_names
 
 
 # ─── Generate C# (constants) ───────────────────────────
@@ -547,6 +570,107 @@ def generate_csharp_event_data(schemas, *, out_path, namespace="OverloadParty.Ga
 
         lines.append("        return d;")
         lines.append("    }")
+        lines.append("}")
+        lines.append("")
+
+    cs_out.parent.mkdir(parents=True, exist_ok=True)
+    with open(cs_out, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+        f.write("\n")
+
+
+# ─── Generate C# (game state view) ───────────────────
+_GO_TO_CS_TYPE = {
+    "string": "string",
+    "int": "int",
+    "int64": "long",
+    "bool": "bool",
+    "time.Time": "DateTime",
+    "json.RawMessage": "JsonElement?",
+}
+
+
+def _go_to_cs_type(go_type):
+    """Convert a Go type string to a C# type string."""
+    is_pointer = go_type.startswith("*")
+    base = go_type.lstrip("*")
+
+    # Slice of pointers: []*T → T?[]
+    if base.startswith("[]*"):
+        elem = base[3:]
+        cs_elem = _GO_TO_CS_TYPE.get(elem, elem)
+        return f"{cs_elem}?[]"
+
+    # Slice: []T → T[] (List for primitives stays as array for view types)
+    if base.startswith("[]"):
+        elem = base[2:]
+        cs_elem = _GO_TO_CS_TYPE.get(elem, elem)
+        return f"{cs_elem}[]"
+
+    cs_base = _GO_TO_CS_TYPE.get(base, base)
+
+    if is_pointer:
+        return f"{cs_base}?"
+
+    return cs_base
+
+
+def generate_csharp_game_state_view(*, out_path, namespace="OverloadParty.GameData"):
+    """Generate GameStateView_gen.cs from the game_state_view section of models.yaml."""
+    with open(MODELS_YAML, "r", encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+
+    file_def = None
+    for fd in data["files"]:
+        if fd["name"] == "game_state_view":
+            file_def = fd
+            break
+
+    if file_def is None:
+        print("WARNING: game_state_view not found in models.yaml, skipping C# generation", file=sys.stderr)
+        return
+
+    cs_out = Path(out_path)
+
+    lines = [
+        _GENERATED_HEADER,
+        "",
+        f"namespace {namespace};",
+        "",
+    ]
+
+    for td in file_def.get("types", []):
+        name = td["name"]
+        if td.get("comment"):
+            lines.append(f"/// <summary>{td['comment']}</summary>")
+        lines.append(f"public class {name}")
+        lines.append("{")
+
+        for field in td.get("fields", []):
+            go_type = str(field["type"])
+            json_tag = str(field.get("json", ""))
+            has_omitempty = json_tag.endswith(",omitempty")
+            cs_type = _go_to_cs_type(go_type)
+            fname = field["name"]
+
+            is_custom_ref = cs_type not in _GO_TO_CS_TYPE.values() and not cs_type.endswith("?") and not cs_type.endswith("[]")
+
+            if go_type.startswith("*"):
+                # Pointer types → nullable in C#
+                lines.append(f"    public {cs_type} {fname} {{ get; init; }}")
+            elif go_type.startswith("[]"):
+                if has_omitempty:
+                    # Array with omitempty → nullable array (absent when null)
+                    lines.append(f"    public {cs_type}? {fname} {{ get; init; }}")
+                else:
+                    lines.append(f"    public {cs_type} {fname} {{ get; init; }} = [];")
+            elif is_custom_ref:
+                lines.append(f"    public required {cs_type} {fname} {{ get; init; }}")
+            elif cs_type == "string":
+                lines.append(f'    public {cs_type} {fname} {{ get; init; }} = "";')
+            else:
+                lines.append(f"    public {cs_type} {fname} {{ get; init; }}")
+
         lines.append("}")
         lines.append("")
 
@@ -786,6 +910,137 @@ def generate_ts_ws_messages(*, out_path):
         f.write("\n")
 
 
+# ─── Generate TypeScript (models) ─────────────────────────
+_GO_TO_TS_MODEL_TYPE = {
+    "string": "string",
+    "int": "number",
+    "int64": "number",
+    "bool": "boolean",
+    "time.Time": "string",
+    "json.RawMessage": "Record<string, unknown>",
+    "interface{}": "unknown",
+    "map[string]interface{}": "Record<string, unknown>",
+    "civil.Date": "string",
+}
+
+
+def _go_to_ts_model_field(go_type, json_tag, type_map=None, *, nullable_as_optional=False):
+    """Convert a Go type + json tag to a TS type string and optional flag."""
+    if type_map is None:
+        type_map = _GO_TO_TS_MODEL_TYPE
+    optional = json_tag.endswith(",omitempty")
+    json_key = json_tag.split(",")[0]
+
+    is_pointer = go_type.startswith("*")
+    base_type = go_type.lstrip("*")
+
+    # Slice of pointers: []*T → (T | null)[]
+    if base_type.startswith("[]*"):
+        elem = base_type[3:]
+        ts_elem = type_map.get(elem, elem)
+        ts_type = f"({ts_elem} | null)[]"
+        return json_key, ts_type, optional
+
+    # Slice type: []T
+    if base_type.startswith("[]"):
+        elem = base_type[2:]
+        ts_elem = type_map.get(elem, elem)
+        ts_type = f"{ts_elem}[]"
+        return json_key, ts_type, optional
+    # Map type
+    if base_type.startswith("map["):
+        ts_type = type_map.get(base_type, "Record<string, unknown>")
+        return json_key, ts_type, optional
+
+    ts_base = type_map.get(base_type, base_type)
+
+    if is_pointer:
+        if optional:
+            # *T + omitempty -> optional field, non-null type
+            return json_key, ts_base, True
+        elif nullable_as_optional:
+            # nullable_as_optional mode: *T without omitempty -> optional field
+            return json_key, ts_base, True
+        else:
+            # *T without omitempty -> T | null
+            return json_key, f"{ts_base} | null", False
+
+    return json_key, ts_base, optional
+
+
+def generate_ts_models(*, out_path, pkg_filter=None):
+    """Generate models.ts from the files section of models.yaml (excluding ws_messages).
+
+    Args:
+        out_path: Output file path.
+        pkg_filter: If set, only include file sections with matching pkg field.
+    """
+    with open(MODELS_YAML, "r", encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+
+    # Collect type_aliases so we can map them to their base TS type.
+    alias_map = dict(_GO_TO_TS_MODEL_TYPE)
+    for file_def in data["files"]:
+        for ta in file_def.get("type_aliases", []):
+            base = ta["base"]
+            alias_map[ta["name"]] = _GO_TO_TS_MODEL_TYPE.get(base, base)
+
+    ts_out = Path(out_path)
+
+    lines = [
+        _GENERATED_HEADER,
+        "",
+    ]
+
+    # Collect ts_imports from all matching file definitions.
+    ts_imports: dict[str, list[str]] = {}  # from_path -> [names]
+    matching_files = []
+    for file_def in data["files"]:
+        file_target = file_def.get("target", "both")
+        if file_target not in ("both", "gateway", "api"):
+            continue
+        if file_def["name"] == "ws_messages":
+            continue
+        if pkg_filter and file_def.get("pkg", "gamedata") != pkg_filter:
+            continue
+        matching_files.append(file_def)
+        for imp in file_def.get("ts_imports", []):
+            from_path = imp["from"]
+            for name in imp["names"]:
+                ts_imports.setdefault(from_path, []).append(name)
+
+    for from_path, names in sorted(ts_imports.items()):
+        sorted_names = sorted(set(names))
+        lines.append(f"import type {{ {', '.join(sorted_names)} }} from '{from_path}';")
+    if ts_imports:
+        lines.append("")
+
+    for file_def in matching_files:
+        file_nullable_as_optional = file_def.get("nullable_as_optional", False)
+
+        for td in file_def.get("types", []):
+            name = td["name"]
+            if td.get("comment"):
+                lines.append(f"/** {td['comment']} */")
+            lines.append(f"export interface {name} {{")
+            for field in td.get("fields", []):
+                go_type = str(field["type"])
+                json_tag = field["json"]
+                json_key, ts_type, optional = _go_to_ts_model_field(
+                    go_type, json_tag, alias_map,
+                    nullable_as_optional=file_nullable_as_optional,
+                )
+                opt = "?" if optional else ""
+                lines.append(f"  {json_key}{opt}: {ts_type};")
+            lines.append("}")
+            lines.append("")
+
+    ts_out.parent.mkdir(parents=True, exist_ok=True)
+    with open(ts_out, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+        f.write("\n")
+
+
 # ─── Generate C# (variant types) ─────────────────────────
 def generate_csharp_variant_types(variant_types, *, out_path, namespace="OverloadParty.GameData"):
     """Generate VariantTypes_gen.cs from variant_types in models.yaml.
@@ -822,7 +1077,7 @@ def generate_csharp_variant_types(variant_types, *, out_path, namespace="Overloa
                 fname = field["name"]
                 if fname in seen:
                     continue
-                cs_prop = _snake_to_pascal(fname)
+                cs_prop = _camel_to_pascal(fname)
                 raw_type = field["type"]
                 cs_type = _CS_NULLABLE_DEFAULTS[raw_type]
                 seen[fname] = (cs_prop, cs_type)
@@ -912,8 +1167,12 @@ def main():
     generate_go_constants(constants, out_path=GO_DIR / "constants" / "constants_gen.go")
     print("Generated → packages/gamedata/constants/constants_gen.go", file=sys.stderr)
 
-    model_names = generate_go_models(out_dir=GO_DIR / "model")
-    print(f"Generated models → packages/gamedata/model/ [{', '.join(model_names)}]", file=sys.stderr)
+    gamedata_names, api_names = generate_go_models(
+        gamedata_dir=GO_DIR / "model",
+        api_dir=API_GO_DIR / "model",
+    )
+    print(f"Generated models → packages/gamedata/model/ [{', '.join(gamedata_names)}]", file=sys.stderr)
+    print(f"Generated models → packages/api/model/ [{', '.join(api_names)}]", file=sys.stderr)
 
     # C#
     generate_csharp_constants(constants, out_path=DOTNET_DIR / "GameConstants_gen.cs")
@@ -926,19 +1185,30 @@ def main():
         generate_csharp_variant_types(variant_types, out_path=DOTNET_DIR / "VariantTypes_gen.cs")
         print("Generated → packages/dotnet/VariantTypes_gen.cs", file=sys.stderr)
 
-    # TypeScript
+    generate_csharp_game_state_view(out_path=DOTNET_DIR / "GameStateView_gen.cs")
+    print("Generated → packages/dotnet/GameStateView_gen.cs", file=sys.stderr)
+
+    # TypeScript (gamedata)
     generate_ts_constants(constants, out_path=NPM_DIR / "src" / "constants.ts")
     print("Generated → packages/npm/src/constants.ts", file=sys.stderr)
 
     generate_ts_event_data(event_schemas, out_path=NPM_DIR / "src" / "eventData.ts")
     print("Generated → packages/npm/src/eventData.ts", file=sys.stderr)
 
-    generate_ts_ws_messages(out_path=NPM_DIR / "src" / "wsMessages.ts")
-    print("Generated → packages/npm/src/wsMessages.ts", file=sys.stderr)
-
     if variant_types:
         generate_ts_variant_types(variant_types, out_path=NPM_DIR / "src" / "variantTypes.ts")
         print("Generated → packages/npm/src/variantTypes.ts", file=sys.stderr)
+
+    # TypeScript (gamedata models)
+    generate_ts_models(out_path=NPM_DIR / "src" / "models.ts", pkg_filter="gamedata")
+    print("Generated → packages/npm/src/models.ts", file=sys.stderr)
+
+    # TypeScript (api)
+    generate_ts_ws_messages(out_path=API_NPM_DIR / "src" / "wsMessages.ts")
+    print("Generated → packages/npm-api/src/wsMessages.ts", file=sys.stderr)
+
+    generate_ts_models(out_path=API_NPM_DIR / "src" / "models.ts", pkg_filter="api")
+    print("Generated → packages/npm-api/src/models.ts", file=sys.stderr)
 
 
 if __name__ == "__main__":
