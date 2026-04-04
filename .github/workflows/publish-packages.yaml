@@ -9,6 +9,7 @@ on:
       - "packages/gamedata/**"
       - "packages/dotnet/**"
       - "packages/npm/**"
+      - "packages/npm-api/**"
       - "data/constants.json"
       - "data/event_schemas.json"
       - "data/cards/**"
@@ -99,9 +100,19 @@ jobs:
             --source "https://nuget.pkg.github.com/kenyamaneko/index.json" \
             --api-key ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publish npm package
+      - name: Publish npm package (gamedata)
         if: steps.check.outputs.publish == 'true'
         working-directory: packages/npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npm version ${{ steps.version.outputs.version }} --no-git-tag-version
+          npm run build
+          npm publish
+
+      - name: Publish npm package (api)
+        if: steps.check.outputs.publish == 'true'
+        working-directory: packages/npm-api
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
