@@ -299,6 +299,8 @@ def _generate_go_model_file(file_def, *, out_path):
         lines.append("")
 
     for td in file_def.get("types", []):
+        if td.get("doc_only"):
+            continue
         if td.get("comment"):
             lines.append(f"// {td['comment']}")
         lines.append(f"type {td['name']} struct {{")
@@ -642,6 +644,8 @@ def generate_csharp_game_state_view(*, out_path, namespace="OverloadParty.GameDa
     ]
 
     for td in file_def.get("types", []):
+        if td.get("doc_only"):
+            continue
         name = td["name"]
         if td.get("comment"):
             lines.append(f"/// <summary>{td['comment']}</summary>")
@@ -904,6 +908,8 @@ def generate_ts_ws_messages(*, out_path):
         lines.append("")
 
     for td in ws_file.get("types", []):
+        if td.get("doc_only"):
+            continue
         name = td["name"]
         if td.get("comment"):
             lines.append(f"/** {td['comment']} */")
@@ -1044,6 +1050,8 @@ def generate_ts_models(*, out_path, pkg_filter=None):
             lines.append("")
 
         for td in file_def.get("types", []):
+            if td.get("doc_only"):
+                continue
             name = td["name"]
             if td.get("comment"):
                 lines.append(f"/** {td['comment']} */")
@@ -1181,6 +1189,138 @@ def generate_ts_variant_types(variant_types, *, out_path):
         f.write("\n")
 
 
+# ─── Update API reference docs (marker-based) ────────
+DOCS_DIR = ROOT / "docs" / "architecture"
+
+_DOC_TYPE_MAP = {
+    "string": "string",
+    "int": "number",
+    "int64": "number",
+    "bool": "boolean",
+    "time.Time": "string (ISO 8601)",
+    "json.RawMessage": "object",
+    "interface{}": "unknown",
+    "map[string]interface{}": "object",
+}
+
+
+def _doc_type(go_type):
+    """Convert a Go type string to a human-readable doc type."""
+    is_pointer = go_type.startswith("*")
+    base = go_type.lstrip("*")
+
+    if base.startswith("[]*"):
+        elem = base[3:]
+        return f"({_DOC_TYPE_MAP.get(elem, elem)} | null)[]"
+    if base.startswith("[]"):
+        elem = base[2:]
+        return f"{_DOC_TYPE_MAP.get(elem, elem)}[]"
+
+    doc_base = _DOC_TYPE_MAP.get(base, base)
+    if is_pointer:
+        return f"{doc_base}?"
+    return doc_base
+
+
+_JSON_PLACEHOLDER = {
+    "string": '"string"',
+    "int": "0",
+    "int64": "0",
+    "bool": "false",
+    "time.Time": '"2006-01-02T15:04:05Z"',
+    "json.RawMessage": "{}",
+    "interface{}": "null",
+    "map[string]interface{}": "{}",
+}
+
+
+def _json_placeholder(go_type):
+    """Return a JSON placeholder value string for a Go type."""
+    is_pointer = go_type.startswith("*")
+    base = go_type.lstrip("*")
+
+    if base.startswith("[]"):
+        return "[]"
+    if base.startswith("map["):
+        return "{}"
+    if is_pointer:
+        return "null"
+    return _JSON_PLACEHOLDER.get(base, '"{}"'.format(base))
+
+
+def _generate_field_table(type_def):
+    """Generate a Markdown field table + JSON skeleton for a type definition.
+
+    Only includes fields that have a 'doc' key.
+    """
+    doc_fields = []
+    for field in type_def.get("fields", []):
+        if "doc" not in field:
+            continue
+        json_tag = field["json"]
+        json_key = json_tag.split(",")[0]
+        go_type = str(field["type"])
+        doc_fields.append((json_key, go_type, field["doc"]))
+
+    if not doc_fields:
+        return None
+
+    # JSON with inline comments (JSONC style)
+    json_entries = []
+    for json_key, go_type, doc in doc_fields:
+        json_entries.append(f'  "{json_key}": {_json_placeholder(go_type)} // {doc}')
+    json_body = ",\n".join(json_entries)
+    return f"```jsonc\n{{\n{json_body}\n}}\n```"
+
+
+def update_doc_field_tables(doc_path):
+    """Replace marker-delimited sections in a Markdown file with generated field tables.
+
+    Markers: <!-- BEGIN GENERATED: TypeName --> ... <!-- END GENERATED: TypeName -->
+    """
+    doc_file = Path(doc_path)
+    if not doc_file.exists():
+        return False
+
+    with open(MODELS_YAML, "r", encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+
+    # Build a lookup: type_name -> type_def (across all file sections).
+    type_map = {}
+    for file_def in data.get("files", []):
+        for td in file_def.get("types", []):
+            type_map[td["name"]] = td
+
+    with open(doc_file, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    marker_re = re.compile(
+        r"(<!-- BEGIN GENERATED: (\w+) -->)\n(.*?)(<!-- END GENERATED: \2 -->)",
+        re.DOTALL,
+    )
+
+    def replacer(match):
+        begin_tag = match.group(1)
+        type_name = match.group(2)
+        end_tag = match.group(4)
+        td = type_map.get(type_name)
+        if td is None:
+            print(f"WARNING: type '{type_name}' not found in models.yaml, skipping marker in {doc_file.name}", file=sys.stderr)
+            return match.group(0)
+        table = _generate_field_table(td)
+        if table is None:
+            return match.group(0)
+        return f"{begin_tag}\n{table}\n{end_tag}"
+
+    new_content = marker_re.sub(replacer, content)
+    if new_content == content:
+        return False
+
+    with open(doc_file, "w", encoding="utf-8") as f:
+        f.write(new_content)
+    return True
+
+
 # ─── Main ──────────────────────────────────────────────
 def main():
     with open(CONSTANTS_YAML, "r", encoding="utf-8") as f:
@@ -1238,6 +1378,11 @@ def main():
 
     generate_ts_models(out_path=API_NPM_DIR / "src" / "models.ts", pkg_filter="api")
     print("Generated → packages/api-npm/src/models.ts", file=sys.stderr)
+
+    # Docs (marker-based field table replacement)
+    for doc_name in ("API_REFERENCE.md", "WS_REFERENCE.md"):
+        if update_doc_field_tables(DOCS_DIR / doc_name):
+            print(f"Updated field tables → docs/architecture/{doc_name}", file=sys.stderr)
 
 
 if __name__ == "__main__":

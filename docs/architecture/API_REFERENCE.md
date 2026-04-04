@@ -1,4 +1,4 @@
-# Overload Party - API リファレンス
+# Overload Party - REST API リファレンス
 
 ---
 
@@ -15,12 +15,10 @@
    - [Scenario](#36-scenarioストーリー)
    - [Shop](#37-shop)
    - [Webhook](#38-webhook)
-4. [WebSocket API](#4-websocket-api)
-   - [接続](#41-接続)
-   - [Client → Server メッセージ](#42-client--server-メッセージ)
-   - [Server → Client メッセージ](#43-server--client-メッセージ)
-5. [Dev API（開発専用）](#5-dev-api開発専用)
-6. [エンドポイント一覧](#6-エンドポイント一覧)
+4. [Dev API（開発専用）](#4-dev-api開発専用)
+5. [エンドポイント一覧](#5-エンドポイント一覧)
+
+WebSocket API リファレンスは [WS_REFERENCE.md](WS_REFERENCE.md) を参照。
 
 ---
 
@@ -28,12 +26,12 @@
 
 ### ベース URL
 
-| 環境 | REST API | WebSocket |
-|------|----------|-----------|
-| ローカル | `http://localhost:9001/api/v1/` | `ws://localhost:9001/ws` |
-| dev | `https://overloadparty-dev.keyandnotes.com/api/v1/` | `wss://overloadparty-dev.keyandnotes.com/ws` |
-| stg | `https://overloadparty-stg.keyandnotes.com/api/v1/` | `wss://overloadparty-stg.keyandnotes.com/ws` |
-| prod | `https://overloadparty.keyandnotes.com/api/v1/` | `wss://overloadparty.keyandnotes.com/ws` |
+| 環境 | URL |
+|------|-----|
+| ローカル | `http://localhost:9001/api/v1/` |
+| dev | `https://overloadparty-dev.keyandnotes.com/api/v1/` |
+| stg | `https://overloadparty-stg.keyandnotes.com/api/v1/` |
+| prod | `https://overloadparty.keyandnotes.com/api/v1/` |
 
 ### ヘルスチェック
 
@@ -41,10 +39,7 @@
 GET /health
 ```
 
-**レスポンス:**
-```json
-{ "status": "ok", "mode": "local" }
-```
+詳細は [GET /health](#get-health) を参照。
 
 ---
 
@@ -52,18 +47,15 @@ GET /health
 
 ### 本番環境
 
-- REST API: `Authorization: Bearer {Firebase ID Token}` ヘッダー
-- WebSocket: `GET /ws?token={Firebase ID Token}` クエリパラメータ
+- `Authorization: Bearer {Firebase ID Token}` ヘッダー
 
 ミドルウェアが Firebase Token を検証し、`firebase_uid` をコンテキストに設定。
 `PlayerResolve` ミドルウェアが `firebase_uid` → `player_id`（UUID）に解決し、コンテキストにセットする。
 認証エンドポイント（`/auth/register`, `/auth/login`）は `PlayerResolve` を経由しない（プレイヤー未作成の場合があるため）。
-WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解決する。
 
 ### ローカル開発
 
-- REST API: `Authorization: Bearer dev-token-{uid}` ヘッダー
-- WebSocket: `GET /ws?token=dev-token-{uid}` クエリパラメータ（空でも可）
+- `Authorization: Bearer dev-token-{uid}` ヘッダー
 - トークンが空の場合、`uid = "dev-anonymous"` として扱う
 - 未登録の uid は **自動でプレイヤーが作成**される
 
@@ -80,9 +72,15 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
 ヘルスチェック。
 
 **レスポンス (200):**
-```json
-{ "status": "ok" }
+
+<!-- BEGIN GENERATED: HealthResponse -->
+```jsonc
+{
+  "status": "string" // サーバーステータス（`ok`）,
+  "mode": "string" // 動作モード（`local` / `dev` / `stg` / `prod`）
+}
 ```
+<!-- END GENERATED: HealthResponse -->
 
 ---
 
@@ -91,16 +89,17 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
 アプリバージョン確認。
 
 **レスポンス (200):**
-```json
+
+<!-- BEGIN GENERATED: VersionResponse -->
+```jsonc
 {
-  "minimumVersion": "1.0.0",
-  "latestVersion": "1.2.0",
-  "forceUpdate": false,
-  "storeUrl": "https://..."
+  "minimumVersion": "string" // 最低要求バージョン,
+  "latestVersion": "string" // 最新バージョン,
+  "forceUpdate": false // `true` の場合、クライアントはストアへ誘導する,
+  "storeUrl": "string" // ストア URL
 }
 ```
-
-`forceUpdate` が `true` の場合、クライアントはストアへ誘導する。
+<!-- END GENERATED: VersionResponse -->
 
 ---
 
@@ -108,18 +107,20 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
 
 お知らせ一覧取得。
 
-**レスポンス (200):**
-```json
-[
-  {
-    "id": "string",
-    "title": "string",
-    "body": "string",
-    "type": "info|event|maintenance",
-    "createdAt": "timestamp"
-  }
-]
+**レスポンス (200):** `[Announcement]`
+
+<!-- BEGIN GENERATED: Announcement -->
+```jsonc
+{
+  "id": "string" // お知らせID,
+  "title": "string" // タイトル,
+  "body": "string" // 本文,
+  "type": "string" // 種別（`info` / `warning` / `maintenance`）,
+  "published_at": "2006-01-02T15:04:05Z" // 公開日時,
+  "expires_at": null // 有効期限
+}
 ```
+<!-- END GENERATED: Announcement -->
 
 ---
 
@@ -128,12 +129,15 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
 デイリー Tips 取得。
 
 **レスポンス (200):**
-```json
+
+<!-- BEGIN GENERATED: DailyTip -->
+```jsonc
 {
-  "id": "string",
-  "text": "string"
+  "id": "string" // TipID,
+  "text": "string" // Tip テキスト
 }
 ```
+<!-- END GENERATED: DailyTip -->
 
 ---
 
@@ -148,30 +152,21 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
 | `limit` | int | 20 | 取得件数（1-100） |
 | `offset` | int | 0 | オフセット |
 
-**レスポンス (200):**
-```json
-[
-  {
-    "article_id": "string (ULID)",
-    "source": "aws|google-cloud|azure|oci|other",
-    "title": "string",
-    "summary": "string (nullable)",
-    "tags": ["aws", "storage"],
-    "published_at": "timestamp (nullable)",
-    "fetched_at": "timestamp"
-  }
-]
-```
+**レスポンス (200):** `[NewsArticle]`
 
-| フィールド | 型 | 説明 |
-|-----------|-----|------|
-| `article_id` | string | 記事 ULID |
-| `source` | string | ソース。`aws` / `google-cloud` / `azure` / `oci` / `other` のいずれか |
-| `title` | string | 記事タイトル |
-| `summary` | string? | AI 要約（未完了の場合 null） |
-| `tags` | string[] | タグ配列 |
-| `published_at` | timestamp? | 記事の公開日時 |
-| `fetched_at` | timestamp | 取得日時 |
+<!-- BEGIN GENERATED: NewsArticle -->
+```jsonc
+{
+  "article_id": "string" // 記事 ULID,
+  "source": "string" // ソース（`aws` / `google-cloud` / `azure` / `oci` / `other`）,
+  "title": "string" // 記事タイトル,
+  "summary": null // AI 要約（未完了の場合 null）,
+  "tags": [] // タグ配列,
+  "published_at": null // 記事の公開日時,
+  "fetched_at": "2006-01-02T15:04:05Z" // 取得日時
+}
+```
+<!-- END GENERATED: NewsArticle -->
 
 ---
 
@@ -184,28 +179,36 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
 新規プレイヤー登録。スターターアイテム（スタンプ 1〜7）とデフォルトユーザー設定（language: `ja`）が作成される。
 
 **リクエスト:**
-```json
+
+<!-- BEGIN GENERATED: RegisterRequest -->
+```jsonc
 {
-  "username": "string (1〜50文字)"
+  "username": "string" // ユーザー名（1〜50文字）
 }
 ```
+<!-- END GENERATED: RegisterRequest -->
 
 **レスポンス (201):**
-```json
+
+<!-- BEGIN GENERATED: PlayerResponse -->
+```jsonc
 {
-  "player_id": "uuid",
-  "firebase_uid": "string",
-  "username": "string",
-  "level": 1,
-  "exp": 0,
-  "is_premium": false,
-  "selected_faction": null,
-  "equipped_icon_no": null,
-  "premium_expires_at": null,
-  "created_at": "timestamp",
-  "updated_at": "timestamp"
+  "player_id": "string" // プレイヤーID（UUID）,
+  "firebase_uid": "string" // Firebase UID,
+  "username": "string" // ユーザー名,
+  "level": 0 // プレイヤーレベル,
+  "exp": 0 // 累計経験値,
+  "is_premium": false // プレミアム会員か,
+  "equipped_icon_no": null // 装備中のアイコン番号,
+  "selected_faction": null // 選択済みファクション,
+  "premium_expires_at": null // プレミアム有効期限,
+  "created_at": "2006-01-02T15:04:05Z" // 登録日時,
+  "updated_at": "2006-01-02T15:04:05Z" // 最終更新日時,
+  "level_exp_current": 0 // 現在レベル内の経験値,
+  "level_exp_required": 0 // 次レベルまでの必要経験値
 }
 ```
+<!-- END GENERATED: PlayerResponse -->
 
 **エラー:** `409` 登録済み
 
@@ -230,16 +233,19 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
 ユーザー設定取得。未作成の場合はデフォルト値を返す。
 
 **レスポンス (200):**
-```json
+
+<!-- BEGIN GENERATED: UserSettings -->
+```jsonc
 {
-  "player_id": "uuid",
-  "language": "ja",
-  "bgm_volume": 50,
-  "se_volume": 50,
-  "push_enabled": true,
-  "updated_at": "timestamp"
+  "player_id": "string" // プレイヤーID,
+  "language": "string" // 言語（`ja` / `en`）,
+  "bgm_volume": 0 // BGM 音量（0-100）,
+  "se_volume": 0 // SE 音量（0-100）,
+  "push_enabled": false // プッシュ通知の有効/無効,
+  "updated_at": "2006-01-02T15:04:05Z" // 最終更新日時
 }
 ```
+<!-- END GENERATED: UserSettings -->
 
 ---
 
@@ -248,14 +254,17 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
 ユーザー設定更新。
 
 **リクエスト:**
-```json
+
+<!-- BEGIN GENERATED: UpdateSettingsRequest -->
+```jsonc
 {
-  "language": "ja|en",
-  "bgm_volume": 50,
-  "se_volume": 50,
-  "push_enabled": true
+  "language": "string" // 言語（`ja` / `en`）,
+  "bgm_volume": 0 // BGM 音量（0-100）,
+  "se_volume": 0 // SE 音量（0-100）,
+  "push_enabled": false // プッシュ通知の有効/無効
 }
 ```
+<!-- END GENERATED: UpdateSettingsRequest -->
 
 **レスポンス (200):** UserSettings オブジェクト
 
@@ -276,11 +285,14 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
 プレイヤー名変更。
 
 **リクエスト:**
-```json
+
+<!-- BEGIN GENERATED: PlayerNameRequest -->
+```jsonc
 {
-  "name": "string"
+  "name": "string" // 新しいプレイヤー名
 }
 ```
+<!-- END GENERATED: PlayerNameRequest -->
 
 **レスポンス (200):** Player オブジェクト
 
@@ -295,13 +307,16 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
 デイリーバトル回数の確認。
 
 **レスポンス (200):**
-```json
+
+<!-- BEGIN GENERATED: BattleLimitResponse -->
+```jsonc
 {
-  "daily_battle_count": 3,
-  "daily_battle_limit": 10,
-  "can_battle": true
+  "daily_battle_count": 0 // 本日のバトル回数,
+  "daily_battle_limit": 0 // デイリーバトル上限（`-1` で無制限 = プレミアム会員）,
+  "can_battle": false // バトル可能か
 }
 ```
+<!-- END GENERATED: BattleLimitResponse -->
 
 `daily_battle_limit` が `-1` の場合は無制限（プレミアム会員）。
 
@@ -311,24 +326,27 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
 
 所持カード一覧取得。カード定義を含む enriched レスポンスを返す。
 
-**レスポンス (200):**
-```json
-[
-  {
-    "card_id": "SH-0001",
-    "art_no": 0,
-    "count": 3,
-    "card_name": "EC2 Instance",
-    "faction": "SHE",
-    "card_type": "resource",
-    "resizable": true,
-    "elastic": false,
-    "stats": { "throughput": 3, "availability": 4, "maintenance_cost": 2, "sla_penalty": 2 },
-    "effect_text": "デプロイ時: スループット+1",
-    "restriction": "unlimited"
-  }
-]
+**レスポンス (200):** `[PlayerCardWithDef]`
+
+<!-- BEGIN GENERATED: PlayerCardWithDef -->
+```jsonc
+{
+  "card_id": "string" // カードID,
+  "art_no": 0 // アート番号,
+  "count": 0 // 所持枚数,
+  "card_name": "string" // カード名,
+  "resource_label": "string" // リソースラベル（AWS/Azure/GCP/Oracle のサービス名）,
+  "faction": "string" // ファクション（`SHE` / `Tenki` / `Sugar` / `Tuners` / `Neutral`）,
+  "card_type": "string" // カード種別,
+  "deploy_turns": 0 // デプロイターン数（0=即時）,
+  "resizable": false // 手動スケール可能か,
+  "elastic": false // 自動スケール対応か,
+  "stats": {} // スタッツ（ComputeStats または DataStats）,
+  "effect_text": null // エフェクト説明テキスト,
+  "restriction": "string" // 制限（`unlimited` / `semi_limited` / `limited` / `forbidden`）
+}
 ```
+<!-- END GENERATED: PlayerCardWithDef -->
 
 ---
 
@@ -338,34 +356,20 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
 
 デッキ一覧取得。
 
-**レスポンス (200):**
-```json
-[
-  {
-    "player_id": "uuid",
-    "deck_id": 1,
-    "deck_name": "SHE スターター",
-    "is_valid": true,
-    "playmat_no": 1,
-    "sleeve_no": 2,
-    "deck_cards": [
-      {"card_id": "SH-0001", "art_no": 0, "count": 3},
-      {"card_id": "SH-0002", "art_no": 1, "count": 2}
-    ],
-    "created_at": "2026-01-15T10:00:00Z",
-    "updated_at": "2026-01-15T10:00:00Z"
-  }
-]
-```
+**レスポンス (200):** `[Deck]`
 
-| フィールド | 型 | 説明 |
-|---|---|---|
-| `deck_id` | int64 | デッキID（自動採番） |
-| `deck_name` | string | デッキ名 |
-| `is_valid` | bool | バトル使用可能か（都度算出: 30枚 + 全カード所持 + 制限枚数以内） |
-| `deck_cards` | array | デッキのカード構成（`card_id`, `art_no`, `count`） |
-| `playmat_no` | int64? | プレイマット番号（null: デフォルト） |
-| `sleeve_no` | int64? | スリーブ番号（null: デフォルト） |
+<!-- BEGIN GENERATED: Deck -->
+```jsonc
+{
+  "deck_id": 0 // デッキID（自動採番）,
+  "deck_name": "string" // デッキ名,
+  "is_valid": false // バトル使用可能か（都度算出: 30枚 + 全カード所持 + 制限枚数以内）,
+  "playmat_no": null // プレイマット番号（null: デフォルト）,
+  "sleeve_no": null // スリーブ番号（null: デフォルト）,
+  "deck_cards": [] // デッキのカード構成（`card_id`, `art_no`, `count`）
+}
+```
+<!-- END GENERATED: Deck -->
 
 > **Note:** `is_valid` は DB に保存せず、リクエストごとにサーバーが算出する。所持カードの変動や制限改定を即座に反映するため。
 
@@ -377,20 +381,15 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
 デッキ詳細取得。
 
 **レスポンス (200):**
-```json
+
+<!-- BEGIN GENERATED: DeckDetailResponse -->
+```jsonc
 {
-  "deck": { /* Deck オブジェクト */ },
-  "cards": [
-    {
-      "player_id": "uuid",
-      "deck_id": 1,
-      "card_id": "SH-0001",
-      "art_no": 0,
-      "count": 3
-    }
-  ]
+  "deck": "Deck" // デッキ本体,
+  "cards": [] // デッキ内のカード一覧
 }
 ```
+<!-- END GENERATED: DeckDetailResponse -->
 
 ---
 
@@ -399,17 +398,17 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
 デッキ作成。
 
 **リクエスト:**
-```json
+
+<!-- BEGIN GENERATED: DeckCreateRequest -->
+```jsonc
 {
-  "deck_name": "string",
-  "cards": [
-    { "card_id": "SH-0001", "art_no": 0, "count": 3 },
-    { "card_id": "SH-0002", "art_no": 0, "count": 2 }
-  ],
-  "playmat_no": 1,
-  "sleeve_no": 2
+  "deck_name": "string" // デッキ名,
+  "cards": [] // デッキのカード構成,
+  "playmat_no": null // プレイマット番号,
+  "sleeve_no": null // スリーブ番号
 }
 ```
+<!-- END GENERATED: DeckCreateRequest -->
 
 **レスポンス (201):** Deck オブジェクト
 
@@ -437,27 +436,9 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
 
 全カード定義取得。
 
-**レスポンス (200):**
-```json
-[
-  {
-    "card_id": "SH-0001",
-    "card_name": "string",
-    "faction": "SHE|Tenki|Sugar|Tuners|Neutral",
-    "card_type": "resource|support|action",
-    "resizable": true,
-    "elastic": false,
-    "stats": {},
-    "effect_text": "string",
-    "effects": [],
-    "passive_effects": [],
-    "platform_effects": [],
-    "attachment_effects": [],
-    "restriction": "unlimited|semi_limited|limited|forbidden",
-    "is_active": true
-  }
-]
-```
+**レスポンス (200):** `[CardDefinition]`
+
+CardDefinition の詳細は PlayerCardWithDef と同構造（+ `effects`, `passive_effects`, `platform_effects`, `attachment_effects`, `is_active`, `created_at`, `updated_at`）。
 
 ---
 
@@ -467,76 +448,24 @@ WS ハンドラは接続時に `FindByFirebaseUID` で PlayerID（UUID）に解�
 
 NPC モデル一覧取得。Gateway が Battle Server の内部 API にプロキシする。
 
-**レスポンス (200):**
-```json
+**レスポンス (200):** `{ "models": [NpcModel] }`
+
+<!-- BEGIN GENERATED: NpcModel -->
+```jsonc
 {
-  "models": [
-    {
-      "model": "SHE-easy",
-      "faction": "SHE",
-      "difficulty": "easy",
-      "display_name": "研修中配達員"
-    },
-    {
-      "model": "SHE-hard",
-      "faction": "SHE",
-      "difficulty": "hard",
-      "display_name": "エース配達員"
-    }
-  ]
+  "model": "string" // NPC モデル ID。`npc_battle_start` で使用する,
+  "faction": "string" // ファクション名,
+  "difficulty": "string" // 難易度（`easy` / `hard`）,
+  "display_name": "string" // NPC の表示名
 }
 ```
-
-| フィールド | 型 | 説明 |
-|-----------|------|------|
-| `model` | string | NPC モデル ID。`npc_battle_start` で使用する |
-| `faction` | string | ファクション名 |
-| `difficulty` | string | 難易度（`easy` / `hard`） |
-| `display_name` | string | NPC の表示名。クライアントは「{faction} {display_name}」の形式で表示する |
+<!-- END GENERATED: NpcModel -->
 
 **内部 API:** Gateway → Battle `GET http://battle:9002/api/v1/npc/models`
 
 ---
 
-#### `npc_battle_start` (Client → Server, WebSocket)
-
-NPC 対戦開始。即座にゲームが作成される（マッチメイキング不要）。
-
-**ペイロード:**
-```json
-{
-  "type": "npc_battle_start",
-  "data": {
-    "deck_id": 1,
-    "npc_model": "SHE-easy"
-  }
-}
-```
-
-| フィールド | 型 | 説明 |
-|-----------|------|------|
-| `deck_id` | int | プレイヤーのデッキ ID |
-| `npc_model` | string | `/npc/models` で取得した NPC モデル ID |
-
-サーバーはゲーム作成前にデッキバリデーションを実行する（内容は `matchmaking_start` と同一）。
-バリデーション失敗時は `error` (code: `npc_battle_error`, retryable: `false`) を返す。
-存在しない `npc_model` を指定した場合も同様にエラーを返す。
-
-**レスポンス:** `npc_battle_created` (Server → Client)
-```json
-{
-  "type": "npc_battle_created",
-  "data": {
-    "game_id": "ULID",
-    "player1_id": "uuid",
-    "player2_id": "npc_..."
-  }
-}
-```
-
-エラー時は `error` メッセージが返る。
-
-ゲーム開始後は PvP と同じ `game_action` メッセージでアクションを送信する。NPC は自動応答する。ゲーム状態は `game_enter` → `game_state` メッセージで取得可能。
+NPC 対戦の開始は WebSocket で行う。詳細は [WS_REFERENCE.md の npc_battle_start](WS_REFERENCE.md#npc_battle_start--npc-対戦開始) を参照。
 
 ---
 
@@ -552,45 +481,34 @@ NPC 対戦開始。即座にゲームが作成される（マッチメイキン�
 |-----------|-----|-----------|------|
 | `lang` | string | `ja` | タイトル言語（`ja` / `en`） |
 
-**レスポンス (200):**
-```json
+**レスポンス (200):** `{ "episodes": [EpisodeWithStatus] }`
+
+<!-- BEGIN GENERATED: EpisodeWithStatus -->
+```jsonc
 {
-  "episodes": [
-    {
-      "episode_id": "she_ep1",
-      "faction": "SHE",
-      "episode_number": 1,
-      "title": "SHE 第1章 ワニと少年と、届かない返事",
-      "thumbnail_url": null,
-      "is_unlocked": true,
-      "is_completed": false,
-      "lock_reasons": []
-    },
-    {
-      "episode_id": "she_ep2",
-      "faction": "SHE",
-      "episode_number": 2,
-      "title": "SHE 第2章 霧の中の「サジェスト」",
-      "thumbnail_url": null,
-      "is_unlocked": false,
-      "is_completed": false,
-      "lock_reasons": [
-        { "type": "level", "required": 6, "current": 2 },
-        { "type": "faction", "required": "SHE" },
-        { "type": "episode", "required": "she_ep1" }
-      ]
-    }
-  ]
+  "episode_id": "string" // エピソードID,
+  "faction": null // ファクション名,
+  "episode_number": 0 // エピソード番号,
+  "title": "string" // エピソードタイトル,
+  "thumbnail_url": null // サムネイル画像 URL,
+  "is_unlocked": false // アンロック済みか,
+  "is_completed": false // クリア済みか,
+  "lock_reasons": [] // 未達のアンロック条件（アンロック済みの場合は空配列）
 }
 ```
+<!-- END GENERATED: EpisodeWithStatus -->
 
 **`lock_reasons`:** 未達のアンロック条件を全て返す配列。アンロック済みの場合は空配列。
 
-| lock_reasons[].type | required の型 | 説明 |
-|---------------------|---------------|------|
-| `level` | number | プレイヤーレベルが不足（`required`: 必要レベル, `current`: 現在レベル） |
-| `faction` | string | 陣営カードセット未所持（`required`: 陣営名） |
-| `episode` | string | 前提エピソード未クリア（`required`: 未完了エピソードID） |
+<!-- BEGIN GENERATED: LockReason -->
+```jsonc
+{
+  "type": "string" // 条件種別（`level` / `faction` / `episode`）,
+  "required": null // 必要値（種別により型が異なる）,
+  "current": null // 現在値（`level` の場合のみ）
+}
+```
+<!-- END GENERATED: LockReason -->
 
 `lock_reasons` の例:
 
@@ -613,12 +531,15 @@ NPC 対戦開始。即座にゲームが作成される（マッチメイキン�
 | `lang` | string | `ja` | スクリプト言語（`ja` / `en`、未対応言語は `ja` にフォールバック） |
 
 **レスポンス (200):**
-```json
+
+<!-- BEGIN GENERATED: ScenarioScriptResponse -->
+```jsonc
 {
-  "episode_id": "she_ep1",
-  "script": "[chara_new name=\"kafka\" ...]\n# kafka\nようこそ。[p]\n..."
+  "episode_id": "string" // エピソードID,
+  "script": "string" // スクリプト（`.ks` 形式）
 }
 ```
+<!-- END GENERATED: ScenarioScriptResponse -->
 
 **エラー:** `404` エピソードが存在しない / `403` ロック中
 
@@ -631,12 +552,15 @@ NPC 対戦開始。即座にゲームが作成される（マッチメイキン�
 **リクエスト:** なし
 
 **レスポンス (200):**
-```json
+
+<!-- BEGIN GENERATED: ScenarioCompleteResponse -->
+```jsonc
 {
-  "message": "episode completed",
-  "episode_id": "she_ep1"
+  "message": "string" // 結果メッセージ,
+  "episode_id": "string" // エピソードID
 }
 ```
+<!-- END GENERATED: ScenarioCompleteResponse -->
 
 **エラー:** `404` エピソードが存在しない / `403` ロック中
 
@@ -651,20 +575,26 @@ NPC 対戦開始。即座にゲームが作成される（マッチメイキン�
 ファクション選択。対応する初期カードセットが付与される。
 
 **リクエスト:**
-```json
+
+<!-- BEGIN GENERATED: SelectFactionRequest -->
+```jsonc
 {
-  "faction": "SHE|Tenki|Sugar|Tuners"
+  "faction": "string" // ファクション（`SHE` / `Tenki` / `Sugar` / `Tuners`）
 }
 ```
+<!-- END GENERATED: SelectFactionRequest -->
 
 **レスポンス (200):**
-```json
+
+<!-- BEGIN GENERATED: SelectFactionResponse -->
+```jsonc
 {
-  "message": "faction selected",
-  "faction": "SHE",
-  "cards_granted": 59
+  "message": "string" // 結果メッセージ,
+  "faction": "string" // 選択されたファクション,
+  "cards_granted": 0 // 付与されたカード枚数
 }
 ```
+<!-- END GENERATED: SelectFactionResponse -->
 
 **エラー:** `400` 不正なファクション / `409` 選択済み
 
@@ -674,24 +604,23 @@ NPC 対戦開始。即座にゲームが作成される（マッチメイキン�
 
 商品一覧取得。プレイヤーIDは認証トークンから自動解決される。
 
-**レスポンス (200):**
-```json
+**レスポンス (200):** `{ "products": [ProductResponse] }`
+
+<!-- BEGIN GENERATED: ProductResponse -->
+```jsonc
 {
-  "products": [
-    {
-      "product_id": "uuid",
-      "name": "string",
-      "type": "faction_set|cosmetic|subscription",
-      "price": 999,
-      "content": {},
-      "description": "string|null",
-      "image_url": "string|null",
-      "is_active": true,
-      "is_owned": false
-    }
-  ]
+  "product_id": "string" // 商品ID,
+  "name": "string" // 商品名,
+  "type": "string" // 商品種別（`faction_set` / `cosmetic` / `subscription`）,
+  "price": 0 // 価格（円）,
+  "content": {} // 商品内容（種別により構造が異なる）,
+  "description": null // 商品説明,
+  "image_url": null // 商品画像 URL,
+  "is_active": false // 販売中か,
+  "is_owned": false // 購入済みか
 }
 ```
+<!-- END GENERATED: ProductResponse -->
 
 ---
 
@@ -700,21 +629,27 @@ NPC 対戦開始。即座にゲームが作成される（マッチメイキン�
 商品購入。
 
 **リクエスト:**
-```json
+
+<!-- BEGIN GENERATED: PurchaseRequest -->
+```jsonc
 {
-  "product_id": "uuid",
-  "platform": "ios|android",
-  "purchase_token": "string"
+  "product_id": "string" // 商品ID,
+  "platform": "string" // プラットフォーム（`ios` / `android`）,
+  "purchase_token": "string" // 購入トークン
 }
 ```
+<!-- END GENERATED: PurchaseRequest -->
 
 **レスポンス (200):**
-```json
+
+<!-- BEGIN GENERATED: PurchaseResponse -->
+```jsonc
 {
-  "message": "purchase completed",
-  "product_id": "uuid"
+  "message": "string" // 結果メッセージ,
+  "product_id": "string" // 購入した商品ID
 }
 ```
+<!-- END GENERATED: PurchaseResponse -->
 
 ---
 
@@ -723,21 +658,27 @@ NPC 対戦開始。即座にゲームが作成される（マッチメイキン�
 サブスクリプション登録。
 
 **リクエスト:**
-```json
+
+<!-- BEGIN GENERATED: SubscribeRequest -->
+```jsonc
 {
-  "product_id": "uuid",
-  "platform": "ios|android",
-  "purchase_token": "string"
+  "product_id": "string" // 商品ID,
+  "platform": "string" // プラットフォーム（`ios` / `android`）,
+  "purchase_token": "string" // 購入トークン
 }
 ```
+<!-- END GENERATED: SubscribeRequest -->
 
 **レスポンス (200):**
-```json
+
+<!-- BEGIN GENERATED: SubscribeResponse -->
+```jsonc
 {
-  "message": "subscription activated",
-  "expires_at": "timestamp"
+  "message": "string" // 結果メッセージ,
+  "expires_at": "2006-01-02T15:04:05Z" // サブスクリプション有効期限
 }
 ```
+<!-- END GENERATED: SubscribeResponse -->
 
 ---
 
@@ -748,11 +689,14 @@ NPC 対戦開始。即座にゲームが作成される（マッチメイキン�
 Apple In-App Purchase のサーバー通知。
 
 **リクエスト:**
-```json
+
+<!-- BEGIN GENERATED: AppleWebhookRequest -->
+```jsonc
 {
-  "signedPayload": "JWS_TOKEN"
+  "signedPayload": "string" // Apple JWS トークン
 }
 ```
+<!-- END GENERATED: AppleWebhookRequest -->
 
 ---
 
@@ -761,471 +705,32 @@ Apple In-App Purchase のサーバー通知。
 Google Play Billing のサーバー通知。
 
 **リクエスト:**
-```json
+
+<!-- BEGIN GENERATED: GoogleWebhookRequest -->
+```jsonc
 {
-  "message": {
-    "data": "base64_encoded_json"
-  }
+  "message": "string" // Base64 エンコードされた通知データを含む JSON オブジェクト
 }
 ```
+<!-- END GENERATED: GoogleWebhookRequest -->
 
 ---
 
-## 4. WebSocket API
-
-### 4.1 接続
-
-```
-GET /ws?token={token}
-```
-
-- 本番: Firebase ID Token
-- ローカル: `dev-token-{uid}` または空
-- サーバーが FirebaseUID → PlayerID (UUID) に解決
-- ローカルでは未登録 uid に対してプレイヤーを自動作成
-
-接続後、サーバーは 15 秒間隔で WebSocket Ping を送信。クライアントは Pong を返す必要がある（ブラウザは自動応答）。Pong が 5 秒以内に返らない場合、サーバーは接続を切断する。
-
-### 切断とタイムアウト
-
-- **切断タイムアウト:** ゲーム中にプレイヤーが切断した場合、60 秒以内に再接続しないと自動フォーフェイト（敗北扱い）となる
-- **ターンタイムアウト:** 各ターンにはタイムバンク制限がある。超過すると自動フォーフェイトとなる
-- **再接続:** 再接続時はクライアントが `game_enter` を送信し、通常の `game_state` + `turn_controls` を受け取る
-
-### メッセージフォーマット
-
-```json
-{
-  "type": "message_type",
-  "data": { /* ペイロード */ }
-}
-```
-
----
-
-### 4.2 Client → Server メッセージ
-
-#### `matchmaking_start` — PvP マッチメイキング開始
-
-```json
-{
-  "type": "matchmaking_start",
-  "data": { "deck_id": 1 }
-}
-```
-
-**応答:** `matchmaking_started` / `error` (code: `matchmaking_error`)
-
-サーバーはキューに入る前にデッキバリデーションを実行する:
-- 枚数チェック（ちょうど30枚）
-- 所持チェック（全カードを必要枚数所持しているか）
-- 制限チェック（unlimited ≤ 3、semi_limited ≤ 2、limited ≤ 1）
-
-バリデーション失敗時は `error` (code: `matchmaking_error`, retryable: `false`) を返す。
-
-冪等: 既にマッチメイキング中の場合はデッキを更新して成功。
-
----
-
-#### `matchmaking_cancel` — マッチメイキングをキャンセル
-
-```json
-{ "type": "matchmaking_cancel" }
-```
-
-**応答:** `matchmaking_cancelled`
-
----
-
-#### `game_enter` — ゲームルームに参加
-
-```json
-{
-  "type": "game_enter",
-  "data": { "game_id": "ULID", "deck_id": 1 }
-}
-```
-
-**応答:** `game_entered` → `game_state`（両プレイヤーに送信）
-
----
-
-#### `game_action` — ゲームアクション実行
-
-```json
-{
-  "type": "game_action",
-  "data": {
-    "game_id": "ULID",
-    "action_type": "play_card|attack|scale_up|monetize|...",
-    "data": { /* アクション固有データ（NPC Battle セクション参照） */ }
-  }
-}
-```
-
-**応答:** `game_state`（両プレイヤーに送信）
-**エラー:** `action_rejected`
-**ゲーム終了時:** `game_over`（両プレイヤーに送信）
-
----
-
-#### `use_stamp` — スタンプ送信（演出のみ）
-
-```json
-{
-  "type": "use_stamp",
-  "data": { "game_id": "ULID", "stamp_no": 1 }
-}
-```
-
-**応答:** `stamp_used`（両プレイヤーにブロードキャスト）
-
----
-
-#### `ping` — 生存確認
-
-```json
-{ "type": "ping" }
-```
-
-**応答:** `pong`
-
----
-
-### 4.3 Server → Client メッセージ
-
-#### `matchmaking_started`
-```json
-{ "type": "matchmaking_started" }
-```
-
-#### `matchmaking_cancelled`
-```json
-{ "type": "matchmaking_cancelled" }
-```
-
-#### `match_found` — マッチ成立
-```json
-{
-  "type": "match_found",
-  "data": {
-    "game_id": "ULID",
-    "player1_id": "uuid",
-    "player2_id": "uuid"
-  }
-}
-```
-
-#### `game_entered`
-```json
-{
-  "type": "game_entered",
-  "data": { "game_id": "ULID" }
-}
-```
-
-#### `game_state` — ゲーム状態（情報秘匿適用済み）
-```json
-{
-  "type": "game_state",
-  "data": {
-    "gameId": "ULID",
-    "currentTurn": 1,
-    "currentPhase": "selecting|draw|yield|main|battle|end",
-    "activePlayer": 1,
-    "isMyTurn": true,
-    "my": {
-      "playerNum": 1,
-      "budget": 5,
-      "insightPool": 0,
-      "field": {
-        "frontend": [null, null, null],
-        "backend": [null, null, null],
-        "support": [null, null, null]
-      },
-      "hand": [
-        { "instanceId": "i0001", "cardId": 1, "artNo": 0 }
-      ],
-      "repoCount": 20,
-      "trashCount": 0
-    },
-    "opponent": {
-      "playerNum": 2,
-      "budget": 5,
-      "insightPool": 0,
-      "field": {},
-      "handCount": 3,
-      "repoCount": 20,
-      "trashCount": 0
-    },
-    "my": {
-      "playerNum": 1,
-      "budget": 5,
-      "insightPool": 0,
-      "field": {
-        "frontend": [null, null, null],
-        "backend": [null, null, null],
-        "support": [null, null, null]
-      },
-      "hand": [
-        { "instanceId": "i0001", "cardId": 1, "artNo": 0 }
-      ],
-      "repoCount": 20,
-      "trashCount": 0,
-      "available_actions": [
-        { "type": "play_card", "hand_instance_id": "i0001", "card_id": 1, "valid_zones": ["frontend_0", "frontend_1", "frontend_2", "backend_0", "backend_1", "backend_2"] }
-      ]
-    },
-    "opponent": { ... }
-  }
-}
-```
-
-##### `available_actions` — 実行可能アクション一覧（カード操作のみ）
-
-`my` の配下に含まれる。サーバーが毎回の状態更新時にフェーズごとの有効アクションを計算し、クライアントはこれを元に操作可能なカードのハイライトやUI制御を行う（クライアント側にゲームロジックの重複を持たせない設計）。
-
-カードに紐付かないゲームフロー制御（フェーズ終了、手札破棄）は `turn_controls` メッセージで別途通知される。
-
-- **`playing` 状態**: アクティブプレイヤーのみに送信される。対戦相手の `game_state` にはこのフィールドは含まれない。
-- **`finished` 状態**: 省略される。
-
-| type | 追加フィールド | 説明 |
-|------|--------------|------|
-| `play_card` | `hand_instance_id`, `card_id`, `valid_zones?`, `valid_targets?` | 手札からカードをデプロイ。デプロイターン 0 なら即表向き、1以上なら裏向き配置。`valid_zones` はゾーン+スロット (例: `"frontend_0"`)。Attachment の場合は `valid_zones` にサポートゾーンスロット (例: `"support_0"`)、`valid_targets` に対象リソースの instanceId が入る |
-| `attack` | `source_instance_id`, `valid_targets` | フロントの表向き Compute で攻撃。相手フロントに表向きリソースあり→フロントのみ対象 |
-| `scale_up` | `source_instance_id`, `target_rank`, `needs_family`, `required_count` | リソースをスケールアップ（無料）。`needs_family=true` なら S→M でファミリー選択が必要。`required_count` はスケールアップに必要なリソース数 |
-| `monetize` | `source_instance_id`, `remaining_capacity` | バックエンド Compute に Insight を配分。`remaining_capacity` は残りスループット |
-| `use_effect` | `source_instance_id`, `effect_target_type`, `valid_targets?` | アクティブ効果を発動。`effect_target_type`: `"none"`, `"choice"`, `"all_opp"`, `"self"` |
-
-#### `turn_controls` — ゲームフロー制御
-
-カードに紐付かないゲームフロー制御を通知する。`game_state` とは別メッセージとして、状態更新のたびにアクティブプレイヤーにのみ送信される。
-
-```json
-{
-  "type": "turn_controls",
-  "data": {
-    "can_end_phase": true,
-    "discard_required": 0
-  }
-}
-```
-
-| フィールド | 型 | 説明 |
-|-----------|-----|------|
-| `can_end_phase` | boolean | 現在のフェーズを終了できるか（main / battle フェーズで `true`） |
-| `discard_required` | int | 手札破棄が必要な枚数（end フェーズで手札 > 6 枚の場合のみ > 0） |
-
----
-
-#### `game_over` — ゲーム終了
-```json
-{
-  "type": "game_over",
-  "data": {
-    "game_id": "ULID",
-    "winner_num": 1,
-    "win_reason": "ko|deck_out|disconnect"
-  }
-}
-```
-
-#### `action_rejected` — アクション拒否
-```json
-{
-  "type": "action_rejected",
-  "data": {
-    "game_id": "ULID",
-    "action_type": "string",
-    "reason": "error message"
-  }
-}
-```
-
-#### `stamp_used` — スタンプ受信
-```json
-{
-  "type": "stamp_used",
-  "data": {
-    "game_id": "ULID",
-    "player_id": "uuid",
-    "stamp_no": 1
-  }
-}
-```
-
-#### `error` — エラー
-```json
-{
-  "type": "error",
-  "data": {
-    "error_code": "string",
-    "message": "エラー詳細",
-    "retryable": true
-  }
-}
-```
-
-**エラーコード一覧:**
-
-| コード | 発生タイミング | retryable | 説明 |
-|---|---|---|---|
-| `invalid_message` | メッセージ受信時 | `false` | JSON パース失敗 |
-| `invalid_data` | メッセージ受信時 | `false` | ペイロードのデシリアライズ失敗 |
-| `matchmaking_error` | `matchmaking_start` | `true`/`false` | デッキバリデーション失敗、バトル上限超過、キュー登録失敗 |
-| `npc_battle_error` | `npc_battle_start` | `true`/`false` | デッキバリデーション失敗、バトル上限超過、ゲーム作成失敗 |
-| `game_state_error` | `game_enter` / ゲーム中 | `true` | バトルサーバーからの状態取得失敗 |
-| `turn_controls_error` | ゲーム中 | `true` | ターン制御情報の取得失敗 |
-
----
-
-#### `action_performed` — 対戦相手のアクション通知
-
-対戦相手（NPC または PvP 相手）が実行した個別アクションを通知する。クライアントはこのメッセージをキューに積み、順番にアニメーション再生する。
-
-```json
-{
-  "type": "action_performed",
-  "data": {
-    "action_type": "play_card",
-    "action_data": {
-      "cardInstanceId": "uuid",
-      "position": { "zone": "frontend", "index": 0 }
-    },
-    "state": { /* game_state と同じ構造 (per-player info-hidden) */ }
-  }
-}
-```
-
-| フィールド | 型 | 説明 |
-|-----------|-----|------|
-| `action_type` | string | 実行されたアクション種別 (`play_card`, `attack`, `scale_up`, `use_effect`, `monetize`, `end_phase`, `discard_hand`, `battle_start`, `turn_start`) |
-
-| `action_data` | object | アクションの詳細データ（アクション種別により構造が異なる） |
-| `state` | ClientGameState | アクション実行後のゲーム状態（情報隠蔽適用済み） |
-
-**送信タイミング:**
-- **NPC ターン**: `runNPCTurnIfNeeded` 内の各アクション実行後
-- **PvP**: 相手プレイヤーのアクション実行後（自分のアクションには送信されない）
-- **battle_start**: selecting 完了後、最初の `game_state` より前に送信
-- **turn_start**: 各ターン開始時、draw フェーズの `game_state` より前に送信
-
-**クライアント処理フロー:**
-1. `action_performed` 受信 → アニメーションキューに追加
-2. キューを順番に処理（各アクションにディレイを設けて再生）
-3. 最後の `game_state` を ground truth として適用
-
-##### `battle_start` — バトル開始バナー
-
-selecting フェーズ完了後、最初の game_state より前に送信される。各プレイヤーに自分視点の情報が届く。
-
-```json
-{
-  "type": "action_performed",
-  "data": {
-    "action_type": "battle_start",
-    "action_data": {
-      "my_name": "Ken",
-      "my_level": 24,
-      "opponent_name": "Smile Horizon Express",
-      "opponent_level": 50,
-      "match_type": "npc"
-    },
-    "state": { /* ClientGameState */ }
-  }
-}
-```
-
-| フィールド | 型 | 説明 |
-|-----------|-----|------|
-| `my_name` | string | 自分の表示名 |
-| `my_level` | int | 自分のレベル |
-| `opponent_name` | string | 対戦相手の表示名（NPC の場合は陣営日本語名） |
-| `opponent_level` | int | 対戦相手のレベル（NPC は固定 50） |
-| `match_type` | string | `"npc"` or `"pvp"` |
-
-NPC 表示名:
-| Faction ID | 表示名 |
-|------------|--------|
-| SHE | Smile Horizon Express |
-| Tenki | 天気使い |
-| Sugar | しゅがーらぼ |
-| Tuners | 調律部 |
-
-##### `turn_start` — ターン開始バナー
-
-各ターン開始時に送信される。draw フェーズの `game_state` より前に届く。
-
-```json
-{
-  "type": "action_performed",
-  "data": {
-    "action_type": "turn_start",
-    "action_data": {
-      "turn": 1,
-      "is_my_turn": true
-    },
-    "state": { /* ClientGameState */ }
-  }
-}
-```
-
-| フィールド | 型 | 説明 |
-|-----------|-----|------|
-| `turn` | int | ターン番号 |
-| `is_my_turn` | bool | このプレイヤーのターンかどうか |
-
-**送信順序:**
-
-```
-[selecting 完了]
-  → action_performed (battle_start)
-  → action_performed (turn_start, turn=1)
-  → game_state
-  → turn_controls
-
-[ターン切り替わり時]
-  → action_performed (turn_start, turn=N)
-  → game_state
-  → turn_controls
-```
-
----
-
-#### `pong`
-```json
-{ "type": "pong" }
-```
-
----
-
-## 5. Dev API（開発専用）
+## 4. Dev API（開発専用）
 
 `/api/dev/` 以下のエンドポイントは認証不要。ローカルモードのみ。
 
-#### POST `/api/dev/games` — テストゲーム作成
-```json
-// リクエスト
-{
-  "player1Id": "uuid",
-  "player2Id": "uuid",
-  "deck1": "npc_deck_name",
-  "deck2": "npc_deck_name",
-  "firstPlayer": 1
-}
-// レスポンス
-{ "gameId": "ULID" }
-```
-
-#### POST `/api/dev/games/{gameId}/select` — 初期配置選択
-#### POST `/api/dev/games/{gameId}/action` — アクション実行
-#### GET `/api/dev/games/{gameId}/state` — 状態取得
-#### GET `/api/dev/cards` — カード一覧
+| メソッド | パス | 用途 |
+|----------|------|------|
+| POST | `/api/dev/games` | テストゲーム作成（`player1Id`, `player2Id`, `deck1`, `deck2`, `firstPlayer`） |
+| POST | `/api/dev/games/{gameId}/select` | 初期配置選択 |
+| POST | `/api/dev/games/{gameId}/action` | アクション実行 |
+| GET | `/api/dev/games/{gameId}/state` | 状態取得 |
+| GET | `/api/dev/cards` | カード一覧 |
 
 ---
 
-## 6. エンドポイント一覧
+## 5. エンドポイント一覧
 
 | カテゴリ | メソッド | パス | 認証 | PlayerResolve | 用途 |
 |----------|----------|------|------|---------------|------|
@@ -1251,12 +756,7 @@ NPC 表示名:
 | **Game Log** | GET | `/games/{gameId}/log` | 要 | 要 | ゲームログ取得 |
 | | GET | `/games/{gameId}/log/text` | 要 | 要 | ゲームログ（テキスト） |
 | **Spectate** | GET | `/spectate/games` | 要 | 要 | 観戦可能ゲーム一覧 |
-| | WS | `spectate_join` | 要 | 要 | 観戦参加（WebSocket）<!-- TODO: spectate WS メッセージの詳細ドキュメントを追加 --> |
-| | WS | `spectate_leave` | - | - | 観戦離脱（WebSocket） |
-| | WS | `spectate_stamp` | - | - | 観戦スタンプ送信（WebSocket） |
 | **NPC** | GET | `/npc/models` | 要 | 要 | NPC モデル一覧 |
-| | WS | `npc_battle_start` | 要 | 要 | NPC 対戦開始（WebSocket） |
-| | WS | `npc_battle_created` | - | - | NPC 対戦作成通知（Server→Client） |
 | **Scenario** | GET | `/scenarios` | 要 | 要 | エピソード一覧 |
 | | GET | `/scenarios/{episodeId}/script` | 要 | 要 | スクリプト取得 |
 | | POST | `/scenarios/{episodeId}/complete` | 要 | 要 | エピソード完了 |
@@ -1266,4 +766,3 @@ NPC 表示名:
 | | POST | `/shop/subscribe` | 要 | 要 | サブスク登録 |
 | **Webhook** | POST | `/shop/webhook/apple` | 不要 | 不要 | Apple 通知 |
 | | POST | `/shop/webhook/google` | 不要 | 不要 | Google 通知 |
-| **WS** | GET | `/ws?token={token}` | 接続時 | 接続時 | WebSocket 接続 |

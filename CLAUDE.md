@@ -30,13 +30,15 @@
 - `db/seed/game_config.sql` - ゲーム定数の DB seed（budget, hand_limit, time_bank 等）
 - `scripts/generate_cards.py` - カードデータ生成スクリプト（YAML → JSON/SQL/Markdown）
 - `scripts/generate_products.py` - 商品データ生成スクリプト（YAML → JSON/SQL）
-- `scripts/generate_constants.py` - 定数・型生成スクリプト（YAML → Go/C#/TS）
+- `scripts/generate_constants.py` - 定数・型生成スクリプト（YAML → Go/C#/TS + ドキュメントのフィールドテーブル自動更新）
 - `packages/gamedata/` - Go パッケージ（ゲームデータ: カード定義・定数・エフェクト型）
 - `packages/api/` - Go パッケージ（API コントラクト: REST 型・WS メッセージ・デッキ型）
 - `packages/devdata/` - Go パッケージ 開発用（カード・商品 JSON、ローカルモック用）
 - `packages/gamedata-dotnet/` - NuGet パッケージ（battle 用、GitHub Packages で publish）
 - `packages/gamedata-npm/` - npm パッケージ gamedata（constants, eventData, variantTypes）
 - `packages/api-npm/` - npm パッケージ api（models, wsMessages）
+- `docs/architecture/API_REFERENCE.md` - REST API リファレンス
+- `docs/architecture/WS_REFERENCE.md` - WebSocket API リファレンス
 - `docs/architecture/` - システム設計ドキュメント（API, CI/CD, データ設計, i18n 等）
 - `docs/game_design/` - ゲームデザインドキュメント（ルール, カード, UI, チュートリアル等）
 - `docs/business/` - ビジネス・法務ドキュメント（法的表示, マーケ, 収益化, 企画書等）
@@ -47,8 +49,10 @@
 - 商品データを変更したら `python3 scripts/generate_products.py` を実行
 - 定数・イベントスキーマ・モデル定義を変更したら `python3 scripts/generate_constants.py` を実行
 - main への push 時に CI が自動でパッケージを publish する（patch bump。minor/major は手動 dispatch で指定）
+- **git tag を手動で打ってはいけない。** タグは CI が自動で作成する。手動タグは二重 publish やバージョン不整合の原因になる
 - codegen は CI では実行しない。PR の codegen-check で同期を保証
 - CARDS.md、products.sql、cards_seed.sql は自動生成なので直接編集しない
+- API_REFERENCE.md / WS_REFERENCE.md の `<!-- BEGIN/END GENERATED: TypeName -->` マーカー間は自動生成。フィールド説明を変更する場合は `data/models.yaml` の `doc` フィールドを編集して codegen を実行する
 - DB スキーマを変更したら `db/schema_postgres.sql` のみ編集する（server リポの schema は廃止）
 - 各リポはパッケージをインストールして生成コードを使う:
   - gateway: `go get .../packages/gamedata@latest` + `go get .../packages/api@latest`

@@ -96,8 +96,7 @@ overload-party-common/          # 共有データ・定義の SSoT
 │       └── src/constants.ts, eventData.ts
 └── .github/workflows/
     ├── ci.yaml                 # DB マイグレーション CI
-    ├── publish-packages.yaml   # gamedata/dotnet/npm パッケージ publish
-    └── publish-devdata.yaml    # devdata パッケージ publish
+    └── publish.yaml            # 統合 publish (check → test → gamedata → api → devdata)
 
 overload-party-gateway/         # Go API サーバー
 ├── internal/
@@ -139,6 +138,19 @@ overload-party-client/          # React + Capacitor クライアント
 | `data/event_schemas.json` | `generate_constants.py` | `packages/gamedata-npm/src/eventData.ts` | npm |
 
 各リポはパッケージをインストールして使う（gateway: `go get gamedata` + `go get devdata`, battle: NuGet, client: npm）。生成されたファイルには `DO NOT EDIT` コメントが付く。
+
+#### パッケージ責務
+
+| パッケージ | 形式 | 責務 | 消費先 |
+|---|---|---|---|
+| `packages/gamedata/` | Go module | ゲームデータ（カード定義・定数・エフェクト型）+ ゲームステート View 型 | gateway |
+| `packages/api/` | Go module | API コントラクト（REST 型・WS メッセージ・デッキ型） | gateway |
+| `packages/devdata/` | Go module | ローカル開発用モックデータ（cards_gen.json, products_gen.json） | gateway (dev) |
+| `packages/gamedata-dotnet/` | NuGet | カード定義・定数・イベントデータ・ゲームステート View 型・AvailableAction | battle |
+| `packages/gamedata-npm/` | npm | 定数・イベントデータ・ゲームステート View 型・AvailableAction | client |
+| `packages/api-npm/` | npm | REST API 型・WS メッセージ型 | client |
+
+**gamedata と api の分離:** gamedata パッケージにはゲームデザインデータに加え、ゲームステート View 型（`ClientGameState`, `PlayerView` 等）が含まれる。これは battle サーバーが直接シリアライズし client がデシリアライズする JSON ワイヤーフォーマット（API 契約）であり、gateway はパススルーする。api パッケージは gateway-client 間の REST/WS プロトコル契約で、battle サーバーは使わない。`models.yaml` の `pkg` フィールド（`gamedata` / `api`）で生成先を振り分ける。
 
 ### 2.4 作業別クロスリファレンス
 

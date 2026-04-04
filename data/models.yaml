@@ -24,41 +24,41 @@ files:
       - name: PlayerCardWithDef
         comment: "PlayerCardWithDef is a PlayerCard enriched with card definition fields for API responses."
         fields:
-          - {name: CardID, type: string, json: "card_id"}
-          - {name: ArtNo, type: int64, json: "art_no"}
-          - {name: Count, type: int, json: "count"}
-          - {name: CardName, type: string, json: "card_name"}
-          - {name: ResourceLabel, type: string, json: "resource_label"}
-          - {name: Faction, type: string, json: "faction", ts_type: "FactionId | 'Neutral'"}
-          - {name: CardType, type: string, json: "card_type", ts_type: CardType}
-          - {name: DeployTurns, type: int64, json: "deploy_turns"}
-          - {name: Resizable, type: bool, json: "resizable"}
-          - {name: Elastic, type: bool, json: "elastic"}
-          - {name: Stats, type: json.RawMessage, json: "stats", ts_type: CardStats}
-          - {name: EffectText, type: "*string", json: "effect_text,omitempty"}
-          - {name: Restriction, type: string, json: "restriction", ts_type: Restriction}
+          - {name: CardID, type: string, json: "card_id", doc: "カードID"}
+          - {name: ArtNo, type: int64, json: "art_no", doc: "アート番号"}
+          - {name: Count, type: int, json: "count", doc: "所持枚数"}
+          - {name: CardName, type: string, json: "card_name", doc: "カード名"}
+          - {name: ResourceLabel, type: string, json: "resource_label", doc: "リソースラベル（AWS/Azure/GCP/Oracle のサービス名）"}
+          - {name: Faction, type: string, json: "faction", ts_type: "FactionId | 'Neutral'", doc: "ファクション（`SHE` / `Tenki` / `Sugar` / `Tuners` / `Neutral`）"}
+          - {name: CardType, type: string, json: "card_type", ts_type: CardType, doc: "カード種別"}
+          - {name: DeployTurns, type: int64, json: "deploy_turns", doc: "デプロイターン数（0=即時）"}
+          - {name: Resizable, type: bool, json: "resizable", doc: "手動スケール可能か"}
+          - {name: Elastic, type: bool, json: "elastic", doc: "自動スケール対応か"}
+          - {name: Stats, type: json.RawMessage, json: "stats", ts_type: CardStats, doc: "スタッツ（ComputeStats または DataStats）"}
+          - {name: EffectText, type: "*string", json: "effect_text,omitempty", doc: "エフェクト説明テキスト"}
+          - {name: Restriction, type: string, json: "restriction", ts_type: Restriction, doc: "制限（`unlimited` / `semi_limited` / `limited` / `forbidden`）"}
 
       - name: Deck
         comment: "Deck is the API response for a player's deck with optional card list."
         fields:
           - {name: PlayerID, type: string, json: "player_id"}
-          - {name: DeckID, type: int64, json: "deck_id"}
-          - {name: DeckName, type: string, json: "deck_name"}
-          - {name: IsValid, type: bool, json: "is_valid"}
-          - {name: PlaymatNo, type: "*int64", json: "playmat_no,omitempty"}
-          - {name: SleeveNo, type: "*int64", json: "sleeve_no,omitempty"}
+          - {name: DeckID, type: int64, json: "deck_id", doc: "デッキID（自動採番）"}
+          - {name: DeckName, type: string, json: "deck_name", doc: "デッキ名"}
+          - {name: IsValid, type: bool, json: "is_valid", doc: "バトル使用可能か（都度算出: 30枚 + 全カード所持 + 制限枚数以内）"}
+          - {name: PlaymatNo, type: "*int64", json: "playmat_no,omitempty", doc: "プレイマット番号（null: デフォルト）"}
+          - {name: SleeveNo, type: "*int64", json: "sleeve_no,omitempty", doc: "スリーブ番号（null: デフォルト）"}
           - {name: CreatedAt, type: time.Time, json: "created_at"}
           - {name: UpdatedAt, type: time.Time, json: "updated_at"}
-          - {name: DeckCards, type: "[]DeckCard", json: "deck_cards,omitempty", comment: "Populated by the service layer for API responses."}
+          - {name: DeckCards, type: "[]DeckCard", json: "deck_cards,omitempty", comment: "Populated by the service layer for API responses.", doc: "デッキのカード構成（`card_id`, `art_no`, `count`）"}
 
       - name: DeckCard
         comment: "DeckCard is a single card entry within a deck."
         fields:
-          - {name: PlayerID, type: string, json: "player_id"}
-          - {name: DeckID, type: int64, json: "deck_id"}
-          - {name: CardID, type: string, json: "card_id"}
-          - {name: ArtNo, type: int64, json: "art_no"}
-          - {name: Count, type: int, json: "count"}
+          - {name: PlayerID, type: string, json: "player_id", doc: "プレイヤーID"}
+          - {name: DeckID, type: int64, json: "deck_id", doc: "デッキID"}
+          - {name: CardID, type: string, json: "card_id", doc: "カードID"}
+          - {name: ArtNo, type: int64, json: "art_no", doc: "アート番号"}
+          - {name: Count, type: int, json: "count", doc: "枚数"}
 
   # ─── Card ──────────────────────────────────────────────
   - name: card
@@ -198,112 +198,112 @@ files:
       # Client -> Server
       - name: MatchmakingStartMessage
         fields:
-          - {name: DeckID, type: int64, json: "deck_id"}
+          - {name: DeckID, type: int64, json: "deck_id", doc: "デッキ ID"}
 
       - name: GameEnterMessage
         fields:
-          - {name: GameID, type: string, json: "game_id"}
-          - {name: DeckID, type: int64, json: "deck_id"}
+          - {name: GameID, type: string, json: "game_id", doc: "ゲームID（ULID）"}
+          - {name: DeckID, type: int64, json: "deck_id", doc: "デッキ ID"}
 
       - name: NPCBattleStartMessage
         fields:
-          - {name: DeckID, type: int64, json: "deck_id"}
-          - {name: NPCModel, type: string, json: "npc_model"}
+          - {name: DeckID, type: int64, json: "deck_id", doc: "プレイヤーのデッキ ID"}
+          - {name: NPCModel, type: string, json: "npc_model", doc: "`/npc/models` で取得した NPC モデル ID"}
 
       - name: GameActionMessage
         fields:
-          - {name: GameID, type: string, json: "game_id"}
-          - {name: ActionType, type: string, json: "action_type"}
-          - {name: Data, type: json.RawMessage, json: "data"}
+          - {name: GameID, type: string, json: "game_id", doc: "ゲームID"}
+          - {name: ActionType, type: string, json: "action_type", doc: "アクション種別"}
+          - {name: Data, type: json.RawMessage, json: "data", doc: "アクション固有データ"}
 
       - name: UseStampMessage
         fields:
-          - {name: GameID, type: string, json: "game_id"}
-          - {name: StampNo, type: int64, json: "stamp_no"}
+          - {name: GameID, type: string, json: "game_id", doc: "ゲームID"}
+          - {name: StampNo, type: int64, json: "stamp_no", doc: "スタンプ番号"}
 
       # Server -> Client
       - name: ErrorMessage
         fields:
-          - {name: Code, type: string, json: "error_code"}
-          - {name: Message, type: string, json: "message"}
-          - {name: Retryable, type: bool, json: "retryable"}
+          - {name: Code, type: string, json: "error_code", doc: "エラーコード"}
+          - {name: Message, type: string, json: "message", doc: "エラー詳細メッセージ"}
+          - {name: Retryable, type: bool, json: "retryable", doc: "リトライ可能か"}
 
       - name: MatchFoundMessage
         fields:
-          - {name: GameID, type: string, json: "game_id"}
-          - {name: Player1ID, type: string, json: "player1_id"}
-          - {name: Player2ID, type: string, json: "player2_id"}
+          - {name: GameID, type: string, json: "game_id", doc: "ゲームID（ULID）"}
+          - {name: Player1ID, type: string, json: "player1_id", doc: "プレイヤー1 ID"}
+          - {name: Player2ID, type: string, json: "player2_id", doc: "プレイヤー2 ID"}
 
       - name: GameOverMessage
         fields:
-          - {name: GameID, type: string, json: "game_id"}
-          - {name: WinnerNum, type: int64, json: "winner_num"}
-          - {name: WinReason, type: string, json: "win_reason"}
+          - {name: GameID, type: string, json: "game_id", doc: "ゲームID"}
+          - {name: WinnerNum, type: int64, json: "winner_num", doc: "勝者のプレイヤー番号（1 or 2）"}
+          - {name: WinReason, type: string, json: "win_reason", doc: "勝因"}
 
       - name: ActionRejectedMessage
         fields:
-          - {name: GameID, type: string, json: "game_id"}
-          - {name: ActionType, type: string, json: "action_type"}
-          - {name: Reason, type: string, json: "reason"}
+          - {name: GameID, type: string, json: "game_id", doc: "ゲームID"}
+          - {name: ActionType, type: string, json: "action_type", doc: "拒否されたアクション種別"}
+          - {name: Reason, type: string, json: "reason", doc: "拒否理由"}
 
       - name: ActionPerformedMessage
         comment: "ActionPerformedMessage notifies a player of an action and the resulting state."
         fields:
-          - {name: Sequence, type: int64, json: "sequence"}
-          - {name: ActionType, type: string, json: "action_type"}
-          - {name: ActionData, type: json.RawMessage, json: "action_data"}
-          - {name: State, type: json.RawMessage, json: "state", ts_type: ClientGameState}
+          - {name: Sequence, type: int64, json: "sequence", doc: "シーケンス番号"}
+          - {name: ActionType, type: string, json: "action_type", doc: "実行されたアクション種別（`play_card`, `attack`, `scale_up`, `use_effect`, `monetize`, `end_phase`, `discard_hand`, `battle_start`, `turn_start`）"}
+          - {name: ActionData, type: json.RawMessage, json: "action_data", doc: "アクションの詳細データ（アクション種別により構造が異なる）"}
+          - {name: State, type: json.RawMessage, json: "state", ts_type: ClientGameState, doc: "アクション実行後のゲーム状態（情報隠蔽適用済み）"}
 
       - name: StampUsedMessage
         fields:
-          - {name: GameID, type: string, json: "game_id"}
-          - {name: PlayerID, type: string, json: "player_id"}
-          - {name: StampNo, type: int64, json: "stamp_no"}
+          - {name: GameID, type: string, json: "game_id", doc: "ゲームID"}
+          - {name: PlayerID, type: string, json: "player_id", doc: "送信したプレイヤーID"}
+          - {name: StampNo, type: int64, json: "stamp_no", doc: "スタンプ番号"}
 
       - name: NPCBattleCreatedMessage
         fields:
-          - {name: GameID, type: string, json: "game_id"}
-          - {name: Player1ID, type: string, json: "player1_id"}
-          - {name: Player2ID, type: string, json: "player2_id"}
+          - {name: GameID, type: string, json: "game_id", doc: "ゲームID（ULID）"}
+          - {name: Player1ID, type: string, json: "player1_id", doc: "プレイヤー1 ID"}
+          - {name: Player2ID, type: string, json: "player2_id", doc: "NPC プレイヤーID（`npc_` プレフィクス）"}
 
       # Spectate: Client -> Server
       - name: SpectateJoinMessage
         fields:
-          - {name: GameID, type: string, json: "game_id"}
+          - {name: GameID, type: string, json: "game_id", doc: "観戦対象のゲームID"}
 
       - name: SpectateLeaveMessage
         fields:
-          - {name: GameID, type: string, json: "game_id"}
+          - {name: GameID, type: string, json: "game_id", doc: "離脱するゲームID"}
 
       - name: SpectateStampMessage
         fields:
-          - {name: GameID, type: string, json: "game_id"}
-          - {name: StampNo, type: int64, json: "stamp_no"}
+          - {name: GameID, type: string, json: "game_id", doc: "ゲームID"}
+          - {name: StampNo, type: int64, json: "stamp_no", doc: "スタンプ番号"}
 
       # Spectate: Server -> Client
       - name: SpectateJoinedMessage
         fields:
-          - {name: GameID, type: string, json: "game_id"}
-          - {name: Player1ID, type: string, json: "player1_id"}
-          - {name: Player2ID, type: string, json: "player2_id"}
-          - {name: State, type: json.RawMessage, json: "state", ts_type: ClientGameState}
+          - {name: GameID, type: string, json: "game_id", doc: "ゲームID"}
+          - {name: Player1ID, type: string, json: "player1_id", doc: "プレイヤー1 ID"}
+          - {name: Player2ID, type: string, json: "player2_id", doc: "プレイヤー2 ID"}
+          - {name: State, type: json.RawMessage, json: "state", ts_type: ClientGameState, doc: "現在のゲーム状態（観戦者視点）"}
 
       - name: SpectateErrorMessage
         fields:
-          - {name: Code, type: string, json: "error_code"}
-          - {name: Message, type: string, json: "message"}
+          - {name: Code, type: string, json: "error_code", doc: "エラーコード"}
+          - {name: Message, type: string, json: "message", doc: "エラー詳細メッセージ"}
 
       - name: SpectateEndedMessage
         fields:
-          - {name: GameID, type: string, json: "game_id"}
-          - {name: WinnerNum, type: int64, json: "winner_num"}
-          - {name: WinReason, type: string, json: "win_reason"}
+          - {name: GameID, type: string, json: "game_id", doc: "ゲームID"}
+          - {name: WinnerNum, type: int64, json: "winner_num", doc: "勝者のプレイヤー番号"}
+          - {name: WinReason, type: string, json: "win_reason", doc: "勝因"}
 
       - name: SpectateStampBroadcastMessage
         fields:
-          - {name: GameID, type: string, json: "game_id"}
-          - {name: SpectatorID, type: string, json: "spectator_id"}
-          - {name: StampNo, type: int64, json: "stamp_no"}
+          - {name: GameID, type: string, json: "game_id", doc: "ゲームID"}
+          - {name: SpectatorID, type: string, json: "spectator_id", doc: "スタンプ送信した観戦者ID"}
+          - {name: StampNo, type: int64, json: "stamp_no", doc: "スタンプ番号"}
 
       # Opponent connection status (Server -> Client, no payload)
       - name: OpponentDisconnectedMessage
@@ -311,6 +311,24 @@ files:
 
       - name: OpponentReconnectedMessage
         fields: []
+
+      # action_performed sub-types (doc only, not code-generated)
+      - name: BattleStartActionData
+        doc_only: true
+        comment: "action_performed (action_type: battle_start) の action_data。selecting 完了後に送信。"
+        fields:
+          - {name: MyName, type: string, json: "my_name", doc: "自分の表示名"}
+          - {name: MyLevel, type: int64, json: "my_level", doc: "自分のレベル"}
+          - {name: OpponentName, type: string, json: "opponent_name", doc: "対戦相手の表示名（NPC の場合は陣営名）"}
+          - {name: OpponentLevel, type: int64, json: "opponent_level", doc: "対戦相手のレベル（NPC は固定 50）"}
+          - {name: MatchType, type: string, json: "match_type", doc: "`npc` or `pvp`"}
+
+      - name: TurnStartActionData
+        doc_only: true
+        comment: "action_performed (action_type: turn_start) の action_data。各ターン開始時に送信。"
+        fields:
+          - {name: Turn, type: int64, json: "turn", doc: "ターン番号"}
+          - {name: IsMyTurn, type: bool, json: "is_my_turn", doc: "このプレイヤーのターンか"}
 
   # ─── REST API (Gateway -> Client) ────────────────────────
   - name: rest_api
@@ -322,146 +340,254 @@ files:
     ts_imports:
       - {names: [CloudNewsSource, ProductType], from: "@kenyamaneko/overload-party-gamedata/constants"}
     types:
+      # ── Public response types (doc only) ──
+      - name: HealthResponse
+        doc_only: true
+        comment: "HealthResponse is the API response for GET /health."
+        fields:
+          - {name: Status, type: string, json: "status", doc: "サーバーステータス（`ok`）"}
+          - {name: Mode, type: string, json: "mode", doc: "動作モード（`local` / `dev` / `stg` / `prod`）"}
+
+      - name: VersionResponse
+        doc_only: true
+        comment: "VersionResponse is the API response for GET /version."
+        fields:
+          - {name: MinimumVersion, type: string, json: "minimumVersion", doc: "最低要求バージョン"}
+          - {name: LatestVersion, type: string, json: "latestVersion", doc: "最新バージョン"}
+          - {name: ForceUpdate, type: bool, json: "forceUpdate", doc: "`true` の場合、クライアントはストアへ誘導する"}
+          - {name: StoreUrl, type: string, json: "storeUrl", doc: "ストア URL"}
+
       # ── Response types ──
       - name: PlayerResponse
         comment: "PlayerResponse is the API response for GET /player."
         fields:
-          - {name: PlayerID, type: string, json: "player_id"}
-          - {name: FirebaseUID, type: string, json: "firebase_uid"}
-          - {name: Username, type: string, json: "username"}
-          - {name: Level, type: int64, json: "level"}
-          - {name: Exp, type: int64, json: "exp"}
-          - {name: IsPremium, type: bool, json: "is_premium"}
-          - {name: EquippedIconNo, type: "*int64", json: "equipped_icon_no,omitempty"}
-          - {name: SelectedFaction, type: "*string", json: "selected_faction,omitempty"}
-          - {name: PremiumExpiresAt, type: "*time.Time", json: "premium_expires_at,omitempty"}
-          - {name: CreatedAt, type: time.Time, json: "created_at"}
-          - {name: UpdatedAt, type: time.Time, json: "updated_at"}
-          - {name: LevelExpCurrent, type: int64, json: "level_exp_current"}
-          - {name: LevelExpRequired, type: int64, json: "level_exp_required"}
+          - {name: PlayerID, type: string, json: "player_id", doc: "プレイヤーID（UUID）"}
+          - {name: FirebaseUID, type: string, json: "firebase_uid", doc: "Firebase UID"}
+          - {name: Username, type: string, json: "username", doc: "ユーザー名"}
+          - {name: Level, type: int64, json: "level", doc: "プレイヤーレベル"}
+          - {name: Exp, type: int64, json: "exp", doc: "累計経験値"}
+          - {name: IsPremium, type: bool, json: "is_premium", doc: "プレミアム会員か"}
+          - {name: EquippedIconNo, type: "*int64", json: "equipped_icon_no,omitempty", doc: "装備中のアイコン番号"}
+          - {name: SelectedFaction, type: "*string", json: "selected_faction,omitempty", doc: "選択済みファクション"}
+          - {name: PremiumExpiresAt, type: "*time.Time", json: "premium_expires_at,omitempty", doc: "プレミアム有効期限"}
+          - {name: CreatedAt, type: time.Time, json: "created_at", doc: "登録日時"}
+          - {name: UpdatedAt, type: time.Time, json: "updated_at", doc: "最終更新日時"}
+          - {name: LevelExpCurrent, type: int64, json: "level_exp_current", doc: "現在レベル内の経験値"}
+          - {name: LevelExpRequired, type: int64, json: "level_exp_required", doc: "次レベルまでの必要経験値"}
 
       - name: BattleLimitResponse
         comment: "BattleLimitResponse is the API response for GET /player/battle-limit."
         fields:
-          - {name: DailyBattleCount, type: int64, json: "daily_battle_count"}
-          - {name: DailyBattleLimit, type: int64, json: "daily_battle_limit"}
-          - {name: CanBattle, type: bool, json: "can_battle"}
+          - {name: DailyBattleCount, type: int64, json: "daily_battle_count", doc: "本日のバトル回数"}
+          - {name: DailyBattleLimit, type: int64, json: "daily_battle_limit", doc: "デイリーバトル上限（`-1` で無制限 = プレミアム会員）"}
+          - {name: CanBattle, type: bool, json: "can_battle", doc: "バトル可能か"}
 
       - name: UserSettings
         comment: "UserSettings holds per-player application settings."
         fields:
-          - {name: PlayerID, type: string, json: "player_id"}
-          - {name: Language, type: string, json: "language"}
-          - {name: BgmVolume, type: int64, json: "bgm_volume"}
-          - {name: SeVolume, type: int64, json: "se_volume"}
-          - {name: PushEnabled, type: bool, json: "push_enabled"}
-          - {name: UpdatedAt, type: time.Time, json: "updated_at"}
+          - {name: PlayerID, type: string, json: "player_id", doc: "プレイヤーID"}
+          - {name: Language, type: string, json: "language", doc: "言語（`ja` / `en`）"}
+          - {name: BgmVolume, type: int64, json: "bgm_volume", doc: "BGM 音量（0-100）"}
+          - {name: SeVolume, type: int64, json: "se_volume", doc: "SE 音量（0-100）"}
+          - {name: PushEnabled, type: bool, json: "push_enabled", doc: "プッシュ通知の有効/無効"}
+          - {name: UpdatedAt, type: time.Time, json: "updated_at", doc: "最終更新日時"}
 
       - name: ProductResponse
         comment: "ProductResponse is the API response for a purchasable item in the shop."
         fields:
-          - {name: ProductID, type: string, json: "product_id"}
-          - {name: Name, type: string, json: "name"}
-          - {name: Type, type: string, json: "type", ts_type: ProductType}
-          - {name: Price, type: int64, json: "price"}
-          - {name: Content, type: json.RawMessage, json: "content"}
-          - {name: Description, type: "*string", json: "description,omitempty"}
-          - {name: ImageURL, type: "*string", json: "image_url,omitempty"}
-          - {name: IsActive, type: bool, json: "is_active"}
-          - {name: IsOwned, type: bool, json: "is_owned"}
+          - {name: ProductID, type: string, json: "product_id", doc: "商品ID"}
+          - {name: Name, type: string, json: "name", doc: "商品名"}
+          - {name: Type, type: string, json: "type", ts_type: ProductType, doc: "商品種別（`faction_set` / `cosmetic` / `subscription`）"}
+          - {name: Price, type: int64, json: "price", doc: "価格（円）"}
+          - {name: Content, type: json.RawMessage, json: "content", doc: "商品内容（種別により構造が異なる）"}
+          - {name: Description, type: "*string", json: "description,omitempty", doc: "商品説明"}
+          - {name: ImageURL, type: "*string", json: "image_url,omitempty", doc: "商品画像 URL"}
+          - {name: IsActive, type: bool, json: "is_active", doc: "販売中か"}
+          - {name: IsOwned, type: bool, json: "is_owned", doc: "購入済みか"}
 
       - name: EpisodeWithStatus
         comment: "EpisodeWithStatus is the API response for a single episode with unlock status."
         fields:
-          - {name: EpisodeID, type: string, json: "episode_id"}
-          - {name: Faction, type: "*string", json: "faction"}
-          - {name: EpisodeNumber, type: int64, json: "episode_number"}
-          - {name: Title, type: string, json: "title"}
-          - {name: ThumbnailURL, type: "*string", json: "thumbnail_url"}
-          - {name: IsUnlocked, type: bool, json: "is_unlocked"}
-          - {name: IsCompleted, type: bool, json: "is_completed"}
-          - {name: LockReasons, type: "[]LockReason", json: "lock_reasons"}
+          - {name: EpisodeID, type: string, json: "episode_id", doc: "エピソードID"}
+          - {name: Faction, type: "*string", json: "faction", doc: "ファクション名"}
+          - {name: EpisodeNumber, type: int64, json: "episode_number", doc: "エピソード番号"}
+          - {name: Title, type: string, json: "title", doc: "エピソードタイトル"}
+          - {name: ThumbnailURL, type: "*string", json: "thumbnail_url", doc: "サムネイル画像 URL"}
+          - {name: IsUnlocked, type: bool, json: "is_unlocked", doc: "アンロック済みか"}
+          - {name: IsCompleted, type: bool, json: "is_completed", doc: "クリア済みか"}
+          - {name: LockReasons, type: "[]LockReason", json: "lock_reasons", doc: "未達のアンロック条件（アンロック済みの場合は空配列）"}
 
       - name: LockReason
         comment: "LockReason describes a single unmet unlock condition for an episode."
         fields:
-          - {name: Type, type: string, json: "type", ts_type: "'level' | 'faction' | 'episode'"}
-          - {name: Required, type: "interface{}", json: "required"}
-          - {name: Current, type: "interface{}", json: "current,omitempty"}
+          - {name: Type, type: string, json: "type", ts_type: "'level' | 'faction' | 'episode'", doc: "条件種別（`level` / `faction` / `episode`）"}
+          - {name: Required, type: "interface{}", json: "required", doc: "必要値（種別により型が異なる）"}
+          - {name: Current, type: "interface{}", json: "current,omitempty", doc: "現在値（`level` の場合のみ）"}
 
       - name: NewsArticle
         comment: "NewsArticle is the API response for a news article."
         fields:
-          - {name: ArticleID, type: string, json: "article_id"}
-          - {name: Source, type: string, json: "source", ts_type: CloudNewsSource}
-          - {name: Title, type: string, json: "title"}
-          - {name: Summary, type: "*string", json: "summary,omitempty"}
-          - {name: Tags, type: "[]string", json: "tags"}
-          - {name: PublishedAt, type: "*time.Time", json: "published_at,omitempty"}
-          - {name: FetchedAt, type: time.Time, json: "fetched_at"}
+          - {name: ArticleID, type: string, json: "article_id", doc: "記事 ULID"}
+          - {name: Source, type: string, json: "source", ts_type: CloudNewsSource, doc: "ソース（`aws` / `google-cloud` / `azure` / `oci` / `other`）"}
+          - {name: Title, type: string, json: "title", doc: "記事タイトル"}
+          - {name: Summary, type: "*string", json: "summary,omitempty", doc: "AI 要約（未完了の場合 null）"}
+          - {name: Tags, type: "[]string", json: "tags", doc: "タグ配列"}
+          - {name: PublishedAt, type: "*time.Time", json: "published_at,omitempty", doc: "記事の公開日時"}
+          - {name: FetchedAt, type: time.Time, json: "fetched_at", doc: "取得日時"}
 
       - name: Announcement
         comment: "Announcement represents a single announcement entry."
         fields:
-          - {name: ID, type: string, json: "id"}
-          - {name: Title, type: string, json: "title"}
-          - {name: Body, type: string, json: "body"}
-          - {name: Type, type: string, json: "type", ts_type: "'info' | 'warning' | 'maintenance'"}
-          - {name: PublishedAt, type: time.Time, json: "published_at"}
-          - {name: ExpiresAt, type: "*time.Time", json: "expires_at,omitempty"}
+          - {name: ID, type: string, json: "id", doc: "お知らせID"}
+          - {name: Title, type: string, json: "title", doc: "タイトル"}
+          - {name: Body, type: string, json: "body", doc: "本文"}
+          - {name: Type, type: string, json: "type", ts_type: "'info' | 'warning' | 'maintenance'", doc: "種別（`info` / `warning` / `maintenance`）"}
+          - {name: PublishedAt, type: time.Time, json: "published_at", doc: "公開日時"}
+          - {name: ExpiresAt, type: "*time.Time", json: "expires_at,omitempty", doc: "有効期限"}
 
       - name: DailyTip
         comment: "DailyTip represents a single daily tip entry."
         fields:
-          - {name: ID, type: string, json: "id"}
-          - {name: Text, type: string, json: "text"}
+          - {name: ID, type: string, json: "id", doc: "TipID"}
+          - {name: Text, type: string, json: "text", doc: "Tip テキスト"}
 
       - name: SpectateGameInfo
         comment: "SpectateGameInfo is the public view of an active game for the spectate list API."
         fields:
-          - {name: GameID, type: string, json: "game_id"}
-          - {name: Player1ID, type: string, json: "player1_id"}
-          - {name: Player2ID, type: string, json: "player2_id"}
-          - {name: StartedAt, type: time.Time, json: "started_at"}
+          - {name: GameID, type: string, json: "game_id", doc: "ゲームID（ULID）"}
+          - {name: Player1ID, type: string, json: "player1_id", doc: "プレイヤー1 ID"}
+          - {name: Player2ID, type: string, json: "player2_id", doc: "プレイヤー2 ID"}
+          - {name: StartedAt, type: time.Time, json: "started_at", doc: "ゲーム開始日時"}
 
       # ── Request types ──
       - name: DeckCardEntry
         comment: "DeckCardEntry represents a card entry in a deck create/update request."
         fields:
-          - {name: CardID, type: string, json: "card_id"}
-          - {name: ArtNo, type: int64, json: "art_no"}
-          - {name: Count, type: int, json: "count"}
+          - {name: CardID, type: string, json: "card_id", doc: "カードID"}
+          - {name: ArtNo, type: int64, json: "art_no", doc: "アート番号"}
+          - {name: Count, type: int, json: "count", doc: "枚数"}
 
       - name: DeckCreateRequest
         comment: "DeckCreateRequest is the request body for POST /decks."
         fields:
-          - {name: DeckName, type: string, json: "deck_name"}
-          - {name: Cards, type: "[]DeckCardEntry", json: "cards"}
-          - {name: PlaymatNo, type: "*int64", json: "playmat_no,omitempty"}
-          - {name: SleeveNo, type: "*int64", json: "sleeve_no,omitempty"}
+          - {name: DeckName, type: string, json: "deck_name", doc: "デッキ名"}
+          - {name: Cards, type: "[]DeckCardEntry", json: "cards", doc: "デッキのカード構成"}
+          - {name: PlaymatNo, type: "*int64", json: "playmat_no,omitempty", doc: "プレイマット番号"}
+          - {name: SleeveNo, type: "*int64", json: "sleeve_no,omitempty", doc: "スリーブ番号"}
 
       - name: DeckUpdateRequest
         comment: "DeckUpdateRequest is the request body for PUT /decks/:id."
         fields:
-          - {name: DeckName, type: string, json: "deck_name"}
-          - {name: Cards, type: "[]DeckCardEntry", json: "cards"}
-          - {name: PlaymatNo, type: "*int64", json: "playmat_no,omitempty"}
-          - {name: SleeveNo, type: "*int64", json: "sleeve_no,omitempty"}
+          - {name: DeckName, type: string, json: "deck_name", doc: "デッキ名"}
+          - {name: Cards, type: "[]DeckCardEntry", json: "cards", doc: "デッキのカード構成"}
+          - {name: PlaymatNo, type: "*int64", json: "playmat_no,omitempty", doc: "プレイマット番号"}
+          - {name: SleeveNo, type: "*int64", json: "sleeve_no,omitempty", doc: "スリーブ番号"}
 
       - name: UpdateSettingsRequest
         comment: "UpdateSettingsRequest is the request body for PUT /player/settings."
         fields:
-          - {name: Language, type: string, json: "language"}
-          - {name: BgmVolume, type: int64, json: "bgm_volume"}
-          - {name: SeVolume, type: int64, json: "se_volume"}
-          - {name: PushEnabled, type: bool, json: "push_enabled"}
+          - {name: Language, type: string, json: "language", doc: "言語（`ja` / `en`）"}
+          - {name: BgmVolume, type: int64, json: "bgm_volume", doc: "BGM 音量（0-100）"}
+          - {name: SeVolume, type: int64, json: "se_volume", doc: "SE 音量（0-100）"}
+          - {name: PushEnabled, type: bool, json: "push_enabled", doc: "プッシュ通知の有効/無効"}
 
       - name: PurchaseRequest
         comment: "PurchaseRequest is the request body for POST /shop/purchase."
         fields:
-          - {name: ProductID, type: string, json: "product_id"}
-          - {name: Platform, type: string, json: "platform"}
-          - {name: PurchaseToken, type: string, json: "purchase_token"}
+          - {name: ProductID, type: string, json: "product_id", doc: "商品ID"}
+          - {name: Platform, type: string, json: "platform", doc: "プラットフォーム（`ios` / `android`）"}
+          - {name: PurchaseToken, type: string, json: "purchase_token", doc: "購入トークン"}
+
+      # ── Doc-only types (not code-generated) ──
+      - name: RegisterRequest
+        doc_only: true
+        comment: "RegisterRequest is the request body for POST /auth/register."
+        fields:
+          - {name: Username, type: string, json: "username", doc: "ユーザー名（1〜50文字）"}
+
+      - name: PlayerNameRequest
+        doc_only: true
+        comment: "PlayerNameRequest is the request body for PUT /player/name."
+        fields:
+          - {name: Name, type: string, json: "name", doc: "新しいプレイヤー名"}
+
+      - name: DeckDetailResponse
+        doc_only: true
+        comment: "DeckDetailResponse is the API response for GET /player/decks/{deckId}."
+        fields:
+          - {name: Deck, type: Deck, json: "deck", doc: "デッキ本体"}
+          - {name: Cards, type: "[]DeckCard", json: "cards", doc: "デッキ内のカード一覧"}
+
+      - name: ScenarioScriptResponse
+        doc_only: true
+        comment: "ScenarioScriptResponse is the API response for GET /scenarios/{episodeId}/script."
+        fields:
+          - {name: EpisodeID, type: string, json: "episode_id", doc: "エピソードID"}
+          - {name: Script, type: string, json: "script", doc: "スクリプト（`.ks` 形式）"}
+
+      - name: ScenarioCompleteResponse
+        doc_only: true
+        comment: "ScenarioCompleteResponse is the API response for POST /scenarios/{episodeId}/complete."
+        fields:
+          - {name: Message, type: string, json: "message", doc: "結果メッセージ"}
+          - {name: EpisodeID, type: string, json: "episode_id", doc: "エピソードID"}
+
+      - name: SelectFactionRequest
+        doc_only: true
+        comment: "SelectFactionRequest is the request body for POST /player/select-faction."
+        fields:
+          - {name: Faction, type: string, json: "faction", doc: "ファクション（`SHE` / `Tenki` / `Sugar` / `Tuners`）"}
+
+      - name: SelectFactionResponse
+        doc_only: true
+        comment: "SelectFactionResponse is the API response for POST /player/select-faction."
+        fields:
+          - {name: Message, type: string, json: "message", doc: "結果メッセージ"}
+          - {name: Faction, type: string, json: "faction", doc: "選択されたファクション"}
+          - {name: CardsGranted, type: int64, json: "cards_granted", doc: "付与されたカード枚数"}
+
+      - name: PurchaseResponse
+        doc_only: true
+        comment: "PurchaseResponse is the API response for POST /shop/purchase."
+        fields:
+          - {name: Message, type: string, json: "message", doc: "結果メッセージ"}
+          - {name: ProductID, type: string, json: "product_id", doc: "購入した商品ID"}
+
+      - name: SubscribeRequest
+        doc_only: true
+        comment: "SubscribeRequest is the request body for POST /shop/subscribe."
+        fields:
+          - {name: ProductID, type: string, json: "product_id", doc: "商品ID"}
+          - {name: Platform, type: string, json: "platform", doc: "プラットフォーム（`ios` / `android`）"}
+          - {name: PurchaseToken, type: string, json: "purchase_token", doc: "購入トークン"}
+
+      - name: SubscribeResponse
+        doc_only: true
+        comment: "SubscribeResponse is the API response for POST /shop/subscribe."
+        fields:
+          - {name: Message, type: string, json: "message", doc: "結果メッセージ"}
+          - {name: ExpiresAt, type: time.Time, json: "expires_at", doc: "サブスクリプション有効期限"}
+
+      - name: NpcModel
+        doc_only: true
+        comment: "NpcModel is a single NPC model entry in GET /npc/models response."
+        fields:
+          - {name: Model, type: string, json: "model", doc: "NPC モデル ID。`npc_battle_start` で使用する"}
+          - {name: Faction, type: string, json: "faction", doc: "ファクション名"}
+          - {name: Difficulty, type: string, json: "difficulty", doc: "難易度（`easy` / `hard`）"}
+          - {name: DisplayName, type: string, json: "display_name", doc: "NPC の表示名"}
+
+      - name: AppleWebhookRequest
+        doc_only: true
+        comment: "AppleWebhookRequest is the request body for POST /shop/webhook/apple."
+        fields:
+          - {name: SignedPayload, type: string, json: "signedPayload", doc: "Apple JWS トークン"}
+
+      - name: GoogleWebhookRequest
+        doc_only: true
+        comment: "GoogleWebhookRequest is the request body for POST /shop/webhook/google."
+        fields:
+          - {name: Message, type: string, json: "message", doc: "Base64 エンコードされた通知データを含む JSON オブジェクト"}
 
   # ─── Game State View (Battle → Client) ─────────────────
   # JSON keys use C# ASP.NET CamelCase convention (first char lowercase).
@@ -480,118 +606,118 @@ files:
     types:
       - name: ClientGameState
         fields:
-          - {name: GameID, type: string, json: "gameID"}
-          - {name: CurrentTurn, type: int64, json: "currentTurn"}
-          - {name: CurrentPhase, type: string, json: "currentPhase", ts_type: GamePhase}
-          - {name: ActivePlayer, type: int64, json: "activePlayer"}
-          - {name: IsMyTurn, type: bool, json: "isMyTurn"}
-          - {name: TurnStartedAt, type: time.Time, json: "turnStartedAt"}
-          - {name: MyView, type: PlayerView, json: "myView"}
-          - {name: OppView, type: OpponentView, json: "oppView"}
+          - {name: GameID, type: string, json: "gameID", doc: "ゲームID（ULID）"}
+          - {name: CurrentTurn, type: int64, json: "currentTurn", doc: "現在のターン番号"}
+          - {name: CurrentPhase, type: string, json: "currentPhase", ts_type: GamePhase, doc: "現在のフェーズ（`selecting` / `draw` / `yield` / `main` / `battle` / `end`）"}
+          - {name: ActivePlayer, type: int64, json: "activePlayer", doc: "アクティブプレイヤー番号（1 or 2）"}
+          - {name: IsMyTurn, type: bool, json: "isMyTurn", doc: "自分のターンか"}
+          - {name: TurnStartedAt, type: time.Time, json: "turnStartedAt", doc: "ターン開始日時"}
+          - {name: MyView, type: PlayerView, json: "myView", doc: "自分の視点"}
+          - {name: OppView, type: OpponentView, json: "oppView", doc: "相手の視点（情報秘匿適用済み）"}
 
       - name: PlayerView
         fields:
-          - {name: PlayerNum, type: int64, json: "playerNum"}
-          - {name: Budget, type: int64, json: "budget"}
-          - {name: InsightPool, type: int64, json: "insightPool"}
-          - {name: TimeBank, type: int64, json: "timeBank"}
-          - {name: Field, type: Field, json: "field"}
-          - {name: Hand, type: "[]UndeployedCard", json: "hand"}
-          - {name: RepoCount, type: int, json: "repoCount"}
-          - {name: TrashCount, type: int, json: "trashCount"}
-          - {name: Trash, type: "[]UndeployedCard", json: "trash"}
-          - {name: AvailableActions, type: "[]AvailableAction", json: "availableActions,omitempty"}
+          - {name: PlayerNum, type: int64, json: "playerNum", doc: "プレイヤー番号（1 or 2）"}
+          - {name: Budget, type: int64, json: "budget", doc: "予算"}
+          - {name: InsightPool, type: int64, json: "insightPool", doc: "Insight プール"}
+          - {name: TimeBank, type: int64, json: "timeBank", doc: "タイムバンク（秒）"}
+          - {name: Field, type: Field, json: "field", doc: "フィールド（Frontend/Backend/Support）"}
+          - {name: Hand, type: "[]UndeployedCard", json: "hand", doc: "手札"}
+          - {name: RepoCount, type: int, json: "repoCount", doc: "リポジトリ残り枚数"}
+          - {name: TrashCount, type: int, json: "trashCount", doc: "トラッシュ枚数"}
+          - {name: Trash, type: "[]UndeployedCard", json: "trash", doc: "トラッシュ"}
+          - {name: AvailableActions, type: "[]AvailableAction", json: "availableActions,omitempty", doc: "実行可能アクション一覧（アクティブプレイヤーのみ）"}
 
       - name: OpponentView
         fields:
-          - {name: PlayerNum, type: int64, json: "playerNum"}
-          - {name: Budget, type: int64, json: "budget"}
-          - {name: InsightPool, type: int64, json: "insightPool"}
-          - {name: TimeBank, type: int64, json: "timeBank"}
-          - {name: Field, type: OpponentField, json: "field"}
-          - {name: HandCount, type: int, json: "handCount"}
-          - {name: RepoCount, type: int, json: "repoCount"}
-          - {name: TrashCount, type: int, json: "trashCount"}
-          - {name: Trash, type: "[]UndeployedCard", json: "trash"}
+          - {name: PlayerNum, type: int64, json: "playerNum", doc: "プレイヤー番号"}
+          - {name: Budget, type: int64, json: "budget", doc: "予算"}
+          - {name: InsightPool, type: int64, json: "insightPool", doc: "Insight プール"}
+          - {name: TimeBank, type: int64, json: "timeBank", doc: "タイムバンク（秒）"}
+          - {name: Field, type: OpponentField, json: "field", doc: "フィールド（サポートは非公開カード隠蔽）"}
+          - {name: HandCount, type: int, json: "handCount", doc: "手札枚数（内容は非公開）"}
+          - {name: RepoCount, type: int, json: "repoCount", doc: "リポジトリ残り枚数"}
+          - {name: TrashCount, type: int, json: "trashCount", doc: "トラッシュ枚数"}
+          - {name: Trash, type: "[]UndeployedCard", json: "trash", doc: "トラッシュ"}
 
       - name: Field
         comment: "Field represents one player's complete field layout."
         fields:
-          - {name: Frontend, type: "[]*DeployedResource", json: "frontend"}
-          - {name: Backend, type: "[]*DeployedResource", json: "backend"}
-          - {name: Support, type: "[]*DeployedSupport", json: "support"}
+          - {name: Frontend, type: "[]*DeployedResource", json: "frontend", doc: "フロントゾーン（3スロット）"}
+          - {name: Backend, type: "[]*DeployedResource", json: "backend", doc: "バックエンドゾーン（3スロット）"}
+          - {name: Support, type: "[]*DeployedSupport", json: "support", doc: "サポートゾーン（3スロット）"}
 
       - name: OpponentField
         comment: "Opponent's field with reactive cards hidden."
         fields:
-          - {name: Frontend, type: "[]*DeployedResource", json: "frontend"}
-          - {name: Backend, type: "[]*DeployedResource", json: "backend"}
-          - {name: Support, type: "[]*HiddenDeployedSupport", json: "support"}
+          - {name: Frontend, type: "[]*DeployedResource", json: "frontend", doc: "フロントゾーン（3スロット）"}
+          - {name: Backend, type: "[]*DeployedResource", json: "backend", doc: "バックエンドゾーン（3スロット）"}
+          - {name: Support, type: "[]*HiddenDeployedSupport", json: "support", doc: "サポートゾーン（非公開カードは隠蔽）"}
 
       - name: DeployedResource
         fields:
-          - {name: InstanceID, type: string, json: "instanceID"}
-          - {name: CardID, type: string, json: "cardID"}
-          - {name: ArtNo, type: int64, json: "artNo"}
-          - {name: Rank, type: "*string", json: "rank", ts_type: Rank}
-          - {name: InstanceFamily, type: "*string", json: "instanceFamily", ts_type: InstanceFamily}
-          - {name: FaceUp, type: bool, json: "faceUp"}
-          - {name: DeployingTurnsLeft, type: int64, json: "deployingTurnsLeft"}
-          - {name: CurrentAV, type: int64, json: "currentAV"}
-          - {name: MaxAV, type: int64, json: "maxAV"}
-          - {name: CurrentTP, type: "*int64", json: "currentTP"}
-          - {name: MaxTP, type: "*int64", json: "maxTP"}
-          - {name: CurrentYield, type: "*int64", json: "currentYield"}
-          - {name: MaxYield, type: "*int64", json: "maxYield"}
-          - {name: Damage, type: int64, json: "damage"}
-          - {name: TemporaryEffects, type: "[]TemporaryEffect", json: "temporaryEffects"}
-          - {name: MonetizedAmount, type: int64, json: "monetizedAmount"}
-          - {name: HasAttacked, type: bool, json: "hasAttacked"}
-          - {name: EffectUsedThisTurn, type: bool, json: "effectUsedThisTurn"}
-          - {name: EffectUsedThisGame, type: bool, json: "effectUsedThisGame"}
-          - {name: DeployedOnTurn, type: int64, json: "deployedOnTurn"}
-          - {name: DeployOrder, type: int64, json: "deployOrder"}
-          - {name: ElasticBonus, type: int64, json: "elasticBonus"}
-          - {name: LastAttackTurn, type: int64, json: "lastAttackTurn"}
+          - {name: InstanceID, type: string, json: "instanceID", doc: "インスタンスID"}
+          - {name: CardID, type: string, json: "cardID", doc: "カードID"}
+          - {name: ArtNo, type: int64, json: "artNo", doc: "アート番号"}
+          - {name: Rank, type: "*string", json: "rank", ts_type: Rank, doc: "ランク（S/M/L/XL）"}
+          - {name: InstanceFamily, type: "*string", json: "instanceFamily", ts_type: InstanceFamily, doc: "インスタンスファミリー"}
+          - {name: FaceUp, type: bool, json: "faceUp", doc: "表向きか"}
+          - {name: DeployingTurnsLeft, type: int64, json: "deployingTurnsLeft", doc: "デプロイ残りターン数（0=アクティブ）"}
+          - {name: CurrentAV, type: int64, json: "currentAV", doc: "現在の可用性"}
+          - {name: MaxAV, type: int64, json: "maxAV", doc: "最大可用性"}
+          - {name: CurrentTP, type: "*int64", json: "currentTP", doc: "現在のスループット（Compute のみ）"}
+          - {name: MaxTP, type: "*int64", json: "maxTP", doc: "最大スループット（Compute のみ）"}
+          - {name: CurrentYield, type: "*int64", json: "currentYield", doc: "現在のイールド（Data のみ）"}
+          - {name: MaxYield, type: "*int64", json: "maxYield", doc: "最大イールド（Data のみ）"}
+          - {name: Damage, type: int64, json: "damage", doc: "受けたダメージ量"}
+          - {name: TemporaryEffects, type: "[]TemporaryEffect", json: "temporaryEffects", doc: "一時効果リスト"}
+          - {name: MonetizedAmount, type: int64, json: "monetizedAmount", doc: "収益化で配分された Insight 量"}
+          - {name: HasAttacked, type: bool, json: "hasAttacked", doc: "このターンに攻撃済みか"}
+          - {name: EffectUsedThisTurn, type: bool, json: "effectUsedThisTurn", doc: "このターンにエフェクト使用済みか"}
+          - {name: EffectUsedThisGame, type: bool, json: "effectUsedThisGame", doc: "このゲームでエフェクト使用済みか"}
+          - {name: DeployedOnTurn, type: int64, json: "deployedOnTurn", doc: "デプロイされたターン"}
+          - {name: DeployOrder, type: int64, json: "deployOrder", doc: "デプロイ順序"}
+          - {name: ElasticBonus, type: int64, json: "elasticBonus", doc: "Elastic によるボーナス"}
+          - {name: LastAttackTurn, type: int64, json: "lastAttackTurn", doc: "最後に攻撃したターン"}
 
       - name: DeployedSupport
         fields:
-          - {name: InstanceID, type: string, json: "instanceID"}
-          - {name: CardID, type: string, json: "cardID"}
-          - {name: ArtNo, type: int64, json: "artNo"}
-          - {name: FaceUp, type: bool, json: "faceUp"}
-          - {name: DeployingTurnsLeft, type: int64, json: "deployingTurnsLeft"}
-          - {name: DeployOrder, type: int64, json: "deployOrder"}
-          - {name: EffectUsedThisTurn, type: bool, json: "effectUsedThisTurn"}
-          - {name: EffectUsedThisGame, type: bool, json: "effectUsedThisGame"}
-          - {name: TargetInstanceID, type: "*string", json: "targetInstanceID"}
+          - {name: InstanceID, type: string, json: "instanceID", doc: "インスタンスID"}
+          - {name: CardID, type: string, json: "cardID", doc: "カードID"}
+          - {name: ArtNo, type: int64, json: "artNo", doc: "アート番号"}
+          - {name: FaceUp, type: bool, json: "faceUp", doc: "表向きか"}
+          - {name: DeployingTurnsLeft, type: int64, json: "deployingTurnsLeft", doc: "デプロイ残りターン数"}
+          - {name: DeployOrder, type: int64, json: "deployOrder", doc: "デプロイ順序"}
+          - {name: EffectUsedThisTurn, type: bool, json: "effectUsedThisTurn", doc: "このターンにエフェクト使用済みか"}
+          - {name: EffectUsedThisGame, type: bool, json: "effectUsedThisGame", doc: "このゲームでエフェクト使用済みか"}
+          - {name: TargetInstanceID, type: "*string", json: "targetInstanceID", doc: "Attachment 対象のインスタンスID"}
 
       - name: HiddenDeployedSupport
         comment: "Support instance with face-down card details hidden."
         fields:
-          - {name: InstanceID, type: string, json: "instanceID"}
-          - {name: CardID, type: "*string", json: "cardID"}
-          - {name: ArtNo, type: int64, json: "artNo"}
-          - {name: FaceDown, type: bool, json: "faceDown"}
-          - {name: Peeked, type: bool, json: "peeked"}
+          - {name: InstanceID, type: string, json: "instanceID", doc: "インスタンスID"}
+          - {name: CardID, type: "*string", json: "cardID", doc: "カードID（表向きの場合のみ）"}
+          - {name: ArtNo, type: int64, json: "artNo", doc: "アート番号"}
+          - {name: FaceDown, type: bool, json: "faceDown", doc: "裏向きか"}
+          - {name: Peeked, type: bool, json: "peeked", doc: "覗き見されたか"}
 
       - name: UndeployedCard
         fields:
-          - {name: InstanceID, type: string, json: "instanceID"}
-          - {name: CardID, type: string, json: "cardID"}
-          - {name: ArtNo, type: int64, json: "artNo"}
+          - {name: InstanceID, type: string, json: "instanceID", doc: "インスタンスID"}
+          - {name: CardID, type: string, json: "cardID", doc: "カードID"}
+          - {name: ArtNo, type: int64, json: "artNo", doc: "アート番号"}
 
       - name: TemporaryEffect
         fields:
-          - {name: EffectType, type: string, json: "effectType"}
-          - {name: Value, type: int64, json: "value"}
-          - {name: Duration, type: string, json: "duration", ts_type: EffectDuration}
-          - {name: SourceID, type: string, json: "sourceID"}
+          - {name: EffectType, type: string, json: "effectType", doc: "効果タイプ"}
+          - {name: Value, type: int64, json: "value", doc: "効果値"}
+          - {name: Duration, type: string, json: "duration", ts_type: EffectDuration, doc: "持続期間（`until_end_of_turn` / `permanent`）"}
+          - {name: SourceID, type: string, json: "sourceID", doc: "効果の発生源インスタンスID"}
 
       - name: TurnControlsMessage
         fields:
-          - {name: CanEndPhase, type: bool, json: "canEndPhase"}
-          - {name: DiscardRequired, type: int, json: "discardRequired"}
+          - {name: CanEndPhase, type: bool, json: "canEndPhase", doc: "現在のフェーズを終了できるか（main / battle フェーズで `true`）"}
+          - {name: DiscardRequired, type: int, json: "discardRequired", doc: "手札破棄が必要な枚数（end フェーズで手札 > 6 枚の場合のみ > 0）"}
 
 # ─── Variant Types (C# flat class + TS discriminated union) ───
 # generate_constants.py reads this section and outputs:
