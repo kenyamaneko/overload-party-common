@@ -1,6 +1,6 @@
 {
   "name": "@kenyamaneko/overload-party-api",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "description": "Auto-generated API contract types (REST, WebSocket, models) for Overload Party",
   "type": "module",
   "main": "./dist/index.js",
