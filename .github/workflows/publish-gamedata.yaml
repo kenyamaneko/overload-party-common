@@ -1,5 +1,3 @@
-# パッケージを手動で publish する。
-# GitHub Actions UI または gh workflow run で任意のブランチから実行可能。
 name: Publish GameData Packages
 
 on:
@@ -9,10 +7,6 @@ on:
       - "packages/gamedata/**"
       - "packages/gamedata-dotnet/**"
       - "packages/gamedata-npm/**"
-      - "packages/api-npm/**"
-      - "data/constants.json"
-      - "data/event_schemas.json"
-      - "data/cards/**"
   workflow_dispatch:
     inputs:
       bump:
@@ -56,7 +50,7 @@ jobs:
           if [ -z "$LAST_TAG" ]; then
             echo "publish=true" >> "$GITHUB_OUTPUT"
             echo "First publish: no existing tags"
-          elif ! git diff --quiet "$LAST_TAG" -- packages/; then
+          elif ! git diff --quiet "$LAST_TAG" -- packages/gamedata/ packages/gamedata-dotnet/ packages/gamedata-npm/; then
             echo "publish=true" >> "$GITHUB_OUTPUT"
             echo "Changes detected since $LAST_TAG"
           else
@@ -100,19 +94,9 @@ jobs:
             --source "https://nuget.pkg.github.com/kenyamaneko/index.json" \
             --api-key ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publish npm package (gamedata)
+      - name: Publish npm package
         if: steps.check.outputs.publish == 'true'
         working-directory: packages/gamedata-npm
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          npm version ${{ steps.version.outputs.version }} --no-git-tag-version
-          npm run build
-          npm publish
-
-      - name: Publish npm package (api)
-        if: steps.check.outputs.publish == 'true'
-        working-directory: packages/api-npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
