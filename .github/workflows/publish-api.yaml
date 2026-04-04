@@ -79,12 +79,20 @@ jobs:
           git tag "packages/api/v${{ steps.version.outputs.version }}"
           git push origin "packages/api/v${{ steps.version.outputs.version }}"
 
+      - name: Build gamedata-npm dependency
+        if: steps.check.outputs.publish == 'true'
+        working-directory: packages/gamedata-npm
+        run: |
+          npm install
+          npm run build
+
       - name: Publish npm package
         if: steps.check.outputs.publish == 'true'
         working-directory: packages/api-npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          npm install
           npm version ${{ steps.version.outputs.version }} --no-git-tag-version
           npm run build
           npm publish

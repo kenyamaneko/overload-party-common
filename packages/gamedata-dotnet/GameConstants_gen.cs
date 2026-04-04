@@ -276,7 +276,7 @@ public static class SelectorPickModes
 public static class CloudNewsSources
 {
     public const string Aws = "aws";
-    public const string Google-Cloud = "google-cloud";
+    public const string GoogleCloud = "google-cloud";
     public const string Azure = "azure";
     public const string Oci = "oci";
     public const string Other = "other";

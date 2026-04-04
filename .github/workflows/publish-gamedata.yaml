@@ -100,6 +100,7 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          npm install
           npm version ${{ steps.version.outputs.version }} --no-git-tag-version
           npm run build
           npm publish

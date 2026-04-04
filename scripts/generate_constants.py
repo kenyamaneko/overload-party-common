@@ -58,11 +58,11 @@ def _camel_to_pascal(s):
 def _to_pascal(value):
     """Convert a YAML value to a PascalCase identifier.
 
-    Handles snake_case, lowercase, PascalCase, uppercase, and slashes.
+    Handles snake_case, kebab-case, lowercase, PascalCase, uppercase, and slashes.
     """
     value = value.replace("/", "")
-    if "_" in value:
-        return "".join(w.title() for w in value.split("_"))
+    if "_" in value or "-" in value:
+        return "".join(w.title() for w in value.replace("-", "_").split("_"))
     if value and value[0].isupper():
         return value
     return value.title() if value else value

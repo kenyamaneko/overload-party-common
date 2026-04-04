@@ -274,7 +274,7 @@ const (
 // Cloud news sources.
 const (
 	CloudNewsSourceAws = "aws"
-	CloudNewsSourceGoogle-Cloud = "google-cloud"
+	CloudNewsSourceGoogleCloud = "google-cloud"
 	CloudNewsSourceAzure = "azure"
 	CloudNewsSourceOci = "oci"
 	CloudNewsSourceOther = "other"
