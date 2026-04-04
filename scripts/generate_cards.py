@@ -29,6 +29,8 @@ MD_OUT = ROOT / "docs" / "game_design" / "CARDS.md"
 SEED_OUT = ROOT / "db" / "seed" / "cards_seed.sql"
 GO_JSON_OUT = ROOT / "packages" / "devdata" / "cache" / "cards_gen.json"
 DOTNET_JSON_OUT = ROOT / "packages" / "dotnet" / "cache" / "cards_gen.json"
+STARTER_DECKS_YAML = ROOT / "data" / "starter_decks.yaml"
+STARTER_DECKS_JSON_OUT = ROOT / "packages" / "devdata" / "cache" / "starter_decks_gen.json"
 
 # ─── Constants ──────────────────────────────────────────
 COMPUTE_TYPES = {"Compute", "Container", "Orchestrator", "Serverless", "AI/ML"}
@@ -531,6 +533,47 @@ def generate_md(cards, faction_data, *, out_path):
     return total
 
 
+# ─── Starter Decks ────────────────────────────────────
+def load_starter_decks():
+    if not STARTER_DECKS_YAML.exists():
+        return None
+    with open(STARTER_DECKS_YAML, "r", encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+    return data.get("starter_decks", [])
+
+
+def validate_starter_decks(decks, valid_card_ids):
+    errors = []
+    for deck in decks:
+        name = deck.get("deck_name", "???")
+        cards = deck.get("cards", [])
+        total = sum(c.get("copies", 1) for c in cards)
+        if total != 30:
+            errors.append(f"deck '{name}': has {total} cards, expected 30")
+        for entry in cards:
+            cid = entry.get("card_id", "")
+            if cid not in valid_card_ids:
+                errors.append(f"deck '{name}': unknown card_id '{cid}'")
+    return errors
+
+
+def generate_starter_decks_json(decks, *, out_path):
+    output = []
+    for deck in decks:
+        cards = []
+        for entry in deck["cards"]:
+            for _ in range(entry.get("copies", 1)):
+                cards.append(entry["card_id"])
+        output.append({"deck_name": deck["deck_name"], "cards": cards})
+
+    out = Path(out_path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with open(out, "w", encoding="utf-8") as f:
+        json.dump(output, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+    return len(output)
+
+
 # ─── Main ──────────────────────────────────────────────
 def main():
     if not YAML_DIR.exists():
@@ -562,6 +605,20 @@ def main():
     # Seed SQL
     seed_count = generate_seed_sql(cards, out_path=SEED_OUT)
     print(f"Generated {seed_count} cards → {SEED_OUT.relative_to(ROOT)}", file=sys.stderr)
+
+    # Starter Decks
+    starter_decks = load_starter_decks()
+    if starter_decks:
+        valid_card_ids = {c["card_id"] for c in cards}
+        deck_errors = validate_starter_decks(starter_decks, valid_card_ids)
+        if deck_errors:
+            print(f"Starter deck validation failed with {len(deck_errors)} error(s):", file=sys.stderr)
+            for err in deck_errors:
+                print(f"  - {err}", file=sys.stderr)
+            sys.exit(1)
+
+        deck_count = generate_starter_decks_json(starter_decks, out_path=STARTER_DECKS_JSON_OUT)
+        print(f"Generated {deck_count} starter decks → {STARTER_DECKS_JSON_OUT.relative_to(ROOT)}", file=sys.stderr)
 
 
 if __name__ == "__main__":
