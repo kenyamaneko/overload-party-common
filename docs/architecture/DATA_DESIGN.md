@@ -103,8 +103,6 @@
 | `updated_at` | TIMESTAMPTZ | No | 更新日時 |
 <!-- END GENERATED: game_states -->
 
-> **フェーズについて:** ゲームフェーズは `draw`, `main`, `battle`, `end` の4つ。Yield（Insight）生成は End フェーズ中に処理される。
-
 ### 2.2 JSONスキーマ (State Details)
 
 `GameStates` テーブルの JSON カラムに格納される詳細データ構造。
@@ -315,23 +313,7 @@
 | `cost_per_request` | int? | Elastic MC レート ÷100（Elastic以外は `null`）。Serverless は `0`（常に MC=0） |
 | `sla_penalty` | int | SLAペナルティ |
 
-> **Elastic メカニクス（オートスケーリング）:**
-> Elastic カードは ElasticBonus が累積的に蓄積され、TP/Yield が増加する。上限キャップは無く、代わりに対数的な逓減が適用される。
->
-> | ゾーン | トリガー | 増加対象 |
-> |--------|----------|----------|
-> | フロントエンド | 攻撃を受けた時 | スループット (TP) + `elastic_increment` |
-> | バックエンド Compute | 収益化（Monetize）に使用された時 | スループット (TP) + `elastic_increment` |
-> | バックエンド DB | 各エンドフェイズ | Yield + `elastic_increment` |
->
-> - ElasticBonus は**累積**される（トリガーごとに `elastic_increment` ずつ線形加算。上限なし）
-> - **ln 逓減:** 実効値は `effectiveElasticBonus = free_tier × ln(1 + ElasticBonus / free_tier)` で計算される。蓄積が進むほど伸びが鈍化する
-> - ElasticBonus = 0 の状態が初期値（フリーティア相当、MC = 0）
-> - **MC 計算式（Elastic）:** `MC = max(0, intrinsicStat - free_tier) × cost_per_request / 100`
->   - `intrinsicStat = base × rank_multiplier × family_multiplier + effectiveElasticBonus`（外部バフを除く固有ステータス）
->   - `free_tier` はランクで変動しない固定値
->   - Serverless（`cost_per_request=0`）は常に MC=0
-> - Elastic カードは MaxTP / MaxYield を持たない（DeployedResource 上は `nil`）
+> Elastic メカニクス（蓄積・逓減・MC 計算式）の詳細は RULEBOOK.md を参照。
 
 **その他のカードタイプ（Platform, Attachment, Strategy, Incident, Reactive）:**
 
@@ -343,49 +325,6 @@ stats フィールドなし（Platform の場合、`deploy_turns` はトップ�
 
 - `CardsByFaction`: `CardDefinitions(faction, card_type)`
 - `CardsByType`: `CardDefinitions(card_type)`
-
-### 5.4 サーバー側のカード参照設計
-
-| 用途 | 参照方法 |
-|------|----------|
-| ゲーム中の効果計算 | サーバー起動時に `CardDefinitions` を全件メモリにキャッシュ。`card_id` → 定義データの `map` で O(1) 参照 |
-| デッキ構築画面 | REST API `GET /api/v1/cards` で全カード定義を返却。クライアントはローカルキャッシュ |
-| カードバランス更新 | Admin Dashboard からカード定義を更新後、キャッシュリフレッシュを実行 |
-
-**キャッシュリフレッシュ方式:**
-
-| タイミング | 方式 | 説明 |
-|-----------|------|------|
-| Pod 起動時 | 全件ロード | Cloud SQL から `card_definitions` を全件取得し `sync.Map` にキャッシュ |
-| 定期更新 | ポーリング | 各 Pod が **5分間隔**で `CardDefinitions` の `updated_at` を確認し、更新があれば差分リフレッシュ |
-| 管理者操作時 | ポーリングで反映 | Admin API でカード定義を更新すると、次回ポーリング（最大5分）で各 Pod がキャッシュをリフレッシュ |
-
-```
-[Admin Dashboard / API]
-     │
-     │ POST/PUT /admin/cards
-     ▼
-[api-server Pod]
-     │
-     └── Cloud SQL に書き込み → 定期ポーリングで各 Pod がキャッシュ更新
-```
-
-> **設計判断:** カード定義の更新頻度は低い（月数回程度）ため、5分間隔ポーリングで十分。最大5分の遅延は許容範囲。
-
-### 5.5 ゲーム定数 (constants.json — initial_values)
-
-`data/constants.json` の `initial_values` セクションで管理されるゲーム全体の初期値・定数。サーバー（Go）とクライアント（TypeScript）の両方に自動生成される。
-
-| キー | 型 | 値 | 説明 |
-|------|-----|-----|------|
-| `budget` | int | 5000 | 初期 Budget |
-| `insight_pool` | int | 0 | 初期 Insight Pool |
-| `hand_size` | int | 5 | 初期手札枚数 |
-| `hand_limit` | int | 6 | 手札上限 |
-| `time_bank` | int | 480 | タイムバンク（秒） |
-| `deck_size` | int | 30 | デッキ枚数 |
-| `max_attachments` | int | 2 | 1体のリソースを対象にできる最大アタッチメント数 |
-| `slots_per_zone` | int | 3 | ゾーンあたりのスロット数 |
 
 ---
 
@@ -638,25 +577,6 @@ stats フィールドなし（Platform の場合、`deploy_turns` はトップ�
 
 > 完了記録は冪等（`ON CONFLICT DO NOTHING`）。同じエピソードを再読了してもレコードは増えない。
 
-### 10.2 アンロック条件の判定
-
-アンロック条件は以下の優先順で判定される。最初に不足が見つかった時点で `lock_reason` を返す:
-
-1. **レベル**: `players.level >= scenario_episodes.required_level`
-2. **陣営所持**: `player_factions` に `required_factions` のすべてが存在
-3. **前提エピソード**: `player_story_progress` に `required_episodes` のすべてが存在
-
-### 10.3 エピソード構成
-
-| ラウンド | レベル帯 | エピソード数 | 内容 |
-|----------|---------|-------------|------|
-| Round 1 | Lv 2〜5 | 4 | 各陣営 第1章 |
-| Round 2 | Lv 6〜9 | 4 | 各陣営 第2章 |
-| Round 3 | Lv 10〜13 | 4 | 各陣営 第3章 |
-| Round 4 | Lv 14〜17 | 4 | 各陣営 第4章 |
-| Round 5 | Lv 18〜21 | 4 | 各陣営 第5章 |
-| Final | Lv 22 | 1 | グランドエンディング（全陣営クリア必須） |
-
-### 10.4 関連インデックス
+### 10.2 関連インデックス
 
 - `ScenarioEpisodesBySort`: `scenario_episodes(sort_order)`

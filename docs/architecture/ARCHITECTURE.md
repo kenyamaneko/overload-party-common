@@ -513,6 +513,34 @@ PostgreSQL をデータストアとして使用。テーブル構成、カラム
 - **products / subscriptions / one_time_purchases** — ショップ・課金
 - **cosmetic_items / player_items** — コスメティクス
 
+### 5.1 カード定義キャッシュ
+
+| 用途 | 参照方法 |
+|------|----------|
+| ゲーム中の効果計算 | サーバー起動時に `card_definitions` を全件メモリにキャッシュ。`card_id` → 定義データの `map` で O(1) 参照 |
+| デッキ構築画面 | REST API `GET /api/v1/cards` で全カード定義を返却。クライアントはローカルキャッシュ |
+| カードバランス更新 | Admin Dashboard からカード定義を更新後、キャッシュリフレッシュを実行 |
+
+**キャッシュリフレッシュ方式:**
+
+| タイミング | 方式 | 説明 |
+|-----------|------|------|
+| Pod 起動時 | 全件ロード | Cloud SQL から `card_definitions` を全件取得し `sync.Map` にキャッシュ |
+| 定期更新 | ポーリング | 各 Pod が **5分間隔**で `card_definitions` の `updated_at` を確認し、更新があ��ば差分リフレッシュ |
+| 管理者操作時 | ポーリングで反映 | Admin API でカード定義を更新すると、次回ポーリング（最大5分）で各 Pod がキャッシュをリフレッシュ |
+
+```
+[Admin Dashboard / API]
+     │
+     │ POST/PUT /admin/cards
+     ▼
+[api-server Pod]
+     │
+     └── Cloud SQL に書き込み → 定期ポーリングで各 Pod がキャッシュ更新
+```
+
+> **設計判断:** カード定義の更新頻度は低い（月数回程度）ため、5分間隔ポーリングで十分。最大5分の遅延は許容範囲。
+
 ---
 
 ## 6. API設計
