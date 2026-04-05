@@ -514,7 +514,7 @@ VALUES
   ('TK-0002', 'アサギリ', 'PaaS', 'Tenki', 'Compute',
    true, false, '{"throughput": 400, "availability": 1500, "sla_penalty": 400, "maintenance_cost": 50}'::jsonb,
    '**Auto Patch:** 相手がインシデントカードを使った時に発動できる。このカードが受けるダメージを半分にする。',
-   '[{"trigger": "reactive", "custom": "halve_incident_damage", "meta": {"categories": ["defensive"], "target": "self"}}]'::jsonb,
+   '[{"trigger": "reactive", "ops": [{"apply_buff": {"selector": {"owner": "self"}, "buff": "incident_reduction", "amount": 50, "mode": "percent", "duration": "this_turn"}}], "meta": {"categories": ["defensive"], "target": "self"}}]'::jsonb,
    'unlimited', true),
 
   ('TK-0003', 'コウテン', 'Container', 'Tenki', 'Container',

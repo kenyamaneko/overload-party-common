@@ -189,6 +189,12 @@ public static class BuffTypes
     public const string TpSuppressed = "tp_suppressed";
 }
 
+public static class BuffModes
+{
+    public const string Flat = "flat";
+    public const string Percent = "percent";
+}
+
 public static class CustomEffects
 {
     public const string CancelNthDeploy = "cancel_nth_deploy";
@@ -196,7 +202,6 @@ public static class CustomEffects
     public const string CloudShift = "cloud_shift";
     public const string DeploySameTypeFromHand = "deploy_same_type_from_hand";
     public const string DisableHighTpDeploy = "disable_high_tp_deploy";
-    public const string HalveIncidentDamage = "halve_incident_damage";
     public const string Reattach = "reattach";
     public const string RedirectAttack = "redirect_attack";
     public const string ScaleToZero = "scale_to_zero";

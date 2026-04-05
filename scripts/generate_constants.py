@@ -84,6 +84,7 @@ _SIMPLE_LIST_KEYS = [
     ("trigger_types", "TriggerType", "Trigger types", "TriggerTypes", "TRIGGER_TYPES", "TriggerType"),
     ("effect_ops", "EffectOp", "Effect operations", "EffectOps", "EFFECT_OPS", "EffectOp"),
     ("buff_types", "BuffType", "Buff types", "BuffTypes", "BUFF_TYPES", "BuffType"),
+    ("buff_modes", "BuffMode", "Buff modes", "BuffModes", "BUFF_MODES", "BuffMode"),
     ("custom_effects", "CustomEffect", "Custom effects", "CustomEffects", "CUSTOM_EFFECTS", "CustomEffect"),
     ("effect_categories", "EffectCategory", "Effect categories", "EffectCategories", "EFFECT_CATEGORIES", "EffectCategory"),
     ("effect_target_types", "EffectTargetType", "Effect target types", "EffectTargetTypes", "EFFECT_TARGET_TYPES", "EffectTargetType"),

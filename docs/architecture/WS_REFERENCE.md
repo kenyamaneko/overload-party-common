@@ -433,7 +433,8 @@ NPC 対戦開始。即座にゲームが作成される（マッチメイキン�
   "effectType": "string" // 効果タイプ,
   "value": 0 // 効果値,
   "duration": "string" // 持続期間（`until_end_of_turn` / `permanent`）,
-  "sourceID": "string" // 効果の発生源インスタンスID
+  "sourceID": "string" // 効果の発生源インスタンスID,
+  "mode": "string" // バフモード（空文字=flat / `percent`=割合）
 }
 ```
 <!-- END GENERATED: TemporaryEffect -->

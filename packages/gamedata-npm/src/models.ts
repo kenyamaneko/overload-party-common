@@ -202,6 +202,7 @@ export interface TemporaryEffect {
   value: number;
   duration: EffectDuration;
   sourceID: string;
+  mode: string;
 }
 
 export interface TurnControlsMessage {

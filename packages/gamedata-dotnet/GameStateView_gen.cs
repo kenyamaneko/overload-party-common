@@ -120,6 +120,7 @@ public class TemporaryEffect
     public long Value { get; init; }
     public string Duration { get; init; } = "";
     public string SourceID { get; init; } = "";
+    public string Mode { get; init; } = "";
 }
 
 public class TurnControlsMessage

@@ -662,6 +662,7 @@ files:
           - {name: Value, type: int64, json: "value", doc: "効果値"}
           - {name: Duration, type: string, json: "duration", ts_type: EffectDuration, doc: "持続期間（`until_end_of_turn` / `permanent`）"}
           - {name: SourceID, type: string, json: "sourceID", doc: "効果の発生源インスタンスID"}
+          - {name: Mode, type: string, json: "mode", doc: "バフモード（空文字=flat / `percent`=割合）"}
 
       - name: TurnControlsMessage
         fields:

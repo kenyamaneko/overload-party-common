@@ -2976,7 +2976,19 @@
     "effects": [
       {
         "trigger": "reactive",
-        "custom": "halve_incident_damage",
+        "ops": [
+          {
+            "apply_buff": {
+              "selector": {
+                "owner": "self"
+              },
+              "buff": "incident_reduction",
+              "amount": 50,
+              "mode": "percent",
+              "duration": "this_turn"
+            }
+          }
+        ],
         "meta": {
           "categories": [
             "defensive"
