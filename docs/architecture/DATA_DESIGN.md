@@ -13,14 +13,13 @@
 1. [ゲーム管理](#1-ゲーム管理-game-management)
 2. [ゲーム状態管理](#2-ゲーム状態管理-game-state-management)
 3. [ゲームイベント・アクション管理](#3-ゲームイベントアクション管理-game-event--action-management)
-4. [対戦履歴管理](#4-対戦履歴管理-match-history)
-5. [プレイヤー管理](#5-プレイヤー管理-player-management)
-6. [カード定義マスター](#6-カード定義マスター-card-definitions)
-7. [カード・デッキ管理](#7-カードデッキ管理-card--deck-management)
-8. [ショップ・設定管理](#8-ショップ設定管理-shop--settings)
-9. [コスメティクス管理](#9-コスメティクス管理-cosmetics)
-10. [陣営所持管理](#10-陣営所持管理-player-factions)
-11. [ストーリー管理](#11-ストーリー管理-story-scenarios)
+4. [プレイヤー管理](#4-プレイヤー管理-player-management)
+5. [カード定義マスター](#5-カード定義マスター-card-definitions)
+6. [カード・デッキ管理](#6-カードデッキ管理-card--deck-management)
+7. [ショップ・設定管理](#7-ショップ設定管理-shop--settings)
+8. [コスメティクス管理](#8-コスメティクス管理-cosmetics)
+9. [陣営所持管理](#9-陣営所持管理-player-factions)
+10. [ストーリー管理](#10-ストーリー管理-story-scenarios)
 
 ---
 
@@ -33,6 +32,7 @@
 **Games** (ゲームマスター)
 - **Primary Key:** `game_id`
 
+<!-- BEGIN GENERATED: games -->
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
 | `game_id` | VARCHAR(26) | No | ULID |
@@ -40,13 +40,14 @@
 | `player2_id` | UUID | No | プレイヤー2 ID |
 | `player1_deck_snapshot` | JSONB | No | 使用デッキのスナップショット（カードIDリスト） |
 | `player2_deck_snapshot` | JSONB | No | 使用デッキのスナップショット（カードIDリスト） |
-| `status` | VARCHAR(20) | No | `'waiting'`, `'playing'`, `'finished'` |
+| `status` | VARCHAR(20) | No | 'waiting' / 'playing' / 'finished' |
+| `engine_version` | TEXT | No | バトルエンジンバージョン（ゲーム作成時に記録） |
+| `card_data_version` | TEXT | No | カードデータバージョン（ゲーム作成時に記録） |
 | `winner_id` | UUID | Yes | 勝者 ID |
-| `created_at` | TIMESTAMPTZ | No | 作成日時 (DEFAULT now()) |
-| `updated_at` | TIMESTAMPTZ | No | 更新日時 (DEFAULT now()) |
-| `engine_version` | TEXT | Yes | バトルエンジンバージョン（ゲーム作成時に記録） |
-| `card_data_version` | TEXT | Yes | カードデータバージョン（ゲーム作成時に記録） |
+| `created_at` | TIMESTAMPTZ | No | 作成日時 |
+| `updated_at` | TIMESTAMPTZ | No | 更新日時 |
 | `finished_at` | TIMESTAMPTZ | Yes | 終了日時 |
+<!-- END GENERATED: games -->
 
 ### 1.2 JSONスキーマ (Deck Snapshot)
 
@@ -73,12 +74,14 @@
 - **Primary Key:** `game_id`
 - **Foreign Key:** `game_id REFERENCES games(game_id) ON DELETE CASCADE`
 
+<!-- BEGIN GENERATED: game_states -->
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
 | `game_id` | VARCHAR(26) | No | 親テーブル参照 |
+| `initial_state` | JSONB | No | ゲーム開始時の初期状態スナップショット（作成後は上書きされない） |
 | `version` | BIGINT | No | 楽観的ロック用バージョン |
 | `current_turn` | BIGINT | No | 現在ターン数 |
-| `current_phase` | VARCHAR(20) | No | `'draw'`, `'main'`, `'battle'`, `'end'` |
+| `current_phase` | VARCHAR(20) | No | 'draw' / 'main' / 'battle' / 'end' |
 | `active_player` | BIGINT | No | 現在のターンプレイヤー (1 or 2) |
 | `player1_budget` | BIGINT | No | Player 1 Budget |
 | `player1_insight_pool` | BIGINT | No | Player 1 Insight Pool |
@@ -87,11 +90,18 @@
 | `player1_repository` | JSONB | No | Player 1 リポジトリ（山札） |
 | `player1_trash` | JSONB | No | Player 1 トラッシュ |
 | `player1_time_bank` | BIGINT | No | Player 1 残り時間 |
-| `player2_...` | ... | No | Player 2 各種ステータス（構成は Player 1 と同じ。`player2_insight_pool` 等） |
+| `player2_budget` | BIGINT | No | Player 2 Budget |
+| `player2_insight_pool` | BIGINT | No | Player 2 Insight Pool |
+| `player2_field` | JSONB | No | Player 2 フィールド上のカード |
+| `player2_hand` | JSONB | No | Player 2 手札 |
+| `player2_repository` | JSONB | No | Player 2 リポジトリ（山札） |
+| `player2_trash` | JSONB | No | Player 2 トラッシュ |
+| `player2_time_bank` | BIGINT | No | Player 2 残り時間 |
 | `chain_stack` | JSONB | Yes | 現在積まれているチェーンスタック |
-| `current_action_timer`| BIGINT | Yes | アクションタイマー |
-| `initial_state` | JSONB | Yes | ゲーム作成時の初期 GameState スナップショット（作成後は上書きされない） |
-| `updated_at` | TIMESTAMPTZ | No | 更新日時 (DEFAULT now()) |
+| `current_action_timer` | BIGINT | Yes | アクションタイマー |
+| `next_instance_seq` | BIGINT | No | インスタンスID発番用シーケンス |
+| `updated_at` | TIMESTAMPTZ | No | 更新日時 |
+<!-- END GENERATED: game_states -->
 
 > **フェーズについて:** ゲームフェーズは `draw`, `main`, `battle`, `end` の4つ。Yield（Insight）生成は End フェーズ中に処理される。
 
@@ -174,14 +184,16 @@
 - **Primary Key:** `game_id`, `sequence_number`
 - **Foreign Key:** `game_id REFERENCES games(game_id) ON DELETE CASCADE`
 
+<!-- BEGIN GENERATED: game_events -->
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
 | `game_id` | VARCHAR(26) | No | 親テーブル参照 |
 | `sequence_number` | BIGINT | No | イベント連番 |
 | `event_type` | VARCHAR(50) | No | イベント種別 |
 | `player_id` | UUID | Yes | 行動プレイヤー |
-| `event_data` | JSONB | No | イベント詳細データ（攻撃対象、使用カードID、ダメージ量など） |
-| `created_at` | TIMESTAMPTZ | No | 発生日時 (DEFAULT now()) |
+| `event_data` | JSONB | No | イベント詳細データ |
+| `created_at` | TIMESTAMPTZ | No | 発生日時 |
+<!-- END GENERATED: game_events -->
 
 **イベントデータの例:**
 - `attack`: `{ "sourceId": "...", "targetId": "...", "damage": 500 }`
@@ -193,111 +205,93 @@
 - **Primary Key:** `game_id`, `seq`
 - **Foreign Key:** `game_id REFERENCES games(game_id) ON DELETE CASCADE`
 
+<!-- BEGIN GENERATED: game_actions -->
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
 | `game_id` | VARCHAR(26) | No | 親テーブル参照 |
-| `seq` | BIGINT | No | アクション連番 |
+| `seq` | INT | No | アクション連番 |
 | `player_id` | UUID | No | アクション実行プレイヤー |
-| `action_type` | VARCHAR(50) | No | アクション種別（`play_card`, `attack`, `scale_up` 等） |
-| `action_data` | JSONB | No | アクションの入力データ（プレイヤーが送信したペイロード） |
-| `created_at` | TIMESTAMPTZ | No | 記録日時 (DEFAULT now()) |
+| `action_type` | TEXT | No | アクション種別（play_card, attack, scale_up 等） |
+| `action_data` | JSONB | No | アクションの入力データ |
+| `created_at` | TIMESTAMPTZ | No | 記録日時 |
+<!-- END GENERATED: game_actions -->
 
 > **設計意図:** `game_events` がサーバー側で生成されるイベントログであるのに対し、`game_actions` はプレイヤーの入力をそのまま記録する追記専用テーブル。`initial_state` + `game_actions` を順に再生することでゲームを再現できる。
 
 ---
 
-## 4. 対戦履歴管理 (Match History)
-
-ユーザーの対戦結果の記録。
-
-> **レーティング制は廃止。** 教育系カードゲームとしてデッキ構築と学習を楽しむことを重視し、勝敗ランキングは設けない。
-
-### 4.1 PostgreSQL スキーマ (matches)
-
-**Matches** (対戦履歴)
-- **Primary Key:** `match_id`
-
-| カラム名 | 型 | Nullable | 説明 |
-|---|---|---|---|
-| `match_id` | BIGINT (IDENTITY) | No | 自動採番 |
-| `game_id` | VARCHAR(26) | No | 対応する `Games` レコード ID（`Games.player1_id/player2_id` を参照） |
-| `created_at` | TIMESTAMPTZ | No | マッチ成立日時 |
-
-> **注:** プレイヤーIDは `Games` テーブルの `player1_id` / `player2_id` を正とする。`Matches` からプレイヤーを特定する場合は `game_id` を通じて `Games` テーブルを参照する。
-
-### 4.2 関連インデックス
-
-- `MatchesByGameId`: `Matches(game_id)`
-
----
-
-## 5. プレイヤー管理 (Player Management)
+## 4. プレイヤー管理 (Player Management)
 
 ユーザーアカウントと基本情報。
 
-### 5.1 PostgreSQL スキーマ (players & player_daily_battle)
+### 4.1 PostgreSQL スキーマ (players & player_daily_battle)
 
 **Players** (プレイヤーマスター)
 - **Primary Key:** `player_id`
 
+<!-- BEGIN GENERATED: players -->
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
 | `player_id` | UUID | No | UUID |
-| `firebase_uid` | VARCHAR(128)| No | Firebase Auth UID (Unique) |
+| `firebase_uid` | VARCHAR(128) | No | Firebase Auth UID (Unique) |
 | `username` | VARCHAR(50) | No | 表示名 |
 | `level` | BIGINT | No | レベル (Default: 1) |
 | `exp` | BIGINT | No | 経験値 (Default: 0) |
-
-| `is_premium` | BOOLEAN | No | 課金ステータス (Default: false) |
-| `equipped_icon_no` | BIGINT | Yes | 装備中アイコン番号（`CosmeticItems` 参照。NULL: デフォルト） |
+| `is_premium` | BOOLEAN | No | 課金ステータス |
+| `equipped_icon_no` | BIGINT | Yes | 装備中アイコン番号（NULL: デフォルト） |
 | `selected_faction` | VARCHAR(20) | Yes | 選択済みファクション |
 | `premium_expires_at` | TIMESTAMPTZ | Yes | サブスク有効期限 |
 | `created_at` | TIMESTAMPTZ | No | 作成日時 |
 | `updated_at` | TIMESTAMPTZ | No | 更新日時 |
+<!-- END GENERATED: players -->
 
 **player_daily_battle** (デイリーバトル管理)
 - **Primary Key:** `player_id`
 - **Foreign Key:** `player_id REFERENCES players(player_id) ON DELETE CASCADE`
 
+<!-- BEGIN GENERATED: player_daily_battle -->
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
 | `player_id` | UUID | No | 親テーブル参照 |
 | `daily_battle_count` | BIGINT | No | 本日のバトル回数 |
 | `last_reset_date` | DATE | No | 最終リセット日 |
+<!-- END GENERATED: player_daily_battle -->
 
-### 5.2 関連インデックス
+### 4.2 関連インデックス
 
 - `PlayersByFirebaseUID`: `Players(firebase_uid)` (UNIQUE)
 
 ---
 
-## 6. カード定義マスター (Card Definitions)
+## 5. カード定義マスター (Card Definitions)
 
 カードのステータス・効果テキスト・コスト等の定義データ。`CARDS.md` の内容をDB上で管理する。
 
-### 6.1 PostgreSQL スキーマ (card_definitions)
+### 5.1 PostgreSQL スキーマ (card_definitions)
 
 **CardDefinitions** (カード定義マスター)
 - **Primary Key:** `card_id`
 
+<!-- BEGIN GENERATED: card_definitions -->
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
-| `card_id` | VARCHAR(10) | No | カード識別子（例: `SH-0001`） |
+| `card_id` | VARCHAR(10) | No | カード識別子（例: SH-0001） |
 | `card_name` | VARCHAR(100) | No | カード名 |
-| `faction` | VARCHAR(20) | No | 陣営 (`SHE`, `Tenki`, `Sugar`, `Tuners`, `Neutral`) |
-| `card_type` | VARCHAR(30) | No | カードタイプ (`Compute`, `Container`, `Orchestrator`, `Serverless`, `AI_ML`, `Database`, `ObjectStorage`, `CacheDB`, `Platform`, `Attachment`, `Strategy`, `Incident`, `Reactive`) |
-| `resizable` | BOOLEAN | No | Resizable 属性 (Default: false) |
-| `elastic` | BOOLEAN | No | Elastic 属性 (Default: false) |
-| `elastic_increment` | BIGINT | Yes | Elastic トリガーごとの TP/Yield 増加量。Elastic カードのみ設定（非 Elastic は `null` または `0`） |
+| `resource_label` | VARCHAR(30) | No | リソースラベル |
+| `faction` | VARCHAR(20) | No | 陣営 |
+| `card_type` | VARCHAR(30) | No | カードタイプ |
+| `resizable` | BOOLEAN | No | Resizable 属性 |
+| `elastic` | BOOLEAN | No | Elastic 属性 |
 | `stats` | JSONB | No | ステータス定義 |
 | `effect_text` | VARCHAR(500) | Yes | 効果テキスト（表示用） |
-| `effects` | JSONB | Yes | 効果定義（複数効果を JSON 配列で保持） |
-| `restriction` | VARCHAR(20) | No | 制限区分 (`unlimited`, `semi_limited`, `limited`, `forbidden`) |
-| `is_active` | BOOLEAN | No | 有効フラグ（メンテ・バランス調整用） |
+| `effects` | JSONB | Yes | 効果定義（JSON 配列） |
+| `restriction` | VARCHAR(20) | No | 制限区分 |
+| `is_active` | BOOLEAN | No | 有効フラグ |
 | `created_at` | TIMESTAMPTZ | No | 作成日時 |
 | `updated_at` | TIMESTAMPTZ | No | 更新日時 |
+<!-- END GENERATED: card_definitions -->
 
-### 6.2 JSONスキーマ (stats)
+### 5.2 JSONスキーマ (stats)
 
 **コンピュート系リソースの場合:**
 
@@ -345,12 +339,12 @@ stats フィールドなし（Platform の場合、`deploy_turns` はトップ�
 
 > `deploy_turns` は stats 内ではなく、カード定義のトップレベルフィールドとして管理する。カードタイプごとのデフォルト値は RULEBOOK.md を参照。
 
-### 6.3 関連インデックス
+### 5.3 関連インデックス
 
 - `CardsByFaction`: `CardDefinitions(faction, card_type)`
 - `CardsByType`: `CardDefinitions(card_type)`
 
-### 6.4 サーバー側のカード参照設計
+### 5.4 サーバー側のカード参照設計
 
 | 用途 | 参照方法 |
 |------|----------|
@@ -378,7 +372,7 @@ stats フィールドなし（Platform の場合、`deploy_turns` はトップ�
 
 > **設計判断:** カード定義の更新頻度は低い（月数回程度）ため、5分間隔ポーリングで十分。最大5分の遅延は許容範囲。
 
-### 6.5 ゲーム定数 (constants.json — initial_values)
+### 5.5 ゲーム定数 (constants.json — initial_values)
 
 `data/constants.json` の `initial_values` セクションで管理されるゲーム全体の初期値・定数。サーバー（Go）とクライアント（TypeScript）の両方に自動生成される。
 
@@ -395,43 +389,48 @@ stats フィールドなし（Platform の場合、`deploy_turns` はトップ�
 
 ---
 
-## 7. カード・デッキ管理 (Card & Deck Management)
+## 6. カード・デッキ管理 (Card & Deck Management)
 
 所持カードとデッキ構築。
 
-### 7.1 PostgreSQL スキーマ (player_cards, decks, deck_cards)
+### 6.1 PostgreSQL スキーマ (player_cards, decks, deck_cards)
 
 **PlayerCards** (所持カード)
 - **Primary Key:** `(player_id, card_id, art_no)`
 - **Foreign Key:** `player_id REFERENCES players(player_id) ON DELETE CASCADE`
 
+<!-- BEGIN GENERATED: player_cards -->
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
 | `player_id` | UUID | No | 親テーブル参照 |
-| `card_id` | VARCHAR(10) | No | カード識別子（例: `SH-0001`） |
+| `card_id` | VARCHAR(10) | No | カード識別子 |
 | `art_no` | BIGINT | No | アート番号 (Default: 0) |
 | `count` | INT | No | 所持枚数 (Default: 1) |
+<!-- END GENERATED: player_cards -->
 
 **Decks** (デッキ定義)
 - **Primary Key:** `player_id`, `deck_id`
 - **Foreign Key:** `player_id REFERENCES players(player_id) ON DELETE CASCADE`
 
+<!-- BEGIN GENERATED: decks -->
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
 | `player_id` | UUID | No | 親テーブル参照 |
 | `deck_id` | BIGINT (IDENTITY) | No | デッキID（自動採番） |
 | `deck_name` | VARCHAR(50) | No | デッキ名 |
-| `playmat_no` | BIGINT | Yes | プレイマット番号（`CosmeticItems` 参照。NULL: デフォルト） |
-
-> **Note:** `is_valid` は DB に保存せず、API レスポンス時にサービス層が都度算出する（所持カード・制限改定に追従するため）。
-| `sleeve_no` | BIGINT | Yes | スリーブ番号（`CosmeticItems` 参照。NULL: デフォルト） |
+| `playmat_no` | BIGINT | Yes | プレイマット番号（NULL: デフォルト） |
+| `sleeve_no` | BIGINT | Yes | スリーブ番号（NULL: デフォルト） |
 | `created_at` | TIMESTAMPTZ | No | 作成日時 |
 | `updated_at` | TIMESTAMPTZ | No | 更新日時 |
+<!-- END GENERATED: decks -->
+
+> **Note:** `is_valid` は DB に保存せず、API レスポンス時にサービス層が都度算出する（所持カード・制限改定に追従するため）。
 
 **DeckCards** (デッキ内カード)
 - **Primary Key:** `(player_id, deck_id, card_id, art_no)`
 - **Foreign Key:** `(player_id, deck_id) REFERENCES decks(player_id, deck_id) ON DELETE CASCADE`
 
+<!-- BEGIN GENERATED: deck_cards -->
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
 | `player_id` | UUID | No | ルート親参照 |
@@ -439,107 +438,122 @@ stats フィールドなし（Platform の場合、`deploy_turns` はトップ�
 | `card_id` | VARCHAR(10) | No | カード識別子 |
 | `art_no` | BIGINT | No | アート番号 (Default: 0) |
 | `count` | INT | No | 枚数 (Default: 1) |
+<!-- END GENERATED: deck_cards -->
 
-### 7.2 関連インデックス
+### 6.2 関連インデックス
 
 - `PlayerCardsByCardId`: `PlayerCards(player_id, card_id)`
 - `DecksByPlayer`: `Decks(player_id, updated_at DESC)`
 
 ---
 
-## 8. ショップ・設定管理 (Shop & Settings)
+## 7. ショップ・設定管理 (Shop & Settings)
 
 アプリ内課金とユーザー設定。
 
-### 8.1 PostgreSQL スキーマ (products, subscriptions, etc.)
+### 7.1 PostgreSQL スキーマ (products, subscriptions, etc.)
 
 **Products** (商品マスター)
 - **Primary Key:** `product_id`
 
+<!-- BEGIN GENERATED: products -->
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
-| `product_id` | VARCHAR(50) | No | 商品ID (e.g. `theme_aws`) |
+| `product_id` | VARCHAR(50) | No | 商品ID |
 | `name` | VARCHAR(100) | No | 商品名 |
-| `type` | VARCHAR(20) | No | `card_pack` / `subscription` |
+| `type` | VARCHAR(20) | No | 商品タイプ (card_pack / subscription) |
 | `price` | BIGINT | No | 価格 (JPY) |
-| `content` | JSONB | No | 商品内容 (カードIDリスト等) |
+| `content` | JSONB | No | 商品内容 |
+| `description` | VARCHAR(500) | Yes | 商品説明 |
+| `image_url` | VARCHAR(200) | Yes | 画像URL |
 | `is_active` | BOOLEAN | No | 販売中フラグ |
+<!-- END GENERATED: products -->
 
 **Subscriptions** (サブスクリプション管理)
 - **Primary Key:** `player_id`, `subscription_id`
 - **Foreign Key:** `player_id REFERENCES players(player_id) ON DELETE CASCADE`
 
+<!-- BEGIN GENERATED: subscriptions -->
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
 | `player_id` | UUID | No | 親テーブル参照 |
 | `subscription_id` | BIGINT (IDENTITY) | No | 自動採番 |
-| `product_id` | VARCHAR(50) | No | 商品ID（`premium_monthly` 等） |
-| `platform` | VARCHAR(10) | No | `apple` / `google` |
-| `purchase_token` | VARCHAR(256) | No | Apple: `originalTransactionId` / Google: `purchaseToken`（UNIQUE） |
-| `status` | VARCHAR(20) | No | `active` / `grace_period` / `expired` / `refunded` |
-| `current_period_start` | TIMESTAMPTZ | No | 現在の課金期間開始日時 |
-| `current_period_end` | TIMESTAMPTZ | No | 現在の課金期間終了日時 |
+| `product_id` | VARCHAR(50) | No | 商品ID |
+| `platform` | VARCHAR(10) | No | apple / google |
+| `purchase_token` | VARCHAR(256) | No | 購入トークン |
+| `status` | VARCHAR(20) | No | active / grace_period / expired / refunded |
+| `current_period_start` | TIMESTAMPTZ | No | 課金期間開始日時 |
+| `current_period_end` | TIMESTAMPTZ | No | 課金期間終了日時 |
 | `created_at` | TIMESTAMPTZ | No | 初回購入日時 |
 | `updated_at` | TIMESTAMPTZ | No | 更新日時 |
+<!-- END GENERATED: subscriptions -->
 
 **OneTimePurchases** (買い切り購入履歴)
 - **Primary Key:** `player_id`, `purchase_id`
 - **Foreign Key:** `player_id REFERENCES players(player_id) ON DELETE CASCADE`
 
+<!-- BEGIN GENERATED: one_time_purchases -->
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
 | `player_id` | UUID | No | 親テーブル参照 |
-| `purchase_id` | UUID | No | UUID |
-| `product_id` | VARCHAR(50) | No | 商品ID（`faction_sws` 等） |
-| `platform` | VARCHAR(10) | No | `apple` / `google` |
-| `purchase_token` | VARCHAR(256) | No | Apple: `transactionId` / Google: `purchaseToken`（UNIQUE） |
+| `purchase_id` | BIGINT (IDENTITY) | No | 自動採番 |
+| `product_id` | VARCHAR(50) | No | 商品ID |
+| `platform` | VARCHAR(10) | No | apple / google |
+| `purchase_token` | VARCHAR(256) | No | 購入トークン |
 | `purchased_at` | TIMESTAMPTZ | No | 購入日時 |
+<!-- END GENERATED: one_time_purchases -->
 
 **UserSettings** (ユーザー設定)
 - **Primary Key:** `player_id`
 - **Foreign Key:** `player_id REFERENCES players(player_id) ON DELETE CASCADE`
 
+<!-- BEGIN GENERATED: user_settings -->
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
 | `player_id` | UUID | No | ユーザーID |
-| `language` | VARCHAR(10) | No | 言語設定 (Default: `ja`) |
+| `language` | VARCHAR(10) | No | 言語設定 |
 | `bgm_volume` | BIGINT | No | BGM音量 (0-100) |
 | `se_volume` | BIGINT | No | SE音量 (0-100) |
 | `push_enabled` | BOOLEAN | No | 通知許可 |
 | `updated_at` | TIMESTAMPTZ | No | 更新日時 |
+<!-- END GENERATED: user_settings -->
 
 ---
 
-## 9. コスメティクス管理 (Cosmetics)
+## 8. コスメティクス管理 (Cosmetics)
 
 装飾アイテム（プレイマット・スリーブ等）の定義・所持・装備。
 
-### 9.1 PostgreSQL スキーマ (cosmetic_items, player_items)
+### 8.1 PostgreSQL スキーマ (cosmetic_items, player_items)
 
 **CosmeticItems** (装飾アイテムマスター)
 - **Primary Key:** `item_type`, `item_no`
 
+<!-- BEGIN GENERATED: cosmetic_items -->
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
-| `item_type` | VARCHAR(20) | No | アイテム種別（`playmat` / `sleeve` / `icon` / `stamp`） |
-| `item_no` | BIGINT | No | アイテム番号（種別内で一意） |
+| `item_type` | VARCHAR(20) | No | アイテム種別（playmat / sleeve / icon / stamp） |
+| `item_no` | BIGINT | No | アイテム番号 |
 | `item_name` | VARCHAR(100) | No | アイテム名 |
 | `description` | VARCHAR(500) | Yes | 説明文 |
 | `is_purchasable` | BOOLEAN | No | 購入可能フラグ |
 | `is_active` | BOOLEAN | No | 有効フラグ |
+<!-- END GENERATED: cosmetic_items -->
 
 **PlayerItems** (プレイヤーの装飾アイテム所持)
 - **Primary Key:** `player_id`, `item_type`, `item_no`
 - **Foreign Key:** `player_id REFERENCES players(player_id) ON DELETE CASCADE`
 
+<!-- BEGIN GENERATED: player_items -->
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
 | `player_id` | UUID | No | 親テーブル参照 |
 | `item_type` | VARCHAR(20) | No | アイテム種別 |
 | `item_no` | BIGINT | No | アイテム番号 |
 | `acquired_at` | TIMESTAMPTZ | No | 獲得日時 |
+<!-- END GENERATED: player_items -->
 
-### 9.2 装備状態の管理
+### 8.2 装備状態の管理
 
 装備中のアイテムは使用時に即座に参照できるよう、所持テーブルではなく **Players / Decks テーブルに直接保持** する。
 
@@ -553,11 +567,11 @@ stats フィールドなし（Platform の場合、`deploy_turns` はトップ�
 
 ---
 
-## 10. 陣営所持管理 (Player Factions)
+## 9. 陣営所持管理 (Player Factions)
 
 プレイヤーが所持している陣営カードセットの中間テーブル。初期選択やショップ購入で取得する。
 
-### 10.1 PostgreSQL スキーマ (player_factions)
+### 9.1 PostgreSQL スキーマ (player_factions)
 
 **PlayerFactions** (陣営所持)
 - **Primary Key:** `(player_id, faction)`
@@ -565,60 +579,66 @@ stats フィールドなし（Platform の場合、`deploy_turns` はトップ�
 - **CHECK:** `faction IN ('SHE', 'Tenki', 'Sugar', 'Tuners')`
 - **CHECK:** `source IN ('initial_selection', 'shop_purchase')`
 
+<!-- BEGIN GENERATED: player_factions -->
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
 | `player_id` | UUID | No | 親テーブル参照 |
-| `faction` | VARCHAR(20) | No | 陣営名 (`SHE`, `Tenki`, `Sugar`, `Tuners`) |
-| `source` | VARCHAR(20) | No | 取得経路 (`initial_selection`, `shop_purchase`) |
-| `acquired_at` | TIMESTAMPTZ | No | 取得日時 (DEFAULT now()) |
+| `faction` | VARCHAR(20) | No | 陣営名 (SHE / Tenki / Sugar / Tuners) |
+| `source` | VARCHAR(20) | No | 取得経路 (initial_selection / shop_purchase) |
+| `acquired_at` | TIMESTAMPTZ | No | 取得日時 |
+<!-- END GENERATED: player_factions -->
 
 > `Players.selected_faction` は初回選択のみを保持するが、`player_factions` はショップ購入を含む全所持陣営を管理する。ストーリーのアンロック条件判定はこのテーブルを参照する。
 
 ---
 
-## 11. ストーリー管理 (Story Scenarios)
+## 10. ストーリー管理 (Story Scenarios)
 
 各陣営のストーリーエピソード定義と、プレイヤーの進行状況。
 
-### 11.1 PostgreSQL スキーマ (scenario_episodes, player_story_progress)
+### 10.1 PostgreSQL スキーマ (scenario_episodes, player_story_progress)
 
 **ScenarioEpisodes** (エピソード定義マスター)
 - **Primary Key:** `episode_id`
 - **CHECK:** `category IN ('main', 'side', 'event')`
 - **CHECK:** `faction IS NULL OR faction IN ('SHE', 'Tenki', 'Sugar', 'Tuners')`
 
+<!-- BEGIN GENERATED: scenario_episodes -->
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
-| `episode_id` | VARCHAR(50) | No | エピソードID（例: `she_ep1`, `final`） |
-| `category` | VARCHAR(20) | No | エピソード種別（DEFAULT `'main'`）。`main`: メインストーリー, `side`: サイドストーリー, `event`: イベントストーリー |
-| `faction` | VARCHAR(20) | Yes | 所属陣営（`NULL` = グランドエンディング等の全陣営共通エピソード） |
+| `episode_id` | VARCHAR(50) | No | エピソードID（例: she_ep1, final） |
+| `category` | VARCHAR(20) | No | エピソード種別 (main / side / event) |
+| `faction` | VARCHAR(20) | Yes | 所属陣営（NULL: 全陣営共通） |
 | `episode_number` | BIGINT | No | 陣営内の章番号 |
 | `title_ja` | VARCHAR(200) | No | 日本語タイトル |
 | `title_en` | VARCHAR(200) | No | 英語タイトル |
-| `required_level` | BIGINT | No | アンロックに必要なプレイヤーレベル (DEFAULT 1) |
-| `required_factions` | TEXT[] | No | アンロックに必要な陣営所持（DEFAULT '{}'） |
-| `required_episodes` | TEXT[] | No | アンロックに必要な完了済みエピソード（DEFAULT '{}'） |
-| `script_path` | VARCHAR(500) | No | スクリプトパステンプレート（`{lang}` を言語コードに置換） |
+| `required_level` | BIGINT | No | アンロックに必要なレベル (Default: 1) |
+| `required_factions` | TEXT[] | No | アンロックに必要な陣営所持 |
+| `required_episodes` | TEXT[] | No | アンロックに必要な完了済みエピソード |
+| `script_path` | VARCHAR(500) | No | スクリプトパステンプレート |
 | `thumbnail_path` | VARCHAR(500) | Yes | サムネイル画像パス |
 | `sort_order` | BIGINT | No | 表示順 |
-| `is_active` | BOOLEAN | No | 公開フラグ (DEFAULT true) |
-| `created_at` | TIMESTAMPTZ | No | 作成日時 (DEFAULT now()) |
-| `updated_at` | TIMESTAMPTZ | No | 更新日時 (DEFAULT now()) |
+| `is_active` | BOOLEAN | No | 公開フラグ (Default: true) |
+| `created_at` | TIMESTAMPTZ | No | 作成日時 |
+| `updated_at` | TIMESTAMPTZ | No | 更新日時 |
+<!-- END GENERATED: scenario_episodes -->
 
 **PlayerStoryProgress** (プレイヤーの進行状況)
 - **Primary Key:** `(player_id, episode_id)`
 - **Foreign Key:** `player_id REFERENCES players(player_id) ON DELETE CASCADE`
 - **Foreign Key:** `episode_id REFERENCES scenario_episodes(episode_id) ON DELETE RESTRICT`
 
+<!-- BEGIN GENERATED: player_story_progress -->
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
 | `player_id` | UUID | No | 親テーブル参照 |
 | `episode_id` | VARCHAR(50) | No | 完了したエピソードID |
-| `completed_at` | TIMESTAMPTZ | No | 完了日時 (DEFAULT now()) |
+| `completed_at` | TIMESTAMPTZ | No | 完了日時 |
+<!-- END GENERATED: player_story_progress -->
 
 > 完了記録は冪等（`ON CONFLICT DO NOTHING`）。同じエピソードを再読了してもレコードは増えない。
 
-### 11.2 アンロック条件の判定
+### 10.2 アンロック条件の判定
 
 アンロック条件は以下の優先順で判定される。最初に不足が見つかった時点で `lock_reason` を返す:
 
@@ -626,7 +646,7 @@ stats フィールドなし（Platform の場合、`deploy_turns` はトップ�
 2. **陣営所持**: `player_factions` に `required_factions` のすべてが存在
 3. **前提エピソード**: `player_story_progress` に `required_episodes` のすべてが存在
 
-### 11.3 エピソード構成
+### 10.3 エピソード構成
 
 | ラウンド | レベル帯 | エピソード数 | 内容 |
 |----------|---------|-------------|------|
@@ -637,6 +657,6 @@ stats フィールドなし（Platform の場合、`deploy_turns` はトップ�
 | Round 5 | Lv 18〜21 | 4 | 各陣営 第5章 |
 | Final | Lv 22 | 1 | グランドエンディング（全陣営クリア必須） |
 
-### 11.4 関連インデックス
+### 10.4 関連インデックス
 
 - `ScenarioEpisodesBySort`: `scenario_episodes(sort_order)`
