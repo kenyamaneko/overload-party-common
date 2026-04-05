@@ -19,11 +19,11 @@
 ## Key Files
 
 - `data/cards/*.yaml` - カード定義（5ファクション）
-- `data/products.yaml` - ショップ商品定義（SSoT）
+- `data/mock/` - 開発用モックデータ（news, products, starter_decks）
 - `data/constants.yaml` - ゲーム定数
 - `data/event_schemas.yaml` - イベントデータスキーマ
 - `data/models.yaml` - モデル定義（pkg: gamedata/api で振り分け）
-- `db/schema_postgres.sql` - PostgreSQL DDL（全テーブルの SSoT）
+- `db/schema_postgres.sql` - PostgreSQL DDL（全テーブルの SSoT、インラインコメントが DATA_DESIGN.md のカラム説明の SSoT）
 - `db/grant_iam.sql` - IAM 認証権限付与
 - `db/seed/cards_seed.sql` - カード定義の DB seed（自動生成）
 - `db/seed/products.sql` - 商品定義の DB seed（自動生成）
@@ -31,6 +31,7 @@
 - `scripts/generate_cards.py` - カードデータ生成スクリプト（YAML → JSON/SQL/Markdown）
 - `scripts/generate_products.py` - 商品データ生成スクリプト（YAML → JSON/SQL）
 - `scripts/generate_constants.py` - 定数・型生成スクリプト（YAML → Go/C#/TS + ドキュメントのフィールドテーブル自動更新）
+- `scripts/generate_schema_doc.py` - スキーマドキュメント生成スクリプト（DDL → DATA_DESIGN.md のカラムテーブル自動更新）
 - `packages/gamedata/` - Go パッケージ（ゲームデータ: カード定義・定数・エフェクト型）
 - `packages/api/` - Go パッケージ（API コントラクト: REST 型・WS メッセージ・デッキ型）
 - `packages/devdata/` - Go パッケージ 開発用（カード・商品 JSON、ローカルモック用）
@@ -53,7 +54,9 @@
 - codegen は CI では実行しない。PR の codegen-check で同期を保証
 - CARDS.md、products.sql、cards_seed.sql は自動生成なので直接編集しない
 - API_REFERENCE.md / WS_REFERENCE.md の `<!-- BEGIN/END GENERATED: TypeName -->` マーカー間は自動生成。フィールド説明を変更する場合は `data/models.yaml` の `doc` フィールドを編集して codegen を実行する
-- DB スキーマを変更したら `db/schema_postgres.sql` のみ編集する（server リポの schema は廃止）
+- DB スキーマを変更したら `db/schema_postgres.sql` のみ編集する（server リポの schema は廃止）。カラムのインラインコメント（`-- 説明`）も必ず記述する
+- DB スキーマを変更したら `python3 scripts/generate_schema_doc.py` を実行して DATA_DESIGN.md を更新する
+- DATA_DESIGN.md の `<!-- BEGIN/END GENERATED: table_name -->` マーカー間は自動生成。カラム説明を変更する場合は `db/schema_postgres.sql` のインラインコメントを編集して codegen を実行する
 - 各リポはパッケージをインストールして生成コードを使う:
   - gateway: `go get .../packages/gamedata@latest` + `go get .../packages/api@latest`
   - gateway 開発用: `go get .../packages/devdata@latest`

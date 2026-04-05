@@ -21,7 +21,7 @@ except ImportError:
 
 # ─── Paths ──────────────────────────────────────────────
 ROOT = Path(__file__).resolve().parent.parent
-YAML_PATH = ROOT / "data" / "products.yaml"
+YAML_PATH = ROOT / "data" / "mock" / "products.yaml"
 SEED_OUT = ROOT / "db" / "seed" / "products.sql"
 GO_JSON_OUT = ROOT / "packages" / "devdata" / "cache" / "products_gen.json"
 

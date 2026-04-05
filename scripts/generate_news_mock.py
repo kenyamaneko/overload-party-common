@@ -2,7 +2,7 @@
 """Generate mock news data from YAML for local development.
 
 Outputs:
-  - packages/devdata/cache/news_mock.json
+  - packages/devdata/cache/news.json
 
 Usage:
     python3 scripts/generate_news_mock.py
@@ -19,8 +19,8 @@ except ImportError:
     sys.exit(1)
 
 ROOT = Path(__file__).resolve().parent.parent
-YAML_PATH = ROOT / "data" / "news_mock.yaml"
-JSON_OUT = ROOT / "packages" / "devdata" / "cache" / "news_mock.json"
+YAML_PATH = ROOT / "data" / "mock" / "news.yaml"
+JSON_OUT = ROOT / "packages" / "devdata" / "cache" / "news.json"
 
 VALID_SOURCES = {"aws", "google-cloud", "azure", "oci", "other"}
 

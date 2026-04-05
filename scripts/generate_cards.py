@@ -29,7 +29,7 @@ MD_OUT = ROOT / "docs" / "game_design" / "CARDS.md"
 SEED_OUT = ROOT / "db" / "seed" / "cards_seed.sql"
 GO_JSON_OUT = ROOT / "packages" / "devdata" / "cache" / "cards_gen.json"
 DOTNET_JSON_OUT = ROOT / "packages" / "gamedata-dotnet" / "cache" / "cards_gen.json"
-STARTER_DECKS_YAML = ROOT / "data" / "starter_decks.yaml"
+STARTER_DECKS_YAML = ROOT / "data" / "mock" / "starter_decks.yaml"
 STARTER_DECKS_JSON_OUT = ROOT / "packages" / "devdata" / "cache" / "starter_decks_gen.json"
 
 # ─── Constants ──────────────────────────────────────────

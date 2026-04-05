@@ -1,6 +1,6 @@
 # Mock news articles for local development
 # Generated outputs:
-#   - packages/devdata/cache/news_mock.json
+#   - packages/devdata/cache/news.json
 #
 # Fields that are set at runtime:
 #   - fetched_at: populated by gateway at request time
