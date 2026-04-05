@@ -684,6 +684,130 @@ def generate_csharp_game_state_view(*, out_path, namespace="OverloadParty.GameDa
         f.write("\n")
 
 
+# ─── Generate C# (battle ↔ gateway RPC envelope) ──────
+_GO_TO_CS_ENVELOPE_TYPE = {
+    "string": "string",
+    "int": "int",
+    "int64": "long",
+    "bool": "bool",
+    "time.Time": "DateTime",
+    "json.RawMessage": "JsonElement",
+}
+
+
+def _go_to_cs_envelope_type(go_type):
+    """Convert a Go type string to a C# type string for envelope types.
+
+    Differs from _go_to_cs_type in that json.RawMessage maps to JsonElement
+    (non-nullable by default) to match the battle server's existing records.
+    """
+    is_pointer = go_type.startswith("*")
+    base = go_type.lstrip("*")
+
+    if base.startswith("[]"):
+        elem = base[2:]
+        cs_elem = _GO_TO_CS_ENVELOPE_TYPE.get(elem, elem)
+        return f"List<{cs_elem}>"
+
+    cs_base = _GO_TO_CS_ENVELOPE_TYPE.get(base, base)
+
+    if is_pointer:
+        return f"{cs_base}?"
+
+    return cs_base
+
+
+def generate_csharp_battle_gateway_rpc(*, out_path, namespace="OverloadParty.GameData"):
+    """Generate BattleGatewayRpc_gen.cs from the battle_gateway_rpc section.
+
+    Types ending in "Request" become C# records (Gateway sends them); other
+    types become classes (Gateway deserializes responses). JSON keys are
+    snake_case and emitted as explicit [JsonPropertyName(...)] attributes.
+    """
+    with open(MODELS_YAML, "r", encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+
+    file_def = None
+    for fd in data["files"]:
+        if fd["name"] == "battle_gateway_rpc":
+            file_def = fd
+            break
+
+    if file_def is None:
+        print("WARNING: battle_gateway_rpc not found in models.yaml, skipping C# generation", file=sys.stderr)
+        return
+
+    cs_out = Path(out_path)
+
+    lines = [
+        _GENERATED_HEADER,
+        "",
+        "using System.Text.Json;",
+        "using System.Text.Json.Serialization;",
+        "",
+        f"namespace {namespace};",
+        "",
+    ]
+
+    for td in file_def.get("types", []):
+        name = td["name"]
+        is_request = name.endswith("Request")
+
+        if td.get("comment"):
+            lines.append(f"/// <summary>{td['comment']}</summary>")
+
+        if is_request:
+            # Emit as record with [property: JsonPropertyName(...)] on constructor params.
+            fields = td.get("fields", [])
+            if not fields:
+                lines.append(f"public record {name}();")
+                lines.append("")
+                continue
+
+            lines.append(f"public record {name}(")
+            for i, field in enumerate(fields):
+                go_type = str(field["type"])
+                json_tag = str(field.get("json", ""))
+                json_key = json_tag.split(",")[0]
+                cs_type = _go_to_cs_envelope_type(go_type)
+                fname = field["name"]
+                trailing = "," if i < len(fields) - 1 else ");"
+                lines.append(f'    [property: JsonPropertyName("{json_key}")] {cs_type} {fname}{trailing}')
+            lines.append("")
+        else:
+            # Emit as class with [JsonPropertyName(...)] on each property.
+            lines.append(f"public class {name}")
+            lines.append("{")
+            for field in td.get("fields", []):
+                go_type = str(field["type"])
+                json_tag = str(field.get("json", ""))
+                json_key = json_tag.split(",")[0]
+                has_omitempty = json_tag.endswith(",omitempty")
+                cs_type = _go_to_cs_envelope_type(go_type)
+                fname = field["name"]
+
+                lines.append(f'    [JsonPropertyName("{json_key}")]')
+                if go_type.startswith("*"):
+                    # Pointer → nullable (already includes ?)
+                    lines.append(f"    public {cs_type} {fname} {{ get; init; }}")
+                elif go_type.startswith("[]"):
+                    if has_omitempty:
+                        lines.append(f"    public {cs_type}? {fname} {{ get; init; }}")
+                    else:
+                        lines.append(f"    public {cs_type} {fname} {{ get; init; }} = [];")
+                elif cs_type == "string":
+                    lines.append(f'    public {cs_type} {fname} {{ get; init; }} = "";')
+                else:
+                    lines.append(f"    public {cs_type} {fname} {{ get; init; }}")
+            lines.append("}")
+            lines.append("")
+
+    cs_out.parent.mkdir(parents=True, exist_ok=True)
+    with open(cs_out, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+        f.write("\n")
+
+
 # ─── Generate TypeScript (constants) ───────────────────
 def _ts_const_array(const_name, type_name, values, extra_union=None):
     """Generate a TS as-const array with union type."""
@@ -1022,6 +1146,8 @@ def generate_ts_models(*, out_path, pkg_filter=None):
             continue
         if file_def["name"] == "ws_messages":
             continue
+        if file_def.get("ts_skip"):
+            continue
         if pkg_filter and file_def.get("pkg", "gamedata") != pkg_filter:
             continue
         matching_files.append(file_def)
@@ -1350,6 +1476,9 @@ def main():
 
     generate_csharp_game_state_view(out_path=DOTNET_DIR / "GameStateView_gen.cs")
     print("Generated → packages/gamedata-dotnet/GameStateView_gen.cs", file=sys.stderr)
+
+    generate_csharp_battle_gateway_rpc(out_path=DOTNET_DIR / "BattleGatewayRpc_gen.cs")
+    print("Generated → packages/gamedata-dotnet/BattleGatewayRpc_gen.cs", file=sys.stderr)
 
     # TypeScript (gamedata)
     generate_ts_constants(constants, out_path=NPM_DIR / "src" / "constants.ts")

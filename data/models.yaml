@@ -312,6 +312,83 @@ files:
       - name: OpponentReconnectedMessage
         fields: []
 
+  # ─── Battle ↔ Gateway RPC (internal envelope) ─────────
+  # Envelope types for the internal REST contract between Gateway (Go) and
+  # Battle (C#). Gateway treats game state / event_data as raw JSON pass-through.
+  # Go struct tags are snake_case; C# uses explicit [JsonPropertyName("snake_case")].
+  - name: battle_gateway_rpc
+    target: both
+    pkg: api
+    ts_skip: true
+    imports:
+      - encoding/json
+    types:
+      # ── Response types ──
+      - name: BattleDeckCard
+        comment: "BattleDeckCard is a single card entry in a deck snapshot sent to the battle server."
+        fields:
+          - {name: CardID, type: string, json: "card_id"}
+          - {name: ArtNo, type: int64, json: "art_no"}
+
+      - name: GameCreatedResult
+        comment: "GameCreatedResult is returned when a new game (NPC or PvP) is created on the battle server."
+        fields:
+          - {name: GameID, type: string, json: "game_id"}
+          - {name: Player1ID, type: string, json: "player1_id"}
+          - {name: Player2ID, type: string, json: "player2_id"}
+          - {name: Npc1Model, type: "*string", json: "npc1_model,omitempty"}
+          - {name: Npc2Model, type: "*string", json: "npc2_model,omitempty"}
+
+      - name: ActionEvent
+        comment: "ActionEvent is a single game event emitted by the battle server after an action."
+        fields:
+          - {name: Sequence, type: int64, json: "sequence"}
+          - {name: EventType, type: string, json: "event_type"}
+          - {name: PlayerID, type: string, json: "player_id"}
+          - {name: IsSystem, type: bool, json: "is_system"}
+          - {name: EventData, type: json.RawMessage, json: "event_data"}
+          - {name: State, type: json.RawMessage, json: "state"}
+
+      - name: ActionResult
+        comment: "ActionResult is returned after a game action is processed by the battle server."
+        fields:
+          - {name: GameOver, type: bool, json: "game_over", doc: "ゲーム終了フラグ"}
+          - {name: WinnerNum, type: int64, json: "winner_num", doc: "勝者プレイヤー番号（1 or 2、未終了時は 0）"}
+          - {name: WinReason, type: string, json: "win_reason", doc: "終了理由（WinReasons enum の文字列、未終了時は空文字）"}
+          - {name: NpcPending, type: bool, json: "npc_pending", doc: "true の場合、Gateway は AdvanceNpcTurn を呼んで次の NPC アクションを取得する必要がある"}
+          - {name: Events, type: "[]ActionEvent", json: "events", doc: "このアクションで発生したイベント列"}
+
+      # ── Request types ──
+      - name: NpcBattleRequest
+        comment: "NpcBattleRequest is the request body for POST /api/v1/games/npc."
+        fields:
+          - {name: PlayerID, type: string, json: "player_id"}
+          - {name: DeckID, type: int64, json: "deck_id"}
+          - {name: Cards, type: "[]BattleDeckCard", json: "cards"}
+          - {name: NpcModel, type: string, json: "npc_model"}
+
+      - name: PvpBattleRequest
+        comment: "PvpBattleRequest is the request body for POST /api/v1/games/pvp."
+        fields:
+          - {name: Player1ID, type: string, json: "player1_id"}
+          - {name: Player1DeckID, type: int64, json: "player1_deck_id"}
+          - {name: Player1Cards, type: "[]BattleDeckCard", json: "player1_cards"}
+          - {name: Player2ID, type: string, json: "player2_id"}
+          - {name: Player2DeckID, type: int64, json: "player2_deck_id"}
+          - {name: Player2Cards, type: "[]BattleDeckCard", json: "player2_cards"}
+
+      - name: GameActionRequest
+        comment: "GameActionRequest is the request body for POST /api/v1/games/{gameId}/action."
+        fields:
+          - {name: PlayerID, type: string, json: "player_id"}
+          - {name: ActionType, type: string, json: "action_type"}
+          - {name: Data, type: json.RawMessage, json: "data"}
+
+      - name: NpcAdvanceRequest
+        comment: "NpcAdvanceRequest is the request body for POST /api/v1/games/{gameId}/npc-advance."
+        fields:
+          - {name: PlayerID, type: string, json: "player_id"}
+
   # ─── REST API (Gateway -> Client) ────────────────────────
   - name: rest_api
     target: gateway
