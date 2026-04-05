@@ -1,0 +1,66 @@
+name: Validate
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "data/**"
+      - "scripts/**"
+      - "db/seed/**"
+  pull_request:
+    paths:
+      - "data/**"
+      - "scripts/**"
+      - "db/seed/**"
+
+jobs:
+  unit-tests:
+    name: Unit tests (Python)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml pytest
+      - name: Run tests
+        run: python3 -m pytest scripts/ -v
+
+  codegen-sync:
+    name: Codegen sync check
+    needs: unit-tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml
+
+      - name: Generate cards
+        run: python3 scripts/generate_cards.py
+
+      - name: Generate products
+        run: python3 scripts/generate_products.py
+
+      - name: Generate constants & models
+        run: python3 scripts/generate_constants.py
+
+      - name: Verify no diff
+        run: |
+          if ! git diff --exit-code -- packages/ docs/game_design/CARDS.md db/seed/cards_seed.sql db/seed/products.sql; then
+            echo "::error::Generated files are out of sync. Run all generate scripts and commit."
+            git diff --stat
+            exit 1
+          fi
+
+  seed-integrity:
+    name: Seed data integrity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate referential integrity
+        run: python3 scripts/validate_seed.py

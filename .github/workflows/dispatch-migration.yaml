@@ -1,5 +1,4 @@
-# スキーマ変更を ops リポの DB マイグレーションワークフローに dispatch する。
-name: CI
+name: Dispatch DB Migration
 
 on:
   push:
@@ -9,10 +8,11 @@ on:
       - "db/grant_iam.sql"
 
 jobs:
-  dispatch-migration:
+  dispatch:
+    name: Trigger ops migration
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger ops DB migration
+      - name: Dispatch to ops repo
         run: |
           gh api repos/kenyamaneko/overload-party-ops/dispatches \
             -f event_type=db-migrate \
