@@ -440,6 +440,8 @@ files:
           - {name: ArtNo, type: int64, json: "art_no", doc: "アート番号"}
           - {name: Count, type: int, json: "count", doc: "枚数"}
 
+      # NOTE: DeckCreateRequest と DeckUpdateRequest は現在同一フィールドだが、
+      # 将来の分岐（例: Update での部分更新対応）に備えて型を分離している。
       - name: DeckCreateRequest
         comment: "DeckCreateRequest is the request body for POST /decks."
         fields:

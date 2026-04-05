@@ -273,8 +273,9 @@ def _generate_go_model_file(file_def, *, out_path):
             declared_imports |= _go_type_needs_import(str(field["type"]))
 
     if declared_imports:
-        std_imports = sorted(i for i in declared_imports if "/" not in i)
-        ext_imports = sorted(i for i in declared_imports if "/" in i)
+        # 外部パッケージはドメイン名で始まる（最初のセグメントに "." を含む）
+        std_imports = sorted(i for i in declared_imports if "." not in i.split("/")[0])
+        ext_imports = sorted(i for i in declared_imports if "." in i.split("/")[0])
         lines.append("import (")
         for imp in std_imports:
             lines.append(f'\t"{imp}"')
