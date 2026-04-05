@@ -544,7 +544,7 @@ def generate_csharp_event_data(schemas, *, out_path, namespace="OverloadParty.Ga
         for raw_key, raw_type in fields.items():
             optional = raw_key.endswith("?")
             key = raw_key.rstrip("?")
-            cs_prop = _to_pascal(key)
+            cs_prop = _snake_to_pascal(key) if "_" in key else _camel_to_pascal(key)
 
             if optional:
                 cs_type = _CS_NULLABLE_DEFAULTS[raw_type]
