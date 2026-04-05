@@ -59,9 +59,17 @@ export interface TurnEndEventData {
   currentPhase: string;
 }
 
+export interface BattleStartEventData {
+  match_type: string;
+  my_name: string;
+  my_level: number;
+  opponent_name: string;
+  opponent_level: number;
+}
+
 export interface TurnStartEventData {
   turn: number;
-  activePlayer: number;
+  is_my_turn: boolean;
 }
 
 export interface ReactiveRevealedEventData {
@@ -85,6 +93,7 @@ export interface EventDataMap {
   phase_change: PhaseChangeEventData;
   phase_end: PhaseEndEventData;
   turn_end: TurnEndEventData;
+  battle_start: BattleStartEventData;
   turn_start: TurnStartEventData;
   reactive_revealed: ReactiveRevealedEventData;
   game_over: GameOverEventData;

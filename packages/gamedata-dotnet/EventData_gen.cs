@@ -4,7 +4,7 @@ namespace OverloadParty.GameData;
 
 public class PlayCardEventData
 {
-    public required string CardId { get; init; } = "";
+    public required string Cardid { get; init; } = "";
     public required string Zone { get; init; } = "";
     public required int Index { get; init; }
     public bool? Cancelled { get; init; }
@@ -13,7 +13,7 @@ public class PlayCardEventData
     {
         var d = new Dictionary<string, object>
         {
-            ["cardId"] = CardId,
+            ["cardId"] = Cardid,
             ["zone"] = Zone,
             ["index"] = Index,
         };
@@ -24,15 +24,15 @@ public class PlayCardEventData
 
 public class AttachCardEventData
 {
-    public required string CardId { get; init; } = "";
-    public required string TargetId { get; init; } = "";
+    public required string Cardid { get; init; } = "";
+    public required string Targetid { get; init; } = "";
 
     public Dictionary<string, object> ToDictionary()
     {
         var d = new Dictionary<string, object>
         {
-            ["cardId"] = CardId,
-            ["targetId"] = TargetId,
+            ["cardId"] = Cardid,
+            ["targetId"] = Targetid,
         };
         return d;
     }
@@ -40,23 +40,23 @@ public class AttachCardEventData
 
 public class AttackEventData
 {
-    public required string AttackerId { get; init; } = "";
-    public required string TargetId { get; init; } = "";
+    public required string Attackerid { get; init; } = "";
+    public required string Targetid { get; init; } = "";
     public required long Damage { get; init; }
     public required bool Destroyed { get; init; }
-    public long? SlaPenalty { get; init; }
+    public long? Slapenalty { get; init; }
     public bool? Cancelled { get; init; }
 
     public Dictionary<string, object> ToDictionary()
     {
         var d = new Dictionary<string, object>
         {
-            ["attackerId"] = AttackerId,
-            ["targetId"] = TargetId,
+            ["attackerId"] = Attackerid,
+            ["targetId"] = Targetid,
             ["damage"] = Damage,
             ["destroyed"] = Destroyed,
         };
-        if (SlaPenalty is not null) d["slaPenalty"] = SlaPenalty;
+        if (Slapenalty is not null) d["slaPenalty"] = Slapenalty;
         if (Cancelled is not null) d["cancelled"] = Cancelled;
         return d;
     }
@@ -64,31 +64,31 @@ public class AttackEventData
 
 public class ScaleUpEventData
 {
-    public required string InstanceId { get; init; } = "";
-    public required string TargetRank { get; init; } = "";
-    public string? InstanceFamily { get; init; }
+    public required string Instanceid { get; init; } = "";
+    public required string Targetrank { get; init; } = "";
+    public string? Instancefamily { get; init; }
 
     public Dictionary<string, object> ToDictionary()
     {
         var d = new Dictionary<string, object>
         {
-            ["instanceId"] = InstanceId,
-            ["targetRank"] = TargetRank,
+            ["instanceId"] = Instanceid,
+            ["targetRank"] = Targetrank,
         };
-        if (InstanceFamily is not null) d["instanceFamily"] = InstanceFamily;
+        if (Instancefamily is not null) d["instanceFamily"] = Instancefamily;
         return d;
     }
 }
 
 public class MonetizeEventData
 {
-    public required long TotalAmount { get; init; }
+    public required long Totalamount { get; init; }
 
     public Dictionary<string, object> ToDictionary()
     {
         var d = new Dictionary<string, object>
         {
-            ["totalAmount"] = TotalAmount,
+            ["totalAmount"] = Totalamount,
         };
         return d;
     }
@@ -96,15 +96,15 @@ public class MonetizeEventData
 
 public class DiscardHandEventData
 {
-    public required int DiscardedCount { get; init; }
-    public required List<string> DiscardedIds { get; init; } = [];
+    public required int Discardedcount { get; init; }
+    public required List<string> Discardedids { get; init; } = [];
 
     public Dictionary<string, object> ToDictionary()
     {
         var d = new Dictionary<string, object>
         {
-            ["discardedCount"] = DiscardedCount,
-            ["discardedIds"] = DiscardedIds,
+            ["discardedCount"] = Discardedcount,
+            ["discardedIds"] = Discardedids,
         };
         return d;
     }
@@ -112,33 +112,33 @@ public class DiscardHandEventData
 
 public class UseEffectEventData
 {
-    public required string CardId { get; init; } = "";
-    public required string SourceId { get; init; } = "";
-    public string? TargetId { get; init; }
+    public required string Cardid { get; init; } = "";
+    public required string Sourceid { get; init; } = "";
+    public string? Targetid { get; init; }
 
     public Dictionary<string, object> ToDictionary()
     {
         var d = new Dictionary<string, object>
         {
-            ["cardId"] = CardId,
-            ["sourceId"] = SourceId,
+            ["cardId"] = Cardid,
+            ["sourceId"] = Sourceid,
         };
-        if (TargetId is not null) d["targetId"] = TargetId;
+        if (Targetid is not null) d["targetId"] = Targetid;
         return d;
     }
 }
 
 public class PhaseChangeEventData
 {
-    public required string PreviousPhase { get; init; } = "";
-    public required string CurrentPhase { get; init; } = "";
+    public required string Previousphase { get; init; } = "";
+    public required string Currentphase { get; init; } = "";
 
     public Dictionary<string, object> ToDictionary()
     {
         var d = new Dictionary<string, object>
         {
-            ["previousPhase"] = PreviousPhase,
-            ["currentPhase"] = CurrentPhase,
+            ["previousPhase"] = Previousphase,
+            ["currentPhase"] = Currentphase,
         };
         return d;
     }
@@ -147,14 +147,14 @@ public class PhaseChangeEventData
 public class PhaseEndEventData
 {
     public required string Phase { get; init; } = "";
-    public required bool NeedsDiscard { get; init; }
+    public required bool Needsdiscard { get; init; }
 
     public Dictionary<string, object> ToDictionary()
     {
         var d = new Dictionary<string, object>
         {
             ["phase"] = Phase,
-            ["needsDiscard"] = NeedsDiscard,
+            ["needsDiscard"] = Needsdiscard,
         };
         return d;
     }
@@ -163,18 +163,40 @@ public class PhaseEndEventData
 public class TurnEndEventData
 {
     public required string Phase { get; init; } = "";
-    public required long NextTurn { get; init; }
-    public required long ActivePlayer { get; init; }
-    public required string CurrentPhase { get; init; } = "";
+    public required long Nextturn { get; init; }
+    public required long Activeplayer { get; init; }
+    public required string Currentphase { get; init; } = "";
 
     public Dictionary<string, object> ToDictionary()
     {
         var d = new Dictionary<string, object>
         {
             ["phase"] = Phase,
-            ["nextTurn"] = NextTurn,
-            ["activePlayer"] = ActivePlayer,
-            ["currentPhase"] = CurrentPhase,
+            ["nextTurn"] = Nextturn,
+            ["activePlayer"] = Activeplayer,
+            ["currentPhase"] = Currentphase,
+        };
+        return d;
+    }
+}
+
+public class BattleStartEventData
+{
+    public required string MatchType { get; init; } = "";
+    public required string MyName { get; init; } = "";
+    public required long MyLevel { get; init; }
+    public required string OpponentName { get; init; } = "";
+    public required long OpponentLevel { get; init; }
+
+    public Dictionary<string, object> ToDictionary()
+    {
+        var d = new Dictionary<string, object>
+        {
+            ["match_type"] = MatchType,
+            ["my_name"] = MyName,
+            ["my_level"] = MyLevel,
+            ["opponent_name"] = OpponentName,
+            ["opponent_level"] = OpponentLevel,
         };
         return d;
     }
@@ -183,14 +205,14 @@ public class TurnEndEventData
 public class TurnStartEventData
 {
     public required long Turn { get; init; }
-    public required long ActivePlayer { get; init; }
+    public required bool IsMyTurn { get; init; }
 
     public Dictionary<string, object> ToDictionary()
     {
         var d = new Dictionary<string, object>
         {
             ["turn"] = Turn,
-            ["activePlayer"] = ActivePlayer,
+            ["is_my_turn"] = IsMyTurn,
         };
         return d;
     }
@@ -198,15 +220,15 @@ public class TurnStartEventData
 
 public class ReactiveRevealedEventData
 {
-    public required string InstanceId { get; init; } = "";
-    public required string CardId { get; init; } = "";
+    public required string Instanceid { get; init; } = "";
+    public required string Cardid { get; init; } = "";
 
     public Dictionary<string, object> ToDictionary()
     {
         var d = new Dictionary<string, object>
         {
-            ["instanceId"] = InstanceId,
-            ["cardId"] = CardId,
+            ["instanceId"] = Instanceid,
+            ["cardId"] = Cardid,
         };
         return d;
     }
@@ -214,15 +236,15 @@ public class ReactiveRevealedEventData
 
 public class GameOverEventData
 {
-    public required long WinnerNum { get; init; }
-    public required string WinReason { get; init; } = "";
+    public required long Winnernum { get; init; }
+    public required string Winreason { get; init; } = "";
 
     public Dictionary<string, object> ToDictionary()
     {
         var d = new Dictionary<string, object>
         {
-            ["winnerNum"] = WinnerNum,
-            ["winReason"] = WinReason,
+            ["winnerNum"] = Winnernum,
+            ["winReason"] = Winreason,
         };
         return d;
     }

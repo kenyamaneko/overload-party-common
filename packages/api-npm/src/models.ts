@@ -42,6 +42,14 @@ export interface DeckCard {
   count: number;
 }
 
+/** VersionResponse is the API response for GET /version. */
+export interface VersionResponse {
+  minimumVersion: string;
+  latestVersion: string;
+  forceUpdate: boolean;
+  storeUrl: string;
+}
+
 /** PlayerResponse is the API response for GET /player. */
 export interface PlayerResponse {
   player_id: string;
@@ -179,5 +187,57 @@ export interface PurchaseRequest {
   product_id: string;
   platform: string;
   purchase_token: string;
+}
+
+/** RegisterRequest is the request body for POST /auth/register. */
+export interface RegisterRequest {
+  username: string;
+}
+
+/** PlayerNameRequest is the request body for PUT /player/name. */
+export interface PlayerNameRequest {
+  name: string;
+}
+
+/** SelectFactionRequest is the request body for POST /player/select-faction. */
+export interface SelectFactionRequest {
+  faction: string;
+}
+
+/** DeckDetailResponse is the API response for GET /player/decks/{deckId}. */
+export interface DeckDetailResponse {
+  deck: Deck;
+  cards: DeckCard[];
+}
+
+/** ScenarioScriptResponse is the API response for GET /scenarios/{episodeId}/script. */
+export interface ScenarioScriptResponse {
+  episode_id: string;
+  script: string;
+}
+
+/** ScenarioCompleteResponse is the API response for POST /scenarios/{episodeId}/complete. */
+export interface ScenarioCompleteResponse {
+  message: string;
+  episode_id: string;
+}
+
+/** SelectFactionResponse is the API response for POST /player/select-faction. */
+export interface SelectFactionResponse {
+  message: string;
+  faction: string;
+  cards_granted: number;
+}
+
+/** PurchaseResponse is the API response for POST /shop/purchase. */
+export interface PurchaseResponse {
+  message: string;
+  product_id: string;
+}
+
+/** SubscribeResponse is the API response for POST /shop/subscribe. */
+export interface SubscribeResponse {
+  message: string;
+  expires_at: string;
 }
 

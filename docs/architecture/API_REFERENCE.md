@@ -73,14 +73,12 @@ GET /health
 
 **レスポンス (200):**
 
-<!-- BEGIN GENERATED: HealthResponse -->
 ```jsonc
 {
   "status": "string" // サーバーステータス（`ok`）,
   "mode": "string" // 動作モード（`local` / `dev` / `stg` / `prod`）
 }
 ```
-<!-- END GENERATED: HealthResponse -->
 
 ---
 
@@ -659,7 +657,6 @@ NPC 対戦の開始は WebSocket で行う。詳細は [WS_REFERENCE.md の npc_
 
 **リクエスト:**
 
-<!-- BEGIN GENERATED: SubscribeRequest -->
 ```jsonc
 {
   "product_id": "string" // 商品ID,
@@ -667,7 +664,6 @@ NPC 対戦の開始は WebSocket で行う。詳細は [WS_REFERENCE.md の npc_
   "purchase_token": "string" // 購入トークン
 }
 ```
-<!-- END GENERATED: SubscribeRequest -->
 
 **レスポンス (200):**
 
@@ -690,13 +686,11 @@ Apple In-App Purchase のサーバー通知。
 
 **リクエスト:**
 
-<!-- BEGIN GENERATED: AppleWebhookRequest -->
 ```jsonc
 {
   "signedPayload": "string" // Apple JWS トークン
 }
 ```
-<!-- END GENERATED: AppleWebhookRequest -->
 
 ---
 
@@ -706,13 +700,11 @@ Google Play Billing のサーバー通知。
 
 **リクエスト:**
 
-<!-- BEGIN GENERATED: GoogleWebhookRequest -->
 ```jsonc
 {
   "message": "string" // Base64 エンコードされた通知データを含む JSON オブジェクト
 }
 ```
-<!-- END GENERATED: GoogleWebhookRequest -->
 
 ---
 

@@ -86,6 +86,14 @@ export interface AttachmentEffectConfig {
   bonus: number;
 }
 
+/** NpcModel is a single NPC model entry in GET /npc/models response. */
+export interface NpcModel {
+  model: string;
+  faction: string;
+  difficulty: string;
+  display_name: string;
+}
+
 export interface ClientGameState {
   gameID: string;
   currentTurn: number;

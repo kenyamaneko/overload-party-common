@@ -312,24 +312,6 @@ files:
       - name: OpponentReconnectedMessage
         fields: []
 
-      # action_performed sub-types (doc only, not code-generated)
-      - name: BattleStartActionData
-        doc_only: true
-        comment: "action_performed (action_type: battle_start) の action_data。selecting 完了後に送信。"
-        fields:
-          - {name: MyName, type: string, json: "my_name", doc: "自分の表示名"}
-          - {name: MyLevel, type: int64, json: "my_level", doc: "自分のレベル"}
-          - {name: OpponentName, type: string, json: "opponent_name", doc: "対戦相手の表示名（NPC の場合は陣営名）"}
-          - {name: OpponentLevel, type: int64, json: "opponent_level", doc: "対戦相手のレベル（NPC は固定 50）"}
-          - {name: MatchType, type: string, json: "match_type", doc: "`npc` or `pvp`"}
-
-      - name: TurnStartActionData
-        doc_only: true
-        comment: "action_performed (action_type: turn_start) の action_data。各ターン開始時に送信。"
-        fields:
-          - {name: Turn, type: int64, json: "turn", doc: "ターン番号"}
-          - {name: IsMyTurn, type: bool, json: "is_my_turn", doc: "このプレイヤーのターンか"}
-
   # ─── REST API (Gateway -> Client) ────────────────────────
   - name: rest_api
     target: gateway
@@ -340,16 +322,8 @@ files:
     ts_imports:
       - {names: [CloudNewsSource, ProductType], from: "@kenyamaneko/overload-party-gamedata/constants"}
     types:
-      # ── Public response types (doc only) ──
-      - name: HealthResponse
-        doc_only: true
-        comment: "HealthResponse is the API response for GET /health."
-        fields:
-          - {name: Status, type: string, json: "status", doc: "サーバーステータス（`ok`）"}
-          - {name: Mode, type: string, json: "mode", doc: "動作モード（`local` / `dev` / `stg` / `prod`）"}
-
+      # ── Response types ──
       - name: VersionResponse
-        doc_only: true
         comment: "VersionResponse is the API response for GET /version."
         fields:
           - {name: MinimumVersion, type: string, json: "minimumVersion", doc: "最低要求バージョン"}
@@ -357,7 +331,6 @@ files:
           - {name: ForceUpdate, type: bool, json: "forceUpdate", doc: "`true` の場合、クライアントはストアへ誘導する"}
           - {name: StoreUrl, type: string, json: "storeUrl", doc: "ストア URL"}
 
-      # ── Response types ──
       - name: PlayerResponse
         comment: "PlayerResponse is the API response for GET /player."
         fields:
@@ -498,48 +471,40 @@ files:
           - {name: Platform, type: string, json: "platform", doc: "プラットフォーム（`ios` / `android`）"}
           - {name: PurchaseToken, type: string, json: "purchase_token", doc: "購入トークン"}
 
-      # ── Doc-only types (not code-generated) ──
       - name: RegisterRequest
-        doc_only: true
         comment: "RegisterRequest is the request body for POST /auth/register."
         fields:
           - {name: Username, type: string, json: "username", doc: "ユーザー名（1〜50文字）"}
 
       - name: PlayerNameRequest
-        doc_only: true
         comment: "PlayerNameRequest is the request body for PUT /player/name."
         fields:
           - {name: Name, type: string, json: "name", doc: "新しいプレイヤー名"}
 
+      - name: SelectFactionRequest
+        comment: "SelectFactionRequest is the request body for POST /player/select-faction."
+        fields:
+          - {name: Faction, type: string, json: "faction", doc: "ファクション（`SHE` / `Tenki` / `Sugar` / `Tuners`）"}
+
       - name: DeckDetailResponse
-        doc_only: true
         comment: "DeckDetailResponse is the API response for GET /player/decks/{deckId}."
         fields:
           - {name: Deck, type: Deck, json: "deck", doc: "デッキ本体"}
           - {name: Cards, type: "[]DeckCard", json: "cards", doc: "デッキ内のカード一覧"}
 
       - name: ScenarioScriptResponse
-        doc_only: true
         comment: "ScenarioScriptResponse is the API response for GET /scenarios/{episodeId}/script."
         fields:
           - {name: EpisodeID, type: string, json: "episode_id", doc: "エピソードID"}
           - {name: Script, type: string, json: "script", doc: "スクリプト（`.ks` 形式）"}
 
       - name: ScenarioCompleteResponse
-        doc_only: true
         comment: "ScenarioCompleteResponse is the API response for POST /scenarios/{episodeId}/complete."
         fields:
           - {name: Message, type: string, json: "message", doc: "結果メッセージ"}
           - {name: EpisodeID, type: string, json: "episode_id", doc: "エピソードID"}
 
-      - name: SelectFactionRequest
-        doc_only: true
-        comment: "SelectFactionRequest is the request body for POST /player/select-faction."
-        fields:
-          - {name: Faction, type: string, json: "faction", doc: "ファクション（`SHE` / `Tenki` / `Sugar` / `Tuners`）"}
-
       - name: SelectFactionResponse
-        doc_only: true
         comment: "SelectFactionResponse is the API response for POST /player/select-faction."
         fields:
           - {name: Message, type: string, json: "message", doc: "結果メッセージ"}
@@ -547,47 +512,29 @@ files:
           - {name: CardsGranted, type: int64, json: "cards_granted", doc: "付与されたカード枚数"}
 
       - name: PurchaseResponse
-        doc_only: true
         comment: "PurchaseResponse is the API response for POST /shop/purchase."
         fields:
           - {name: Message, type: string, json: "message", doc: "結果メッセージ"}
           - {name: ProductID, type: string, json: "product_id", doc: "購入した商品ID"}
 
-      - name: SubscribeRequest
-        doc_only: true
-        comment: "SubscribeRequest is the request body for POST /shop/subscribe."
-        fields:
-          - {name: ProductID, type: string, json: "product_id", doc: "商品ID"}
-          - {name: Platform, type: string, json: "platform", doc: "プラットフォーム（`ios` / `android`）"}
-          - {name: PurchaseToken, type: string, json: "purchase_token", doc: "購入トークン"}
-
       - name: SubscribeResponse
-        doc_only: true
         comment: "SubscribeResponse is the API response for POST /shop/subscribe."
         fields:
           - {name: Message, type: string, json: "message", doc: "結果メッセージ"}
           - {name: ExpiresAt, type: time.Time, json: "expires_at", doc: "サブスクリプション有効期限"}
 
+  # ─── NPC Models (Battle → Client) ───────────────────────
+  - name: npc_models
+    target: both
+    pkg: gamedata
+    types:
       - name: NpcModel
-        doc_only: true
         comment: "NpcModel is a single NPC model entry in GET /npc/models response."
         fields:
           - {name: Model, type: string, json: "model", doc: "NPC モデル ID。`npc_battle_start` で使用する"}
           - {name: Faction, type: string, json: "faction", doc: "ファクション名"}
           - {name: Difficulty, type: string, json: "difficulty", doc: "難易度（`easy` / `hard`）"}
           - {name: DisplayName, type: string, json: "display_name", doc: "NPC の表示名"}
-
-      - name: AppleWebhookRequest
-        doc_only: true
-        comment: "AppleWebhookRequest is the request body for POST /shop/webhook/apple."
-        fields:
-          - {name: SignedPayload, type: string, json: "signedPayload", doc: "Apple JWS トークン"}
-
-      - name: GoogleWebhookRequest
-        doc_only: true
-        comment: "GoogleWebhookRequest is the request body for POST /shop/webhook/google."
-        fields:
-          - {name: Message, type: string, json: "message", doc: "Base64 エンコードされた通知データを含む JSON オブジェクト"}
 
   # ─── Game State View (Battle → Client) ─────────────────
   # JSON keys use C# ASP.NET CamelCase convention (first char lowercase).

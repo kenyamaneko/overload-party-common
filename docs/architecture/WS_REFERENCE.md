@@ -565,7 +565,6 @@ NPC 対戦開始。即座にゲームが作成される（マッチメイキン�
 
 selecting フェーズ完了後、最初の game_state より前に送信される。各プレイヤーに自分視点の情報が届く。
 
-<!-- BEGIN GENERATED: BattleStartActionData -->
 ```jsonc
 {
   "my_name": "string" // 自分の表示名,
@@ -575,7 +574,6 @@ selecting フェーズ完了後、最初の game_state より前に送信され�
   "match_type": "string" // `npc` or `pvp`
 }
 ```
-<!-- END GENERATED: BattleStartActionData -->
 
 NPC 表示名:
 | Faction ID | 表示名 |
@@ -589,14 +587,12 @@ NPC 表示名:
 
 各ターン開始時に送信される。draw フェーズの `game_state` より前に届く。
 
-<!-- BEGIN GENERATED: TurnStartActionData -->
 ```jsonc
 {
   "turn": 0 // ターン番号,
   "is_my_turn": false // このプレイヤーのターンか
 }
 ```
-<!-- END GENERATED: TurnStartActionData -->
 
 **送信順序:**
 

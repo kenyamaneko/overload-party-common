@@ -2,6 +2,11 @@
 name: Codegen Sync Check
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - "data/**"
+      - "scripts/**"
   pull_request:
     paths:
       - "data/**"

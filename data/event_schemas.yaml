@@ -39,9 +39,15 @@ turn_end:
   nextTurn: long
   activePlayer: long
   currentPhase: string
+battle_start:
+  match_type: string
+  my_name: string
+  my_level: long
+  opponent_name: string
+  opponent_level: long
 turn_start:
   turn: long
-  activePlayer: long
+  is_my_turn: bool
 reactive_revealed:
   instanceId: string
   cardId: string

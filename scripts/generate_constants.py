@@ -299,8 +299,6 @@ def _generate_go_model_file(file_def, *, out_path):
         lines.append("")
 
     for td in file_def.get("types", []):
-        if td.get("doc_only"):
-            continue
         if td.get("comment"):
             lines.append(f"// {td['comment']}")
         lines.append(f"type {td['name']} struct {{")
@@ -546,7 +544,7 @@ def generate_csharp_event_data(schemas, *, out_path, namespace="OverloadParty.Ga
         for raw_key, raw_type in fields.items():
             optional = raw_key.endswith("?")
             key = raw_key.rstrip("?")
-            cs_prop = _camel_to_pascal(key)
+            cs_prop = _to_pascal(key)
 
             if optional:
                 cs_type = _CS_NULLABLE_DEFAULTS[raw_type]
@@ -644,8 +642,6 @@ def generate_csharp_game_state_view(*, out_path, namespace="OverloadParty.GameDa
     ]
 
     for td in file_def.get("types", []):
-        if td.get("doc_only"):
-            continue
         name = td["name"]
         if td.get("comment"):
             lines.append(f"/// <summary>{td['comment']}</summary>")
@@ -908,8 +904,6 @@ def generate_ts_ws_messages(*, out_path):
         lines.append("")
 
     for td in ws_file.get("types", []):
-        if td.get("doc_only"):
-            continue
         name = td["name"]
         if td.get("comment"):
             lines.append(f"/** {td['comment']} */")
@@ -1050,8 +1044,6 @@ def generate_ts_models(*, out_path, pkg_filter=None):
             lines.append("")
 
         for td in file_def.get("types", []):
-            if td.get("doc_only"):
-                continue
             name = td["name"]
             if td.get("comment"):
                 lines.append(f"/** {td['comment']} */")
