@@ -35,13 +35,11 @@ export interface ErrorMessage {
 
 export interface MatchFoundMessage {
   game_id: string;
-  player1_id: string;
-  player2_id: string;
 }
 
 export interface GameOverMessage {
   game_id: string;
-  winner_num: number;
+  winning_player_num: number;
   win_reason: string;
 }
 
@@ -61,14 +59,12 @@ export interface ActionPerformedMessage {
 
 export interface StampUsedMessage {
   game_id: string;
-  player_id: string;
+  player_num: number;
   stamp_no: number;
 }
 
 export interface NPCBattleCreatedMessage {
   game_id: string;
-  player1_id: string;
-  player2_id: string;
 }
 
 export interface SpectateJoinMessage {
@@ -86,8 +82,10 @@ export interface SpectateStampMessage {
 
 export interface SpectateJoinedMessage {
   game_id: string;
-  player1_id: string;
-  player2_id: string;
+  player1_name: string;
+  player1_level: number;
+  player2_name: string;
+  player2_level: number;
   state: ClientGameState;
 }
 
@@ -98,7 +96,7 @@ export interface SpectateErrorMessage {
 
 export interface SpectateEndedMessage {
   game_id: string;
-  winner_num: number;
+  winning_player_num: number;
   win_reason: string;
 }
 

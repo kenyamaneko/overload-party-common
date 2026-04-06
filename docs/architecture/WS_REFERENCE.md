@@ -274,9 +274,7 @@ NPC 対戦開始。即座にゲームが作成される（マッチメイキン�
 <!-- BEGIN GENERATED: MatchFoundMessage -->
 ```jsonc
 {
-  "game_id": "string" // ゲームID（ULID）,
-  "player1_id": "string" // プレイヤー1 ID,
-  "player2_id": "string" // プレイヤー2 ID
+  "game_id": "string" // ゲームID（ULID）
 }
 ```
 <!-- END GENERATED: MatchFoundMessage -->
@@ -481,7 +479,7 @@ NPC 対戦開始。即座にゲームが作成される（マッチメイキン�
 ```jsonc
 {
   "game_id": "string" // ゲームID,
-  "winner_num": 0 // 勝者のプレイヤー番号（1 or 2）,
+  "winning_player_num": 0 // 勝者のプレイヤー番号（1 or 2）,
   "win_reason": "string" // 勝因
 }
 ```
@@ -505,7 +503,7 @@ NPC 対戦開始。即座にゲームが作成される（マッチメイキン�
 ```jsonc
 {
   "game_id": "string" // ゲームID,
-  "player_id": "string" // 送信したプレイヤーID,
+  "player_num": 0 // 送信したプレイヤー番号（1 or 2）,
   "stamp_no": 0 // スタンプ番号
 }
 ```
@@ -561,6 +559,8 @@ NPC 対戦開始。即座にゲームが作成される（マッチメイキン�
 1. `action_performed` 受信 → アニメーションキューに追加
 2. キューを順番に処理（各アクションにディレイを設けて再生）
 3. 最後の `game_state` を ground truth として適用
+
+> **Note:** 以下の `action_data` スキーマの SSoT は `data/event_schemas.yaml` である。フィールドを変更する場合は event_schemas.yaml を編集し、`generate_constants.py` を実行すること。
 
 ##### `battle_start` — バトル開始バナー
 
@@ -619,9 +619,7 @@ NPC 表示名:
 <!-- BEGIN GENERATED: NPCBattleCreatedMessage -->
 ```jsonc
 {
-  "game_id": "string" // ゲームID（ULID）,
-  "player1_id": "string" // プレイヤー1 ID,
-  "player2_id": "string" // NPC プレイヤーID（`npc_` プレフィクス）
+  "game_id": "string" // ゲームID（ULID）
 }
 ```
 <!-- END GENERATED: NPCBattleCreatedMessage -->
@@ -636,8 +634,10 @@ NPC 表示名:
 ```jsonc
 {
   "game_id": "string" // ゲームID,
-  "player1_id": "string" // プレイヤー1 ID,
-  "player2_id": "string" // プレイヤー2 ID,
+  "player1_name": "string" // プレイヤー1 表示名,
+  "player1_level": 0 // プレイヤー1 レベル,
+  "player2_name": "string" // プレイヤー2 表示名（NPC の場合は NPC モデル表示名）,
+  "player2_level": 0 // プレイヤー2 レベル（NPC の場合は 0）,
   "state": {} // 現在のゲーム状態（観戦者視点）
 }
 ```
@@ -660,7 +660,7 @@ NPC 表示名:
 ```jsonc
 {
   "game_id": "string" // ゲームID,
-  "winner_num": 0 // 勝者のプレイヤー番号,
+  "winning_player_num": 0 // 勝者のプレイヤー番号,
   "win_reason": "string" // 勝因
 }
 ```

@@ -36,31 +36,81 @@
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
 | `game_id` | VARCHAR(26) | No | ULID |
-| `player1_id` | UUID | No | プレイヤー1 ID |
-| `player2_id` | UUID | No | プレイヤー2 ID |
-| `player1_deck_snapshot` | JSONB | No | 使用デッキのスナップショット（カードIDリスト） |
-| `player2_deck_snapshot` | JSONB | No | 使用デッキのスナップショット（カードIDリスト） |
 | `status` | VARCHAR(20) | No | 'waiting' / 'playing' / 'finished' |
+| `first_player` | SMALLINT | No | 先攻プレイヤー番号 (1 or 2) |
+| `winning_player_num` | SMALLINT | Yes | NULL=進行中, 0=引分, 1=P1勝, 2=P2勝 |
+| `win_reason` | TEXT | Yes | 'budget_zero', 'turn_timeout' 等 |
 | `engine_version` | TEXT | No | バトルエンジンバージョン（ゲーム作成時に記録） |
 | `card_data_version` | TEXT | No | カードデータバージョン（ゲーム作成時に記録） |
-| `winner_id` | UUID | Yes | 勝者 ID |
 | `created_at` | TIMESTAMPTZ | No | 作成日時 |
 | `updated_at` | TIMESTAMPTZ | No | 更新日時 |
 | `finished_at` | TIMESTAMPTZ | Yes | 終了日時 |
 <!-- END GENERATED: games -->
 
-### 1.2 JSONスキーマ (Deck Snapshot)
+### 1.2 PostgreSQL スキーマ (game_npcs)
 
-`Games` テーブルの `player1_deck_snapshot`, `player2_deck_snapshot` カラムに格納されるデッキ情報。
+**GameNpcs** (NPC 設定、NPC 戦のみ。PvP では行なし。Battle が書き込む)
+- **Primary Key:** `game_id`, `player_num`
+- **Foreign Key:** `game_id REFERENCES games(game_id)`
+
+<!-- BEGIN GENERATED: game_npcs -->
+| カラム名 | 型 | Nullable | 説明 |
+|---|---|---|---|
+| `game_id` | VARCHAR(26) | No | 親テーブル参照 |
+| `player_num` | SMALLINT | No | NPC が座っているスロット番号 (1 or 2) |
+| `npc_model` | VARCHAR | No | NPC モデル名 |
+<!-- END GENERATED: game_npcs -->
+
+### 1.3 PostgreSQL スキーマ (game_decks)
+
+**GameDecks** (デッキスナップショット、常に 2 行。Battle が書き込む)
+- **Primary Key:** `game_id`, `player_num`
+- **Foreign Key:** `game_id REFERENCES games(game_id)`
+
+<!-- BEGIN GENERATED: game_decks -->
+| カラム名 | 型 | Nullable | 説明 |
+|---|---|---|---|
+| `game_id` | VARCHAR(26) | No | 親テーブル参照 |
+| `player_num` | SMALLINT | No | 1 or 2 |
+| `deck_snapshot` | JSONB | No | デッキスナップショット |
+<!-- END GENERATED: game_decks -->
+
+### 1.4 PostgreSQL スキーマ (game_players)
+
+**GamePlayers** (プレイヤー ID マッピング、人間スロットのみ。Gateway が書き込む)
+- **Primary Key:** `game_id`, `player_num`
+- **Foreign Key:** `game_id REFERENCES games(game_id)`
+- **Index:** `idx_game_players_player_id` ON `game_players(player_id)`
+
+<!-- BEGIN GENERATED: game_players -->
+| カラム名 | 型 | Nullable | 説明 |
+|---|---|---|---|
+| `game_id` | VARCHAR(26) | No | 親テーブル参照 |
+| `player_num` | SMALLINT | No | 人間が座っているスロット番号 (1 or 2) |
+| `player_id` | UUID | No | プレイヤー ID |
+<!-- END GENERATED: game_players -->
+
+### 1.5 JSONスキーマ (Deck Snapshot)
+
+`game_decks` テーブルの `deck_snapshot` カラムに格納されるデッキ情報。
 
 | フィールド | 型 | 説明 |
 |---|---|---|
 | `deckId` | string | 元になったデッキID |
 | `cards` | Array[object] | デッキに含まれるカードのリスト（`cardId` を持つオブジェクト配列、順序はシャッフル前） |
 
-### 1.3 関連インデックス
+### 1.6 関連インデックス
 
 - `GamesByStatus`: `Games(status, created_at DESC)`
+
+### 1.7 書き込み責務
+
+| テーブル | 書き込み責務 | 内容 |
+|---------|------------|------|
+| `games` | Battle | セッション（状態・結果・先攻・バージョン） |
+| `game_npcs` | Battle | NPC 設定（NPC 戦のみ） |
+| `game_decks` | Battle | デッキスナップショット（常に 2 行） |
+| `game_players` | Gateway | プレイヤー ID マッピング（人間スロットのみ） |
 
 ---
 
@@ -188,7 +238,7 @@
 | `game_id` | VARCHAR(26) | No | 親テーブル参照 |
 | `sequence_number` | BIGINT | No | イベント連番 |
 | `event_type` | VARCHAR(50) | No | イベント種別 |
-| `player_id` | UUID | Yes | 行動プレイヤー |
+| `player_num` | SMALLINT | Yes | NULL=system event, 1 or 2=プレイヤーイベント |
 | `event_data` | JSONB | No | イベント詳細データ |
 | `created_at` | TIMESTAMPTZ | No | 発生日時 |
 <!-- END GENERATED: game_events -->
@@ -208,7 +258,7 @@
 |---|---|---|---|
 | `game_id` | VARCHAR(26) | No | 親テーブル参照 |
 | `seq` | INT | No | アクション連番 |
-| `player_id` | UUID | No | アクション実行プレイヤー |
+| `player_num` | SMALLINT | No | アクション実行プレイヤー番号 (1 or 2) |
 | `action_type` | TEXT | No | アクション種別（play_card, attack, scale_up 等） |
 | `action_data` | JSONB | No | アクションの入力データ |
 | `created_at` | TIMESTAMPTZ | No | 記録日時 |

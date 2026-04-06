@@ -231,13 +231,11 @@ files:
       - name: MatchFoundMessage
         fields:
           - {name: GameID, type: string, json: "game_id", doc: "ゲームID（ULID）"}
-          - {name: Player1ID, type: string, json: "player1_id", doc: "プレイヤー1 ID"}
-          - {name: Player2ID, type: string, json: "player2_id", doc: "プレイヤー2 ID"}
 
       - name: GameOverMessage
         fields:
           - {name: GameID, type: string, json: "game_id", doc: "ゲームID"}
-          - {name: WinnerNum, type: int64, json: "winner_num", doc: "勝者のプレイヤー番号（1 or 2）"}
+          - {name: WinningPlayerNum, type: int64, json: "winning_player_num", doc: "勝者のプレイヤー番号（1 or 2）"}
           - {name: WinReason, type: string, json: "win_reason", doc: "勝因"}
 
       - name: ActionRejectedMessage
@@ -257,14 +255,12 @@ files:
       - name: StampUsedMessage
         fields:
           - {name: GameID, type: string, json: "game_id", doc: "ゲームID"}
-          - {name: PlayerID, type: string, json: "player_id", doc: "送信したプレイヤーID"}
+          - {name: PlayerNum, type: int64, json: "player_num", doc: "送信したプレイヤー番号（1 or 2）"}
           - {name: StampNo, type: int64, json: "stamp_no", doc: "スタンプ番号"}
 
       - name: NPCBattleCreatedMessage
         fields:
           - {name: GameID, type: string, json: "game_id", doc: "ゲームID（ULID）"}
-          - {name: Player1ID, type: string, json: "player1_id", doc: "プレイヤー1 ID"}
-          - {name: Player2ID, type: string, json: "player2_id", doc: "NPC プレイヤーID（`npc_` プレフィクス）"}
 
       # Spectate: Client -> Server
       - name: SpectateJoinMessage
@@ -284,8 +280,10 @@ files:
       - name: SpectateJoinedMessage
         fields:
           - {name: GameID, type: string, json: "game_id", doc: "ゲームID"}
-          - {name: Player1ID, type: string, json: "player1_id", doc: "プレイヤー1 ID"}
-          - {name: Player2ID, type: string, json: "player2_id", doc: "プレイヤー2 ID"}
+          - {name: Player1Name, type: string, json: "player1_name", doc: "プレイヤー1 表示名"}
+          - {name: Player1Level, type: int64, json: "player1_level", doc: "プレイヤー1 レベル"}
+          - {name: Player2Name, type: string, json: "player2_name", doc: "プレイヤー2 表示名（NPC の場合は NPC モデル表示名）"}
+          - {name: Player2Level, type: int64, json: "player2_level", doc: "プレイヤー2 レベル（NPC の場合は 0）"}
           - {name: State, type: json.RawMessage, json: "state", ts_type: ClientGameState, doc: "現在のゲーム状態（観戦者視点）"}
 
       - name: SpectateErrorMessage
@@ -296,7 +294,7 @@ files:
       - name: SpectateEndedMessage
         fields:
           - {name: GameID, type: string, json: "game_id", doc: "ゲームID"}
-          - {name: WinnerNum, type: int64, json: "winner_num", doc: "勝者のプレイヤー番号"}
+          - {name: WinningPlayerNum, type: int64, json: "winning_player_num", doc: "勝者のプレイヤー番号"}
           - {name: WinReason, type: string, json: "win_reason", doc: "勝因"}
 
       - name: SpectateStampBroadcastMessage
@@ -334,17 +332,13 @@ files:
         comment: "GameCreatedResult is returned when a new game (NPC or PvP) is created on the battle server."
         fields:
           - {name: GameID, type: string, json: "game_id"}
-          - {name: Player1ID, type: string, json: "player1_id"}
-          - {name: Player2ID, type: string, json: "player2_id"}
-          - {name: Npc1Model, type: "*string", json: "npc1_model,omitempty"}
-          - {name: Npc2Model, type: "*string", json: "npc2_model,omitempty"}
 
       - name: ActionEvent
         comment: "ActionEvent is a single game event emitted by the battle server after an action."
         fields:
           - {name: Sequence, type: int64, json: "sequence"}
           - {name: EventType, type: string, json: "event_type"}
-          - {name: PlayerID, type: string, json: "player_id"}
+          - {name: PlayerNum, type: int64, json: "player_num"}
           - {name: IsSystem, type: bool, json: "is_system"}
           - {name: EventData, type: json.RawMessage, json: "event_data"}
           - {name: State, type: json.RawMessage, json: "state"}
@@ -353,7 +347,7 @@ files:
         comment: "ActionResult is returned after a game action is processed by the battle server."
         fields:
           - {name: GameOver, type: bool, json: "game_over", doc: "ゲーム終了フラグ"}
-          - {name: WinnerNum, type: int64, json: "winner_num", doc: "勝者プレイヤー番号（1 or 2、未終了時は 0）"}
+          - {name: WinningPlayerNum, type: int64, json: "winning_player_num", doc: "勝者プレイヤー番号（1 or 2、未終了時は 0）"}
           - {name: WinReason, type: string, json: "win_reason", doc: "終了理由（WinReasons enum の文字列、未終了時は空文字）"}
           - {name: NpcPending, type: bool, json: "npc_pending", doc: "true の場合、Gateway は AdvanceNpcTurn を呼んで次の NPC アクションを取得する必要がある"}
           - {name: Events, type: "[]ActionEvent", json: "events", doc: "このアクションで発生したイベント列"}
@@ -362,32 +356,21 @@ files:
       - name: NpcBattleRequest
         comment: "NpcBattleRequest is the request body for POST /api/v1/games/npc."
         fields:
-          - {name: PlayerID, type: string, json: "player_id"}
-          - {name: DeckID, type: int64, json: "deck_id"}
-          - {name: Cards, type: "[]BattleDeckCard", json: "cards"}
+          - {name: DeckCards, type: "[]BattleDeckCard", json: "deck_cards"}
           - {name: NpcModel, type: string, json: "npc_model"}
 
       - name: PvpBattleRequest
         comment: "PvpBattleRequest is the request body for POST /api/v1/games/pvp."
         fields:
-          - {name: Player1ID, type: string, json: "player1_id"}
-          - {name: Player1DeckID, type: int64, json: "player1_deck_id"}
-          - {name: Player1Cards, type: "[]BattleDeckCard", json: "player1_cards"}
-          - {name: Player2ID, type: string, json: "player2_id"}
-          - {name: Player2DeckID, type: int64, json: "player2_deck_id"}
-          - {name: Player2Cards, type: "[]BattleDeckCard", json: "player2_cards"}
+          - {name: Deck1Cards, type: "[]BattleDeckCard", json: "deck1_cards"}
+          - {name: Deck2Cards, type: "[]BattleDeckCard", json: "deck2_cards"}
 
       - name: GameActionRequest
-        comment: "GameActionRequest is the request body for POST /api/v1/games/{gameId}/action."
+        comment: "GameActionRequest is the request body for POST /api/v1/games/{gameId}/actions."
         fields:
-          - {name: PlayerID, type: string, json: "player_id"}
+          - {name: PlayerNum, type: int64, json: "player_num"}
           - {name: ActionType, type: string, json: "action_type"}
           - {name: Data, type: json.RawMessage, json: "data"}
-
-      - name: NpcAdvanceRequest
-        comment: "NpcAdvanceRequest is the request body for POST /api/v1/games/{gameId}/npc-advance."
-        fields:
-          - {name: PlayerID, type: string, json: "player_id"}
 
   # ─── REST API (Gateway -> Client) ────────────────────────
   - name: rest_api

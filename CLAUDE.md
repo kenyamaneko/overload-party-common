@@ -51,12 +51,12 @@
 - 定数・イベントスキーマ・モデル定義を変更したら `python3 scripts/generate_constants.py` を実行
 - main への push 時に CI が自動でパッケージを publish する（patch bump。minor/major は手動 dispatch で指定）
 - **git tag を手動で打ってはいけない。** タグは CI が自動で作成する。手動タグは二重 publish やバージョン不整合の原因になる
-- codegen は CI では実行しない。PR の codegen-check で同期を保証
+- 生成スクリプトは CI では実行しない。PR の codegen-check で同期を保証
 - CARDS.md、products.sql、cards_seed.sql は自動生成なので直接編集しない
-- API_REFERENCE.md / WS_REFERENCE.md の `<!-- BEGIN/END GENERATED: TypeName -->` マーカー間は自動生成。フィールド説明を変更する場合は `data/models.yaml` の `doc` フィールドを編集して codegen を実行する
+- API_REFERENCE.md / WS_REFERENCE.md の `<!-- BEGIN/END GENERATED: TypeName -->` マーカー間は自動生成。フィールド説明を変更する場合は `data/models.yaml` の `doc` フィールドを編集して `python3 scripts/generate_constants.py` を実行する
 - DB スキーマを変更したら `db/schema_postgres.sql` のみ編集する（server リポの schema は廃止）。カラムのインラインコメント（`-- 説明`）も必ず記述する
 - DB スキーマを変更したら `python3 scripts/generate_schema_doc.py` を実行して DATA_DESIGN.md を更新する
-- DATA_DESIGN.md の `<!-- BEGIN/END GENERATED: table_name -->` マーカー間は自動生成。カラム説明を変更する場合は `db/schema_postgres.sql` のインラインコメントを編集して codegen を実行する
+- DATA_DESIGN.md の `<!-- BEGIN/END GENERATED: table_name -->` マーカー間は自動生成。カラム説明を変更する場合は `db/schema_postgres.sql` のインラインコメントを編集して `python3 scripts/generate_schema_doc.py` を実行する
 - 各リポはパッケージをインストールして生成コードを使う:
   - gateway: `go get .../packages/gamedata@latest` + `go get .../packages/api@latest`
   - gateway 開発用: `go get .../packages/devdata@latest`

@@ -85,10 +85,10 @@ Gateway 側は `parseBattleError` で `error` フィールドを抽出し、ロ�
 
 ```jsonc
 {
-  "game_over": false,            // ゲーム終了フラグ
-  "winner_num": 0,               // 勝者プレイヤー番号（1 or 2、未終了時は 0）
-  "win_reason": "budget_zero",   // 終了理由（WinReasons enum の文字列、未終了時は空文字）
-  "npc_pending": false,          // true の場合、Gateway は `/advance-npc` を呼んで次の NPC アクションを取得する
+  "game_over": false,                // ゲーム終了フラグ
+  "winning_player_num": 0,           // 勝者プレイヤー番号（1 or 2、未終了時は 0）
+  "win_reason": "budget_zero",       // 終了理由（WinReasons enum の文字列、未終了時は空文字）
+  "npc_pending": false,              // true の場合、Gateway は `/advance-npc` を呼んで次の NPC アクションを取得する
   "events": [ /* ActionEvent[] */ ]
 }
 ```
@@ -103,7 +103,7 @@ Gateway 側は `parseBattleError` で `error` フィールドを抽出し、ロ�
 {
   "sequence": 42,                // イベントシーケンス番号（game 単位で単調増加）
   "event_type": "play_card",     // EventTypes enum の文字列
-  "player_id": "uuid-or-empty",  // 当該イベントを起こしたプレイヤーID（system event では空文字）
+  "player_num": 1,               // アクション元のスロット番号（1 or 2、system event は 0）
   "is_system": false,            // システム生成イベントかどうか（turn_start 等は true）
   "event_data": { /* ... */ },   // イベント固有ペイロード（event_type ごとに形状が異なる）
   "state": { /* ... */ } | null  // NPC アクションの場合のみ中間 state スナップショット
@@ -112,15 +112,15 @@ Gateway 側は `parseBattleError` で `error` フィールドを抽出し、ロ�
 
 ### state フィールドの埋まり方（重要）
 
-`state` フィールドは JSON 上常にキーとして含まれるが、値は誰のアクションによって生成されたイベントかで変わる。Gateway 側のルーティングは `is_system` を一次キー、`player_id` を二次キーにして判定する:
+`state` フィールドは JSON 上常にキーとして含まれるが、値は誰のアクションによって生成されたイベントかで変わる。Gateway 側のルーティングは `is_system` を一次キー、`player_num` を二次キーにして判定する:
 
-| イベントの発生元 | `is_system` | `player_id` | `state` の値 | Gateway 側の処理 |
+| イベントの発生元 | `is_system` | `player_num` | `state` の値 | Gateway 側の処理 |
 |---|---|---|---|---|
-| **system event**（`turn_start`） | `true` | `""` | `null` | 全プレイヤーに送信、`state` は `GET /games/{gameId}/state/{playerId}` で都度フェッチ |
-| **人間プレイヤーのアクション** | `false` | プレイヤー UUID | `null` | 相手プレイヤー視点で `state` を都度フェッチして送信 |
-| **NPC のアクション** | `false` | `""`（NPC はプレイヤーID を持たない） | 中間 state スナップショット（人間プレイヤー視点） | そのまま中継（逐次アニメーションのため） |
+| **system event**（`turn_start`） | `true` | `0` | `null` | 全プレイヤーに送信、`state` は `GET /games/{gameId}/state/{playerNum}` で都度フェッチ |
+| **人間プレイヤーのアクション** | `false` | `1` or `2` | `null` | 相手プレイヤー視点で `state` を都度フェッチして送信 |
+| **NPC のアクション** | `false` | `1` or `2`（NPC のスロット番号） | 中間 state スナップショット（人間プレイヤー視点） | そのまま中継（逐次アニメーションのため） |
 
-NPC イベントと system event は共に `player_id == ""` となるため、`player_id` だけでは両者を区別できない。`is_system` フラグはこの曖昧さを解消するためのもの。
+player_num 化により、NPC イベントと system event の曖昧さが解消される。旧仕様では両者とも `player_id == ""` で `is_system` による判別が必須だったが、新仕様では NPC イベントは `player_num=1 or 2`、system event は `player_num=0` と明確に区別できる。`is_system` フラグは後方互換性のため引き続き保持する。
 
 `event_type` の値は GameData パッケージの [`EventTypes`](../../packages/gamedata-dotnet/GameConstants_gen.cs) を参照。
 
@@ -132,13 +132,9 @@ NPC イベントと system event は共に `player_id == ""` となるため、`
 
 ```jsonc
 {
-  "game_id": "uuid",
-  "player1_id": "uuid",
-  "player2_id": "uuid"  // NPC 対戦時は空文字
+  "game_id": "ulid"
 }
 ```
-
-`POST /games/npc` のみ追加で `npc1_model` / `npc2_model` を返す。
 
 ---
 
@@ -191,30 +187,19 @@ NPC 対戦を作成する。作成後、Battle 側で `RunAutoAdvance`（ドロ�
 
 ```jsonc
 {
-  "player_id": "uuid",      // 人間プレイヤーID
-  "deck_id": 123,           // デッキID（int64）
-  "cards": [                // デッキスナップショット
+  "deck_cards": [              // 人間プレイヤーのデッキスナップショット
     { "card_id": "card_001", "art_no": 1 }
   ],
-  "npc_model": "blue_easy"  // NPC モデルID（/npc/models から取得）
+  "npc_model": "blue_easy"    // NPC モデルID（/npc/models から取得）
 }
 ```
 
-**レスポンス (200):**
-
-```jsonc
-{
-  "game_id": "uuid",
-  "player1_id": "uuid",     // 人間プレイヤーID（リクエストの player_id）
-  "player2_id": "",         // NPC 側は空文字
-  "npc1_model": null,
-  "npc2_model": "blue_easy"
-}
-```
+**レスポンス (200):** `GameCreatedResult`
 
 **備考:**
-- どちらのスロット（Player1 / Player2）が NPC になるかは設計上不定。現状の実装では Player2 固定だが、将来的に Player1 NPC や両方 NPC の実験用対戦もサポート予定。クライアント / Gateway 側は `npc1_model` / `npc2_model` を見てスロットを判別すること（片方だけ埋まる場合・両方埋まる場合がありうる）
-- 先攻プレイヤー（1 or 2）は `Random.Shared.Next(2)` でランダム決定される（NPC スロット決定とは独立）
+- Battle は `games`（セッション）、`game_npcs`（NPC 設定）、`game_decks`（両スロットのデッキ）を書き込む。NPC デッキは Battle が `npc_model` に基づいて生成する
+- どちらのスロット（Player1 / Player2）が NPC になるかは設計上不定。NPC スロット情報は `game_npcs` テーブルに記録される
+- 先攻プレイヤー（1 or 2）は `Random.Shared.Next(2)` でランダム決定され、`games.first_player` に記録される
 
 **エラー:**
 - `400`: デッキが空 / NPC モデルID が未登録
@@ -229,16 +214,14 @@ PvP ゲームを作成する。マッチメイキング成立後に Gateway が�
 
 ```jsonc
 {
-  "player1_id": "uuid",
-  "player1_deck_id": 123,
-  "player1_cards": [ { "card_id": "card_001", "art_no": 1 } ],
-  "player2_id": "uuid",
-  "player2_deck_id": 456,
-  "player2_cards": [ { "card_id": "card_002", "art_no": 1 } ]
+  "deck1_cards": [ { "card_id": "card_001", "art_no": 1 } ],
+  "deck2_cards": [ { "card_id": "card_002", "art_no": 1 } ]
 }
 ```
 
-**レスポンス (200):** `GameCreatedResult`（`player2_id` も埋まる）
+デッキ送信順 = player_num 順（`deck1_cards` → P1、`deck2_cards` → P2）。
+
+**レスポンス (200):** `GameCreatedResult`
 
 **エラー:**
 - `400`: デッキ不正等
@@ -258,7 +241,7 @@ PvP ゲームを作成する。マッチメイキング成立後に Gateway が�
 
 ```jsonc
 {
-  "player_id": "uuid",          // アクションを起こしたプレイヤーID
+  "player_num": 1,              // アクションを起こしたプレイヤー番号（1 or 2）
   "action_type": "play_card",   // ActionTypes enum の文字列
   "data": { /* ... */ }         // アクション固有ペイロード（レイヤ C: camelCase、action_type ごとに形状が異なる）
 }
@@ -284,13 +267,9 @@ NPC ターンを進める。人間プレイヤーがゲームに `game_enter` �
 **パスパラメータ:**
 - `gameId`: ゲームID
 
-**リクエスト:**
+**リクエスト:** なし（リクエストボディ不要）
 
-```jsonc
-{
-  "player_id": "uuid"  // 人間プレイヤーID（state の視点決定に使う）
-}
-```
+Battle は `game_npcs` から NPC スロットを判別し、「NPC でない側 = 人間プレイヤー」と推論して state の視点を決定する。
 
 **レスポンス (200):** `ActionResult`
 
@@ -303,31 +282,31 @@ NPC ターンを進める。人間プレイヤーがゲームに `game_enter` �
 
 ### 3.5 Game 状態取得
 
-#### GET `/api/v1/games/{gameId}/state/{playerId}`
+#### GET `/api/v1/games/{gameId}/state/{playerNum}`
 
 指定プレイヤー視点の `ClientGameState` を返す。非公開情報（相手の手札内容等）はマスクされる。
 
 **パスパラメータ:**
 - `gameId`: ゲームID
-- `playerId`: 視点となるプレイヤーID
+- `playerNum`: 視点となるプレイヤー番号（1 or 2）
 
 **レスポンス (200):** `ClientGameState`（GameData パッケージで定義）
 
 Gateway 側では `json.RawMessage` として受け取り、変換せずクライアントにパススルーする。
 
 **エラー:**
-- `400`: `playerId` がゲームに含まれない等
+- `400`: `playerNum` が不正等
 - `404`: ゲームが存在しない（`null` が返るケースもある）
 
 ---
 
-#### GET `/api/v1/games/{gameId}/controls/{playerId}`
+#### GET `/api/v1/games/{gameId}/controls/{playerNum}`
 
 指定プレイヤーのターン制御情報を返す。自分のターンでない場合は `null`。
 
 **パスパラメータ:**
 - `gameId`: ゲームID
-- `playerId`: 視点となるプレイヤーID
+- `playerNum`: 視点となるプレイヤー番号（1 or 2）
 
 **レスポンス (200):** `TurnControlsMessage` または `null`
 
@@ -379,8 +358,8 @@ Gateway 側では `json.RawMessage` として受け取り、変換せずクラ�
 | POST | `/api/v1/games/pvp` | PvP ゲーム作成 |
 | POST | `/api/v1/games/{gameId}/actions` | アクション実行 |
 | POST | `/api/v1/games/{gameId}/advance-npc` | NPC ターン実行 |
-| GET | `/api/v1/games/{gameId}/state/{playerId}` | プレイヤー視点の状態取得 |
-| GET | `/api/v1/games/{gameId}/controls/{playerId}` | ターン制御情報取得 |
+| GET | `/api/v1/games/{gameId}/state/{playerNum}` | プレイヤー視点の状態取得 |
+| GET | `/api/v1/games/{gameId}/controls/{playerNum}` | ターン制御情報取得 |
 | GET | `/api/v1/games/{gameId}/log` | ゲームログ（JSON） |
 | GET | `/api/v1/games/{gameId}/log/text` | ゲームログ（テキスト） |
 
@@ -401,7 +380,7 @@ Gateway 側では `json.RawMessage` として受け取り、変換せずクラ�
 | カテゴリ | 型 / 定数 | 生成先 |
 |---|---|---|
 | 列挙値 | `ActionTypes`, `EventTypes`, `WinReasons`, `Phases`, `EffectDurations` 等 | Go / C# / TS |
-| レイヤ A: Envelope | `ActionResult`, `ActionEvent`, `GameCreatedResult`, `BattleDeckCard`, `NpcBattleRequest`, `PvpBattleRequest`, `GameActionRequest`, `NpcAdvanceRequest`, `TurnControlsMessage` | Go (`packages/api/model/battle_gateway_rpc_gen.go`) / C# (`packages/gamedata-dotnet/BattleGatewayRpc_gen.cs`) |
+| レイヤ A: Envelope | `ActionResult`, `ActionEvent`, `GameCreatedResult`, `BattleDeckCard`, `NpcBattleRequest`, `PvpBattleRequest`, `GameActionRequest`, `TurnControlsMessage` | Go (`packages/api/model/battle_gateway_rpc_gen.go`) / C# (`packages/gamedata-dotnet/BattleGatewayRpc_gen.cs`) |
 | レイヤ B: State Payload | `ClientGameState`, `PlayerView`, `OpponentView`, `FieldView` 等 | Go / C# |
 | レイヤ B: Event Payload | `PlayCardEventData`, `TurnStartEventData`, ... + `EventDataMap` | Go / C# / TS |
 | NPC 情報 | `NpcModel` | Go / C# / TS |

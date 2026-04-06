@@ -19,14 +19,6 @@ public class GameCreatedResult
 {
     [JsonPropertyName("game_id")]
     public string GameID { get; init; } = "";
-    [JsonPropertyName("player1_id")]
-    public string Player1ID { get; init; } = "";
-    [JsonPropertyName("player2_id")]
-    public string Player2ID { get; init; } = "";
-    [JsonPropertyName("npc1_model")]
-    public string? Npc1Model { get; init; }
-    [JsonPropertyName("npc2_model")]
-    public string? Npc2Model { get; init; }
 }
 
 /// <summary>ActionEvent is a single game event emitted by the battle server after an action.</summary>
@@ -36,8 +28,8 @@ public class ActionEvent
     public long Sequence { get; init; }
     [JsonPropertyName("event_type")]
     public string EventType { get; init; } = "";
-    [JsonPropertyName("player_id")]
-    public string PlayerID { get; init; } = "";
+    [JsonPropertyName("player_num")]
+    public long PlayerNum { get; init; }
     [JsonPropertyName("is_system")]
     public bool IsSystem { get; init; }
     [JsonPropertyName("event_data")]
@@ -51,8 +43,8 @@ public class ActionResult
 {
     [JsonPropertyName("game_over")]
     public bool GameOver { get; init; }
-    [JsonPropertyName("winner_num")]
-    public long WinnerNum { get; init; }
+    [JsonPropertyName("winning_player_num")]
+    public long WinningPlayerNum { get; init; }
     [JsonPropertyName("win_reason")]
     public string WinReason { get; init; } = "";
     [JsonPropertyName("npc_pending")]
@@ -63,27 +55,17 @@ public class ActionResult
 
 /// <summary>NpcBattleRequest is the request body for POST /api/v1/games/npc.</summary>
 public record NpcBattleRequest(
-    [property: JsonPropertyName("player_id")] string PlayerID,
-    [property: JsonPropertyName("deck_id")] long DeckID,
-    [property: JsonPropertyName("cards")] List<BattleDeckCard> Cards,
+    [property: JsonPropertyName("deck_cards")] List<BattleDeckCard> DeckCards,
     [property: JsonPropertyName("npc_model")] string NpcModel);
 
 /// <summary>PvpBattleRequest is the request body for POST /api/v1/games/pvp.</summary>
 public record PvpBattleRequest(
-    [property: JsonPropertyName("player1_id")] string Player1ID,
-    [property: JsonPropertyName("player1_deck_id")] long Player1DeckID,
-    [property: JsonPropertyName("player1_cards")] List<BattleDeckCard> Player1Cards,
-    [property: JsonPropertyName("player2_id")] string Player2ID,
-    [property: JsonPropertyName("player2_deck_id")] long Player2DeckID,
-    [property: JsonPropertyName("player2_cards")] List<BattleDeckCard> Player2Cards);
+    [property: JsonPropertyName("deck1_cards")] List<BattleDeckCard> Deck1Cards,
+    [property: JsonPropertyName("deck2_cards")] List<BattleDeckCard> Deck2Cards);
 
-/// <summary>GameActionRequest is the request body for POST /api/v1/games/{gameId}/action.</summary>
+/// <summary>GameActionRequest is the request body for POST /api/v1/games/{gameId}/actions.</summary>
 public record GameActionRequest(
-    [property: JsonPropertyName("player_id")] string PlayerID,
+    [property: JsonPropertyName("player_num")] long PlayerNum,
     [property: JsonPropertyName("action_type")] string ActionType,
     [property: JsonPropertyName("data")] JsonElement Data);
-
-/// <summary>NpcAdvanceRequest is the request body for POST /api/v1/games/{gameId}/npc-advance.</summary>
-public record NpcAdvanceRequest(
-    [property: JsonPropertyName("player_id")] string PlayerID);
 

@@ -18,23 +18,50 @@ $$ LANGUAGE plpgsql;
 -- =============================================================================
 
 CREATE TABLE games (
-  game_id            VARCHAR(26) NOT NULL,           -- ULID
-  player1_id         UUID NOT NULL,                  -- プレイヤー1 ID
-  player2_id         UUID NOT NULL,                  -- プレイヤー2 ID
-  player1_deck_snapshot JSONB NOT NULL,              -- 使用デッキのスナップショット（カードIDリスト）
-  player2_deck_snapshot JSONB NOT NULL,              -- 使用デッキのスナップショット（カードIDリスト）
-  status             VARCHAR(20) NOT NULL,           -- 'waiting' / 'playing' / 'finished'
-  engine_version     TEXT NOT NULL DEFAULT '',        -- バトルエンジンバージョン（ゲーム作成時に記録）
-  card_data_version  TEXT NOT NULL DEFAULT '',        -- カードデータバージョン（ゲーム作成時に記録）
-  winner_id          UUID,                           -- 勝者 ID
-  created_at         TIMESTAMPTZ NOT NULL DEFAULT now(), -- 作成日時
-  updated_at         TIMESTAMPTZ NOT NULL DEFAULT now(), -- 更新日時
-  finished_at        TIMESTAMPTZ,                    -- 終了日時
+  game_id              VARCHAR(26) NOT NULL,           -- ULID
+  status               VARCHAR(20) NOT NULL,           -- 'waiting' / 'playing' / 'finished'
+  first_player         SMALLINT NOT NULL,              -- 先攻プレイヤー番号 (1 or 2)
+  winning_player_num   SMALLINT,                       -- NULL=進行中, 0=引分, 1=P1勝, 2=P2勝
+  win_reason           TEXT,                           -- 'budget_zero', 'turn_timeout' 等
+  engine_version       TEXT NOT NULL DEFAULT '',        -- バトルエンジンバージョン（ゲーム作成時に記録）
+  card_data_version    TEXT NOT NULL DEFAULT '',        -- カードデータバージョン（ゲーム作成時に記録）
+  created_at           TIMESTAMPTZ NOT NULL DEFAULT now(), -- 作成日時
+  updated_at           TIMESTAMPTZ NOT NULL DEFAULT now(), -- 更新日時
+  finished_at          TIMESTAMPTZ,                    -- 終了日時
   PRIMARY KEY (game_id)
 );
 
 CREATE INDEX idx_games_status ON games(status, created_at DESC);
 CREATE TRIGGER trg_games_updated_at BEFORE UPDATE ON games FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- 4.1a Game NPC Settings (child of games, NPC 戦のみ。PvP では行なし)
+
+CREATE TABLE game_npcs (
+  game_id       VARCHAR(26) NOT NULL REFERENCES games(game_id), -- 親テーブル参照
+  player_num    SMALLINT NOT NULL,              -- NPC が座っているスロット番号 (1 or 2)
+  npc_model     VARCHAR NOT NULL,               -- NPC モデル名
+  PRIMARY KEY (game_id, player_num)
+);
+
+-- 4.1b Game Decks (child of games, 常に 2 行)
+
+CREATE TABLE game_decks (
+  game_id        VARCHAR(26) NOT NULL REFERENCES games(game_id), -- 親テーブル参照
+  player_num     SMALLINT NOT NULL,             -- 1 or 2
+  deck_snapshot  JSONB NOT NULL,                -- デッキスナップショット
+  PRIMARY KEY (game_id, player_num)
+);
+
+-- 4.1c Game Players (child of games, 人間スロットのみ。Gateway が書き込む)
+
+CREATE TABLE game_players (
+  game_id       VARCHAR(26) NOT NULL REFERENCES games(game_id), -- 親テーブル参照
+  player_num    SMALLINT NOT NULL,              -- 人間が座っているスロット番号 (1 or 2)
+  player_id     UUID NOT NULL,                  -- プレイヤー ID
+  PRIMARY KEY (game_id, player_num)
+);
+
+CREATE INDEX idx_game_players_player_id ON game_players(player_id);
 
 -- 4.2 Game State (child of games, 1:1)
 
@@ -71,7 +98,7 @@ CREATE TRIGGER trg_game_states_updated_at BEFORE UPDATE ON game_states FOR EACH 
 CREATE TABLE game_actions (
   game_id     VARCHAR(26) NOT NULL REFERENCES games(game_id) ON DELETE CASCADE, -- 親テーブル参照
   seq         INT NOT NULL,                          -- アクション連番
-  player_id   UUID NOT NULL,                         -- アクション実行プレイヤー
+  player_num  SMALLINT NOT NULL,                     -- アクション実行プレイヤー番号 (1 or 2)
   action_type TEXT NOT NULL,                         -- アクション種別（play_card, attack, scale_up 等）
   action_data JSONB NOT NULL,                        -- アクションの入力データ
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),    -- 記録日時
@@ -84,7 +111,7 @@ CREATE TABLE game_events (
   game_id         VARCHAR(26) NOT NULL REFERENCES games(game_id) ON DELETE CASCADE, -- 親テーブル参照
   sequence_number BIGINT NOT NULL,                   -- イベント連番
   event_type      VARCHAR(50) NOT NULL,              -- イベント種別
-  player_id       UUID,                              -- 行動プレイヤー
+  player_num      SMALLINT,                          -- NULL=system event, 1 or 2=プレイヤーイベント
   event_data      JSONB NOT NULL,                    -- イベント詳細データ
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now(), -- 発生日時
   PRIMARY KEY (game_id, sequence_number)
