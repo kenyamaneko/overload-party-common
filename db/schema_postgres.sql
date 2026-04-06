@@ -121,6 +121,25 @@ CREATE TABLE player_daily_battle (
 );
 
 -- =============================================================================
+-- 4.5 Factions Master (陣営マスタ)
+-- =============================================================================
+
+CREATE TABLE factions (
+  faction_id     VARCHAR(20) NOT NULL,                -- 陣営識別子（SHE / Tenki / Sugar / Tuners / Neutral）
+  short_name_ja  VARCHAR(50) NOT NULL,                -- 短縮表示名（日本語）
+  short_name_en  VARCHAR(50) NOT NULL,                -- 短縮表示名（英語）
+  full_name_ja   VARCHAR(100) NOT NULL,               -- 正式名称（日本語）
+  full_name_en   VARCHAR(100) NOT NULL,               -- 正式名称（英語）
+  is_collectible BOOLEAN NOT NULL DEFAULT true,       -- プレイヤーが収集対象とする陣営か（false = Neutral）
+  sort_order     INT NOT NULL DEFAULT 0,              -- 表示順
+  PRIMARY KEY (faction_id)
+);
+
+ALTER TABLE players
+  ADD CONSTRAINT fk_players_selected_faction
+    FOREIGN KEY (selected_faction) REFERENCES factions(faction_id);
+
+-- =============================================================================
 -- 4.6 Card Definitions
 -- =============================================================================
 
@@ -128,14 +147,14 @@ CREATE TABLE card_definitions (
   card_id        VARCHAR(10) NOT NULL,               -- カード識別子（例: SH-0001）
   card_name      VARCHAR(100) NOT NULL,              -- カード名
   resource_label VARCHAR(30) NOT NULL DEFAULT '',     -- リソースラベル
-  faction        VARCHAR(20) NOT NULL,               -- 陣営
-  card_type      VARCHAR(30) NOT NULL,               -- カードタイプ
+  faction        VARCHAR(20) NOT NULL REFERENCES factions(faction_id), -- 陣営（SHE / Tenki / Sugar / Tuners / Neutral）
+  card_type      VARCHAR(30) NOT NULL,               -- カードタイプ（Resource / Support）
   resizable      BOOLEAN NOT NULL DEFAULT false,     -- Resizable 属性
   elastic        BOOLEAN NOT NULL DEFAULT false,     -- Elastic 属性
   stats          JSONB NOT NULL,                     -- ステータス定義
   effect_text    VARCHAR(500),                       -- 効果テキスト（表示用）
   effects        JSONB,                              -- 効果定義（JSON 配列）
-  restriction    VARCHAR(20) NOT NULL,               -- 制限区分
+  restriction    VARCHAR(20) NOT NULL,               -- 制限区分（unlimited / semi_limited / limited / forbidden）
   is_active      BOOLEAN NOT NULL,                   -- 有効フラグ
   created_at     TIMESTAMPTZ NOT NULL DEFAULT now(), -- 作成日時
   updated_at     TIMESTAMPTZ NOT NULL DEFAULT now(), -- 更新日時
@@ -187,15 +206,18 @@ CREATE TABLE deck_cards (
 -- =============================================================================
 
 CREATE TABLE products (
-  product_id  VARCHAR(50) NOT NULL,                  -- 商品ID
-  name        VARCHAR(100) NOT NULL,                 -- 商品名
-  type        VARCHAR(20) NOT NULL,                  -- 商品タイプ (card_pack / subscription)
-  price       BIGINT NOT NULL,                       -- 価格 (JPY)
-  content     JSONB NOT NULL,                        -- 商品内容
-  description VARCHAR(500),                          -- 商品説明
-  image_url   VARCHAR(200),                          -- 画像URL
-  is_active   BOOLEAN NOT NULL,                      -- 販売中フラグ
-  PRIMARY KEY (product_id)
+  product_id          VARCHAR(50) NOT NULL,                  -- 商品ID
+  name                VARCHAR(100) NOT NULL,                 -- 商品名
+  type                VARCHAR(20) NOT NULL,                  -- 商品タイプ (faction_set / cosmetic / subscription)
+  price               BIGINT NOT NULL,                       -- 価格 (JPY)
+  content             JSONB NOT NULL,                        -- 商品内容
+  faction_id          VARCHAR(20) REFERENCES factions(faction_id), -- 陣営（faction_set 商品のみ、それ以外は NULL）
+  requires_product_id VARCHAR(50),                           -- 購入前提の商品ID（拡張セット用、NULL: なし）
+  description         VARCHAR(500),                          -- 商品説明
+  image_url           VARCHAR(200),                          -- 画像URL
+  is_active           BOOLEAN NOT NULL,                      -- 販売中フラグ
+  PRIMARY KEY (product_id),
+  FOREIGN KEY (requires_product_id) REFERENCES products(product_id)
 );
 
 CREATE TABLE subscriptions (
@@ -203,7 +225,7 @@ CREATE TABLE subscriptions (
   subscription_id      BIGINT NOT NULL GENERATED ALWAYS AS IDENTITY, -- 自動採番
   product_id           VARCHAR(50) NOT NULL,          -- 商品ID
   platform             VARCHAR(10) NOT NULL,          -- apple / google
-  purchase_token       VARCHAR(256) NOT NULL,         -- 購入トークン
+  purchase_token       VARCHAR(256) NOT NULL,         -- 購入トークン（Apple: originalTransactionId / Google: purchaseToken）
   status               VARCHAR(20) NOT NULL,          -- active / grace_period / expired / refunded
   current_period_start TIMESTAMPTZ NOT NULL,          -- 課金期間開始日時
   current_period_end   TIMESTAMPTZ NOT NULL,          -- 課金期間終了日時
@@ -218,7 +240,7 @@ CREATE TABLE one_time_purchases (
   purchase_id    BIGINT NOT NULL GENERATED ALWAYS AS IDENTITY, -- 自動採番
   product_id     VARCHAR(50) NOT NULL,               -- 商品ID
   platform       VARCHAR(10) NOT NULL,               -- apple / google
-  purchase_token VARCHAR(256) NOT NULL,              -- 購入トークン
+  purchase_token VARCHAR(256) NOT NULL,              -- 購入トークン（Apple: originalTransactionId / Google: purchaseToken）
   purchased_at   TIMESTAMPTZ NOT NULL DEFAULT now(), -- 購入日時
   PRIMARY KEY (player_id, purchase_id)
 );
@@ -293,7 +315,7 @@ CREATE INDEX idx_news_articles_source ON news_articles(source, published_at DESC
 
 CREATE TABLE player_factions (
   player_id   UUID NOT NULL REFERENCES players(player_id) ON DELETE CASCADE, -- 親テーブル参照
-  faction     VARCHAR(20) NOT NULL CHECK (faction IN ('SHE', 'Tenki', 'Sugar', 'Tuners')), -- 陣営名 (SHE / Tenki / Sugar / Tuners)
+  faction     VARCHAR(20) NOT NULL REFERENCES factions(faction_id), -- 陣営名 (SHE / Tenki / Sugar / Tuners)
   source      VARCHAR(20) NOT NULL CHECK (source IN ('initial_selection', 'shop_purchase')), -- 取得経路 (initial_selection / shop_purchase)
   acquired_at TIMESTAMPTZ NOT NULL DEFAULT now(),    -- 取得日時
   PRIMARY KEY (player_id, faction)
@@ -306,14 +328,13 @@ CREATE TABLE player_factions (
 CREATE TABLE scenario_episodes (
   episode_id        VARCHAR(50) NOT NULL,            -- エピソードID（例: she_ep1, final）
   category          VARCHAR(20) NOT NULL DEFAULT 'main' CHECK (category IN ('main', 'side', 'event')), -- エピソード種別 (main / side / event)
-  faction           VARCHAR(20) CHECK (faction IS NULL OR faction IN ('SHE', 'Tenki', 'Sugar', 'Tuners')), -- 所属陣営（NULL: 全陣営共通）
+  faction           VARCHAR(20) REFERENCES factions(faction_id), -- 所属陣営（NULL: 全陣営共通）
   episode_number    BIGINT NOT NULL,                 -- 陣営内の章番号
   title_ja          VARCHAR(200) NOT NULL,           -- 日本語タイトル
   title_en          VARCHAR(200) NOT NULL,           -- 英語タイトル
   required_level    BIGINT NOT NULL DEFAULT 1,       -- アンロックに必要なレベル (Default: 1)
-  required_factions TEXT[] NOT NULL DEFAULT '{}' CHECK (required_factions <@ ARRAY['SHE','Tenki','Sugar','Tuners']::TEXT[]), -- アンロックに必要な陣営所持
   required_episodes TEXT[] NOT NULL DEFAULT '{}',    -- アンロックに必要な完了済みエピソード
-  script_path       VARCHAR(500) NOT NULL,           -- スクリプトパステンプレート
+  script_path       VARCHAR(500) NOT NULL,           -- スクリプトパステンプレート（{lang} を言語コードに置換）
   thumbnail_path    VARCHAR(500),                    -- サムネイル画像パス
   sort_order        BIGINT NOT NULL,                 -- 表示順
   is_active         BOOLEAN NOT NULL DEFAULT true,   -- 公開フラグ (Default: true)
@@ -324,6 +345,12 @@ CREATE TABLE scenario_episodes (
 
 CREATE INDEX idx_scenario_episodes_sort ON scenario_episodes(sort_order);
 CREATE TRIGGER trg_scenario_episodes_updated_at BEFORE UPDATE ON scenario_episodes FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+CREATE TABLE episode_required_factions (
+  episode_id  VARCHAR(50) NOT NULL REFERENCES scenario_episodes(episode_id) ON DELETE CASCADE, -- エピソード参照
+  faction_id  VARCHAR(20) NOT NULL REFERENCES factions(faction_id), -- 必要陣営
+  PRIMARY KEY (episode_id, faction_id)
+);
 
 CREATE TABLE player_story_progress (
   player_id    UUID NOT NULL REFERENCES players(player_id) ON DELETE CASCADE, -- 親テーブル参照

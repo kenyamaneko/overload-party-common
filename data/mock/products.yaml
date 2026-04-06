@@ -11,8 +11,8 @@ products:
     name: SHEカードパック
     type: faction_set
     price: 480
-    content:
-      faction: SHE
+    content: {}
+    faction_id: SHE
     description: SHEファクションの全カードが手に入るパック。
     image_url: /assets/shop/pack-she.webp
     is_active: true
@@ -21,8 +21,8 @@ products:
     name: 天気使いカードパック
     type: faction_set
     price: 480
-    content:
-      faction: Tenki
+    content: {}
+    faction_id: Tenki
     description: 天気使いファクションの全カードが手に入るパック。
     image_url: /assets/shop/pack-tenki.webp
     is_active: true
@@ -31,8 +31,8 @@ products:
     name: しゅがーらぼカードパック
     type: faction_set
     price: 480
-    content:
-      faction: Sugar
+    content: {}
+    faction_id: Sugar
     description: しゅがーらぼファクションの全カードが手に入るパック。
     image_url: /assets/shop/pack-sugar.webp
     is_active: true
@@ -41,8 +41,8 @@ products:
     name: 調律部カードパック
     type: faction_set
     price: 480
-    content:
-      faction: Tuners
+    content: {}
+    faction_id: Tuners
     description: 調律部ファクションの全カードが手に入るパック。
     image_url: /assets/shop/pack-tuners.webp
     is_active: true

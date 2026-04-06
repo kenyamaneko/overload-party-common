@@ -4,10 +4,9 @@
     "name": "SHEカードパック",
     "type": "faction_set",
     "price": 480,
-    "content": {
-      "faction": "SHE"
-    },
+    "content": {},
     "is_active": true,
+    "faction_id": "SHE",
     "description": "SHEファクションの全カードが手に入るパック。",
     "image_url": "/assets/shop/pack-she.webp"
   },
@@ -16,10 +15,9 @@
     "name": "天気使いカードパック",
     "type": "faction_set",
     "price": 480,
-    "content": {
-      "faction": "Tenki"
-    },
+    "content": {},
     "is_active": true,
+    "faction_id": "Tenki",
     "description": "天気使いファクションの全カードが手に入るパック。",
     "image_url": "/assets/shop/pack-tenki.webp"
   },
@@ -28,10 +26,9 @@
     "name": "しゅがーらぼカードパック",
     "type": "faction_set",
     "price": 480,
-    "content": {
-      "faction": "Sugar"
-    },
+    "content": {},
     "is_active": true,
+    "faction_id": "Sugar",
     "description": "しゅがーらぼファクションの全カードが手に入るパック。",
     "image_url": "/assets/shop/pack-sugar.webp"
   },
@@ -40,10 +37,9 @@
     "name": "調律部カードパック",
     "type": "faction_set",
     "price": 480,
-    "content": {
-      "faction": "Tuners"
-    },
+    "content": {},
     "is_active": true,
+    "faction_id": "Tuners",
     "description": "調律部ファクションの全カードが手に入るパック。",
     "image_url": "/assets/shop/pack-tuners.webp"
   },
