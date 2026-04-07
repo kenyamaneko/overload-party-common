@@ -1,4 +1,4 @@
--- Overload Party - PostgreSQL DDL
+-- Overload Party - PostgreSQL DDL (SSoT)
 -- All tables with foreign keys and indexes
 
 -- =============================================================================
