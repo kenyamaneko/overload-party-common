@@ -103,8 +103,7 @@ Gateway 側は `parseBattleError` で `error` フィールドを抽出し、ロ�
 {
   "sequence": 42,                // イベントシーケンス番号（game 単位で単調増加）
   "event_type": "play_card",     // EventTypes enum の文字列
-  "player_num": 1,               // アクション元のスロット番号（1 or 2、system event は 0）
-  "is_system": false,            // システム生成イベントかどうか（turn_start 等は true）
+  "player_num": 1,               // アクション元のスロット番号（1 or 2）。system event では null
   "event_data": { /* ... */ },   // イベント固有ペイロード（event_type ごとに形状が異なる）
   "state": { /* ... */ } | null  // NPC アクションの場合のみ中間 state スナップショット
 }
@@ -112,15 +111,15 @@ Gateway 側は `parseBattleError` で `error` フィールドを抽出し、ロ�
 
 ### state フィールドの埋まり方（重要）
 
-`state` フィールドは JSON 上常にキーとして含まれるが、値は誰のアクションによって生成されたイベントかで変わる。Gateway 側のルーティングは `is_system` を一次キー、`player_num` を二次キーにして判定する:
+`state` フィールドは JSON 上常にキーとして含まれるが、値は誰のアクションによって生成されたイベントかで変わる。Gateway 側のルーティングは `event_type` を一次キー、`player_num` を二次キーにして判定する:
 
-| イベントの発生元 | `is_system` | `player_num` | `state` の値 | Gateway 側の処理 |
+| イベントの発生元 | `event_type` | `player_num` | `state` の値 | Gateway 側の処理 |
 |---|---|---|---|---|
-| **system event**（`turn_start`） | `true` | `0` | `null` | 全プレイヤーに送信、`state` は `GET /games/{gameId}/state/{playerNum}` で都度フェッチ |
-| **人間プレイヤーのアクション** | `false` | `1` or `2` | `null` | 相手プレイヤー視点で `state` を都度フェッチして送信 |
-| **NPC のアクション** | `false` | `1` or `2`（NPC のスロット番号） | 中間 state スナップショット（人間プレイヤー視点） | そのまま中継（逐次アニメーションのため） |
+| **system event** | `turn_start` | `null` | `null` | 全プレイヤーに送信、`state` は `GET /games/{gameId}/state/{playerNum}` で都度フェッチ |
+| **人間プレイヤーのアクション** | その他 | `1` or `2` | `null` | 相手プレイヤー視点で `state` を都度フェッチして送信 |
+| **NPC のアクション** | その他 | `1` or `2`（NPC のスロット番号） | 中間 state スナップショット（人間プレイヤー視点） | そのまま中継（逐次アニメーションのため） |
 
-player_num 化により、NPC イベントと system event の曖昧さが解消される。旧仕様では両者とも `player_id == ""` で `is_system` による判別が必須だったが、新仕様では NPC イベントは `player_num=1 or 2`、system event は `player_num=0` と明確に区別できる。`is_system` フラグは後方互換性のため引き続き保持する。
+system event の判定は `event_type == "turn_start"` で行う。現状 system event は `turn_start` のみ。
 
 `event_type` の値は GameData パッケージの [`EventTypes`](../../packages/gamedata-dotnet/GameConstants_gen.cs) を参照。
 

@@ -29,9 +29,7 @@ public class ActionEvent
     [JsonPropertyName("event_type")]
     public string EventType { get; init; } = "";
     [JsonPropertyName("player_num")]
-    public long PlayerNum { get; init; }
-    [JsonPropertyName("is_system")]
-    public bool IsSystem { get; init; }
+    public long? PlayerNum { get; init; }
     [JsonPropertyName("event_data")]
     public JsonElement EventData { get; init; }
     [JsonPropertyName("state")]

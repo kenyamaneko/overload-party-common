@@ -338,8 +338,7 @@ files:
         fields:
           - {name: Sequence, type: int64, json: "sequence"}
           - {name: EventType, type: string, json: "event_type"}
-          - {name: PlayerNum, type: int64, json: "player_num"}
-          - {name: IsSystem, type: bool, json: "is_system"}
+          - {name: PlayerNum, type: "*int64", json: "player_num", doc: "アクション元のスロット番号（1 or 2）。system event (turn_start) では null"}
           - {name: EventData, type: json.RawMessage, json: "event_data"}
           - {name: State, type: json.RawMessage, json: "state"}
 

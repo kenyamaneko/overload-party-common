@@ -21,8 +21,7 @@ type GameCreatedResult struct {
 type ActionEvent struct {
 	Sequence  int64           `json:"sequence"`
 	EventType string          `json:"event_type"`
-	PlayerNum int64           `json:"player_num"`
-	IsSystem  bool            `json:"is_system"`
+	PlayerNum *int64          `json:"player_num"`
 	EventData json.RawMessage `json:"event_data"`
 	State     json.RawMessage `json:"state"`
 }
