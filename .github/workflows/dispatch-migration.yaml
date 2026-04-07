@@ -18,4 +18,4 @@ jobs:
             -f event_type=db-migrate \
             -f 'client_payload[sha]=${{ github.sha }}'
         env:
-          GH_TOKEN: ${{ secrets.OPS_DISPATCH_TOKEN }}
+          GH_TOKEN: ${{ secrets.DB_MIGRATE_TOKEN }}
