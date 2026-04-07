@@ -58,6 +58,7 @@ CREATE TABLE game_players (
   game_id       VARCHAR(26) NOT NULL REFERENCES games(game_id), -- 親テーブル参照
   player_num    SMALLINT NOT NULL,              -- 人間が座っているスロット番号 (1 or 2)
   player_id     UUID NOT NULL,                  -- プレイヤー ID
+  exp_awarded   BOOLEAN NOT NULL DEFAULT FALSE, -- 経験値付与済みフラグ（二重付与防止）
   PRIMARY KEY (game_id, player_num)
 );
 

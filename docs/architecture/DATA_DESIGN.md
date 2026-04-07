@@ -88,6 +88,7 @@
 | `game_id` | VARCHAR(26) | No | 親テーブル参照 |
 | `player_num` | SMALLINT | No | 人間が座っているスロット番号 (1 or 2) |
 | `player_id` | UUID | No | プレイヤー ID |
+| `exp_awarded` | BOOLEAN | No | 経験値付与済みフラグ（二重付与防止） |
 <!-- END GENERATED: game_players -->
 
 ### 1.5 JSONスキーマ (Deck Snapshot)
