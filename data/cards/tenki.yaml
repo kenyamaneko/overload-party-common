@@ -496,7 +496,9 @@ cards:
       - trigger: activate
         use_limit: once_per_turn
         ops:
-          - trash_to_hand: {}
+          - trash_to_hand:
+              faction: Tenki
+              card_type: [Compute, Container, Orchestrator, Serverless, "AI/ML", Database, CacheDB, ObjectStorage]
 
   - card_no: 44
     card_id: "TK-0022"

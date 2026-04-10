@@ -629,7 +629,7 @@ VALUES
   ('TK-0021', '天気使い Migration', '', 'Tenki', 'Strategy',
    false, false, '{}'::jsonb,
    'Budget 100 を払って発動できる。トラッシュから 天気使い リソース1枚を選択して手札に加える。',
-   '[{"trigger": "activate", "use_limit": "once_per_turn", "ops": [{"trash_to_hand": {}}]}]'::jsonb,
+   '[{"trigger": "activate", "use_limit": "once_per_turn", "ops": [{"trash_to_hand": {"faction": "Tenki", "card_type": ["Compute", "Container", "Orchestrator", "Serverless", "AI/ML", "Database", "CacheDB", "ObjectStorage"]}}]}]'::jsonb,
    'unlimited', true),
 
   ('TK-0022', '天気使い Policy', '', 'Tenki', 'Strategy',
