@@ -77,6 +77,13 @@ export interface ReactiveRevealedEventData {
   cardId: string;
 }
 
+export interface SelectSlotEventData {
+  cardId: string;
+  instanceId: string;
+  zone: string;
+  index: number;
+}
+
 export interface GameOverEventData {
   winnerNum: number;
   winReason: string;
@@ -96,6 +103,7 @@ export interface EventDataMap {
   battle_start: BattleStartEventData;
   turn_start: TurnStartEventData;
   reactive_revealed: ReactiveRevealedEventData;
+  select_slot: SelectSlotEventData;
   game_over: GameOverEventData;
 }
 

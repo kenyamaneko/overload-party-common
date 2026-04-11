@@ -530,6 +530,9 @@ def generate_csharp_event_data(schemas, *, out_path, namespace="OverloadParty.Ga
         "",
         f"namespace {namespace};",
         "",
+        "/// <summary>Marker interface for all EventData records. Used to constrain GameEvent.EventData type.</summary>",
+        "public interface IEventData { }",
+        "",
     ]
 
     for event_type, fields in schemas.items():
@@ -537,7 +540,7 @@ def generate_csharp_event_data(schemas, *, out_path, namespace="OverloadParty.Ga
             continue
 
         class_name = f"{_snake_to_pascal(event_type)}EventData"
-        lines.append(f"public class {class_name}")
+        lines.append(f"public class {class_name} : IEventData")
         lines.append("{")
 
         required_fields = []
@@ -560,20 +563,6 @@ def generate_csharp_event_data(schemas, *, out_path, namespace="OverloadParty.Ga
         for key, cs_prop, cs_type, raw_type in optional_fields:
             lines.append(f"    public {cs_type} {cs_prop} {{ get; init; }}")
 
-        lines.append("")
-        lines.append("    public Dictionary<string, object> ToDictionary()")
-        lines.append("    {")
-        lines.append("        var d = new Dictionary<string, object>")
-        lines.append("        {")
-        for key, cs_prop, _, _ in required_fields:
-            lines.append(f'            ["{key}"] = {cs_prop},')
-        lines.append("        };")
-
-        for key, cs_prop, _, _ in optional_fields:
-            lines.append(f'        if ({cs_prop} is not null) d["{key}"] = {cs_prop};')
-
-        lines.append("        return d;")
-        lines.append("    }")
         lines.append("}")
         lines.append("")
 

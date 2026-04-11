@@ -2,43 +2,24 @@
 
 namespace OverloadParty.GameData;
 
-public class PlayCardEventData
+/// <summary>Marker interface for all EventData records. Used to constrain GameEvent.EventData type.</summary>
+public interface IEventData { }
+
+public class PlayCardEventData : IEventData
 {
     public required string CardId { get; init; } = "";
     public required string Zone { get; init; } = "";
     public required int Index { get; init; }
     public bool? Cancelled { get; init; }
-
-    public Dictionary<string, object> ToDictionary()
-    {
-        var d = new Dictionary<string, object>
-        {
-            ["cardId"] = CardId,
-            ["zone"] = Zone,
-            ["index"] = Index,
-        };
-        if (Cancelled is not null) d["cancelled"] = Cancelled;
-        return d;
-    }
 }
 
-public class AttachCardEventData
+public class AttachCardEventData : IEventData
 {
     public required string CardId { get; init; } = "";
     public required string TargetId { get; init; } = "";
-
-    public Dictionary<string, object> ToDictionary()
-    {
-        var d = new Dictionary<string, object>
-        {
-            ["cardId"] = CardId,
-            ["targetId"] = TargetId,
-        };
-        return d;
-    }
 }
 
-public class AttackEventData
+public class AttackEventData : IEventData
 {
     public required string AttackerId { get; init; } = "";
     public required string TargetId { get; init; } = "";
@@ -46,207 +27,85 @@ public class AttackEventData
     public required bool Destroyed { get; init; }
     public long? SlaPenalty { get; init; }
     public bool? Cancelled { get; init; }
-
-    public Dictionary<string, object> ToDictionary()
-    {
-        var d = new Dictionary<string, object>
-        {
-            ["attackerId"] = AttackerId,
-            ["targetId"] = TargetId,
-            ["damage"] = Damage,
-            ["destroyed"] = Destroyed,
-        };
-        if (SlaPenalty is not null) d["slaPenalty"] = SlaPenalty;
-        if (Cancelled is not null) d["cancelled"] = Cancelled;
-        return d;
-    }
 }
 
-public class ScaleUpEventData
+public class ScaleUpEventData : IEventData
 {
     public required string InstanceId { get; init; } = "";
     public required string TargetRank { get; init; } = "";
     public string? InstanceFamily { get; init; }
-
-    public Dictionary<string, object> ToDictionary()
-    {
-        var d = new Dictionary<string, object>
-        {
-            ["instanceId"] = InstanceId,
-            ["targetRank"] = TargetRank,
-        };
-        if (InstanceFamily is not null) d["instanceFamily"] = InstanceFamily;
-        return d;
-    }
 }
 
-public class MonetizeEventData
+public class MonetizeEventData : IEventData
 {
     public required long TotalAmount { get; init; }
-
-    public Dictionary<string, object> ToDictionary()
-    {
-        var d = new Dictionary<string, object>
-        {
-            ["totalAmount"] = TotalAmount,
-        };
-        return d;
-    }
 }
 
-public class DiscardHandEventData
+public class DiscardHandEventData : IEventData
 {
     public required int DiscardedCount { get; init; }
     public required List<string> DiscardedIds { get; init; } = [];
-
-    public Dictionary<string, object> ToDictionary()
-    {
-        var d = new Dictionary<string, object>
-        {
-            ["discardedCount"] = DiscardedCount,
-            ["discardedIds"] = DiscardedIds,
-        };
-        return d;
-    }
 }
 
-public class UseEffectEventData
+public class UseEffectEventData : IEventData
 {
     public required string CardId { get; init; } = "";
     public required string SourceId { get; init; } = "";
     public string? TargetId { get; init; }
-
-    public Dictionary<string, object> ToDictionary()
-    {
-        var d = new Dictionary<string, object>
-        {
-            ["cardId"] = CardId,
-            ["sourceId"] = SourceId,
-        };
-        if (TargetId is not null) d["targetId"] = TargetId;
-        return d;
-    }
 }
 
-public class PhaseChangeEventData
+public class PhaseChangeEventData : IEventData
 {
     public required string PreviousPhase { get; init; } = "";
     public required string CurrentPhase { get; init; } = "";
-
-    public Dictionary<string, object> ToDictionary()
-    {
-        var d = new Dictionary<string, object>
-        {
-            ["previousPhase"] = PreviousPhase,
-            ["currentPhase"] = CurrentPhase,
-        };
-        return d;
-    }
 }
 
-public class PhaseEndEventData
+public class PhaseEndEventData : IEventData
 {
     public required string Phase { get; init; } = "";
     public required bool NeedsDiscard { get; init; }
-
-    public Dictionary<string, object> ToDictionary()
-    {
-        var d = new Dictionary<string, object>
-        {
-            ["phase"] = Phase,
-            ["needsDiscard"] = NeedsDiscard,
-        };
-        return d;
-    }
 }
 
-public class TurnEndEventData
+public class TurnEndEventData : IEventData
 {
     public required string Phase { get; init; } = "";
     public required long NextTurn { get; init; }
     public required long ActivePlayer { get; init; }
     public required string CurrentPhase { get; init; } = "";
-
-    public Dictionary<string, object> ToDictionary()
-    {
-        var d = new Dictionary<string, object>
-        {
-            ["phase"] = Phase,
-            ["nextTurn"] = NextTurn,
-            ["activePlayer"] = ActivePlayer,
-            ["currentPhase"] = CurrentPhase,
-        };
-        return d;
-    }
 }
 
-public class BattleStartEventData
+public class BattleStartEventData : IEventData
 {
     public required string MatchType { get; init; } = "";
     public required string MyName { get; init; } = "";
     public required long MyLevel { get; init; }
     public required string OpponentName { get; init; } = "";
     public required long OpponentLevel { get; init; }
-
-    public Dictionary<string, object> ToDictionary()
-    {
-        var d = new Dictionary<string, object>
-        {
-            ["match_type"] = MatchType,
-            ["my_name"] = MyName,
-            ["my_level"] = MyLevel,
-            ["opponent_name"] = OpponentName,
-            ["opponent_level"] = OpponentLevel,
-        };
-        return d;
-    }
 }
 
-public class TurnStartEventData
+public class TurnStartEventData : IEventData
 {
     public required long Turn { get; init; }
     public required bool IsMyTurn { get; init; }
-
-    public Dictionary<string, object> ToDictionary()
-    {
-        var d = new Dictionary<string, object>
-        {
-            ["turn"] = Turn,
-            ["is_my_turn"] = IsMyTurn,
-        };
-        return d;
-    }
 }
 
-public class ReactiveRevealedEventData
+public class ReactiveRevealedEventData : IEventData
 {
     public required string InstanceId { get; init; } = "";
     public required string CardId { get; init; } = "";
-
-    public Dictionary<string, object> ToDictionary()
-    {
-        var d = new Dictionary<string, object>
-        {
-            ["instanceId"] = InstanceId,
-            ["cardId"] = CardId,
-        };
-        return d;
-    }
 }
 
-public class GameOverEventData
+public class SelectSlotEventData : IEventData
+{
+    public required string CardId { get; init; } = "";
+    public required string InstanceId { get; init; } = "";
+    public required string Zone { get; init; } = "";
+    public required int Index { get; init; }
+}
+
+public class GameOverEventData : IEventData
 {
     public required long WinnerNum { get; init; }
     public required string WinReason { get; init; } = "";
-
-    public Dictionary<string, object> ToDictionary()
-    {
-        var d = new Dictionary<string, object>
-        {
-            ["winnerNum"] = WinnerNum,
-            ["winReason"] = WinReason,
-        };
-        return d;
-    }
 }
 

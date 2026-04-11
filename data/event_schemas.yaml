@@ -51,6 +51,11 @@ turn_start:
 reactive_revealed:
   instanceId: string
   cardId: string
+select_slot:
+  cardId: string
+  instanceId: string
+  zone: string
+  index: int
 game_over:
   winnerNum: long
   winReason: string
