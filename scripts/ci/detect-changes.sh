@@ -1,15 +1,62 @@
 #!/usr/bin/env bash
 # Detect package changes since last tag and compute next versions.
 # Called from publish.yaml — outputs are written to $GITHUB_OUTPUT.
+#
+# Package list (12 publish units, ADR-015 Phase 3/4 naming):
+#
+#   Go modules (9):
+#     - game-design-constants, game-logic-constants, ws-constants,
+#       shop-constants, newsfeed-constants, card-types, api-client,
+#       api-battle-rpc, devdata
+#
+#   C# csproj (1):
+#     - gamedata-dotnet (Phase 4 で 4 分割予定、現状 1 csproj)
+#
+#   npm packages (2):
+#     - gamedata-npm (Phase 4 で複数分割予定、現状 subpath exports で 1)
+#     - api-npm       (Phase 4 で api-client-npm にリネーム予定)
+#
+# Each package has its own tag prefix "packages/{name}/v{version}".
+
 set -euo pipefail
 
 TARGET="${1:-auto}"
 BUMP="${2:-patch}"
 
+# (package_name, tag_prefix, watch_path, fallback_prefix)
+# - tag_prefix  : 新規タグを作成するときのプレフィクス
+# - watch_path  : git diff で変更検知する対象ディレクトリ
+# - fallback_prefix : 新 tag_prefix 配下にタグが存在しないときに "最後の既知の
+#   バージョン" として参照する旧プレフィクス (ADR-015 Phase 3/4 でパッケージを
+#   分割した際の移行サポート用)。該当なしは "-"
+PACKAGES=(
+  "game-design-constants:packages/game-design-constants:packages/game-design-constants/:-"
+  "game-logic-constants:packages/game-logic-constants:packages/game-logic-constants/:-"
+  "ws-constants:packages/ws-constants:packages/ws-constants/:-"
+  "shop-constants:packages/shop-constants:packages/shop-constants/:-"
+  "newsfeed-constants:packages/newsfeed-constants:packages/newsfeed-constants/:-"
+  "card-types:packages/card-types:packages/card-types/:-"
+  "api-client:packages/api-client:packages/api-client/:-"
+  "api-battle-rpc:packages/api-battle-rpc:packages/api-battle-rpc/:-"
+  "devdata:packages/devdata:packages/devdata/:-"
+  "gamedata-dotnet:packages/gamedata-dotnet:packages/gamedata-dotnet/:packages/gamedata"
+  "gamedata-npm:packages/gamedata-npm:packages/gamedata-npm/:packages/gamedata"
+  "api-npm:packages/api-npm:packages/api-npm/:packages/api"
+)
+
 compute_version() {
-  local prefix="$1" bump="$2"
+  local prefix="$1" bump="$2" fallback="$3"
   local last_tag
   last_tag=$(git tag -l "${prefix}/v*" | sort -V | tail -1)
+  if [ -z "$last_tag" ] && [ "$fallback" != "-" ]; then
+    # New prefix has no tags yet — fall back to the pre-migration prefix so
+    # the version number continues monotonically (Phase 3/4 migration support).
+    last_tag=$(git tag -l "${fallback}/v*" | sort -V | tail -1)
+    if [ -n "$last_tag" ]; then
+      # Rewrite prefix so the "{current}" extraction works uniformly below.
+      last_tag="${prefix}/v${last_tag#"${fallback}/v"}"
+    fi
+  fi
   if [ -z "$last_tag" ]; then
     echo "0.1.0"
     return
@@ -25,48 +72,59 @@ compute_version() {
 }
 
 has_changes() {
-  local prefix="$1"
-  shift
+  local prefix="$1" path="$2" fallback="$3"
   local last_tag
   last_tag=$(git tag -l "${prefix}/v*" | sort -V | tail -1)
+  if [ -z "$last_tag" ] && [ "$fallback" != "-" ]; then
+    last_tag=$(git tag -l "${fallback}/v*" | sort -V | tail -1)
+  fi
   if [ -z "$last_tag" ]; then
+    # No previous tag → treat as changed (first publish).
     return 0
   fi
-  ! git diff --quiet "$last_tag" -- "$@"
+  ! git diff --quiet "$last_tag" -- "$path"
 }
 
-GAMEDATA=false
-API=false
-DEVDATA=false
+# output-key は GitHub Actions で参照する matrix 化しやすい形式にする。
+# 例: "changed=game-design-constants,api-client,gamedata-npm"
+CHANGED=()
 
-if [ "$TARGET" = "auto" ]; then
-  has_changes "packages/gamedata" packages/gamedata/ packages/gamedata-dotnet/ packages/gamedata-npm/ && GAMEDATA=true
-  has_changes "packages/api" packages/api/ packages/api-npm/ && API=true
-  has_changes "packages/devdata" packages/devdata/ && DEVDATA=true
-else
+for entry in "${PACKAGES[@]}"; do
+  IFS=':' read -r name prefix path fallback <<< "$entry"
+
   case "$TARGET" in
-    gamedata) GAMEDATA=true ;;
-    api)      API=true ;;
-    devdata)  DEVDATA=true ;;
+    auto)
+      if has_changes "$prefix" "$path" "$fallback"; then
+        CHANGED+=("$name")
+      fi
+      ;;
+    "$name")
+      CHANGED+=("$name")
+      ;;
   esac
-fi
+done
 
-echo "gamedata=$GAMEDATA" >> "$GITHUB_OUTPUT"
-echo "api=$API" >> "$GITHUB_OUTPUT"
-echo "devdata=$DEVDATA" >> "$GITHUB_OUTPUT"
+# Emit per-package outputs: "{name}=true" and "{name}-version={ver}".
+# Use underscore in output keys (GitHub Actions does not allow hyphens in step
+# output references: needs.detect.outputs.game_design_constants).
+for entry in "${PACKAGES[@]}"; do
+  IFS=':' read -r name prefix _ fallback <<< "$entry"
+  key=$(echo "$name" | tr '-' '_')
 
-if [ "$GAMEDATA" = "true" ]; then
-  VER=$(compute_version "packages/gamedata" "$BUMP")
-  echo "gamedata-version=$VER" >> "$GITHUB_OUTPUT"
-  echo "gamedata → v$VER"
+  if [[ " ${CHANGED[*]} " == *" $name "* ]]; then
+    echo "${key}=true" >> "$GITHUB_OUTPUT"
+    ver=$(compute_version "$prefix" "$BUMP" "$fallback")
+    echo "${key}_version=$ver" >> "$GITHUB_OUTPUT"
+    echo "$name → v$ver"
+  else
+    echo "${key}=false" >> "$GITHUB_OUTPUT"
+  fi
+done
+
+# Aggregate flags for easy conditional gating in publish.yaml.
+ANY_CHANGED=false
+if [ ${#CHANGED[@]} -gt 0 ]; then
+  ANY_CHANGED=true
 fi
-if [ "$API" = "true" ]; then
-  VER=$(compute_version "packages/api" "$BUMP")
-  echo "api-version=$VER" >> "$GITHUB_OUTPUT"
-  echo "api → v$VER"
-fi
-if [ "$DEVDATA" = "true" ]; then
-  VER=$(compute_version "packages/devdata" "$BUMP")
-  echo "devdata-version=$VER" >> "$GITHUB_OUTPUT"
-  echo "devdata → v$VER"
-fi
+echo "any_changed=$ANY_CHANGED" >> "$GITHUB_OUTPUT"
+echo "changed_list=${CHANGED[*]:-}" >> "$GITHUB_OUTPUT"

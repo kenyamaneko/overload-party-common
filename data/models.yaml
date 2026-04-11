@@ -1,13 +1,21 @@
-# Model definitions for API contract types shared across repositories.
-# generate_constants.py reads this file and outputs:
-#   - packages/gamedata/model/*_gen.go  (Go structs, pkg: gamedata)
-#   - packages/api/model/*_gen.go       (Go structs, pkg: api)
-#   - packages/api-npm/src/models.ts      (TS interfaces, pkg: api)
-#   - packages/api-npm/src/wsMessages.ts   (TS WS message types, pkg: api)
+# Model definitions for API contract types + card domain types shared across repositories.
+# generate_constants.py reads this file and routes each section to the correct Go module
+# (per ADR-015 Phase 3) and TS package:
 #
-# target: "both" = gateway + battle, "gateway" = gateway only, "battle" = battle only
-# pkg: "gamedata" = game design types, "api" = API contract types
-# Fields: name (Go name), type (Go type string), json (json tag), db (optional db tag)
+#   Go (scripts/generate_constants.py:_GO_MODELS_ROUTING):
+#     card / card_stats / passive_effect / npc_models → packages/card-types/
+#     deck / rest_api / ws_messages                  → packages/api-client/
+#     battle_gateway_rpc                             → packages/api-battle-rpc/
+#     game_state_view                                 → Go skip (go_skip: true; battle consumes via C#)
+#
+#   TS (Phase 4 で 1:1 の npm package 分割予定):
+#     pkg: gamedata → packages/gamedata-npm/src/models.ts
+#     pkg: api      → packages/api-npm/src/{models,wsMessages}.ts
+#
+# Fields:
+#   target: "both" = gateway + battle, "gateway" = gateway only, "battle" = battle only
+#   pkg:    "gamedata" or "api" (currently used for TS package routing only; Go routing uses _GO_MODELS_ROUTING)
+#   Per-type fields: name (Go name), type (Go type string), json (json tag), db (optional db tag)
 
 files:
   # ─── Deck ──────────────────────────────────────────────

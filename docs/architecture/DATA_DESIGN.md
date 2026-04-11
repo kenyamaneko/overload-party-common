@@ -65,7 +65,7 @@ shop → account の整合性は Transactional Outbox パターンで担保さ�
 
 従来 DB に存在した陣営マスター (`factions` テーブル) は完全に廃止し、陣営は constants として code generation 経由で配布する方式に一本化済み。
 
-- ID の定数は `packages/gamedata/constants/game_design/` に `FactionSHE` / `FactionTenki` / `FactionSugar` / `FactionTuners` / `FactionNeutral` および `SelectableFactions` リストとして code-generated されている
+- ID の定数は `packages/game-design-constants/` に `FactionSHE` / `FactionTenki` / `FactionSugar` / `FactionTuners` / `FactionNeutral` および `SelectableFactions` リストとして code-generated されている
 - 表示名（`short_name_ja` / `short_name_en` / `full_name_ja` / `full_name_en`）、`is_collectible`、`sort_order` といった metadata は `data/factions.yaml` を SSoT として `scripts/generate_constants.py` から Go / C# / TypeScript 定数および `FactionMetadata` 構造体に一括生成される
 - `players.selected_faction`, `products.faction_id`, `player_factions.faction`, `scenario_episodes.faction`, `episode_required_factions.faction_id` などに張られていた `factions(faction_id)` への FK 制約は全て撤廃済み。代わりに各カラムは `VARCHAR(20)` + `CHECK (<col> IN ('SHE','Tenki','Sugar','Tuners','Neutral'))` で不正値を DB 層で拒否する
 - クロススキーマ FK を避けることで、将来 Cloud SQL インスタンスをサービス単位に物理分割した際もスキーマ間の依存がなく、アプリ側のクエリ書き換えも不要

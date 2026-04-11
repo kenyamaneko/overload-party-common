@@ -1,30 +1,30 @@
 #!/usr/bin/env python3
 """Generate shared constants, event data types, and Go models from YAML definitions.
 
-Per ADR-015 Phase 1, constants are split into 5 categories and emitted as separate
-sub-packages / namespaces / TS modules:
+Per ADR-015 Phase 1 / Phase 3, constants and models are split into responsibility-based
+packages and emitted to 9 Go modules (Phase 3) + C# namespaces (Phase 1) + TS modules.
 
-  game_design  — zones, ranks, card_types, factions, etc.
-  game_logic   — phases, events, effects, buffs, etc.
-  ws           — gateway WebSocket message types
-  shop         — product types
-  newsfeed     — cloud news sources
+Outputs (Go — each directory is an independent Go module per ADR-015 Phase 3):
+  - packages/game-design-constants/constants_gen.go
+  - packages/game-logic-constants/constants_gen.go
+  - packages/ws-constants/constants_gen.go
+  - packages/shop-constants/constants_gen.go
+  - packages/newsfeed-constants/constants_gen.go
+  - packages/card-types/{card,card_stats,passive_effect,npc_models}_gen.go
+  - packages/api-client/{deck,rest_api,ws_messages}_gen.go
+  - packages/api-battle-rpc/battle_gateway_rpc_gen.go
 
-Outputs:
-  - packages/gamedata/constants/{category}/constants_gen.go
-  - packages/gamedata/model/*_gen.go
-  - packages/api/model/*_gen.go
-  - packages/gamedata-dotnet/{Category}/{Category}Constants_gen.cs
+Outputs (C# — Phase 4 で csproj 分割予定、現状 1 csproj 内で namespace 分離):
+  - packages/gamedata-dotnet/{GameDesign,GameLogic,Ws,Shop,Newsfeed}/{Category}Constants_gen.cs
   - packages/gamedata-dotnet/EventData_gen.cs
   - packages/gamedata-dotnet/GameStateView_gen.cs
   - packages/gamedata-dotnet/BattleGatewayRpc_gen.cs
   - packages/gamedata-dotnet/VariantTypes_gen.cs
-  - packages/gamedata-npm/src/{category}.ts
-  - packages/gamedata-npm/src/eventData.ts
-  - packages/gamedata-npm/src/variantTypes.ts
-  - packages/gamedata-npm/src/models.ts
-  - packages/api-npm/src/wsMessages.ts
-  - packages/api-npm/src/models.ts
+
+Outputs (TS — Phase 4 で npm 分割予定、現状 gamedata-npm / api-npm の 2 package):
+  - packages/gamedata-npm/src/{gameDesign,gameLogic,ws,shop,newsfeed}.ts
+  - packages/gamedata-npm/src/{eventData,variantTypes,models}.ts
+  - packages/api-npm/src/{wsMessages,models}.ts
 
 Usage:
     python3 scripts/generate_constants.py
@@ -55,13 +55,34 @@ FACTIONS_YAML = DATA_DIR / "factions.yaml"
 EVENT_SCHEMAS_YAML = DATA_DIR / "event_schemas.yaml"
 MODELS_YAML = DATA_DIR / "models.yaml"
 
-GO_DIR = ROOT / "packages" / "gamedata"
-API_GO_DIR = ROOT / "packages" / "api"
-DOTNET_DIR = ROOT / "packages" / "gamedata-dotnet"
-NPM_DIR = ROOT / "packages" / "gamedata-npm"
-API_NPM_DIR = ROOT / "packages" / "api-npm"
+PACKAGES_DIR = ROOT / "packages"
 
-GO_CONSTANTS_DIR = GO_DIR / "constants"
+# Go module directories (one per logical package — ADR-015 Phase 3/4 naming).
+GO_GAME_DESIGN_DIR = PACKAGES_DIR / "game-design-constants"
+GO_GAME_LOGIC_DIR = PACKAGES_DIR / "game-logic-constants"
+GO_WS_DIR = PACKAGES_DIR / "ws-constants"
+GO_SHOP_DIR = PACKAGES_DIR / "shop-constants"
+GO_NEWSFEED_DIR = PACKAGES_DIR / "newsfeed-constants"
+GO_CARD_TYPES_DIR = PACKAGES_DIR / "card-types"
+GO_API_CLIENT_DIR = PACKAGES_DIR / "api-client"
+GO_API_BATTLE_RPC_DIR = PACKAGES_DIR / "api-battle-rpc"
+
+# Mapping of models.yaml section name → (target Go module dir, Go package name).
+# Sections not listed here (e.g., game_state_view with go_skip) are not emitted.
+_GO_MODELS_ROUTING = {
+    "card":               (GO_CARD_TYPES_DIR,     "cardtypes"),
+    "card_stats":         (GO_CARD_TYPES_DIR,     "cardtypes"),
+    "passive_effect":     (GO_CARD_TYPES_DIR,     "cardtypes"),
+    "npc_models":         (GO_CARD_TYPES_DIR,     "cardtypes"),
+    "deck":               (GO_API_CLIENT_DIR,     "apiclient"),
+    "rest_api":           (GO_API_CLIENT_DIR,     "apiclient"),
+    "ws_messages":        (GO_API_CLIENT_DIR,     "apiclient"),
+    "battle_gateway_rpc": (GO_API_BATTLE_RPC_DIR, "apibattle"),
+}
+
+DOTNET_DIR = PACKAGES_DIR / "gamedata-dotnet"
+NPM_DIR = PACKAGES_DIR / "gamedata-npm"
+API_NPM_DIR = PACKAGES_DIR / "api-npm"
 
 # ─── Helpers ────────────────────────────────────────────
 
@@ -312,10 +333,10 @@ def generate_go_game_design(data, factions):
     lines.append("}")
     lines.append("")
 
-    _write_file(GO_CONSTANTS_DIR / "game_design" / "constants_gen.go", lines)
+    _write_file(GO_GAME_DESIGN_DIR / "constants_gen.go", lines)
 
 
-# ─── Go: game_logic sub-package ────────────────────────
+# ─── Go: game_logic module ─────────────────────────────
 def generate_go_game_logic(data):
     lines = _go_header("game_logic")
     for yaml_key, go_prefix, go_comment, _, _, _, _ in GAME_LOGIC_SIMPLE:
@@ -323,10 +344,10 @@ def generate_go_game_logic(data):
         if values is None:
             continue
         lines.extend(_go_const_block(go_comment, go_prefix, values))
-    _write_file(GO_CONSTANTS_DIR / "game_logic" / "constants_gen.go", lines)
+    _write_file(GO_GAME_LOGIC_DIR / "constants_gen.go", lines)
 
 
-# ─── Go: ws sub-package ────────────────────────────────
+# ─── Go: ws module ─────────────────────────────────────
 def generate_go_ws(data):
     lines = _go_header("ws")
     ws = data["ws_message_types"]
@@ -345,10 +366,10 @@ def generate_go_ws(data):
     lines.append(")")
     lines.append("")
 
-    _write_file(GO_CONSTANTS_DIR / "ws" / "constants_gen.go", lines)
+    _write_file(GO_WS_DIR / "constants_gen.go", lines)
 
 
-# ─── Go: shop sub-package ──────────────────────────────
+# ─── Go: shop module ───────────────────────────────────
 def generate_go_shop(data):
     lines = _go_header("shop")
     for yaml_key, go_prefix, go_comment, _, _, _, _ in SHOP_SIMPLE:
@@ -356,10 +377,10 @@ def generate_go_shop(data):
         if values is None:
             continue
         lines.extend(_go_const_block(go_comment, go_prefix, values))
-    _write_file(GO_CONSTANTS_DIR / "shop" / "constants_gen.go", lines)
+    _write_file(GO_SHOP_DIR / "constants_gen.go", lines)
 
 
-# ─── Go: newsfeed sub-package ──────────────────────────
+# ─── Go: newsfeed module ───────────────────────────────
 def generate_go_newsfeed(data):
     lines = _go_header("newsfeed")
     for yaml_key, go_prefix, go_comment, _, _, _, _ in NEWSFEED_SIMPLE:
@@ -367,7 +388,7 @@ def generate_go_newsfeed(data):
         if values is None:
             continue
         lines.extend(_go_const_block(go_comment, go_prefix, values))
-    _write_file(GO_CONSTANTS_DIR / "newsfeed" / "constants_gen.go", lines)
+    _write_file(GO_NEWSFEED_DIR / "constants_gen.go", lines)
 
 
 # ─── Generate Go (models) ──────────────────────────────
@@ -383,12 +404,12 @@ def _go_type_needs_import(type_str):
     return imports
 
 
-def _generate_go_model_file(file_def, *, out_path):
+def _generate_go_model_file(file_def, *, out_path, package_name):
     """Generate a single *_gen.go file from a file definition."""
     lines = [
         _GENERATED_HEADER,
         "",
-        "package model",
+        f"package {package_name}",
         "",
     ]
 
@@ -465,13 +486,19 @@ def _generate_go_model_file(file_def, *, out_path):
         f.write("\n")
 
 
-def generate_go_models(*, gamedata_dir, api_dir):
-    """Generate *_gen.go model files from models.yaml, split by pkg field."""
+def generate_go_models():
+    """Generate *_gen.go model files from models.yaml.
+
+    Each models.yaml section is routed to a target Go module based on
+    _GO_MODELS_ROUTING. Sections not in the routing table (or with
+    go_skip: true) are not emitted as Go code.
+
+    Returns a dict of {module_dir: [emitted_section_names]} for logging.
+    """
     with open(MODELS_YAML, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f)
 
-    gamedata_names = []
-    api_names = []
+    emitted = {}
 
     for file_def in data["files"]:
         file_target = file_def.get("target", "both")
@@ -481,18 +508,18 @@ def generate_go_models(*, gamedata_dir, api_dir):
             continue
 
         name = file_def["name"]
-        pkg = file_def.get("pkg", "gamedata")
+        route = _GO_MODELS_ROUTING.get(name)
+        if route is None:
+            # No Go output for this section (e.g., deliberately skipped
+            # or not yet assigned to a module).
+            continue
 
-        if pkg == "api":
-            out_path = Path(api_dir) / f"{name}_gen.go"
-            _generate_go_model_file(file_def, out_path=out_path)
-            api_names.append(name)
-        else:
-            out_path = Path(gamedata_dir) / f"{name}_gen.go"
-            _generate_go_model_file(file_def, out_path=out_path)
-            gamedata_names.append(name)
+        module_dir, package_name = route
+        out_path = module_dir / f"{name}_gen.go"
+        _generate_go_model_file(file_def, out_path=out_path, package_name=package_name)
+        emitted.setdefault(module_dir, []).append(name)
 
-    return gamedata_names, api_names
+    return emitted
 
 
 # ─── C# constants: generic emitters ────────────────────
@@ -1673,29 +1700,27 @@ def main():
     models = _load_yaml(MODELS_YAML)
     variant_types = models.get("variant_types", [])
 
-    # ── Go constants (5 sub-packages) ──
+    # ── Go constants (5 modules) ──
     generate_go_game_design(game_design, factions)
-    print("Generated → packages/gamedata/constants/game_design/constants_gen.go", file=sys.stderr)
+    print("Generated → packages/game-design-constants/constants_gen.go", file=sys.stderr)
 
     generate_go_game_logic(game_logic)
-    print("Generated → packages/gamedata/constants/game_logic/constants_gen.go", file=sys.stderr)
+    print("Generated → packages/game-logic-constants/constants_gen.go", file=sys.stderr)
 
     generate_go_ws(gateway_ws)
-    print("Generated → packages/gamedata/constants/ws/constants_gen.go", file=sys.stderr)
+    print("Generated → packages/ws-constants/constants_gen.go", file=sys.stderr)
 
     generate_go_shop(shop)
-    print("Generated → packages/gamedata/constants/shop/constants_gen.go", file=sys.stderr)
+    print("Generated → packages/shop-constants/constants_gen.go", file=sys.stderr)
 
     generate_go_newsfeed(newsfeed)
-    print("Generated → packages/gamedata/constants/newsfeed/constants_gen.go", file=sys.stderr)
+    print("Generated → packages/newsfeed-constants/constants_gen.go", file=sys.stderr)
 
-    # ── Go models ──
-    gamedata_names, api_names = generate_go_models(
-        gamedata_dir=GO_DIR / "model",
-        api_dir=API_GO_DIR / "model",
-    )
-    print(f"Generated models → packages/gamedata/model/ [{', '.join(gamedata_names)}]", file=sys.stderr)
-    print(f"Generated models → packages/api/model/ [{', '.join(api_names)}]", file=sys.stderr)
+    # ── Go models (3 modules: card-types / api-client / api-battle-rpc) ──
+    emitted = generate_go_models()
+    for module_dir, names in emitted.items():
+        rel = module_dir.relative_to(ROOT)
+        print(f"Generated models → {rel}/ [{', '.join(names)}]", file=sys.stderr)
 
     # ── C# constants (5 namespaces) ──
     generate_csharp_game_design(game_design, factions)

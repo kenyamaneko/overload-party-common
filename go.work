@@ -1,0 +1,16 @@
+go 1.25.1
+
+// Workspace for local development across multiple common packages.
+// CI builds each module independently with GOWORK=off (or equivalent),
+// relying on published module versions resolved via go.sum per-module.
+use (
+	./packages/game-design-constants
+	./packages/game-logic-constants
+	./packages/ws-constants
+	./packages/shop-constants
+	./packages/newsfeed-constants
+	./packages/card-types
+	./packages/api-client
+	./packages/api-battle-rpc
+	./packages/devdata
+)

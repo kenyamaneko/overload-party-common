@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "packages/**"
+      - "scripts/ci/**"
   workflow_dispatch:
     inputs:
       bump:
@@ -23,9 +24,18 @@ on:
         type: choice
         options:
           - auto
-          - gamedata
-          - api
+          - game-design-constants
+          - game-logic-constants
+          - ws-constants
+          - shop-constants
+          - newsfeed-constants
+          - card-types
+          - api-client
+          - api-battle-rpc
           - devdata
+          - gamedata-dotnet
+          - gamedata-npm
+          - api-npm
 
 permissions:
   contents: write
@@ -39,12 +49,34 @@ jobs:
     name: Detect changes
     runs-on: ubuntu-latest
     outputs:
-      gamedata: ${{ steps.detect.outputs.gamedata }}
-      api: ${{ steps.detect.outputs.api }}
+      any_changed: ${{ steps.detect.outputs.any_changed }}
+      # Go modules
+      game_design_constants: ${{ steps.detect.outputs.game_design_constants }}
+      game_design_constants_version: ${{ steps.detect.outputs.game_design_constants_version }}
+      game_logic_constants: ${{ steps.detect.outputs.game_logic_constants }}
+      game_logic_constants_version: ${{ steps.detect.outputs.game_logic_constants_version }}
+      ws_constants: ${{ steps.detect.outputs.ws_constants }}
+      ws_constants_version: ${{ steps.detect.outputs.ws_constants_version }}
+      shop_constants: ${{ steps.detect.outputs.shop_constants }}
+      shop_constants_version: ${{ steps.detect.outputs.shop_constants_version }}
+      newsfeed_constants: ${{ steps.detect.outputs.newsfeed_constants }}
+      newsfeed_constants_version: ${{ steps.detect.outputs.newsfeed_constants_version }}
+      card_types: ${{ steps.detect.outputs.card_types }}
+      card_types_version: ${{ steps.detect.outputs.card_types_version }}
+      api_client: ${{ steps.detect.outputs.api_client }}
+      api_client_version: ${{ steps.detect.outputs.api_client_version }}
+      api_battle_rpc: ${{ steps.detect.outputs.api_battle_rpc }}
+      api_battle_rpc_version: ${{ steps.detect.outputs.api_battle_rpc_version }}
       devdata: ${{ steps.detect.outputs.devdata }}
-      gamedata-version: ${{ steps.detect.outputs.gamedata-version }}
-      api-version: ${{ steps.detect.outputs.api-version }}
-      devdata-version: ${{ steps.detect.outputs.devdata-version }}
+      devdata_version: ${{ steps.detect.outputs.devdata_version }}
+      # C# csproj
+      gamedata_dotnet: ${{ steps.detect.outputs.gamedata_dotnet }}
+      gamedata_dotnet_version: ${{ steps.detect.outputs.gamedata_dotnet_version }}
+      # npm packages
+      gamedata_npm: ${{ steps.detect.outputs.gamedata_npm }}
+      gamedata_npm_version: ${{ steps.detect.outputs.gamedata_npm_version }}
+      api_npm: ${{ steps.detect.outputs.api_npm }}
+      api_npm_version: ${{ steps.detect.outputs.api_npm_version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -60,14 +92,16 @@ jobs:
   build:
     name: Build & validate
     needs: detect
-    if: needs.detect.outputs.gamedata == 'true' || needs.detect.outputs.api == 'true' || needs.detect.outputs.devdata == 'true'
+    if: needs.detect.outputs.any_changed == 'true'
     runs-on: ubuntu-latest
+    env:
+      GOWORK: "off"
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-go@v5
         with:
-          go-version-file: packages/gamedata/go.mod
+          go-version-file: packages/game-design-constants/go.mod
 
       - uses: actions/setup-dotnet@v4
         with:
@@ -77,11 +111,11 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Go vet
+      - name: Go vet + build (all modules)
         run: |
-          for mod in packages/gamedata packages/api packages/devdata; do
-            echo "::group::go vet ${mod}"
-            (cd "$mod" && go vet ./...)
+          for mod in packages/game-design-constants packages/game-logic-constants packages/ws-constants packages/shop-constants packages/newsfeed-constants packages/card-types packages/api-client packages/api-battle-rpc packages/devdata; do
+            echo "::group::go vet $mod"
+            (cd "$mod" && go vet ./... && go build ./...)
             echo "::endgroup::"
           done
 
@@ -102,13 +136,47 @@ jobs:
           npx tsc --noEmit
 
   # ──────────────────────────────────────────────
-  # 3. Publish gamedata (Go + NuGet + npm)
-  #    Must complete before api (api-npm depends on gamedata-npm)
+  # 3. Publish Go modules (tag only — go get resolves via git tag)
+  #    All Go modules are independent; no publish ordering needed.
   # ──────────────────────────────────────────────
-  publish-gamedata:
-    name: Publish gamedata
+  publish-go:
+    name: Publish Go modules
     needs: [detect, build]
-    if: needs.detect.outputs.gamedata == 'true'
+    if: needs.detect.outputs.any_changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tag Go modules
+        run: |
+          declare -A MODULES=(
+            [game-design-constants]="${{ needs.detect.outputs.game_design_constants }}:${{ needs.detect.outputs.game_design_constants_version }}"
+            [game-logic-constants]="${{ needs.detect.outputs.game_logic_constants }}:${{ needs.detect.outputs.game_logic_constants_version }}"
+            [ws-constants]="${{ needs.detect.outputs.ws_constants }}:${{ needs.detect.outputs.ws_constants_version }}"
+            [shop-constants]="${{ needs.detect.outputs.shop_constants }}:${{ needs.detect.outputs.shop_constants_version }}"
+            [newsfeed-constants]="${{ needs.detect.outputs.newsfeed_constants }}:${{ needs.detect.outputs.newsfeed_constants_version }}"
+            [card-types]="${{ needs.detect.outputs.card_types }}:${{ needs.detect.outputs.card_types_version }}"
+            [api-client]="${{ needs.detect.outputs.api_client }}:${{ needs.detect.outputs.api_client_version }}"
+            [api-battle-rpc]="${{ needs.detect.outputs.api_battle_rpc }}:${{ needs.detect.outputs.api_battle_rpc_version }}"
+            [devdata]="${{ needs.detect.outputs.devdata }}:${{ needs.detect.outputs.devdata_version }}"
+          )
+          for name in "${!MODULES[@]}"; do
+            IFS=':' read -r changed ver <<< "${MODULES[$name]}"
+            if [ "$changed" = "true" ]; then
+              tag="packages/$name/v$ver"
+              echo "Tagging $tag"
+              git tag "$tag"
+              git push origin "$tag"
+            fi
+          done
+
+  # ──────────────────────────────────────────────
+  # 4. Publish gamedata-dotnet (NuGet)
+  # ──────────────────────────────────────────────
+  publish-gamedata-dotnet:
+    name: Publish gamedata-dotnet
+    needs: [detect, build]
+    if: needs.detect.outputs.gamedata_dotnet == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -117,44 +185,26 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          registry-url: "https://npm.pkg.github.com"
-
       - name: Publish NuGet
         working-directory: packages/gamedata-dotnet
         run: |
-          dotnet pack -c Release -p:Version=${{ needs.detect.outputs.gamedata-version }} -o ./nupkg
+          dotnet pack -c Release -p:Version=${{ needs.detect.outputs.gamedata_dotnet_version }} -o ./nupkg
           dotnet nuget push ./nupkg/*.nupkg \
             --source "https://nuget.pkg.github.com/kenyamaneko/index.json" \
             --api-key ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publish npm (gamedata)
-        working-directory: packages/gamedata-npm
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Tag
         run: |
-          npm install
-          npm version ${{ needs.detect.outputs.gamedata-version }} --no-git-tag-version
-          npm run build
-          npm publish
-
-      - name: Tag Go module (gamedata)
-        run: |
-          git tag "packages/gamedata/v${{ needs.detect.outputs.gamedata-version }}"
-          git push origin "packages/gamedata/v${{ needs.detect.outputs.gamedata-version }}"
+          git tag "packages/gamedata-dotnet/v${{ needs.detect.outputs.gamedata_dotnet_version }}"
+          git push origin "packages/gamedata-dotnet/v${{ needs.detect.outputs.gamedata_dotnet_version }}"
 
   # ──────────────────────────────────────────────
-  # 4. Publish api (Go + npm)
-  #    Waits for gamedata to ensure registry dependency is available
+  # 5. Publish gamedata-npm (must publish before api-npm if both changed)
   # ──────────────────────────────────────────────
-  publish-api:
-    name: Publish api
-    needs: [detect, build, publish-gamedata]
-    if: |
-      !failure() && !cancelled() &&
-      needs.detect.outputs.api == 'true'
+  publish-gamedata-npm:
+    name: Publish gamedata-npm
+    needs: [detect, build]
+    if: needs.detect.outputs.gamedata_npm == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -164,7 +214,41 @@ jobs:
           node-version: "22"
           registry-url: "https://npm.pkg.github.com"
 
-      - name: Publish npm (api)
+      - name: Publish npm
+        working-directory: packages/gamedata-npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npm install
+          npm version ${{ needs.detect.outputs.gamedata_npm_version }} --no-git-tag-version
+          npm run build
+          npm publish
+
+      - name: Tag
+        run: |
+          git tag "packages/gamedata-npm/v${{ needs.detect.outputs.gamedata_npm_version }}"
+          git push origin "packages/gamedata-npm/v${{ needs.detect.outputs.gamedata_npm_version }}"
+
+  # ──────────────────────────────────────────────
+  # 6. Publish api-npm (waits for gamedata-npm so the registry dependency
+  #    is resolvable during npm install)
+  # ──────────────────────────────────────────────
+  publish-api-npm:
+    name: Publish api-npm
+    needs: [detect, build, publish-gamedata-npm]
+    if: |
+      !failure() && !cancelled() &&
+      needs.detect.outputs.api_npm == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://npm.pkg.github.com"
+
+      - name: Publish npm
         working-directory: packages/api-npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -172,27 +256,11 @@ jobs:
           # Replace file: reference with registry dependency for CI build
           sed -i 's|"file:../gamedata-npm"|"*"|' package.json
           npm install
-          npm version ${{ needs.detect.outputs.api-version }} --no-git-tag-version
+          npm version ${{ needs.detect.outputs.api_npm_version }} --no-git-tag-version
           npm run build
           npm publish
 
-      - name: Tag Go module (api)
+      - name: Tag
         run: |
-          git tag "packages/api/v${{ needs.detect.outputs.api-version }}"
-          git push origin "packages/api/v${{ needs.detect.outputs.api-version }}"
-
-  # ──────────────────────────────────────────────
-  # 5. Publish devdata (Go tag only)
-  # ──────────────────────────────────────────────
-  publish-devdata:
-    name: Publish devdata
-    needs: [detect, build]
-    if: needs.detect.outputs.devdata == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Tag Go module (devdata)
-        run: |
-          git tag "packages/devdata/v${{ needs.detect.outputs.devdata-version }}"
-          git push origin "packages/devdata/v${{ needs.detect.outputs.devdata-version }}"
+          git tag "packages/api-npm/v${{ needs.detect.outputs.api_npm_version }}"
+          git push origin "packages/api-npm/v${{ needs.detect.outputs.api_npm_version }}"

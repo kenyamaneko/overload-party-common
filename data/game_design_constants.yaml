@@ -6,8 +6,8 @@
 # Per ADR-015 Phase 1, this file is split out of the former data/constants.yaml.
 # Faction constants are sourced separately from data/factions.yaml.
 #
-# Consumed by scripts/generate_constants.py → packages/gamedata/constants/game_design
-#                                            → packages/gamedata-dotnet/GameDesign
+# Consumed by scripts/generate_constants.py → packages/game-design-constants/
+#                                            → packages/gamedata-dotnet/GameDesign/
 #                                            → packages/gamedata-npm/src/gameDesign.ts
 
 zones:

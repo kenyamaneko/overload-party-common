@@ -6,8 +6,8 @@
 # Per ADR-015 Phase 1, this file is split out of the former data/constants.yaml.
 # Consumers: battle (primary), gateway (subset for RPC dispatch), client (subset for display).
 #
-# Consumed by scripts/generate_constants.py → packages/gamedata/constants/game_logic
-#                                            → packages/gamedata-dotnet/GameLogic
+# Consumed by scripts/generate_constants.py → packages/game-logic-constants/
+#                                            → packages/gamedata-dotnet/GameLogic/
 #                                            → packages/gamedata-npm/src/gameLogic.ts
 
 phases:

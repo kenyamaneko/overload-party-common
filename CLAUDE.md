@@ -37,12 +37,19 @@
 - `scripts/generate_products.py` - 商品データ生成スクリプト（YAML → JSON/SQL）
 - `scripts/generate_constants.py` - 定数・型生成スクリプト（YAML → Go/C#/TS + ドキュメントのフィールドテーブル自動更新）
 - `scripts/generate_schema_doc.py` - スキーマドキュメント生成スクリプト（DDL → DATA_DESIGN.md のカラムテーブル自動更新）
-- `packages/gamedata/` - Go パッケージ（ゲームデータ: カード定義・定数・エフェクト型）
-- `packages/api/` - Go パッケージ（API コントラクト: REST 型・WS メッセージ・デッキ型）
-- `packages/devdata/` - Go パッケージ 開発用（カード・商品 JSON、ローカルモック用）
-- `packages/gamedata-dotnet/` - NuGet パッケージ（battle 用、GitHub Packages で publish）
-- `packages/gamedata-npm/` - npm パッケージ gamedata（game-design / game-logic / ws / shop / newsfeed / eventData / variantTypes / models サブエントリポイント）
-- `packages/api-npm/` - npm パッケージ api（models, wsMessages）
+- `packages/game-design-constants/` - Go module（Faction / CardType / Restriction 等、全リポ共通）
+- `packages/game-logic-constants/` - Go module（Phase / WinReason / TriggerType 等、将来 battle 移管）
+- `packages/ws-constants/` - Go module（WSServerMsg / WSClientMsg、将来 gateway 移管）
+- `packages/shop-constants/` - Go module（ProductType、将来 shop 移管）
+- `packages/newsfeed-constants/` - Go module（CloudNewsSource、将来 newsfeed 移管）
+- `packages/card-types/` - Go module（CardDefinition / CardStats / PassiveEffect / NpcModel）
+- `packages/api-client/` - Go module（client ↔ gateway REST + WS 契約、将来 gateway 移管）
+- `packages/api-battle-rpc/` - Go module（gateway ↔ battle 内部 RPC 契約、将来 battle 移管）
+- `packages/devdata/` - Go module 開発用（カード・商品 JSON、ローカルモック用）
+- `packages/gamedata-dotnet/` - NuGet パッケージ（battle 用、将来 Phase 4 で 4 分割予定）
+- `packages/gamedata-npm/` - npm パッケージ gamedata（game-design / game-logic / ws / shop / newsfeed / eventData / variantTypes / models サブエントリポイント、将来 Phase 4 で分割予定）
+- `packages/api-npm/` - npm パッケージ api（models, wsMessages、将来 Phase 4 で api-client-npm にリネーム予定）
+- `go.work` - ローカル開発用の Go workspace (8 新 Go module + devdata をまとめる)
 - `docs/architecture/API_REFERENCE.md` - REST API リファレンス
 - `docs/architecture/WS_REFERENCE.md` - WebSocket API リファレンス
 - `docs/architecture/` - システム設計ドキュメント（API, CI/CD, データ設計, i18n 等）
@@ -54,7 +61,7 @@
 - カードデータを変更したら `python3 scripts/generate_cards.py` を実行
 - 商品データを変更したら `python3 scripts/generate_products.py` を実行
 - 定数（`data/*_constants.yaml`）・ファクション（`data/factions.yaml`）・イベントスキーマ・モデル定義を変更したら `python3 scripts/generate_constants.py` を実行
-- 定数は 5 分類 (game_design / game_logic / ws / shop / newsfeed) に分かれており、それぞれが独立したサブパッケージ（Go: `packages/gamedata/constants/{category}/`、C#: `OverloadParty.GameData.{Category}` namespace、npm: `@kenyamaneko/overload-party-gamedata/{category}` サブエントリポイント）に生成される
+- 定数は 5 分類 (game_design / game_logic / ws / shop / newsfeed) に分かれており、それぞれが独立したパッケージ（Go: `packages/{category}-constants/` トップレベルモジュール、C#: `OverloadParty.GameData.{Category}` namespace、npm: `@kenyamaneko/overload-party-gamedata/{category}` サブエントリポイント）に生成される
 - main への push 時に CI が自動でパッケージを publish する（patch bump。minor/major は手動 dispatch で指定）
 - **git tag を手動で打ってはいけない。** タグは CI が自動で作成する。手動タグは二重 publish やバージョン不整合の原因になる
 - 生成スクリプトは CI では実行しない。PR の codegen-check で同期を保証
@@ -63,9 +70,11 @@
 - DB スキーマを変更したら `db/schema_postgres.sql` のみ編集する（server リポの schema は廃止）。カラムのインラインコメント（`-- 説明`）も必ず記述する
 - DB スキーマを変更したら `python3 scripts/generate_schema_doc.py` を実行して DATA_DESIGN.md を更新する
 - DATA_DESIGN.md の `<!-- BEGIN/END GENERATED: table_name -->` マーカー間は自動生成。カラム説明を変更する場合は `db/schema_postgres.sql` のインラインコメントを編集して `python3 scripts/generate_schema_doc.py` を実行する
-- 各リポはパッケージをインストールして生成コードを使う（Gateway は gateway / account / matchmaking / shop / scenario / card / battle の 7 サービスに分割済み）:
-  - Go サービス（gateway / account / matchmaking / shop / scenario / card）: `go get .../packages/gamedata@latest` + `go get .../packages/api@latest`
-  - Go サービス 開発用: `go get .../packages/devdata@latest`
-  - battle: NuGet `OverloadParty.GameData` パッケージ
-  - client: npm `@kenyamaneko/overload-party-gamedata` + `@kenyamaneko/overload-party-api`
-  - 各 Go サービスが実際にどのパッケージを必要とするかは責務に応じて取捨する（例: card サービスはカードマスター関連、matchmaking は WS メッセージ型など）
+- 各リポはパッケージをインストールして生成コードを使う:
+  - Go サービス (gateway / 将来の account / matchmaking / shop / scenario / card): 必要な module だけを `go get` する。例:
+    - gateway: game-design-constants + game-logic-constants + ws-constants + card-types + api-client + api-battle-rpc + devdata
+    - card (将来): game-design-constants + card-types + api-client
+    - matchmaking (将来): ws-constants + api-client
+  - battle: NuGet `OverloadParty.GameData` パッケージ (Phase 4 で 4 分割予定)
+  - client: npm `@kenyamaneko/overload-party-gamedata` + `@kenyamaneko/overload-party-api` (Phase 4 で複数分割予定)
+- common 内で Go module 間の相互参照がある場合は `go.work` が local 開発時に自動解決する (CI では `GOWORK=off` で独立ビルド)

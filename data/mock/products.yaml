@@ -1,6 +1,6 @@
 # Shop products definition (SSoT)
 # Generated outputs:
-#   - packages/gamedata/cache/products_gen.json  (Go embedded, local dev)
+#   - packages/devdata/cache/products_gen.json   (Go embedded, local dev)
 #   - db/seed/products.sql                       (PostgreSQL UPSERT seed)
 #
 # Usage: python3 scripts/generate_products.py

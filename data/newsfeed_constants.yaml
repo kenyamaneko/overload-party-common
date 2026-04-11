@@ -6,8 +6,8 @@
 # Per ADR-015 Phase 1, this file is split out of the former data/constants.yaml.
 # Consumers: newsfeed service (primary), client (news source filtering/display).
 #
-# Consumed by scripts/generate_constants.py → packages/gamedata/constants/newsfeed
-#                                            → packages/gamedata-dotnet/Newsfeed
+# Consumed by scripts/generate_constants.py → packages/newsfeed-constants/
+#                                            → packages/gamedata-dotnet/Newsfeed/
 #                                            → packages/gamedata-npm/src/newsfeed.ts
 
 cloud_news_sources:

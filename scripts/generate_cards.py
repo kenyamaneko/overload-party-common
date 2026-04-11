@@ -2,10 +2,10 @@
 """Generate card data outputs from YAML card definitions.
 
 Outputs:
-  - packages/gamedata/cache/cards_gen.json  (Go embedded, local dev)
-  - packages/gamedata-dotnet/cache/cards_gen.json  (C# embedded, local dev)
-  - docs/game_design/CARDS.md               (human-readable card list)
-  - db/seed/cards_seed.sql                  (PostgreSQL UPSERT seed)
+  - packages/devdata/cache/cards_gen.json         (Go embedded, local dev)
+  - packages/gamedata-dotnet/cache/cards_gen.json (C# embedded, local dev)
+  - docs/game_design/CARDS.md                     (human-readable card list)
+  - db/seed/cards_seed.sql                        (PostgreSQL UPSERT seed)
 
 Usage:
     python3 scripts/generate_cards.py

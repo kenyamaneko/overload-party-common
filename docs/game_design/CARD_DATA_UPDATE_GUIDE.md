@@ -184,13 +184,17 @@ python3 scripts/generate_constants.py
 
 | 生成ファイル | 用途 |
 |-------------|------|
-| `packages/gamedata/constants/constants_gen.go` | Gateway サーバー用定数 |
-| `packages/gamedata/model/*_gen.go` | Gateway サーバー用 Go 型定義 |
-| `packages/gamedata-dotnet/GameConstants_gen.cs` | Battle サーバー用定数 |
+| `packages/{game-design,game-logic,ws,shop,newsfeed}-constants/constants_gen.go` | Gateway サーバー用定数 (5 Go module) |
+| `packages/card-types/*_gen.go` | Gateway サーバー用 Go 型定義 (Card / CardStats / PassiveEffect / NPC) |
+| `packages/api-client/*_gen.go` | Gateway サーバー用 Go 型定義 (REST / WS / Deck) |
+| `packages/api-battle-rpc/*_gen.go` | Gateway サーバー用 Go 型定義 (battle-gateway RPC) |
+| `packages/gamedata-dotnet/{GameDesign,GameLogic,Ws,Shop,Newsfeed}/*Constants_gen.cs` | Battle サーバー用定数 |
 | `packages/gamedata-dotnet/EventData_gen.cs` | Battle サーバー用イベント型 |
-| `packages/gamedata-npm/src/constants.ts` | クライアント用定数 |
-| `packages/gamedata-npm/src/eventData.ts` | クライアント用イベント型 |
-| `packages/gamedata-npm/src/wsMessages.ts` | クライアント用 WS メッセージ型 |
+| `packages/gamedata-dotnet/GameStateView_gen.cs` / `VariantTypes_gen.cs` | Battle サーバー用ゲーム状態型 |
+| `packages/gamedata-dotnet/BattleGatewayRpc_gen.cs` | Battle サーバー用 gateway-battle RPC 契約 |
+| `packages/gamedata-npm/src/{gameDesign,gameLogic,ws,shop,newsfeed}.ts` | クライアント用定数 |
+| `packages/gamedata-npm/src/{eventData,variantTypes,models}.ts` | クライアント用イベント型・ゲーム状態型・カード型 |
+| `packages/api-npm/src/{wsMessages,models}.ts` | クライアント用 WS / REST メッセージ型 |
 
 ---
 
@@ -240,9 +244,9 @@ gh workflow run "Publish GameData Packages" --ref <ブランチ名>
 
 | パッケージ | 参照元 |
 |-----------|--------|
-| Go モジュール（`packages/gamedata/vX.Y.Z` タグ） | Gateway サーバー |
+| Go モジュール (`packages/{game-design-constants, game-logic-constants, ws-constants, shop-constants, newsfeed-constants, card-types, api-client, api-battle-rpc, devdata}/vX.Y.Z` タグ) | Gateway サーバー |
 | NuGet `OverloadParty.GameData` | Battle サーバー |
-| npm `@overload-party/generated` | クライアント |
+| npm `@kenyamaneko/overload-party-gamedata` / `@kenyamaneko/overload-party-api` | クライアント |
 
 ---
 
@@ -251,8 +255,11 @@ gh workflow run "Publish GameData Packages" --ref <ブランチ名>
 パッケージが公開されたら、各リポジトリで最新バージョンに更新してビルドとテストを確認する:
 
 ```bash
-# Gateway（Go）
-go get github.com/kenyamaneko/overload-party-common/packages/gamedata@latest
+# Gateway（Go） — 必要な module を個別に更新する
+go get github.com/kenyamaneko/overload-party-common/packages/game-design-constants@latest
+go get github.com/kenyamaneko/overload-party-common/packages/card-types@latest
+go get github.com/kenyamaneko/overload-party-common/packages/api-client@latest
+# ... 他の必要な module も同様に
 
 # Battle（.NET） - NuGet の最新バージョンを指定
 dotnet add package OverloadParty.GameData

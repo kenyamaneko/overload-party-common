@@ -86,33 +86,48 @@ overload-party-common/          # 共有データ・定義の SSoT
 │   │   ├── sugar.yaml
 │   │   ├── tuners.yaml
 │   │   └── neutral.yaml
-│   └── constants.json          # ゲーム定数 (Phase, Zone, Rank, 初期値 等)
+│   ├── factions.yaml           # ファクションマスター SSoT
+│   ├── game_design_constants.yaml   # ゲームデザイン定数
+│   ├── game_logic_constants.yaml    # バトル状態機械 enum
+│   ├── gateway_ws_constants.yaml    # WS メッセージ種別
+│   ├── shop_constants.yaml          # ProductType
+│   ├── newsfeed_constants.yaml      # CloudNewsSource
+│   ├── event_schemas.yaml           # battle → client イベント型
+│   └── models.yaml                  # REST/WS/RPC/Card 型定義
 ├── db/
 │   ├── schema_postgres.sql     # PostgreSQL DDL（SSoT）
-│   └── grant_iam.sql           # IAM 認証権限付与
+│   └── grant_iam.sql           # IAM 認証権限付与（スキーマ単位 GRANT）
 ├── docs/                       # 全ドキュメント
+├── go.work                     # local dev 用 Go workspace (9 module)
 ├── packages/
-│   ├── gamedata/               # Go パッケージ 本番用 (型・定数のみ)
-│   │   ├── model/              # 生成: Go モデル
-│   │   ├── constants/          # 生成: ゲーム定数
-│   │   └── cardno/             # 生成: カード番号定数
-│   ├── devdata/                # Go パッケージ 開発用 (ローカルモック用データ)
-│   │   └── cache/              # 生成: cards_gen.json, products_gen.json (embed)
-│   ├── dotnet/                 # NuGet パッケージ (battle 用)
-│   │   ├── GameConstants_gen.cs
-│   │   └── EventData_gen.cs
-│   └── npm/                    # npm パッケージ (client 用)
-│       └── src/constants.ts, eventData.ts
+│   ├── game-design-constants/  # Go module: Faction / Zone / CardType 等
+│   ├── game-logic-constants/   # Go module: Phase / WinReason / TriggerType 等
+│   ├── ws-constants/           # Go module: WS メッセージ種別
+│   ├── shop-constants/         # Go module: ProductType
+│   ├── newsfeed-constants/     # Go module: CloudNewsSource
+│   ├── card-types/             # Go module: CardDefinition / PassiveEffect / NpcModel
+│   ├── api-client/             # Go module: client ↔ gateway REST/WS 契約
+│   ├── api-battle-rpc/         # Go module: gateway ↔ battle 内部 RPC 契約
+│   ├── devdata/                # Go module 開発用: cards_gen.json / products_gen.json embed
+│   ├── gamedata-dotnet/        # NuGet パッケージ (battle 用、Phase 4 で分割予定)
+│   │   ├── GameDesign/GameDesignConstants_gen.cs
+│   │   ├── GameLogic/GameLogicConstants_gen.cs
+│   │   ├── EventData_gen.cs / GameStateView_gen.cs / VariantTypes_gen.cs / BattleGatewayRpc_gen.cs
+│   │   └── Ws/ Shop/ Newsfeed/ （battle は未使用だが生成）
+│   ├── gamedata-npm/           # npm @kenyamaneko/overload-party-gamedata (client 用)
+│   │   └── src/gameDesign.ts, gameLogic.ts, ws.ts, shop.ts, newsfeed.ts, eventData.ts, variantTypes.ts, models.ts
+│   └── api-npm/                # npm @kenyamaneko/overload-party-api (client 用)
+│       └── src/wsMessages.ts, models.ts
 └── .github/workflows/
     ├── ci.yaml                 # DB マイグレーション CI
-    └── publish.yaml            # 統合 publish (check → test → gamedata → api → devdata)
+    └── publish.yaml            # 統合 publish (12 パッケージを並列/依存順に)
 
 overload-party-gateway/         # Go API サーバー
 ├── internal/
-│   ├── model/gen.go            # packages/gamedata/model の re-export
-│   ├── constants/gen.go        # packages/gamedata/constants の re-export
+│   ├── model/gen.go            # packages/card-types / api-client の re-export
+│   ├── constants/gen.go        # packages/{game-design,game-logic,ws}-constants の re-export
 │   └── ...
-└── go.mod                      # packages/gamedata モジュールを依存
+└── go.mod                      # 9 つの common Go module を独立に依存
 
 overload-party-battle/          # C# 対戦エンジン
 ├── src/
@@ -139,27 +154,35 @@ overload-party-client/          # React + Capacitor クライアント
 | `data/cards/*.yaml` | `generate_cards.py` | `db/seed/cards_seed.sql` | — |
 | `data/mock/products.yaml` | `generate_products.py` | `packages/devdata/cache/products_gen.json` | Go devdata (embed) |
 | `data/mock/products.yaml` | `generate_products.py` | `db/seed/products.sql` | — |
-| `data/models.yaml` | `generate_constants.py` | `packages/gamedata/model/*_gen.go` | Go gamedata |
-| `data/constants.json` | `generate_constants.py` | `packages/gamedata/constants/constants_gen.go` | Go gamedata |
-| `data/constants.json` | `generate_constants.py` | `packages/gamedata-dotnet/GameConstants_gen.cs` | NuGet (`OverloadParty.GameData`) |
-| `data/constants.json` | `generate_constants.py` | `packages/gamedata-npm/src/constants.ts` | npm (`@kenyamaneko/overload-party-gamedata`) |
-| `data/event_schemas.json` | `generate_constants.py` | `packages/gamedata-dotnet/EventData_gen.cs` | NuGet |
-| `data/event_schemas.json` | `generate_constants.py` | `packages/gamedata-npm/src/eventData.ts` | npm |
+| `data/models.yaml` | `generate_constants.py` | `packages/card-types/*_gen.go` / `packages/api-client/*_gen.go` / `packages/api-battle-rpc/*_gen.go` | Go (3 module) |
+| `data/*_constants.yaml` | `generate_constants.py` | `packages/{game-design,game-logic,ws,shop,newsfeed}-constants/constants_gen.go` | Go (5 module) |
+| `data/*_constants.yaml` | `generate_constants.py` | `packages/gamedata-dotnet/{GameDesign,GameLogic,Ws,Shop,Newsfeed}/{Category}Constants_gen.cs` | NuGet (`OverloadParty.GameData`) |
+| `data/*_constants.yaml` | `generate_constants.py` | `packages/gamedata-npm/src/{gameDesign,gameLogic,ws,shop,newsfeed}.ts` | npm (`@kenyamaneko/overload-party-gamedata`) |
+| `data/event_schemas.yaml` | `generate_constants.py` | `packages/gamedata-dotnet/EventData_gen.cs` | NuGet |
+| `data/event_schemas.yaml` | `generate_constants.py` | `packages/gamedata-npm/src/eventData.ts` | npm |
 
-各リポはパッケージをインストールして使う（gateway: `go get gamedata` + `go get devdata`, battle: NuGet, client: npm）。生成されたファイルには `DO NOT EDIT` コメントが付く。
+各リポはパッケージをインストールして使う（gateway: 必要な Go module を個別に `go get`, battle: NuGet, client: npm）。生成されたファイルには `DO NOT EDIT` コメントが付く。
 
-#### パッケージ責務
+#### パッケージ責務 (ADR-015 Phase 3 後)
 
-| パッケージ | 形式 | 責務 | 消費先 |
-|---|---|---|---|
-| `packages/gamedata/` | Go module | ゲームデータ（カード定義・定数・エフェクト型）+ ゲームステート View 型 | gateway |
-| `packages/api/` | Go module | API コントラクト（REST 型・WS メッセージ・デッキ型） | gateway |
-| `packages/devdata/` | Go module | ローカル開発用モックデータ（cards_gen.json, products_gen.json） | gateway (dev) |
-| `packages/gamedata-dotnet/` | NuGet | カード定義・定数・イベントデータ・ゲームステート View 型・AvailableAction | battle |
-| `packages/gamedata-npm/` | npm | 定数・イベントデータ・ゲームステート View 型・AvailableAction | client |
-| `packages/api-npm/` | npm | REST API 型・WS メッセージ型 | client |
+Go は責務単位で 9 module に分割済み。C# / npm は Phase 4 で分割予定で、現状は既存の `gamedata-dotnet` / `gamedata-npm` / `api-npm` を維持。
 
-**gamedata と api の分離:** gamedata パッケージにはゲームデザインデータに加え、ゲームステート View 型（`ClientGameState`, `PlayerView` 等）が含まれる。これは battle サーバーが直接シリアライズし client がデシリアライズする JSON ワイヤーフォーマット（API 契約）であり、gateway はパススルーする。api パッケージは gateway-client 間の REST/WS プロトコル契約で、battle サーバーは使わない。`models.yaml` の `pkg` フィールド（`gamedata` / `api`）で生成先を振り分ける。
+| パッケージ | 形式 | 責務 | 消費先 | Phase 6 移管先 |
+|---|---|---|---|---|
+| `packages/game-design-constants/` | Go module | Faction / Zone / Rank / CardType / Restriction / MatchType / StatType / DeckSize / FactionMetadata | 全 Go サービス | common 永続 |
+| `packages/game-logic-constants/` | Go module | Phase / WinReason / TriggerType / EffectOp / BuffType 等のバトル状態機械 enum | battle (主) / gateway (subset) | battle |
+| `packages/ws-constants/` | Go module | WSServerMsg / WSClientMsg 種別 | gateway | gateway |
+| `packages/shop-constants/` | Go module | ProductType | future shop | shop |
+| `packages/newsfeed-constants/` | Go module | CloudNewsSource | future newsfeed | newsfeed |
+| `packages/card-types/` | Go module | CardDefinition / CardStats / PassiveEffect 系 / NpcModel | gateway / future card | common 永続 |
+| `packages/api-client/` | Go module | client ↔ gateway REST + WS 契約 (Deck 型含む) | gateway | gateway |
+| `packages/api-battle-rpc/` | Go module | gateway ↔ battle 内部 RPC 契約 | gateway (呼び出し) / future battle (受信) | battle |
+| `packages/devdata/` | Go module | ローカル開発用モックデータ (cards_gen.json, products_gen.json embed) | gateway (dev) | common 永続 |
+| `packages/gamedata-dotnet/` | NuGet | カード定義・定数・イベントデータ・ゲームステート View 型・AvailableAction (Phase 4 で 4 csproj に分割予定) | battle | 各サービス分散 |
+| `packages/gamedata-npm/` | npm | ゲームデザイン/ロジック定数・カード型・eventData・variantTypes・models サブエントリポイント (Phase 4 で分割予定) | client | 各サービス分散 |
+| `packages/api-npm/` | npm | REST / WS メッセージモデル (Phase 4 で api-client-npm にリネーム予定) | client | gateway |
+
+**責務境界の原則:** 各 Go module は**単一の責務**を持つ (e.g., `card-types` はカード定義型のみ、`api-client` は client ↔ gateway 契約のみ)。将来 Phase 6 で各 module は対応するサービスリポへ物理移管される。C# / npm の責務分離は現状 namespace / subpath exports でのみ行われており、Phase 4 で csproj / npm package 単位の分離に進む。
 
 ### 2.4 作業別クロスリファレンス
 
@@ -571,7 +594,7 @@ Cloud SQL インスタンスは 1 つのまま維持したうえで、**PostgreS
 | （なし） | matchmaking | キューは Upstash Redis、通知は Cloud Pub/Sub のため RDB スキーマを持たない |
 
 - **`shared` スキーマ**: 特定サービスに属さず、全サービスが SELECT のみで参照する master / config データを配置するスキーマ。write はマイグレーション管理ユーザー（psqldef などで DDL とシードデータを投入する管理専用アカウント）にのみ許可し、各サービスユーザーには `USAGE + SELECT` のみ付与する。現時点の住人は `game_config` のみで、runtime update を想定しない「シードで投入する read-only データ」の置き場として予約する
-- **`factions` テーブルの廃止 (実施済み)**: 従来 DB に持っていた陣営マスター（`factions` テーブル）は廃止済み。ID 定数 (`FactionSHE` 等)・表示名 (`short_name_ja` / `short_name_en` / `full_name_ja` / `full_name_en`)・`is_collectible`・`sort_order` などの metadata は `data/factions.yaml` を SSoT として `packages/gamedata/constants/game_design/` の code-generated 定数 (`FactionMetadata` 構造体含む) に寄せた。`players.selected_faction` など 6 箇所に存在した `factions(faction_id)` への FK 制約は全て撤廃済みで、該当カラムは `VARCHAR(20)` + `CHECK` 制約で不正値を拒否する
+- **`factions` テーブルの廃止 (実施済み)**: 従来 DB に持っていた陣営マスター（`factions` テーブル）は廃止済み。ID 定数 (`FactionSHE` 等)・表示名 (`short_name_ja` / `short_name_en` / `full_name_ja` / `full_name_en`)・`is_collectible`・`sort_order` などの metadata は `data/factions.yaml` を SSoT として `packages/game-design-constants/` の code-generated 定数 (`FactionMetadata` 構造体含む) に寄せた。`players.selected_faction` など 6 箇所に存在した `factions(faction_id)` への FK 制約は全て撤廃済みで、該当カラムは `VARCHAR(20)` + `CHECK` 制約で不正値を拒否する
 
 ### 5.2 カード定義のサービス間参照
 

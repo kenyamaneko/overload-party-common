@@ -6,8 +6,8 @@
 # Per ADR-015 Phase 1, this file is split out of the former data/constants.yaml.
 # Consumers: gateway (primary), client (for WS dispatch).
 #
-# Consumed by scripts/generate_constants.py → packages/gamedata/constants/ws
-#                                            → packages/gamedata-dotnet/Ws
+# Consumed by scripts/generate_constants.py → packages/ws-constants/
+#                                            → packages/gamedata-dotnet/Ws/
 #                                            → packages/gamedata-npm/src/ws.ts
 
 ws_message_types:
