@@ -247,8 +247,8 @@ gh workflow run "Publish GameData Packages" --ref <ブランチ名>
 | パッケージ | 参照元 |
 |-----------|--------|
 | Go モジュール (`packages/{game-design-constants, game-logic-constants, ws-constants, shop-constants, newsfeed-constants, card-types, api-client, api-battle-rpc, devdata}/vX.Y.Z` タグ) | Gateway サーバー |
-| NuGet `OverloadParty.GameData` | Battle サーバー |
-| npm (8 パッケージ: `@kenyamaneko/overload-party-{game-design,game-logic,ws,shop,newsfeed}-constants` + `-card-types` / `-game-state` / `-api-client`) | クライアント |
+| NuGet (4 package: `OverloadParty.GameDesignConstants` / `OverloadParty.GameLogicConstants` / `OverloadParty.GameState` / `OverloadParty.ApiBattleRpc`) | Battle サーバー |
+| npm (8 package: `@kenyamaneko/overload-party-{game-design,game-logic,ws,shop,newsfeed}-constants` + `-card-types` / `-game-state` / `-api-client`) | クライアント |
 
 ---
 
@@ -263,11 +263,21 @@ go get github.com/kenyamaneko/overload-party-common/packages/card-types@latest
 go get github.com/kenyamaneko/overload-party-common/packages/api-client@latest
 # ... 他の必要な module も同様に
 
-# Battle（.NET） - NuGet の最新バージョンを指定
-dotnet add package OverloadParty.GameData
+# Battle（.NET） — 必要な 4 package を個別に add
+dotnet add package OverloadParty.GameDesignConstants
+dotnet add package OverloadParty.GameLogicConstants
+dotnet add package OverloadParty.GameState
+dotnet add package OverloadParty.ApiBattleRpc
 
-# Client（npm）
-npm install @overload-party/generated@latest
+# Client（npm） — 必要な 8 package を個別に install
+npm install @kenyamaneko/overload-party-game-design-constants
+npm install @kenyamaneko/overload-party-game-logic-constants
+npm install @kenyamaneko/overload-party-ws-constants
+npm install @kenyamaneko/overload-party-shop-constants
+npm install @kenyamaneko/overload-party-newsfeed-constants
+npm install @kenyamaneko/overload-party-card-types
+npm install @kenyamaneko/overload-party-game-state
+npm install @kenyamaneko/overload-party-api-client
 ```
 
 ---

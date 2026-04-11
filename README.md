@@ -16,12 +16,35 @@ db/
   schema_postgres.sql   # PostgreSQL DDL (Single Source of Truth)
   grant_iam.sql         # IAM 認証用権限付与 (psqldef 対象外、手動実行)
   seed/                 # 初期データ (dev/stg 環境向け)
-packages/
-  generate_from_yaml.py  # コード生成スクリプト
-  go/             # Go パッケージ (gateway 用)
-  dotnet/         # NuGet パッケージ (battle 用)
-  npm/            # npm パッケージ (client 用)
-docs/             # 全ドキュメント
+packages/                # 9 Go module + 4 NuGet csproj + 8 npm package (ADR-015 Phase 3/4/5)
+  game-design-constants/       # Go module
+  game-logic-constants/        # Go module
+  ws-constants/                # Go module
+  shop-constants/              # Go module
+  newsfeed-constants/          # Go module
+  card-types/                  # Go module
+  api-client/                  # Go module
+  api-battle-rpc/              # Go module
+  devdata/                     # Go module (開発用 JSON 埋め込み)
+  game-design-constants-dotnet/  # NuGet csproj
+  game-logic-constants-dotnet/   # NuGet csproj
+  game-state-dotnet/             # NuGet csproj (cards_gen.json を同梱)
+  api-battle-rpc-dotnet/         # NuGet csproj
+  game-design-constants-npm/     # npm package
+  game-logic-constants-npm/      # npm package
+  ws-constants-npm/              # npm package
+  shop-constants-npm/            # npm package
+  newsfeed-constants-npm/        # npm package
+  card-types-npm/                # npm package
+  game-state-npm/                # npm package
+  api-client-npm/                # npm package
+go.work                   # local dev 用 Go workspace (9 Go module を束ねる)
+scripts/
+  generate_cards.py       # カード生成
+  generate_products.py    # 商品生成
+  generate_constants.py   # 定数/モデル/型生成 (21 package に振り分け)
+  generate_schema_doc.py  # DATA_DESIGN.md 更新
+docs/                     # 全ドキュメント
 ```
 
 ## DB スキーマ管理

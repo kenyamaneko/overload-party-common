@@ -46,7 +46,10 @@
 - `packages/api-client/` - Go module（client ↔ gateway REST + WS 契約、将来 gateway 移管）
 - `packages/api-battle-rpc/` - Go module（gateway ↔ battle 内部 RPC 契約、将来 battle 移管）
 - `packages/devdata/` - Go module 開発用（カード・商品 JSON、ローカルモック用）
-- `packages/gamedata-dotnet/` - NuGet パッケージ（battle 用、将来 Phase 5 で 4 分割予定）
+- `packages/game-design-constants-dotnet/` - NuGet `OverloadParty.GameDesignConstants`（Faction / Zone / CardType 等）
+- `packages/game-logic-constants-dotnet/` - NuGet `OverloadParty.GameLogicConstants`（Phase / WinReason / TriggerType 等）
+- `packages/game-state-dotnet/` - NuGet `OverloadParty.GameState`（ClientGameState / PlayerView / EventData / AvailableAction + cards_gen.json EmbeddedResource）
+- `packages/api-battle-rpc-dotnet/` - NuGet `OverloadParty.ApiBattleRpc`（gateway ↔ battle 内部 RPC 契約）
 - `packages/game-design-constants-npm/` - npm パッケージ（`@kenyamaneko/overload-party-game-design-constants` - Faction / CardType / Restriction 等）
 - `packages/game-logic-constants-npm/` - npm パッケージ（`@kenyamaneko/overload-party-game-logic-constants` - Phase / WinReason / TriggerType 等）
 - `packages/ws-constants-npm/` - npm パッケージ（`@kenyamaneko/overload-party-ws-constants` - WSServerMsg / WSClientMsg）

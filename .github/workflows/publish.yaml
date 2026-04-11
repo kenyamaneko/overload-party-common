@@ -471,9 +471,9 @@ jobs:
         run: |
           # Replace any file: references with registry "*" so npm resolves
           # against GitHub Packages during the publish build.
-          # Remove lock file to force fresh resolution from registry
-          # (file: refs in lock file would override sed'd package.json).
-          rm -f package-lock.json
+          # file: refs in package.json are rewritten to "*" so npm resolves
+          # the registry-published version of each dependency. package-lock.json
+          # is gitignored (library convention) so there's nothing stale to remove.
           sed -i 's|"file:\.\./[^"]*"|"*"|g' package.json
           npm install
           npm version ${{ needs.detect.outputs.card_types_npm_version }} --no-git-tag-version
@@ -510,9 +510,9 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Remove lock file to force fresh resolution from registry
-          # (file: refs in lock file would override sed'd package.json).
-          rm -f package-lock.json
+          # file: refs in package.json are rewritten to "*" so npm resolves
+          # the registry-published version of each dependency. package-lock.json
+          # is gitignored (library convention) so there's nothing stale to remove.
           sed -i 's|"file:\.\./[^"]*"|"*"|g' package.json
           npm install
           npm version ${{ needs.detect.outputs.game_state_npm_version }} --no-git-tag-version
@@ -554,9 +554,9 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Remove lock file to force fresh resolution from registry
-          # (file: refs in lock file would override sed'd package.json).
-          rm -f package-lock.json
+          # file: refs in package.json are rewritten to "*" so npm resolves
+          # the registry-published version of each dependency. package-lock.json
+          # is gitignored (library convention) so there's nothing stale to remove.
           sed -i 's|"file:\.\./[^"]*"|"*"|g' package.json
           npm install
           npm version ${{ needs.detect.outputs.api_client_npm_version }} --no-git-tag-version

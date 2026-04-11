@@ -33,6 +33,11 @@ packages/*-dotnet/obj/
 packages/*-dotnet/bin/
 packages/*-npm/dist/
 packages/*-npm/node_modules/
+# npm lock files are library artifacts, not checked in. Libraries rely on
+# published tarballs for version pinning; consumer repos generate their own
+# lock files. Committing lock files here causes CI publish bugs where sed-
+# rewritten package.json is ignored in favor of file: refs in the lock file.
+packages/*-npm/package-lock.json
 
 # Secrets / env
 *.env
