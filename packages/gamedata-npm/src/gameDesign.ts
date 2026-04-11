@@ -18,7 +18,7 @@ export type MatchType = (typeof MATCH_TYPES)[number];
 export const STAT_TYPES = ["tp", "yield", "av"] as const;
 export type StatType = (typeof STAT_TYPES)[number];
 
-export const CARD_TYPES = ["Compute", "Container", "Orchestrator", "Serverless", "AI/ML", "Database", "ObjectStorage", "CacheDB", "Platform", "Attachment", "Strategy", "Reactive", "Incident", "Log"] as const;
+export const CARD_TYPES = ["Compute", "Container", "Orchestrator", "Serverless", "AI/ML", "Database", "ObjectStorage", "CacheDB", "Platform", "Attachment", "Strategy", "Reactive", "Incident"] as const;
 export type CardType = (typeof CARD_TYPES)[number];
 
 const COMPUTE_TYPES: ReadonlySet<string> = new Set(["Compute", "Container", "Orchestrator", "Serverless", "AI/ML"]);

@@ -107,7 +107,6 @@ public static class CardTypes
     public const string Strategy = "Strategy";
     public const string Reactive = "Reactive";
     public const string Incident = "Incident";
-    public const string Log = "Log";
 
     public static readonly string[] ComputeTypes = [Compute, Container, Orchestrator, Serverless, AIML];
     public static readonly string[] DataTypes = [Database, ObjectStorage, CacheDB];

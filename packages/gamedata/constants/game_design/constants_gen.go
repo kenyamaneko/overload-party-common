@@ -150,7 +150,6 @@ const (
 	CardTypeStrategy = "Strategy"
 	CardTypeReactive = "Reactive"
 	CardTypeIncident = "Incident"
-	CardTypeLog = "Log"
 )
 
 // IsResourceType returns true if the card type is a deployable resource (compute or data).

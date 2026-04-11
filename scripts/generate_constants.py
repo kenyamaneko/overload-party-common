@@ -234,9 +234,11 @@ def generate_go_game_design(data, factions):
             continue
         lines.extend(_go_const_block(go_comment, go_prefix, values))
 
-    # Card types (flattened across compute/data/support/log).
+    # Card types visible to clients/UI. The `log` sub-category in yaml is
+    # reserved for internal log cards that do not surface in player-facing
+    # enums; it is intentionally excluded here.
     ct = data["card_types"]
-    all_types = ct["compute"] + ct["data"] + ct["support"] + ct.get("log", [])
+    all_types = ct["compute"] + ct["data"] + ct["support"]
     lines.append("// Card types.")
     lines.append("const (")
     for v in all_types:
@@ -584,9 +586,10 @@ def generate_csharp_game_design(data, factions):
             continue
         lines.extend(_cs_static_class(cs_class, values))
 
-    # Card types (flattened).
+    # Card types visible to clients/UI. The `log` sub-category is reserved
+    # for internal log cards and is intentionally excluded.
     ct = data["card_types"]
-    all_types = ct["compute"] + ct["data"] + ct["support"] + ct.get("log", [])
+    all_types = ct["compute"] + ct["data"] + ct["support"]
     lines.append("public static class CardTypes")
     lines.append("{")
     for v in all_types:
@@ -1007,9 +1010,10 @@ def generate_ts_game_design(data, factions):
             continue
         lines.extend(_ts_const_array(ts_const, ts_type, values, extra_union=extra_union))
 
-    # Card types.
+    # Card types visible to clients/UI. The `log` sub-category is reserved
+    # for internal log cards and is intentionally excluded.
     ct = data["card_types"]
-    all_card_types = ct["compute"] + ct["data"] + ct["support"] + ct.get("log", [])
+    all_card_types = ct["compute"] + ct["data"] + ct["support"]
     lines.append(f"export const CARD_TYPES = {json.dumps(all_card_types)} as const;")
     lines.append("export type CardType = (typeof CARD_TYPES)[number];")
     lines.append("")
