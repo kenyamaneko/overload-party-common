@@ -255,12 +255,6 @@ def generate_json(cards, *, out_path):
             entry["effect_text"] = card["effect_text"]
         if card.get("effects"):
             entry["effects"] = card["effects"]
-        if card.get("passive_effects"):
-            entry["passive_effects"] = card["passive_effects"]
-        if card.get("platform_effects"):
-            entry["platform_effects"] = card["platform_effects"]
-        if card.get("attachment_effects"):
-            entry["attachment_effects"] = card["attachment_effects"]
         output.append(entry)
 
     json_out.parent.mkdir(parents=True, exist_ok=True)
