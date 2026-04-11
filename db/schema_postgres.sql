@@ -1,11 +1,34 @@
 -- Overload Party - PostgreSQL DDL (SSoT)
 -- All tables with foreign keys and indexes
+--
+-- Schema layout (ADR-014): 各サービスが自スキーマを所有し、他サービスは API 経由で参照する。
+-- スキーマ越境 FK はアプリ層整合性に委ねて張らない。
+--
+--   shared    : 全サービス read-only の共通設定
+--   account   : プレイヤーアカウント (overload-party-account)
+--   card      : カードマスター / 所持 / デッキ (overload-party-card)
+--   shop      : 商品 / 購入 / アイテム (overload-party-shop)
+--   scenario  : ストーリーエピソード / 進捗 (overload-party-scenario)
+--   battle    : ゲーム実行時状態 / アクション / イベント (overload-party-battle)
+--   newsfeed  : ニュースフィード (overload-party-newsfeed)
+
+-- =============================================================================
+-- Schemas
+-- =============================================================================
+
+CREATE SCHEMA IF NOT EXISTS shared;
+CREATE SCHEMA IF NOT EXISTS account;
+CREATE SCHEMA IF NOT EXISTS card;
+CREATE SCHEMA IF NOT EXISTS shop;
+CREATE SCHEMA IF NOT EXISTS scenario;
+CREATE SCHEMA IF NOT EXISTS battle;
+CREATE SCHEMA IF NOT EXISTS newsfeed;
 
 -- =============================================================================
 -- Shared: updated_at auto-update trigger function
 -- =============================================================================
 
-CREATE OR REPLACE FUNCTION update_updated_at()
+CREATE OR REPLACE FUNCTION shared.update_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
   NEW.updated_at = now();
@@ -14,10 +37,10 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- =============================================================================
--- 4.1 Game Management
+-- 4.1 Game Management (schema: battle)
 -- =============================================================================
 
-CREATE TABLE games (
+CREATE TABLE battle.games (
   game_id              VARCHAR(26) NOT NULL,           -- ULID
   status               VARCHAR(20) NOT NULL,           -- 'waiting' / 'playing' / 'finished'
   first_player         SMALLINT NOT NULL,              -- 先攻プレイヤー番号 (1 or 2)
@@ -31,13 +54,13 @@ CREATE TABLE games (
   PRIMARY KEY (game_id)
 );
 
-CREATE INDEX idx_games_status ON games(status, created_at DESC);
-CREATE TRIGGER trg_games_updated_at BEFORE UPDATE ON games FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE INDEX idx_games_status ON battle.games(status, created_at DESC);
+CREATE TRIGGER trg_games_updated_at BEFORE UPDATE ON battle.games FOR EACH ROW EXECUTE FUNCTION shared.update_updated_at();
 
 -- 4.1a Game NPC Settings (child of games, NPC 戦のみ。PvP では行なし)
 
-CREATE TABLE game_npcs (
-  game_id       VARCHAR(26) NOT NULL REFERENCES games(game_id), -- 親テーブル参照
+CREATE TABLE battle.game_npcs (
+  game_id       VARCHAR(26) NOT NULL REFERENCES battle.games(game_id), -- 親テーブル参照
   player_num    SMALLINT NOT NULL,              -- NPC が座っているスロット番号 (1 or 2)
   npc_model     VARCHAR NOT NULL,               -- NPC モデル名
   PRIMARY KEY (game_id, player_num)
@@ -45,8 +68,8 @@ CREATE TABLE game_npcs (
 
 -- 4.1b Game Decks (child of games, 常に 2 行)
 
-CREATE TABLE game_decks (
-  game_id        VARCHAR(26) NOT NULL REFERENCES games(game_id), -- 親テーブル参照
+CREATE TABLE battle.game_decks (
+  game_id        VARCHAR(26) NOT NULL REFERENCES battle.games(game_id), -- 親テーブル参照
   player_num     SMALLINT NOT NULL,             -- 1 or 2
   deck_snapshot  JSONB NOT NULL,                -- デッキスナップショット
   PRIMARY KEY (game_id, player_num)
@@ -54,20 +77,20 @@ CREATE TABLE game_decks (
 
 -- 4.1c Game Players (child of games, 人間スロットのみ。Gateway が書き込む)
 
-CREATE TABLE game_players (
-  game_id       VARCHAR(26) NOT NULL REFERENCES games(game_id), -- 親テーブル参照
+CREATE TABLE battle.game_players (
+  game_id       VARCHAR(26) NOT NULL REFERENCES battle.games(game_id), -- 親テーブル参照
   player_num    SMALLINT NOT NULL,              -- 人間が座っているスロット番号 (1 or 2)
-  player_id     UUID NOT NULL,                  -- プレイヤー ID
+  player_id     UUID NOT NULL,                  -- プレイヤー ID (cross-schema reference to account.players; app-level integrity, not enforced by FK)
   exp_awarded   BOOLEAN NOT NULL DEFAULT FALSE, -- 経験値付与済みフラグ（二重付与防止）
   PRIMARY KEY (game_id, player_num)
 );
 
-CREATE INDEX idx_game_players_player_id ON game_players(player_id);
+CREATE INDEX idx_game_players_player_id ON battle.game_players(player_id);
 
 -- 4.2 Game State (child of games, 1:1)
 
-CREATE TABLE game_states (
-  game_id              VARCHAR(26) PRIMARY KEY REFERENCES games(game_id) ON DELETE CASCADE, -- 親テーブル参照
+CREATE TABLE battle.game_states (
+  game_id              VARCHAR(26) PRIMARY KEY REFERENCES battle.games(game_id) ON DELETE CASCADE, -- 親テーブル参照
   initial_state        JSONB NOT NULL DEFAULT '{}',  -- ゲーム開始時の初期状態スナップショット（作成後は上書きされない）
   version              BIGINT NOT NULL,              -- 楽観的ロック用バージョン
   current_turn         BIGINT NOT NULL,              -- 現在ターン数
@@ -92,12 +115,12 @@ CREATE TABLE game_states (
   next_instance_seq    BIGINT NOT NULL DEFAULT 0,    -- インスタンスID発番用シーケンス
   updated_at           TIMESTAMPTZ NOT NULL DEFAULT now() -- 更新日時
 );
-CREATE TRIGGER trg_game_states_updated_at BEFORE UPDATE ON game_states FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE TRIGGER trg_game_states_updated_at BEFORE UPDATE ON battle.game_states FOR EACH ROW EXECUTE FUNCTION shared.update_updated_at();
 
 -- Game Actions (child of games, append-only action log)
 
-CREATE TABLE game_actions (
-  game_id     VARCHAR(26) NOT NULL REFERENCES games(game_id) ON DELETE CASCADE, -- 親テーブル参照
+CREATE TABLE battle.game_actions (
+  game_id     VARCHAR(26) NOT NULL REFERENCES battle.games(game_id) ON DELETE CASCADE, -- 親テーブル参照
   seq         INT NOT NULL,                          -- アクション連番
   player_num  SMALLINT NOT NULL,                     -- アクション実行プレイヤー番号 (1 or 2)
   action_type TEXT NOT NULL,                         -- アクション種別（play_card, attack, scale_up 等）
@@ -108,8 +131,8 @@ CREATE TABLE game_actions (
 
 -- 4.3 Game Events (child of games)
 
-CREATE TABLE game_events (
-  game_id         VARCHAR(26) NOT NULL REFERENCES games(game_id) ON DELETE CASCADE, -- 親テーブル参照
+CREATE TABLE battle.game_events (
+  game_id         VARCHAR(26) NOT NULL REFERENCES battle.games(game_id) ON DELETE CASCADE, -- 親テーブル参照
   sequence_number BIGINT NOT NULL,                   -- イベント連番
   event_type      VARCHAR(50) NOT NULL,              -- イベント種別
   player_num      SMALLINT,                          -- NULL=system event, 1 or 2=プレイヤーイベント
@@ -119,10 +142,10 @@ CREATE TABLE game_events (
 );
 
 -- =============================================================================
--- 4.4 Player Management
+-- 4.4 Player Management (schema: account)
 -- =============================================================================
 
-CREATE TABLE players (
+CREATE TABLE account.players (
   player_id          UUID NOT NULL DEFAULT gen_random_uuid(), -- UUID
   firebase_uid       VARCHAR(128) NOT NULL,          -- Firebase Auth UID (Unique)
   username           VARCHAR(50) NOT NULL,           -- 表示名
@@ -137,26 +160,52 @@ CREATE TABLE players (
   PRIMARY KEY (player_id)
 );
 
-CREATE UNIQUE INDEX idx_players_firebase_uid ON players(firebase_uid);
-CREATE TRIGGER trg_players_updated_at BEFORE UPDATE ON players FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE UNIQUE INDEX idx_players_firebase_uid ON account.players(firebase_uid);
+CREATE TRIGGER trg_players_updated_at BEFORE UPDATE ON account.players FOR EACH ROW EXECUTE FUNCTION shared.update_updated_at();
 
 -- player_daily_battle (child of players, 1:1)
 
-CREATE TABLE player_daily_battle (
-  player_id          UUID PRIMARY KEY REFERENCES players(player_id) ON DELETE CASCADE, -- 親テーブル参照
+CREATE TABLE account.player_daily_battle (
+  player_id          UUID PRIMARY KEY REFERENCES account.players(player_id) ON DELETE CASCADE, -- 親テーブル参照
   daily_battle_count BIGINT NOT NULL,                -- 本日のバトル回数
   last_reset_date    DATE NOT NULL                   -- 最終リセット日
 );
 
-ALTER TABLE players
+ALTER TABLE account.players
   ADD CONSTRAINT chk_players_selected_faction
     CHECK (selected_faction IS NULL OR selected_faction IN ('SHE', 'Tenki', 'Sugar', 'Tuners', 'Neutral'));
 
 -- =============================================================================
--- 4.6 Card Definitions
+-- 4.5 Player Factions (陣営所持の中間テーブル, schema: account)
 -- =============================================================================
 
-CREATE TABLE card_definitions (
+CREATE TABLE account.player_factions (
+  player_id   UUID NOT NULL REFERENCES account.players(player_id) ON DELETE CASCADE, -- 親テーブル参照
+  faction     VARCHAR(20) NOT NULL CHECK (faction IN ('SHE', 'Tenki', 'Sugar', 'Tuners', 'Neutral')), -- 陣営名 (SHE / Tenki / Sugar / Tuners / Neutral)
+  source      VARCHAR(20) NOT NULL CHECK (source IN ('initial_selection', 'shop_purchase')), -- 取得経路 (initial_selection / shop_purchase)
+  acquired_at TIMESTAMPTZ NOT NULL DEFAULT now(),    -- 取得日時
+  PRIMARY KEY (player_id, faction)
+);
+
+-- =============================================================================
+-- 4.6 User Settings (schema: account)
+-- =============================================================================
+
+CREATE TABLE account.user_settings (
+  player_id    UUID PRIMARY KEY REFERENCES account.players(player_id) ON DELETE CASCADE, -- ユーザーID
+  language     VARCHAR(10) NOT NULL,                 -- 言語設定
+  bgm_volume   BIGINT NOT NULL,                      -- BGM音量 (0-100)
+  se_volume    BIGINT NOT NULL,                      -- SE音量 (0-100)
+  push_enabled BOOLEAN NOT NULL,                     -- 通知許可
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()    -- 更新日時
+);
+CREATE TRIGGER trg_user_settings_updated_at BEFORE UPDATE ON account.user_settings FOR EACH ROW EXECUTE FUNCTION shared.update_updated_at();
+
+-- =============================================================================
+-- 4.7 Card Definitions (schema: card)
+-- =============================================================================
+
+CREATE TABLE card.card_definitions (
   card_id        VARCHAR(10) NOT NULL,               -- カード識別子（例: SH-0001）
   card_name      VARCHAR(100) NOT NULL,              -- カード名
   resource_label VARCHAR(30) NOT NULL DEFAULT '',     -- リソースラベル
@@ -174,24 +223,24 @@ CREATE TABLE card_definitions (
   PRIMARY KEY (card_id)
 );
 
-CREATE INDEX idx_cards_faction ON card_definitions(faction, card_type);
-CREATE INDEX idx_cards_type ON card_definitions(card_type);
-CREATE TRIGGER trg_card_definitions_updated_at BEFORE UPDATE ON card_definitions FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE INDEX idx_cards_faction ON card.card_definitions(faction, card_type);
+CREATE INDEX idx_cards_type ON card.card_definitions(card_type);
+CREATE TRIGGER trg_card_definitions_updated_at BEFORE UPDATE ON card.card_definitions FOR EACH ROW EXECUTE FUNCTION shared.update_updated_at();
 
 -- =============================================================================
--- 4.7 Card & Deck Management (children of players)
+-- 4.8 Card & Deck Management (schema: card, children of players)
 -- =============================================================================
 
-CREATE TABLE player_cards (
-  player_id  UUID NOT NULL REFERENCES players(player_id) ON DELETE CASCADE, -- 親テーブル参照
+CREATE TABLE card.player_cards (
+  player_id  UUID NOT NULL, -- 所有プレイヤー (cross-schema reference to account.players; app-level integrity, not enforced by FK)
   card_id    VARCHAR(10) NOT NULL,                   -- カード識別子
   art_no     BIGINT NOT NULL DEFAULT 0,              -- アート番号 (Default: 0)
   count      INT NOT NULL DEFAULT 1,                 -- 所持枚数 (Default: 1)
   PRIMARY KEY (player_id, card_id, art_no)
 );
 
-CREATE TABLE decks (
-  player_id   UUID NOT NULL REFERENCES players(player_id) ON DELETE CASCADE, -- 親テーブル参照
+CREATE TABLE card.decks (
+  player_id   UUID NOT NULL, -- 所有プレイヤー (cross-schema reference to account.players; app-level integrity, not enforced by FK)
   deck_id     BIGINT NOT NULL GENERATED ALWAYS AS IDENTITY, -- デッキID（自動採番）
   deck_name   VARCHAR(50) NOT NULL,                  -- デッキ名
   playmat_no  BIGINT,                                -- プレイマット番号（NULL: デフォルト）
@@ -201,24 +250,24 @@ CREATE TABLE decks (
   PRIMARY KEY (player_id, deck_id)
 );
 
-CREATE INDEX idx_decks_player ON decks(player_id, updated_at DESC);
-CREATE TRIGGER trg_decks_updated_at BEFORE UPDATE ON decks FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE INDEX idx_decks_player ON card.decks(player_id, updated_at DESC);
+CREATE TRIGGER trg_decks_updated_at BEFORE UPDATE ON card.decks FOR EACH ROW EXECUTE FUNCTION shared.update_updated_at();
 
-CREATE TABLE deck_cards (
+CREATE TABLE card.deck_cards (
   player_id  UUID NOT NULL,                          -- ルート親参照
   deck_id    BIGINT NOT NULL,                        -- 親テーブル参照
   card_id    VARCHAR(10) NOT NULL,                   -- カード識別子
   art_no     BIGINT NOT NULL DEFAULT 0,              -- アート番号 (Default: 0)
   count      INT NOT NULL DEFAULT 1,                 -- 枚数 (Default: 1)
   PRIMARY KEY (player_id, deck_id, card_id, art_no),
-  FOREIGN KEY (player_id, deck_id) REFERENCES decks(player_id, deck_id) ON DELETE CASCADE
+  FOREIGN KEY (player_id, deck_id) REFERENCES card.decks(player_id, deck_id) ON DELETE CASCADE
 );
 
 -- =============================================================================
--- 4.8 Shop & Settings
+-- 4.9 Shop (schema: shop)
 -- =============================================================================
 
-CREATE TABLE products (
+CREATE TABLE shop.products (
   product_id          VARCHAR(50) NOT NULL,                  -- 商品ID
   name                VARCHAR(100) NOT NULL,                 -- 商品名
   type                VARCHAR(20) NOT NULL,                  -- 商品タイプ (faction_set / cosmetic / subscription)
@@ -230,11 +279,11 @@ CREATE TABLE products (
   image_url           VARCHAR(200),                          -- 画像URL
   is_active           BOOLEAN NOT NULL,                      -- 販売中フラグ
   PRIMARY KEY (product_id),
-  FOREIGN KEY (requires_product_id) REFERENCES products(product_id)
+  FOREIGN KEY (requires_product_id) REFERENCES shop.products(product_id)
 );
 
-CREATE TABLE subscriptions (
-  player_id            UUID NOT NULL REFERENCES players(player_id) ON DELETE CASCADE, -- 親テーブル参照
+CREATE TABLE shop.subscriptions (
+  player_id            UUID NOT NULL, -- 所有プレイヤー (cross-schema reference to account.players; app-level integrity, not enforced by FK)
   subscription_id      BIGINT NOT NULL GENERATED ALWAYS AS IDENTITY, -- 自動採番
   product_id           VARCHAR(50) NOT NULL,          -- 商品ID
   platform             VARCHAR(10) NOT NULL,          -- apple / google
@@ -246,10 +295,10 @@ CREATE TABLE subscriptions (
   updated_at           TIMESTAMPTZ NOT NULL DEFAULT now(), -- 更新日時
   PRIMARY KEY (player_id, subscription_id)
 );
-CREATE TRIGGER trg_subscriptions_updated_at BEFORE UPDATE ON subscriptions FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE TRIGGER trg_subscriptions_updated_at BEFORE UPDATE ON shop.subscriptions FOR EACH ROW EXECUTE FUNCTION shared.update_updated_at();
 
-CREATE TABLE one_time_purchases (
-  player_id      UUID NOT NULL REFERENCES players(player_id) ON DELETE CASCADE, -- 親テーブル参照
+CREATE TABLE shop.one_time_purchases (
+  player_id      UUID NOT NULL, -- 所有プレイヤー (cross-schema reference to account.players; app-level integrity, not enforced by FK)
   purchase_id    BIGINT NOT NULL GENERATED ALWAYS AS IDENTITY, -- 自動採番
   product_id     VARCHAR(50) NOT NULL,               -- 商品ID
   platform       VARCHAR(10) NOT NULL,               -- apple / google
@@ -258,21 +307,11 @@ CREATE TABLE one_time_purchases (
   PRIMARY KEY (player_id, purchase_id)
 );
 
-CREATE TABLE user_settings (
-  player_id    UUID PRIMARY KEY REFERENCES players(player_id) ON DELETE CASCADE, -- ユーザーID
-  language     VARCHAR(10) NOT NULL,                 -- 言語設定
-  bgm_volume   BIGINT NOT NULL,                      -- BGM音量 (0-100)
-  se_volume    BIGINT NOT NULL,                      -- SE音量 (0-100)
-  push_enabled BOOLEAN NOT NULL,                     -- 通知許可
-  updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()    -- 更新日時
-);
-CREATE TRIGGER trg_user_settings_updated_at BEFORE UPDATE ON user_settings FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-
 -- =============================================================================
--- 4.9 Cosmetics
+-- 4.10 Cosmetics (schema: shop)
 -- =============================================================================
 
-CREATE TABLE cosmetic_items (
+CREATE TABLE shop.cosmetic_items (
   item_type      VARCHAR(20) NOT NULL,               -- アイテム種別（playmat / sleeve / icon / stamp）
   item_no        BIGINT NOT NULL,                    -- アイテム番号
   item_name      VARCHAR(100) NOT NULL,              -- アイテム名
@@ -282,8 +321,8 @@ CREATE TABLE cosmetic_items (
   PRIMARY KEY (item_type, item_no)
 );
 
-CREATE TABLE player_items (
-  player_id   UUID NOT NULL REFERENCES players(player_id) ON DELETE CASCADE, -- 親テーブル参照
+CREATE TABLE shop.player_items (
+  player_id   UUID NOT NULL, -- 所有プレイヤー (cross-schema reference to account.players; app-level integrity, not enforced by FK)
   item_type   VARCHAR(20) NOT NULL,                  -- アイテム種別
   item_no     BIGINT NOT NULL,                       -- アイテム番号
   acquired_at TIMESTAMPTZ NOT NULL DEFAULT now(),    -- 獲得日時
@@ -291,21 +330,21 @@ CREATE TABLE player_items (
 );
 
 -- =============================================================================
--- 4.10 Game Configuration (server-side KV store)
+-- 4.11 Game Configuration (schema: shared, server-side KV store, read-only for all services)
 -- =============================================================================
 
-CREATE TABLE game_config (
+CREATE TABLE shared.game_config (
   key        VARCHAR(100) PRIMARY KEY,               -- 設定キー
   value      JSONB NOT NULL,                         -- 設定値
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()      -- 更新日時
 );
-CREATE TRIGGER trg_game_config_updated_at BEFORE UPDATE ON game_config FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE TRIGGER trg_game_config_updated_at BEFORE UPDATE ON shared.game_config FOR EACH ROW EXECUTE FUNCTION shared.update_updated_at();
 
 -- =============================================================================
--- 4.11 News Feed
+-- 4.12 News Feed (schema: newsfeed)
 -- =============================================================================
 
-CREATE TABLE news_articles (
+CREATE TABLE newsfeed.news_articles (
   article_id   VARCHAR(26) NOT NULL,                 -- ULID
   source       VARCHAR(20) NOT NULL,                 -- ニュースソース (aws / google-cloud / azure / oci / other)
   source_url   TEXT NOT NULL,                        -- 元記事URL
@@ -318,27 +357,15 @@ CREATE TABLE news_articles (
   PRIMARY KEY (article_id)
 );
 
-CREATE UNIQUE INDEX idx_news_articles_source_url ON news_articles(source_url);
-CREATE INDEX idx_news_articles_published ON news_articles(published_at DESC);
-CREATE INDEX idx_news_articles_source ON news_articles(source, published_at DESC);
+CREATE UNIQUE INDEX idx_news_articles_source_url ON newsfeed.news_articles(source_url);
+CREATE INDEX idx_news_articles_published ON newsfeed.news_articles(published_at DESC);
+CREATE INDEX idx_news_articles_source ON newsfeed.news_articles(source, published_at DESC);
 
 -- =============================================================================
--- 4.12 Player Factions (陣営所持の中間テーブル)
+-- 4.13 Story Scenarios (schema: scenario)
 -- =============================================================================
 
-CREATE TABLE player_factions (
-  player_id   UUID NOT NULL REFERENCES players(player_id) ON DELETE CASCADE, -- 親テーブル参照
-  faction     VARCHAR(20) NOT NULL CHECK (faction IN ('SHE', 'Tenki', 'Sugar', 'Tuners', 'Neutral')), -- 陣営名 (SHE / Tenki / Sugar / Tuners / Neutral)
-  source      VARCHAR(20) NOT NULL CHECK (source IN ('initial_selection', 'shop_purchase')), -- 取得経路 (initial_selection / shop_purchase)
-  acquired_at TIMESTAMPTZ NOT NULL DEFAULT now(),    -- 取得日時
-  PRIMARY KEY (player_id, faction)
-);
-
--- =============================================================================
--- 4.13 Story Scenarios
--- =============================================================================
-
-CREATE TABLE scenario_episodes (
+CREATE TABLE scenario.scenario_episodes (
   episode_id        VARCHAR(50) NOT NULL,            -- エピソードID（例: she_ep1, final）
   category          VARCHAR(20) NOT NULL DEFAULT 'main' CHECK (category IN ('main', 'side', 'event')), -- エピソード種別 (main / side / event)
   faction           VARCHAR(20) CHECK (faction IS NULL OR faction IN ('SHE', 'Tenki', 'Sugar', 'Tuners', 'Neutral')), -- 所属陣営（NULL: 全陣営共通）
@@ -356,18 +383,18 @@ CREATE TABLE scenario_episodes (
   PRIMARY KEY (episode_id)
 );
 
-CREATE INDEX idx_scenario_episodes_sort ON scenario_episodes(sort_order);
-CREATE TRIGGER trg_scenario_episodes_updated_at BEFORE UPDATE ON scenario_episodes FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE INDEX idx_scenario_episodes_sort ON scenario.scenario_episodes(sort_order);
+CREATE TRIGGER trg_scenario_episodes_updated_at BEFORE UPDATE ON scenario.scenario_episodes FOR EACH ROW EXECUTE FUNCTION shared.update_updated_at();
 
-CREATE TABLE episode_required_factions (
-  episode_id  VARCHAR(50) NOT NULL REFERENCES scenario_episodes(episode_id) ON DELETE CASCADE, -- エピソード参照
+CREATE TABLE scenario.episode_required_factions (
+  episode_id  VARCHAR(50) NOT NULL REFERENCES scenario.scenario_episodes(episode_id) ON DELETE CASCADE, -- エピソード参照
   faction_id  VARCHAR(20) NOT NULL CHECK (faction_id IN ('SHE', 'Tenki', 'Sugar', 'Tuners', 'Neutral')), -- 必要陣営
   PRIMARY KEY (episode_id, faction_id)
 );
 
-CREATE TABLE player_story_progress (
-  player_id    UUID NOT NULL REFERENCES players(player_id) ON DELETE CASCADE, -- 親テーブル参照
-  episode_id   VARCHAR(50) NOT NULL REFERENCES scenario_episodes(episode_id) ON DELETE RESTRICT, -- 完了したエピソードID
+CREATE TABLE scenario.player_story_progress (
+  player_id    UUID NOT NULL, -- 所有プレイヤー (cross-schema reference to account.players; app-level integrity, not enforced by FK)
+  episode_id   VARCHAR(50) NOT NULL REFERENCES scenario.scenario_episodes(episode_id) ON DELETE RESTRICT, -- 完了したエピソードID
   completed_at TIMESTAMPTZ NOT NULL DEFAULT now(),   -- 完了日時
   PRIMARY KEY (player_id, episode_id)
 );

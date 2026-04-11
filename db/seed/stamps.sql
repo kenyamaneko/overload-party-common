@@ -1,7 +1,7 @@
 -- Stamp (emote) definitions seed data
 -- item_type = 'stamp', is_purchasable = false → 無料配布スタンプ
 
-INSERT INTO cosmetic_items (item_type, item_no, item_name, description, is_purchasable, is_active) VALUES
+INSERT INTO shop.cosmetic_items (item_type, item_no, item_name, description, is_purchasable, is_active) VALUES
   ('stamp', 1, 'よろしくお願いします！', 'Greeting / 対戦開始時',                                   false, true),
   ('stamp', 2, 'ヨシ！',               'Confirmation / 完璧な盤面を作った時など',                  false, true),
   ('stamp', 3, '仕様です',             'Working as Intended / 痛いところを突かれた時の言い訳や、カウンター時', false, true),
@@ -14,7 +14,7 @@ ON CONFLICT (item_type, item_no) DO NOTHING;
 -- 課金スタンプ（陣営別セット）— キャラクターデザインは今後追加予定
 -- item_no 100番台: SHE, 200番台: Tenki, 300番台: Sugar, 400番台: Tuners
 -- 現時点ではプレースホルダーのみ（is_active = false で非公開）
-INSERT INTO cosmetic_items (item_type, item_no, item_name, description, is_purchasable, is_active) VALUES
+INSERT INTO shop.cosmetic_items (item_type, item_no, item_name, description, is_purchasable, is_active) VALUES
   ('stamp', 101, 'SHEスタンプ（準備中）',         'SHE陣営キャラクタースタンプ', true, false),
   ('stamp', 201, '天気使いスタンプ（準備中）',    '天気使い陣営キャラクタースタンプ', true, false),
   ('stamp', 301, 'しゅがーらぼスタンプ（準備中）', 'しゅがーらぼ陣営キャラクタースタンプ', true, false),

@@ -37,18 +37,20 @@ shop → account の整合性は Transactional Outbox パターンで担保さ�
 
 ### スキーマ所有権マップ
 
-各テーブルのスキーマ配置は以下のとおり確定している（`data/factions.yaml` を起点とした陣営マスターの code generation への移行は別ステップで実装予定）。
+各テーブルのスキーマ配置は以下のとおり (ADR-014 に従い実装済み)。
 
 | スキーマ | 所有サービス | 主な対象テーブル |
 |---|---|---|
 | `shared` | （なし: マイグレーション管理） | `game_config` |
 | `account` | account | `players`, `player_daily_battle`, `player_factions`, `user_settings` |
 | `card` | card | `card_definitions`, `player_cards`, `decks`, `deck_cards` |
-| `shop` | shop | `products`, `subscriptions`, `one_time_purchases`, `cosmetic_items`, `player_items`, `subscription_outbox` |
+| `shop` | shop | `products`, `subscriptions`, `one_time_purchases`, `cosmetic_items`, `player_items` |
 | `scenario` | scenario | `scenario_episodes`, `episode_required_factions`, `player_story_progress` |
 | `battle` | battle | `games`, `game_npcs`, `game_decks`, `game_players`, `game_states`, `game_actions`, `game_events` |
 | `newsfeed` | newsfeed | `news_articles` |
 | （なし） | matchmaking | キューは Upstash Redis、通知は Cloud Pub/Sub のため RDB スキーマなし |
+
+**補足**: Transactional Outbox パターンで使う `subscription_outbox` テーブル (shop → account) は設計上 `shop` スキーマに配置する予定だが、shop サービス実装時 (ADR-015 Phase 6) に schema_postgres.sql へ追加する。現時点では未定義。
 
 #### `shared` スキーマの位置付け
 
@@ -59,15 +61,14 @@ shop → account の整合性は Transactional Outbox パターンで担保さ�
 - runtime update を想定しない read-only データの置き場であり、現時点の住人は `game_config` のみ
 - 将来的に複数サービスが同一マスター（たとえば通貨レートやゲームバランス設定など）を参照するケースが出たときに追加する余地を残す
 
-#### `factions` テーブルの廃止
+#### `factions` テーブルの廃止 (実施済み)
 
-従来 DB に存在した陣営マスター (`factions` テーブル) は完全に廃止し、陣営は constants として code generation 経由で配布する方式に一本化する。
+従来 DB に存在した陣営マスター (`factions` テーブル) は完全に廃止し、陣営は constants として code generation 経由で配布する方式に一本化済み。
 
-- ID の定数は既に `packages/gamedata/constants/` 以下に `FactionSHE` / `FactionTenki` / `FactionSugar` / `FactionTuners` / `FactionNeutral` および `SelectableFactions` リストとして code-generated されている
-- 表示名（`short_name_ja` / `short_name_en` / `full_name_ja` / `full_name_en`）、`is_collectible`、`sort_order` といった metadata は、`data/factions.yaml` を新設して `scripts/generate_constants.py` から Go / C# / TypeScript 定数および i18n リソースに一括生成する構成へ移行する
-- これまで `players.selected_faction`, `products.faction_id`, `player_factions.faction`, `scenario_episodes.faction`, `episode_required_factions.faction_id` などに張られていた `factions(faction_id)` への FK 制約は全て撤廃する。代わりに各カラムは `VARCHAR(20)` + `CHECK (<col> IN ('SHE','Tenki','Sugar','Tuners','Neutral'))` とし、不正値は DB 層で拒否する
-- クロススキーマ FK を避けることで、将来 Cloud SQL インスタンスをサービス単位に物理分割した際もスキーマ間の依存がなくなり、アプリ側のクエリ書き換えも不要になる
-- 実装フェーズ（`data/factions.yaml` 新設、`generate_constants.py` 拡張、`schema_postgres.sql` から `factions` テーブルと関連 FK の削除、`grant_iam.sql` のスキーマ別 GRANT 整備、`generate_schema_doc.py` 実行による本ドキュメントの再生成）は別ステップで進める
+- ID の定数は `packages/gamedata/constants/game_design/` に `FactionSHE` / `FactionTenki` / `FactionSugar` / `FactionTuners` / `FactionNeutral` および `SelectableFactions` リストとして code-generated されている
+- 表示名（`short_name_ja` / `short_name_en` / `full_name_ja` / `full_name_en`）、`is_collectible`、`sort_order` といった metadata は `data/factions.yaml` を SSoT として `scripts/generate_constants.py` から Go / C# / TypeScript 定数および `FactionMetadata` 構造体に一括生成される
+- `players.selected_faction`, `products.faction_id`, `player_factions.faction`, `scenario_episodes.faction`, `episode_required_factions.faction_id` などに張られていた `factions(faction_id)` への FK 制約は全て撤廃済み。代わりに各カラムは `VARCHAR(20)` + `CHECK (<col> IN ('SHE','Tenki','Sugar','Tuners','Neutral'))` で不正値を DB 層で拒否する
+- クロススキーマ FK を避けることで、将来 Cloud SQL インスタンスをサービス単位に物理分割した際もスキーマ間の依存がなく、アプリ側のクエリ書き換えも不要
 
 ### 権限 (GRANT) の方針
 
@@ -159,7 +160,7 @@ IAM 認証の権限付与 SQL は [`db/grant_iam.sql`](../../db/grant_iam.sql) �
 |---|---|---|---|
 | `game_id` | VARCHAR(26) | No | 親テーブル参照 |
 | `player_num` | SMALLINT | No | 人間が座っているスロット番号 (1 or 2) |
-| `player_id` | UUID | No | プレイヤー ID |
+| `player_id` | UUID | No | プレイヤー ID (cross-schema reference to account.players; app-level integrity, not enforced by FK) |
 | `exp_awarded` | BOOLEAN | No | 経験値付与済みフラグ（二重付与防止） |
 <!-- END GENERATED: game_players -->
 
@@ -475,7 +476,7 @@ stats フィールドなし（Platform の場合、`deploy_turns` はトップ�
 <!-- BEGIN GENERATED: player_cards -->
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
-| `player_id` | UUID | No | 親テーブル参照 |
+| `player_id` | UUID | No | 所有プレイヤー (cross-schema reference to account.players; app-level integrity, not enforced by FK) |
 | `card_id` | VARCHAR(10) | No | カード識別子 |
 | `art_no` | BIGINT | No | アート番号 (Default: 0) |
 | `count` | INT | No | 所持枚数 (Default: 1) |
@@ -488,7 +489,7 @@ stats フィールドなし（Platform の場合、`deploy_turns` はトップ�
 <!-- BEGIN GENERATED: decks -->
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
-| `player_id` | UUID | No | 親テーブル参照 |
+| `player_id` | UUID | No | 所有プレイヤー (cross-schema reference to account.players; app-level integrity, not enforced by FK) |
 | `deck_id` | BIGINT (IDENTITY) | No | デッキID（自動採番） |
 | `deck_name` | VARCHAR(50) | No | デッキ名 |
 | `playmat_no` | BIGINT | Yes | プレイマット番号（NULL: デフォルト） |
@@ -551,7 +552,7 @@ stats フィールドなし（Platform の場合、`deploy_turns` はトップ�
 <!-- BEGIN GENERATED: subscriptions -->
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
-| `player_id` | UUID | No | 親テーブル参照 |
+| `player_id` | UUID | No | 所有プレイヤー (cross-schema reference to account.players; app-level integrity, not enforced by FK) |
 | `subscription_id` | BIGINT (IDENTITY) | No | 自動採番 |
 | `product_id` | VARCHAR(50) | No | 商品ID |
 | `platform` | VARCHAR(10) | No | apple / google |
@@ -570,7 +571,7 @@ stats フィールドなし（Platform の場合、`deploy_turns` はトップ�
 <!-- BEGIN GENERATED: one_time_purchases -->
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
-| `player_id` | UUID | No | 親テーブル参照 |
+| `player_id` | UUID | No | 所有プレイヤー (cross-schema reference to account.players; app-level integrity, not enforced by FK) |
 | `purchase_id` | BIGINT (IDENTITY) | No | 自動採番 |
 | `product_id` | VARCHAR(50) | No | 商品ID |
 | `platform` | VARCHAR(10) | No | apple / google |
@@ -622,7 +623,7 @@ stats フィールドなし（Platform の場合、`deploy_turns` はトップ�
 <!-- BEGIN GENERATED: player_items -->
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
-| `player_id` | UUID | No | 親テーブル参照 |
+| `player_id` | UUID | No | 所有プレイヤー (cross-schema reference to account.players; app-level integrity, not enforced by FK) |
 | `item_type` | VARCHAR(20) | No | アイテム種別 |
 | `item_no` | BIGINT | No | アイテム番号 |
 | `acquired_at` | TIMESTAMPTZ | No | 獲得日時 |
@@ -705,7 +706,7 @@ stats フィールドなし（Platform の場合、`deploy_turns` はトップ�
 <!-- BEGIN GENERATED: player_story_progress -->
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
-| `player_id` | UUID | No | 親テーブル参照 |
+| `player_id` | UUID | No | 所有プレイヤー (cross-schema reference to account.players; app-level integrity, not enforced by FK) |
 | `episode_id` | VARCHAR(50) | No | 完了したエピソードID |
 | `completed_at` | TIMESTAMPTZ | No | 完了日時 |
 <!-- END GENERATED: player_story_progress -->

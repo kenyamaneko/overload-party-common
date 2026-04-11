@@ -1,6 +1,6 @@
 -- Story scenario episodes seed data
 
-INSERT INTO scenario_episodes (episode_id, category, faction, episode_number, title_ja, title_en,
+INSERT INTO scenario.scenario_episodes (episode_id, category, faction, episode_number, title_ja, title_en,
   required_level, required_episodes, script_path, sort_order) VALUES
   -- Round 1 (Lv2-5): 各陣営 第1章
   ('she_ep1',    'main', 'SHE',    1, 'SHE 第1章 ワニと少年と、届かない返事',       'SHE Ch.1 The Crocodile, the Boy, and the Unanswered Reply',  2, '{}',           'stories/{lang}/she_ep1.ks',    1),
@@ -32,7 +32,7 @@ INSERT INTO scenario_episodes (episode_id, category, faction, episode_number, ti
 ON CONFLICT (episode_id) DO NOTHING;
 
 -- Episode required factions (アンロックに必要な陣営所持)
-INSERT INTO episode_required_factions (episode_id, faction_id) VALUES
+INSERT INTO scenario.episode_required_factions (episode_id, faction_id) VALUES
   -- Round 1
   ('she_ep1',    'SHE'),
   ('tenki_ep1',  'Tenki'),

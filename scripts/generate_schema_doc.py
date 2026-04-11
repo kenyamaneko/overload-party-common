@@ -47,7 +47,7 @@ class Table:
 # ---------------------------------------------------------------------------
 
 _CREATE_TABLE_RE = re.compile(
-    r"CREATE\s+TABLE\s+(\w+)\s*\((.*?)\);", re.DOTALL | re.IGNORECASE
+    r"CREATE\s+TABLE\s+((?:\w+\.)?\w+)\s*\((.*?)\);", re.DOTALL | re.IGNORECASE
 )
 
 _TYPE_STOP = frozenset(
@@ -60,7 +60,9 @@ def parse_schema(sql_text: str) -> dict[str, Table]:
     tables: dict[str, Table] = {}
 
     for m in _CREATE_TABLE_RE.finditer(sql_text):
-        table_name = m.group(1)
+        qualified = m.group(1)
+        # schema-qualified な場合は unqualified 部分のみ保持（DATA_DESIGN.md マーカーは unqualified）
+        table_name = qualified.split(".", 1)[1] if "." in qualified else qualified
         body = m.group(2)
         columns: list[Column] = []
 
