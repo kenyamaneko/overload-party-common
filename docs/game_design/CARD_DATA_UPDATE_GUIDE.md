@@ -192,9 +192,10 @@ python3 scripts/generate_constants.py
 | `packages/gamedata-dotnet/EventData_gen.cs` | Battle サーバー用イベント型 |
 | `packages/gamedata-dotnet/GameStateView_gen.cs` / `VariantTypes_gen.cs` | Battle サーバー用ゲーム状態型 |
 | `packages/gamedata-dotnet/BattleGatewayRpc_gen.cs` | Battle サーバー用 gateway-battle RPC 契約 |
-| `packages/gamedata-npm/src/{gameDesign,gameLogic,ws,shop,newsfeed}.ts` | クライアント用定数 |
-| `packages/gamedata-npm/src/{eventData,variantTypes,models}.ts` | クライアント用イベント型・ゲーム状態型・カード型 |
-| `packages/api-npm/src/{wsMessages,models}.ts` | クライアント用 WS / REST メッセージ型 |
+| `packages/{game-design,game-logic,ws,shop,newsfeed}-constants-npm/src/index.ts` | クライアント用定数 (Layer 1: 5 独立 npm package) |
+| `packages/card-types-npm/src/models.ts` | クライアント用カード型 (Layer 2) |
+| `packages/game-state-npm/src/{models,eventData,variantTypes}.ts` | クライアント用ゲーム状態型・イベント型・AvailableAction (Layer 2) |
+| `packages/api-client-npm/src/{models,wsMessages}.ts` | クライアント用 REST / WS メッセージ型 + Deck 型 (Layer 3) |
 
 ---
 
@@ -246,7 +247,7 @@ gh workflow run "Publish GameData Packages" --ref <ブランチ名>
 |-----------|--------|
 | Go モジュール (`packages/{game-design-constants, game-logic-constants, ws-constants, shop-constants, newsfeed-constants, card-types, api-client, api-battle-rpc, devdata}/vX.Y.Z` タグ) | Gateway サーバー |
 | NuGet `OverloadParty.GameData` | Battle サーバー |
-| npm `@kenyamaneko/overload-party-gamedata` / `@kenyamaneko/overload-party-api` | クライアント |
+| npm (8 パッケージ: `@kenyamaneko/overload-party-{game-design,game-logic,ws,shop,newsfeed}-constants` + `-card-types` / `-game-state` / `-api-client`) | クライアント |
 
 ---
 

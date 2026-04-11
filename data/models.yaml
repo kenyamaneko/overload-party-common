@@ -8,13 +8,14 @@
 #     battle_gateway_rpc                             → packages/api-battle-rpc/
 #     game_state_view                                 → Go skip (go_skip: true; battle consumes via C#)
 #
-#   TS (Phase 4 で 1:1 の npm package 分割予定):
-#     pkg: gamedata → packages/gamedata-npm/src/models.ts
-#     pkg: api      → packages/api-npm/src/{models,wsMessages}.ts
+#   TS (ADR-015 Phase 4 — 1:1 の npm package 分割済み):
+#     card / card_stats / passive_effect / npc_models → packages/card-types-npm/src/models.ts
+#     game_state_view                                 → packages/game-state-npm/src/models.ts
+#     deck / rest_api / ws_messages                   → packages/api-client-npm/src/{models,wsMessages}.ts
 #
 # Fields:
 #   target: "both" = gateway + battle, "gateway" = gateway only, "battle" = battle only
-#   pkg:    "gamedata" or "api" (currently used for TS package routing only; Go routing uses _GO_MODELS_ROUTING)
+#   pkg:    legacy field from Phase 3 (TS routing now uses _TS_MODELS_ROUTING; Go routing uses _GO_MODELS_ROUTING)
 #   Per-type fields: name (Go name), type (Go type string), json (json tag), db (optional db tag)
 
 files:
@@ -26,8 +27,8 @@ files:
       - encoding/json
       - time
     ts_imports:
-      - {names: [CardType, FactionId, Restriction], from: "@kenyamaneko/overload-party-gamedata/game-design"}
-      - {names: [CardStats], from: "@kenyamaneko/overload-party-gamedata/models"}
+      - {names: [CardType, FactionId, Restriction], from: "@kenyamaneko/overload-party-game-design-constants"}
+      - {names: [CardStats], from: "@kenyamaneko/overload-party-card-types"}
     types:
       - name: PlayerCardWithDef
         comment: "PlayerCardWithDef is a PlayerCard enriched with card definition fields for API responses."
@@ -201,7 +202,7 @@ files:
     imports:
       - encoding/json
     ts_imports:
-      - {names: [ClientGameState], from: "@kenyamaneko/overload-party-gamedata/models"}
+      - {names: [ClientGameState], from: "@kenyamaneko/overload-party-game-state"}
     types:
       # Client -> Server
       - name: MatchmakingStartMessage
@@ -387,8 +388,8 @@ files:
       - encoding/json
       - time
     ts_imports:
-      - {names: [CloudNewsSource], from: "@kenyamaneko/overload-party-gamedata/newsfeed"}
-      - {names: [ProductType], from: "@kenyamaneko/overload-party-gamedata/shop"}
+      - {names: [CloudNewsSource], from: "@kenyamaneko/overload-party-newsfeed-constants"}
+      - {names: [ProductType], from: "@kenyamaneko/overload-party-shop-constants"}
     types:
       # ── Response types ──
       - name: VersionResponse
@@ -619,8 +620,8 @@ files:
       - time
     ts_imports:
       - {names: [AvailableAction], from: "./variantTypes"}
-      - {names: [InstanceFamily, Rank], from: "./gameDesign"}
-      - {names: [EffectDuration, GamePhase], from: "./gameLogic"}
+      - {names: [InstanceFamily, Rank], from: "@kenyamaneko/overload-party-game-design-constants"}
+      - {names: [EffectDuration, GamePhase], from: "@kenyamaneko/overload-party-game-logic-constants"}
     types:
       - name: ClientGameState
         fields:
@@ -741,7 +742,7 @@ files:
 # ─── Variant Types (C# flat class + TS discriminated union) ───
 # generate_constants.py reads this section and outputs:
 #   - packages/gamedata-dotnet/VariantTypes_gen.cs
-#   - packages/gamedata-npm/src/variantTypes.ts
+#   - packages/game-state-npm/src/variantTypes.ts
 #
 # Field types: string, int, long, bool, string[]
 # Optional fields are nullable in C# and have ? in TS.

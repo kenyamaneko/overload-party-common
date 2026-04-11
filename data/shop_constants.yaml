@@ -8,7 +8,7 @@
 #
 # Consumed by scripts/generate_constants.py → packages/shop-constants/
 #                                            → packages/gamedata-dotnet/Shop/
-#                                            → packages/gamedata-npm/src/shop.ts
+#                                            → packages/shop-constants-npm/src/index.ts
 
 product_types:
 - faction_set

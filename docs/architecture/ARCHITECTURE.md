@@ -109,18 +109,22 @@ overload-party-common/          # 共有データ・定義の SSoT
 │   ├── api-client/             # Go module: client ↔ gateway REST/WS 契約
 │   ├── api-battle-rpc/         # Go module: gateway ↔ battle 内部 RPC 契約
 │   ├── devdata/                # Go module 開発用: cards_gen.json / products_gen.json embed
-│   ├── gamedata-dotnet/        # NuGet パッケージ (battle 用、Phase 4 で分割予定)
+│   ├── gamedata-dotnet/        # NuGet パッケージ (battle 用、Phase 5 で 4 csproj に分割予定)
 │   │   ├── GameDesign/GameDesignConstants_gen.cs
 │   │   ├── GameLogic/GameLogicConstants_gen.cs
 │   │   ├── EventData_gen.cs / GameStateView_gen.cs / VariantTypes_gen.cs / BattleGatewayRpc_gen.cs
 │   │   └── Ws/ Shop/ Newsfeed/ （battle は未使用だが生成）
-│   ├── gamedata-npm/           # npm @kenyamaneko/overload-party-gamedata (client 用)
-│   │   └── src/gameDesign.ts, gameLogic.ts, ws.ts, shop.ts, newsfeed.ts, eventData.ts, variantTypes.ts, models.ts
-│   └── api-npm/                # npm @kenyamaneko/overload-party-api (client 用)
-│       └── src/wsMessages.ts, models.ts
+│   ├── game-design-constants-npm/   # npm Layer 1: @kenyamaneko/overload-party-game-design-constants
+│   ├── game-logic-constants-npm/    # npm Layer 1: @kenyamaneko/overload-party-game-logic-constants
+│   ├── ws-constants-npm/            # npm Layer 1: @kenyamaneko/overload-party-ws-constants
+│   ├── shop-constants-npm/          # npm Layer 1: @kenyamaneko/overload-party-shop-constants
+│   ├── newsfeed-constants-npm/      # npm Layer 1: @kenyamaneko/overload-party-newsfeed-constants
+│   ├── card-types-npm/              # npm Layer 2: @kenyamaneko/overload-party-card-types
+│   ├── game-state-npm/              # npm Layer 2: @kenyamaneko/overload-party-game-state (ClientGameState / EventData / AvailableAction)
+│   └── api-client-npm/              # npm Layer 3: @kenyamaneko/overload-party-api-client (REST + WS + Deck)
 └── .github/workflows/
     ├── ci.yaml                 # DB マイグレーション CI
-    └── publish.yaml            # 統合 publish (12 パッケージを並列/依存順に)
+    └── publish.yaml            # 統合 publish (18 パッケージを並列/依存順に)
 
 overload-party-gateway/         # Go API サーバー
 ├── internal/
@@ -136,10 +140,10 @@ overload-party-battle/          # C# 対戦エンジン
 └── nuget.config                # GitHub Packages NuGet feed
 
 overload-party-client/          # React + Capacitor クライアント
-├── src/                        # @kenyamaneko/overload-party-gamedata パッケージを import
+├── src/                        # 8 つの @kenyamaneko/overload-party-* npm package を import
 │   └── ...
 ├── .npmrc                      # GitHub Packages npm registry
-└── package.json                # @kenyamaneko/overload-party-gamedata 依存
+└── package.json                # 必要な overload-party-* npm package を個別に依存
 ```
 
 ### 2.3 コード生成パイプライン
@@ -157,15 +161,15 @@ overload-party-client/          # React + Capacitor クライアント
 | `data/models.yaml` | `generate_constants.py` | `packages/card-types/*_gen.go` / `packages/api-client/*_gen.go` / `packages/api-battle-rpc/*_gen.go` | Go (3 module) |
 | `data/*_constants.yaml` | `generate_constants.py` | `packages/{game-design,game-logic,ws,shop,newsfeed}-constants/constants_gen.go` | Go (5 module) |
 | `data/*_constants.yaml` | `generate_constants.py` | `packages/gamedata-dotnet/{GameDesign,GameLogic,Ws,Shop,Newsfeed}/{Category}Constants_gen.cs` | NuGet (`OverloadParty.GameData`) |
-| `data/*_constants.yaml` | `generate_constants.py` | `packages/gamedata-npm/src/{gameDesign,gameLogic,ws,shop,newsfeed}.ts` | npm (`@kenyamaneko/overload-party-gamedata`) |
+| `data/*_constants.yaml` | `generate_constants.py` | `packages/{game-design,game-logic,ws,shop,newsfeed}-constants-npm/src/index.ts` | npm (5 Layer 1 packages) |
 | `data/event_schemas.yaml` | `generate_constants.py` | `packages/gamedata-dotnet/EventData_gen.cs` | NuGet |
-| `data/event_schemas.yaml` | `generate_constants.py` | `packages/gamedata-npm/src/eventData.ts` | npm |
+| `data/event_schemas.yaml` | `generate_constants.py` | `packages/game-state-npm/src/eventData.ts` | npm (`@kenyamaneko/overload-party-game-state`) |
 
 各リポはパッケージをインストールして使う（gateway: 必要な Go module を個別に `go get`, battle: NuGet, client: npm）。生成されたファイルには `DO NOT EDIT` コメントが付く。
 
-#### パッケージ責務 (ADR-015 Phase 3 後)
+#### パッケージ責務 (ADR-015 Phase 3/4 後)
 
-Go は責務単位で 9 module に分割済み。C# / npm は Phase 4 で分割予定で、現状は既存の `gamedata-dotnet` / `gamedata-npm` / `api-npm` を維持。
+Go と npm は責務単位でそれぞれ 9 module / 8 package に分割済み。C# は Phase 5 で 4 csproj に分割予定で、現状は既存の `gamedata-dotnet` を維持。
 
 | パッケージ | 形式 | 責務 | 消費先 | Phase 6 移管先 |
 |---|---|---|---|---|
@@ -178,11 +182,19 @@ Go は責務単位で 9 module に分割済み。C# / npm は Phase 4 で分割�
 | `packages/api-client/` | Go module | client ↔ gateway REST + WS 契約 (Deck 型含む) | gateway | gateway |
 | `packages/api-battle-rpc/` | Go module | gateway ↔ battle 内部 RPC 契約 | gateway (呼び出し) / future battle (受信) | battle |
 | `packages/devdata/` | Go module | ローカル開発用モックデータ (cards_gen.json, products_gen.json embed) | gateway (dev) | common 永続 |
-| `packages/gamedata-dotnet/` | NuGet | カード定義・定数・イベントデータ・ゲームステート View 型・AvailableAction (Phase 4 で 4 csproj に分割予定) | battle | 各サービス分散 |
-| `packages/gamedata-npm/` | npm | ゲームデザイン/ロジック定数・カード型・eventData・variantTypes・models サブエントリポイント (Phase 4 で分割予定) | client | 各サービス分散 |
-| `packages/api-npm/` | npm | REST / WS メッセージモデル (Phase 4 で api-client-npm にリネーム予定) | client | gateway |
+| `packages/gamedata-dotnet/` | NuGet | カード定義・定数・イベントデータ・ゲームステート View 型・AvailableAction (Phase 5 で 4 csproj に分割予定) | battle | 各サービス分散 |
+| `packages/game-design-constants-npm/` | npm (Layer 1) | Faction / Zone / CardType / Restriction / DeckSize 等のゲームデザイン定数 | client | common 永続 |
+| `packages/game-logic-constants-npm/` | npm (Layer 1) | Phase / WinReason / TriggerType / EffectOp 等のゲームロジック enum | client | battle |
+| `packages/ws-constants-npm/` | npm (Layer 1) | WSServerMsg / WSClientMsg 種別 | client | gateway |
+| `packages/shop-constants-npm/` | npm (Layer 1) | ProductType | client | shop |
+| `packages/newsfeed-constants-npm/` | npm (Layer 1) | CloudNewsSource | client | newsfeed |
+| `packages/card-types-npm/` | npm (Layer 2) | CardDefinition / CardStats / PassiveEffect / NpcModel | client | common 永続 |
+| `packages/game-state-npm/` | npm (Layer 2) | ClientGameState / PlayerView / Field / EventData / AvailableAction | client | battle |
+| `packages/api-client-npm/` | npm (Layer 3) | client ↔ gateway REST + WS + Deck 型 | client | gateway |
 
-**責務境界の原則:** 各 Go module は**単一の責務**を持つ (e.g., `card-types` はカード定義型のみ、`api-client` は client ↔ gateway 契約のみ)。将来 Phase 6 で各 module は対応するサービスリポへ物理移管される。C# / npm の責務分離は現状 namespace / subpath exports でのみ行われており、Phase 4 で csproj / npm package 単位の分離に進む。
+**責務境界の原則:** 各 Go module / npm package は**単一の責務**を持つ (e.g., `card-types` はカード定義型のみ、`api-client` は client ↔ gateway 契約のみ)。将来 Phase 6 で各 module は対応するサービスリポへ物理移管される。C# の責務分離は現状 namespace でのみ行われており、Phase 5 で csproj 単位の分離に進む。
+
+**npm Layer 構造:** Layer 1 (独立 5 package) → Layer 2 (Layer 1 に依存する `card-types-npm` / `game-state-npm`) → Layer 3 (Layer 1/2 に依存する `api-client-npm`)。Local dev では `"file:../*-npm"` 参照で、CI publish 時は sed で `"*"` (registry 最新) に書き換える。
 
 ### 2.4 作業別クロスリファレンス
 

@@ -34,8 +34,14 @@ on:
           - api-battle-rpc
           - devdata
           - gamedata-dotnet
-          - gamedata-npm
-          - api-npm
+          - game-design-constants-npm
+          - game-logic-constants-npm
+          - ws-constants-npm
+          - shop-constants-npm
+          - newsfeed-constants-npm
+          - card-types-npm
+          - game-state-npm
+          - api-client-npm
 
 permissions:
   contents: write
@@ -72,11 +78,25 @@ jobs:
       # C# csproj
       gamedata_dotnet: ${{ steps.detect.outputs.gamedata_dotnet }}
       gamedata_dotnet_version: ${{ steps.detect.outputs.gamedata_dotnet_version }}
-      # npm packages
-      gamedata_npm: ${{ steps.detect.outputs.gamedata_npm }}
-      gamedata_npm_version: ${{ steps.detect.outputs.gamedata_npm_version }}
-      api_npm: ${{ steps.detect.outputs.api_npm }}
-      api_npm_version: ${{ steps.detect.outputs.api_npm_version }}
+      # npm packages (Layer 1: independent)
+      game_design_constants_npm: ${{ steps.detect.outputs.game_design_constants_npm }}
+      game_design_constants_npm_version: ${{ steps.detect.outputs.game_design_constants_npm_version }}
+      game_logic_constants_npm: ${{ steps.detect.outputs.game_logic_constants_npm }}
+      game_logic_constants_npm_version: ${{ steps.detect.outputs.game_logic_constants_npm_version }}
+      ws_constants_npm: ${{ steps.detect.outputs.ws_constants_npm }}
+      ws_constants_npm_version: ${{ steps.detect.outputs.ws_constants_npm_version }}
+      shop_constants_npm: ${{ steps.detect.outputs.shop_constants_npm }}
+      shop_constants_npm_version: ${{ steps.detect.outputs.shop_constants_npm_version }}
+      newsfeed_constants_npm: ${{ steps.detect.outputs.newsfeed_constants_npm }}
+      newsfeed_constants_npm_version: ${{ steps.detect.outputs.newsfeed_constants_npm_version }}
+      # npm packages (Layer 2: depends on Layer 1)
+      card_types_npm: ${{ steps.detect.outputs.card_types_npm }}
+      card_types_npm_version: ${{ steps.detect.outputs.card_types_npm_version }}
+      game_state_npm: ${{ steps.detect.outputs.game_state_npm }}
+      game_state_npm_version: ${{ steps.detect.outputs.game_state_npm_version }}
+      # npm packages (Layer 3: depends on Layer 1/2)
+      api_client_npm: ${{ steps.detect.outputs.api_client_npm }}
+      api_client_npm_version: ${{ steps.detect.outputs.api_client_npm_version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -123,17 +143,23 @@ jobs:
         working-directory: packages/gamedata-dotnet
         run: dotnet build -c Release --nologo -v quiet
 
-      - name: Build gamedata-npm
-        working-directory: packages/gamedata-npm
+      # npm packages are built in layer order so downstream packages can resolve
+      # dependency type declarations via "file:.." references during local tsc.
+      - name: Build npm packages (Layer 1 → Layer 2 → Layer 3)
         run: |
-          npm install
-          npm run build
-
-      - name: Type-check api-npm
-        working-directory: packages/api-npm
-        run: |
-          npm install
-          npx tsc --noEmit
+          for pkg in \
+            game-design-constants-npm \
+            game-logic-constants-npm \
+            ws-constants-npm \
+            shop-constants-npm \
+            newsfeed-constants-npm \
+            card-types-npm \
+            game-state-npm \
+            api-client-npm; do
+            echo "::group::build $pkg"
+            (cd "packages/$pkg" && npm install && npm run build)
+            echo "::endgroup::"
+          done
 
   # ──────────────────────────────────────────────
   # 3. Publish Go modules (tag only — go get resolves via git tag)
@@ -199,68 +225,245 @@ jobs:
           git push origin "packages/gamedata-dotnet/v${{ needs.detect.outputs.gamedata_dotnet_version }}"
 
   # ──────────────────────────────────────────────
-  # 5. Publish gamedata-npm (must publish before api-npm if both changed)
+  # 5. Publish npm Layer 1 (independent packages — parallel)
   # ──────────────────────────────────────────────
-  publish-gamedata-npm:
-    name: Publish gamedata-npm
+  publish-game-design-constants-npm:
+    name: Publish game-design-constants-npm
     needs: [detect, build]
-    if: needs.detect.outputs.gamedata_npm == 'true'
+    if: needs.detect.outputs.game_design_constants_npm == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
           registry-url: "https://npm.pkg.github.com"
-
       - name: Publish npm
-        working-directory: packages/gamedata-npm
+        working-directory: packages/game-design-constants-npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           npm install
-          npm version ${{ needs.detect.outputs.gamedata_npm_version }} --no-git-tag-version
+          npm version ${{ needs.detect.outputs.game_design_constants_npm_version }} --no-git-tag-version
           npm run build
           npm publish
-
       - name: Tag
         run: |
-          git tag "packages/gamedata-npm/v${{ needs.detect.outputs.gamedata_npm_version }}"
-          git push origin "packages/gamedata-npm/v${{ needs.detect.outputs.gamedata_npm_version }}"
+          git tag "packages/game-design-constants-npm/v${{ needs.detect.outputs.game_design_constants_npm_version }}"
+          git push origin "packages/game-design-constants-npm/v${{ needs.detect.outputs.game_design_constants_npm_version }}"
+
+  publish-game-logic-constants-npm:
+    name: Publish game-logic-constants-npm
+    needs: [detect, build]
+    if: needs.detect.outputs.game_logic_constants_npm == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://npm.pkg.github.com"
+      - name: Publish npm
+        working-directory: packages/game-logic-constants-npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npm install
+          npm version ${{ needs.detect.outputs.game_logic_constants_npm_version }} --no-git-tag-version
+          npm run build
+          npm publish
+      - name: Tag
+        run: |
+          git tag "packages/game-logic-constants-npm/v${{ needs.detect.outputs.game_logic_constants_npm_version }}"
+          git push origin "packages/game-logic-constants-npm/v${{ needs.detect.outputs.game_logic_constants_npm_version }}"
+
+  publish-ws-constants-npm:
+    name: Publish ws-constants-npm
+    needs: [detect, build]
+    if: needs.detect.outputs.ws_constants_npm == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://npm.pkg.github.com"
+      - name: Publish npm
+        working-directory: packages/ws-constants-npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npm install
+          npm version ${{ needs.detect.outputs.ws_constants_npm_version }} --no-git-tag-version
+          npm run build
+          npm publish
+      - name: Tag
+        run: |
+          git tag "packages/ws-constants-npm/v${{ needs.detect.outputs.ws_constants_npm_version }}"
+          git push origin "packages/ws-constants-npm/v${{ needs.detect.outputs.ws_constants_npm_version }}"
+
+  publish-shop-constants-npm:
+    name: Publish shop-constants-npm
+    needs: [detect, build]
+    if: needs.detect.outputs.shop_constants_npm == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://npm.pkg.github.com"
+      - name: Publish npm
+        working-directory: packages/shop-constants-npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npm install
+          npm version ${{ needs.detect.outputs.shop_constants_npm_version }} --no-git-tag-version
+          npm run build
+          npm publish
+      - name: Tag
+        run: |
+          git tag "packages/shop-constants-npm/v${{ needs.detect.outputs.shop_constants_npm_version }}"
+          git push origin "packages/shop-constants-npm/v${{ needs.detect.outputs.shop_constants_npm_version }}"
+
+  publish-newsfeed-constants-npm:
+    name: Publish newsfeed-constants-npm
+    needs: [detect, build]
+    if: needs.detect.outputs.newsfeed_constants_npm == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://npm.pkg.github.com"
+      - name: Publish npm
+        working-directory: packages/newsfeed-constants-npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npm install
+          npm version ${{ needs.detect.outputs.newsfeed_constants_npm_version }} --no-git-tag-version
+          npm run build
+          npm publish
+      - name: Tag
+        run: |
+          git tag "packages/newsfeed-constants-npm/v${{ needs.detect.outputs.newsfeed_constants_npm_version }}"
+          git push origin "packages/newsfeed-constants-npm/v${{ needs.detect.outputs.newsfeed_constants_npm_version }}"
 
   # ──────────────────────────────────────────────
-  # 6. Publish api-npm (waits for gamedata-npm so the registry dependency
-  #    is resolvable during npm install)
+  # 6. Publish npm Layer 2 (card-types / game-state — depend on Layer 1)
+  #    Wait for Layer 1 so GitHub Packages can resolve the dependencies.
   # ──────────────────────────────────────────────
-  publish-api-npm:
-    name: Publish api-npm
-    needs: [detect, build, publish-gamedata-npm]
+  publish-card-types-npm:
+    name: Publish card-types-npm
+    needs:
+      - detect
+      - build
+      - publish-game-design-constants-npm
+      - publish-game-logic-constants-npm
+      - publish-ws-constants-npm
+      - publish-shop-constants-npm
+      - publish-newsfeed-constants-npm
     if: |
       !failure() && !cancelled() &&
-      needs.detect.outputs.api_npm == 'true'
+      needs.detect.outputs.card_types_npm == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
           registry-url: "https://npm.pkg.github.com"
-
       - name: Publish npm
-        working-directory: packages/api-npm
+        working-directory: packages/card-types-npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Replace file: reference with registry dependency for CI build
-          sed -i 's|"file:../gamedata-npm"|"*"|' package.json
+          # Replace any file: references with registry "*" so npm resolves
+          # against GitHub Packages during the publish build.
+          sed -i 's|"file:\.\./[^"]*"|"*"|g' package.json
           npm install
-          npm version ${{ needs.detect.outputs.api_npm_version }} --no-git-tag-version
+          npm version ${{ needs.detect.outputs.card_types_npm_version }} --no-git-tag-version
           npm run build
           npm publish
-
       - name: Tag
         run: |
-          git tag "packages/api-npm/v${{ needs.detect.outputs.api_npm_version }}"
-          git push origin "packages/api-npm/v${{ needs.detect.outputs.api_npm_version }}"
+          git tag "packages/card-types-npm/v${{ needs.detect.outputs.card_types_npm_version }}"
+          git push origin "packages/card-types-npm/v${{ needs.detect.outputs.card_types_npm_version }}"
+
+  publish-game-state-npm:
+    name: Publish game-state-npm
+    needs:
+      - detect
+      - build
+      - publish-game-design-constants-npm
+      - publish-game-logic-constants-npm
+      - publish-ws-constants-npm
+      - publish-shop-constants-npm
+      - publish-newsfeed-constants-npm
+    if: |
+      !failure() && !cancelled() &&
+      needs.detect.outputs.game_state_npm == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://npm.pkg.github.com"
+      - name: Publish npm
+        working-directory: packages/game-state-npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          sed -i 's|"file:\.\./[^"]*"|"*"|g' package.json
+          npm install
+          npm version ${{ needs.detect.outputs.game_state_npm_version }} --no-git-tag-version
+          npm run build
+          npm publish
+      - name: Tag
+        run: |
+          git tag "packages/game-state-npm/v${{ needs.detect.outputs.game_state_npm_version }}"
+          git push origin "packages/game-state-npm/v${{ needs.detect.outputs.game_state_npm_version }}"
+
+  # ──────────────────────────────────────────────
+  # 7. Publish npm Layer 3 (api-client — depends on Layer 1 + Layer 2)
+  # ──────────────────────────────────────────────
+  publish-api-client-npm:
+    name: Publish api-client-npm
+    needs:
+      - detect
+      - build
+      - publish-game-design-constants-npm
+      - publish-game-logic-constants-npm
+      - publish-ws-constants-npm
+      - publish-shop-constants-npm
+      - publish-newsfeed-constants-npm
+      - publish-card-types-npm
+      - publish-game-state-npm
+    if: |
+      !failure() && !cancelled() &&
+      needs.detect.outputs.api_client_npm == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://npm.pkg.github.com"
+      - name: Publish npm
+        working-directory: packages/api-client-npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          sed -i 's|"file:\.\./[^"]*"|"*"|g' package.json
+          npm install
+          npm version ${{ needs.detect.outputs.api_client_npm_version }} --no-git-tag-version
+          npm run build
+          npm publish
+      - name: Tag
+        run: |
+          git tag "packages/api-client-npm/v${{ needs.detect.outputs.api_client_npm_version }}"
+          git push origin "packages/api-client-npm/v${{ needs.detect.outputs.api_client_npm_version }}"

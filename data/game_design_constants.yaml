@@ -8,7 +8,7 @@
 #
 # Consumed by scripts/generate_constants.py → packages/game-design-constants/
 #                                            → packages/gamedata-dotnet/GameDesign/
-#                                            → packages/gamedata-npm/src/gameDesign.ts
+#                                            → packages/game-design-constants-npm/src/index.ts
 
 zones:
 - frontend

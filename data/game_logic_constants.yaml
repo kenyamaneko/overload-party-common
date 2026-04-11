@@ -8,7 +8,7 @@
 #
 # Consumed by scripts/generate_constants.py → packages/game-logic-constants/
 #                                            → packages/gamedata-dotnet/GameLogic/
-#                                            → packages/gamedata-npm/src/gameLogic.ts
+#                                            → packages/game-logic-constants-npm/src/index.ts
 
 phases:
 - draw

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Generate shared constants, event data types, and Go models from YAML definitions.
 
-Per ADR-015 Phase 1 / Phase 3, constants and models are split into responsibility-based
-packages and emitted to 9 Go modules (Phase 3) + C# namespaces (Phase 1) + TS modules.
+Per ADR-015 Phase 1 / Phase 3 / Phase 4, constants and models are split into
+responsibility-based packages and emitted to 9 Go modules (Phase 3) + C#
+namespaces (Phase 1) + 8 npm packages (Phase 4).
 
 Outputs (Go — each directory is an independent Go module per ADR-015 Phase 3):
   - packages/game-design-constants/constants_gen.go
@@ -14,17 +15,22 @@ Outputs (Go — each directory is an independent Go module per ADR-015 Phase 3):
   - packages/api-client/{deck,rest_api,ws_messages}_gen.go
   - packages/api-battle-rpc/battle_gateway_rpc_gen.go
 
-Outputs (C# — Phase 4 で csproj 分割予定、現状 1 csproj 内で namespace 分離):
+Outputs (C# — Phase 5 で csproj 分割予定、現状 1 csproj 内で namespace 分離):
   - packages/gamedata-dotnet/{GameDesign,GameLogic,Ws,Shop,Newsfeed}/{Category}Constants_gen.cs
   - packages/gamedata-dotnet/EventData_gen.cs
   - packages/gamedata-dotnet/GameStateView_gen.cs
   - packages/gamedata-dotnet/BattleGatewayRpc_gen.cs
   - packages/gamedata-dotnet/VariantTypes_gen.cs
 
-Outputs (TS — Phase 4 で npm 分割予定、現状 gamedata-npm / api-npm の 2 package):
-  - packages/gamedata-npm/src/{gameDesign,gameLogic,ws,shop,newsfeed}.ts
-  - packages/gamedata-npm/src/{eventData,variantTypes,models}.ts
-  - packages/api-npm/src/{wsMessages,models}.ts
+Outputs (TS — ADR-015 Phase 4 — 各ディレクトリが独立した npm package):
+  - packages/game-design-constants-npm/src/index.ts
+  - packages/game-logic-constants-npm/src/index.ts
+  - packages/ws-constants-npm/src/index.ts
+  - packages/shop-constants-npm/src/index.ts
+  - packages/newsfeed-constants-npm/src/index.ts
+  - packages/card-types-npm/src/{models,index}.ts
+  - packages/game-state-npm/src/{models,eventData,variantTypes,index}.ts
+  - packages/api-client-npm/src/{models,wsMessages,index}.ts
 
 Usage:
     python3 scripts/generate_constants.py
@@ -81,8 +87,29 @@ _GO_MODELS_ROUTING = {
 }
 
 DOTNET_DIR = PACKAGES_DIR / "gamedata-dotnet"
-NPM_DIR = PACKAGES_DIR / "gamedata-npm"
-API_NPM_DIR = PACKAGES_DIR / "api-npm"
+
+# npm package directories (one per logical package — ADR-015 Phase 4 naming).
+NPM_GAME_DESIGN_DIR = PACKAGES_DIR / "game-design-constants-npm"
+NPM_GAME_LOGIC_DIR = PACKAGES_DIR / "game-logic-constants-npm"
+NPM_WS_DIR = PACKAGES_DIR / "ws-constants-npm"
+NPM_SHOP_DIR = PACKAGES_DIR / "shop-constants-npm"
+NPM_NEWSFEED_DIR = PACKAGES_DIR / "newsfeed-constants-npm"
+NPM_CARD_TYPES_DIR = PACKAGES_DIR / "card-types-npm"
+NPM_GAME_STATE_DIR = PACKAGES_DIR / "game-state-npm"
+NPM_API_CLIENT_DIR = PACKAGES_DIR / "api-client-npm"
+
+# Mapping of models.yaml section name → target npm package directory for TS models.
+# Sections not listed here are not emitted as TS (e.g., battle_gateway_rpc has ts_skip: true).
+# ws_messages is emitted separately by generate_ts_ws_messages.
+_TS_MODELS_ROUTING = {
+    "card":            NPM_CARD_TYPES_DIR,
+    "card_stats":      NPM_CARD_TYPES_DIR,
+    "passive_effect":  NPM_CARD_TYPES_DIR,
+    "npc_models":      NPM_CARD_TYPES_DIR,
+    "game_state_view": NPM_GAME_STATE_DIR,
+    "deck":            NPM_API_CLIENT_DIR,
+    "rest_api":        NPM_API_CLIENT_DIR,
+}
 
 # ─── Helpers ────────────────────────────────────────────
 
@@ -1027,6 +1054,14 @@ def _ts_header():
     ]
 
 
+def _write_ts_index(out_path, module_names):
+    """Write a barrel index.ts that re-exports from sibling modules."""
+    lines = [_GENERATED_HEADER]
+    for name in module_names:
+        lines.append(f"export * from './{name}';")
+    _write_file(Path(out_path), lines)
+
+
 # ─── TS: gameDesign.ts ─────────────────────────────────
 def generate_ts_game_design(data, factions):
     lines = _ts_header()
@@ -1150,10 +1185,10 @@ def generate_ts_game_design(data, factions):
     lines.append("} as const;")
     lines.append("")
 
-    _write_file(NPM_DIR / "src" / "gameDesign.ts", lines)
+    _write_file(NPM_GAME_DESIGN_DIR / "src" / "index.ts", lines)
 
 
-# ─── TS: gameLogic.ts ──────────────────────────────────
+# ─── TS: game-logic-constants-npm ──────────────────────
 def generate_ts_game_logic(data):
     lines = _ts_header()
     for yaml_key, _, _, _, ts_const, ts_type, extra_union in GAME_LOGIC_SIMPLE:
@@ -1161,10 +1196,10 @@ def generate_ts_game_logic(data):
         if values is None:
             continue
         lines.extend(_ts_const_array(ts_const, ts_type, values, extra_union=extra_union))
-    _write_file(NPM_DIR / "src" / "gameLogic.ts", lines)
+    _write_file(NPM_GAME_LOGIC_DIR / "src" / "index.ts", lines)
 
 
-# ─── TS: ws.ts ─────────────────────────────────────────
+# ─── TS: ws-constants-npm ──────────────────────────────
 def generate_ts_ws(data):
     lines = _ts_header()
     ws_types = data["ws_message_types"]
@@ -1174,10 +1209,10 @@ def generate_ts_ws(data):
     lines.append(f"export const WS_CLIENT_MSG_TYPES = {json.dumps(ws_types['client'])} as const;")
     lines.append("export type WSClientMsgType = (typeof WS_CLIENT_MSG_TYPES)[number];")
     lines.append("")
-    _write_file(NPM_DIR / "src" / "ws.ts", lines)
+    _write_file(NPM_WS_DIR / "src" / "index.ts", lines)
 
 
-# ─── TS: shop.ts ───────────────────────────────────────
+# ─── TS: shop-constants-npm ────────────────────────────
 def generate_ts_shop(data):
     lines = _ts_header()
     for yaml_key, _, _, _, ts_const, ts_type, extra_union in SHOP_SIMPLE:
@@ -1185,10 +1220,10 @@ def generate_ts_shop(data):
         if values is None:
             continue
         lines.extend(_ts_const_array(ts_const, ts_type, values, extra_union=extra_union))
-    _write_file(NPM_DIR / "src" / "shop.ts", lines)
+    _write_file(NPM_SHOP_DIR / "src" / "index.ts", lines)
 
 
-# ─── TS: newsfeed.ts ───────────────────────────────────
+# ─── TS: newsfeed-constants-npm ────────────────────────
 def generate_ts_newsfeed(data):
     lines = _ts_header()
     for yaml_key, _, _, _, ts_const, ts_type, extra_union in NEWSFEED_SIMPLE:
@@ -1196,7 +1231,7 @@ def generate_ts_newsfeed(data):
         if values is None:
             continue
         lines.extend(_ts_const_array(ts_const, ts_type, values, extra_union=extra_union))
-    _write_file(NPM_DIR / "src" / "newsfeed.ts", lines)
+    _write_file(NPM_NEWSFEED_DIR / "src" / "index.ts", lines)
 
 
 # ─── Generate TypeScript (event data) ──────────────────
@@ -1372,8 +1407,12 @@ def _go_to_ts_model_field(go_type, json_tag, type_map=None, *, nullable_as_optio
     return json_key, ts_base, optional
 
 
-def generate_ts_models(*, out_path, pkg_filter=None):
-    """Generate models.ts from the files section of models.yaml (excluding ws_messages)."""
+def generate_ts_models():
+    """Generate models.ts files from models.yaml sections, routed per _TS_MODELS_ROUTING.
+
+    Each target npm package gets one models.ts that bundles all sections routed to it.
+    Returns a dict of {package_dir: [emitted_section_names]} for logging.
+    """
     with open(MODELS_YAML, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f)
 
@@ -1383,15 +1422,8 @@ def generate_ts_models(*, out_path, pkg_filter=None):
             base = ta["base"]
             alias_map[ta["name"]] = _GO_TO_TS_MODEL_TYPE.get(base, base)
 
-    ts_out = Path(out_path)
-
-    lines = [
-        _GENERATED_HEADER,
-        "",
-    ]
-
-    ts_imports: dict[str, list[str]] = {}
-    matching_files = []
+    # Group file_defs by target npm package directory.
+    files_by_pkg: dict[Path, list[dict]] = {}
     for file_def in data["files"]:
         file_target = file_def.get("target", "both")
         if file_target not in ("both", "gateway", "api"):
@@ -1400,53 +1432,70 @@ def generate_ts_models(*, out_path, pkg_filter=None):
             continue
         if file_def.get("ts_skip"):
             continue
-        if pkg_filter and file_def.get("pkg", "gamedata") != pkg_filter:
+        pkg_dir = _TS_MODELS_ROUTING.get(file_def["name"])
+        if pkg_dir is None:
             continue
-        matching_files.append(file_def)
-        for imp in file_def.get("ts_imports", []):
-            from_path = imp["from"]
-            for name in imp["names"]:
-                ts_imports.setdefault(from_path, []).append(name)
+        files_by_pkg.setdefault(pkg_dir, []).append(file_def)
 
-    for from_path, names in sorted(ts_imports.items()):
-        sorted_names = sorted(set(names))
-        lines.append(f"import type {{ {', '.join(sorted_names)} }} from '{from_path}';")
-    if ts_imports:
-        lines.append("")
+    emitted: dict[Path, list[str]] = {}
 
-    for file_def in matching_files:
-        file_nullable_as_optional = file_def.get("nullable_as_optional", False)
+    for pkg_dir, file_defs in files_by_pkg.items():
+        lines = [
+            _GENERATED_HEADER,
+            "",
+        ]
 
-        for ta in file_def.get("ts_type_aliases", []):
-            lines.append(f"export type {ta['name']} = {ta['value']};")
-        if file_def.get("ts_type_aliases"):
+        ts_imports: dict[str, list[str]] = {}
+        for file_def in file_defs:
+            for imp in file_def.get("ts_imports", []):
+                from_path = imp["from"]
+                for name in imp["names"]:
+                    ts_imports.setdefault(from_path, []).append(name)
+
+        for from_path, names in sorted(ts_imports.items()):
+            sorted_names = sorted(set(names))
+            lines.append(f"import type {{ {', '.join(sorted_names)} }} from '{from_path}';")
+        if ts_imports:
             lines.append("")
 
-        for td in file_def.get("types", []):
-            name = td["name"]
-            if td.get("comment"):
-                lines.append(f"/** {td['comment']} */")
-            lines.append(f"export interface {name} {{")
-            for field in td.get("fields", []):
-                go_type = str(field["type"])
-                json_tag = field["json"]
-                json_key, ts_type, optional = _go_to_ts_model_field(
-                    go_type, json_tag, alias_map,
-                    nullable_as_optional=file_nullable_as_optional,
-                )
-                if "ts_type" in field:
-                    ts_type = field["ts_type"]
-                if "ts_optional" in field:
-                    optional = field["ts_optional"]
-                opt = "?" if optional else ""
-                lines.append(f"  {json_key}{opt}: {ts_type};")
-            lines.append("}")
-            lines.append("")
+        for file_def in file_defs:
+            file_nullable_as_optional = file_def.get("nullable_as_optional", False)
 
-    ts_out.parent.mkdir(parents=True, exist_ok=True)
-    with open(ts_out, "w", encoding="utf-8") as f:
-        f.write("\n".join(lines))
-        f.write("\n")
+            for ta in file_def.get("ts_type_aliases", []):
+                lines.append(f"export type {ta['name']} = {ta['value']};")
+            if file_def.get("ts_type_aliases"):
+                lines.append("")
+
+            for td in file_def.get("types", []):
+                name = td["name"]
+                if td.get("comment"):
+                    lines.append(f"/** {td['comment']} */")
+                lines.append(f"export interface {name} {{")
+                for field in td.get("fields", []):
+                    go_type = str(field["type"])
+                    json_tag = field["json"]
+                    json_key, ts_type, optional = _go_to_ts_model_field(
+                        go_type, json_tag, alias_map,
+                        nullable_as_optional=file_nullable_as_optional,
+                    )
+                    if "ts_type" in field:
+                        ts_type = field["ts_type"]
+                    if "ts_optional" in field:
+                        optional = field["ts_optional"]
+                    opt = "?" if optional else ""
+                    lines.append(f"  {json_key}{opt}: {ts_type};")
+                lines.append("}")
+                lines.append("")
+
+        out_path = pkg_dir / "src" / "models.ts"
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(out_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(lines))
+            f.write("\n")
+
+        emitted[pkg_dir] = [fd["name"] for fd in file_defs]
+
+    return emitted
 
 
 # ─── Generate C# (variant types) ─────────────────────────
@@ -1502,7 +1551,7 @@ def generate_ts_variant_types(variant_types, *, out_path):
     """Generate variantTypes.ts from variant_types in models.yaml.
 
     Current variant types only reference game_design symbols (InstanceFamily, Rank),
-    so imports are hardcoded to './gameDesign'.
+    so imports are hardcoded to @kenyamaneko/overload-party-game-design-constants.
     """
     ts_out = Path(out_path)
 
@@ -1521,7 +1570,9 @@ def generate_ts_variant_types(variant_types, *, out_path):
 
     if ref_types:
         sorted_refs = sorted(ref_types)
-        lines.append(f"import type {{ {', '.join(sorted_refs)} }} from './gameDesign';")
+        lines.append(
+            f"import type {{ {', '.join(sorted_refs)} }} from '@kenyamaneko/overload-party-game-design-constants';"
+        )
         lines.append("")
 
     for vt in variant_types:
@@ -1752,38 +1803,44 @@ def main():
     generate_csharp_battle_gateway_rpc(out_path=DOTNET_DIR / "BattleGatewayRpc_gen.cs")
     print("Generated → packages/gamedata-dotnet/BattleGatewayRpc_gen.cs", file=sys.stderr)
 
-    # ── TypeScript constants (5 files) ──
+    # ── TypeScript constants — Layer 1 (5 independent packages) ──
     generate_ts_game_design(game_design, factions)
-    print("Generated → packages/gamedata-npm/src/gameDesign.ts", file=sys.stderr)
+    print("Generated → packages/game-design-constants-npm/src/index.ts", file=sys.stderr)
 
     generate_ts_game_logic(game_logic)
-    print("Generated → packages/gamedata-npm/src/gameLogic.ts", file=sys.stderr)
+    print("Generated → packages/game-logic-constants-npm/src/index.ts", file=sys.stderr)
 
     generate_ts_ws(gateway_ws)
-    print("Generated → packages/gamedata-npm/src/ws.ts", file=sys.stderr)
+    print("Generated → packages/ws-constants-npm/src/index.ts", file=sys.stderr)
 
     generate_ts_shop(shop)
-    print("Generated → packages/gamedata-npm/src/shop.ts", file=sys.stderr)
+    print("Generated → packages/shop-constants-npm/src/index.ts", file=sys.stderr)
 
     generate_ts_newsfeed(newsfeed)
-    print("Generated → packages/gamedata-npm/src/newsfeed.ts", file=sys.stderr)
+    print("Generated → packages/newsfeed-constants-npm/src/index.ts", file=sys.stderr)
 
-    # ── TypeScript other generators ──
-    generate_ts_event_data(event_schemas, out_path=NPM_DIR / "src" / "eventData.ts")
-    print("Generated → packages/gamedata-npm/src/eventData.ts", file=sys.stderr)
+    # ── TypeScript models — Layer 2/3 (card-types / game-state / api-client) ──
+    ts_emitted = generate_ts_models()
+    for pkg_dir, names in ts_emitted.items():
+        rel = pkg_dir.relative_to(ROOT)
+        print(f"Generated models → {rel}/src/models.ts [{', '.join(names)}]", file=sys.stderr)
+
+    # ── TypeScript event data + variant types → game-state-npm ──
+    generate_ts_event_data(event_schemas, out_path=NPM_GAME_STATE_DIR / "src" / "eventData.ts")
+    print("Generated → packages/game-state-npm/src/eventData.ts", file=sys.stderr)
 
     if variant_types:
-        generate_ts_variant_types(variant_types, out_path=NPM_DIR / "src" / "variantTypes.ts")
-        print("Generated → packages/gamedata-npm/src/variantTypes.ts", file=sys.stderr)
+        generate_ts_variant_types(variant_types, out_path=NPM_GAME_STATE_DIR / "src" / "variantTypes.ts")
+        print("Generated → packages/game-state-npm/src/variantTypes.ts", file=sys.stderr)
 
-    generate_ts_models(out_path=NPM_DIR / "src" / "models.ts", pkg_filter="gamedata")
-    print("Generated → packages/gamedata-npm/src/models.ts", file=sys.stderr)
+    # ── TypeScript ws_messages → api-client-npm ──
+    generate_ts_ws_messages(out_path=NPM_API_CLIENT_DIR / "src" / "wsMessages.ts")
+    print("Generated → packages/api-client-npm/src/wsMessages.ts", file=sys.stderr)
 
-    generate_ts_ws_messages(out_path=API_NPM_DIR / "src" / "wsMessages.ts")
-    print("Generated → packages/api-npm/src/wsMessages.ts", file=sys.stderr)
-
-    generate_ts_models(out_path=API_NPM_DIR / "src" / "models.ts", pkg_filter="api")
-    print("Generated → packages/api-npm/src/models.ts", file=sys.stderr)
+    # ── TypeScript index.ts barrels for multi-file packages (card-types / game-state / api-client) ──
+    _write_ts_index(NPM_CARD_TYPES_DIR / "src" / "index.ts", ["models"])
+    _write_ts_index(NPM_GAME_STATE_DIR / "src" / "index.ts", ["models", "eventData", "variantTypes"])
+    _write_ts_index(NPM_API_CLIENT_DIR / "src" / "index.ts", ["models", "wsMessages"])
 
     # ── Docs (marker-based field table replacement) ──
     for doc_name in ("API_REFERENCE.md", "WS_REFERENCE.md"):

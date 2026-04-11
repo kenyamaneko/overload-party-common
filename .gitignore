@@ -31,10 +31,8 @@ docs/STORY/
 # Generated packages (build artifacts)
 packages/gamedata-dotnet/obj/
 packages/gamedata-dotnet/bin/
-packages/gamedata-npm/dist/
-packages/gamedata-npm/node_modules/
-packages/api-npm/dist/
-packages/api-npm/node_modules/
+packages/*-npm/dist/
+packages/*-npm/node_modules/
 
 # Secrets / env
 *.env

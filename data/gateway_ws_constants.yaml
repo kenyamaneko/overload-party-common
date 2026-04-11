@@ -8,7 +8,7 @@
 #
 # Consumed by scripts/generate_constants.py → packages/ws-constants/
 #                                            → packages/gamedata-dotnet/Ws/
-#                                            → packages/gamedata-npm/src/ws.ts
+#                                            → packages/ws-constants-npm/src/index.ts
 
 ws_message_types:
   server:

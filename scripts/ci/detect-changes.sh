@@ -2,7 +2,7 @@
 # Detect package changes since last tag and compute next versions.
 # Called from publish.yaml — outputs are written to $GITHUB_OUTPUT.
 #
-# Package list (12 publish units, ADR-015 Phase 3/4 naming):
+# Package list (18 publish units, ADR-015 Phase 3/4 naming):
 #
 #   Go modules (9):
 #     - game-design-constants, game-logic-constants, ws-constants,
@@ -10,11 +10,16 @@
 #       api-battle-rpc, devdata
 #
 #   C# csproj (1):
-#     - gamedata-dotnet (Phase 4 で 4 分割予定、現状 1 csproj)
+#     - gamedata-dotnet (Phase 5 で 4 分割予定、現状 1 csproj)
 #
-#   npm packages (2):
-#     - gamedata-npm (Phase 4 で複数分割予定、現状 subpath exports で 1)
-#     - api-npm       (Phase 4 で api-client-npm にリネーム予定)
+#   npm packages (8 — ADR-015 Phase 4 で分割済み):
+#     - game-design-constants-npm, game-logic-constants-npm,
+#       ws-constants-npm, shop-constants-npm, newsfeed-constants-npm
+#       (Layer 1: 独立)
+#     - card-types-npm, game-state-npm
+#       (Layer 2: Layer 1 に依存)
+#     - api-client-npm
+#       (Layer 3: Layer 1/2 に依存)
 #
 # Each package has its own tag prefix "packages/{name}/v{version}".
 
@@ -40,8 +45,14 @@ PACKAGES=(
   "api-battle-rpc:packages/api-battle-rpc:packages/api-battle-rpc/:-"
   "devdata:packages/devdata:packages/devdata/:-"
   "gamedata-dotnet:packages/gamedata-dotnet:packages/gamedata-dotnet/:packages/gamedata"
-  "gamedata-npm:packages/gamedata-npm:packages/gamedata-npm/:packages/gamedata"
-  "api-npm:packages/api-npm:packages/api-npm/:packages/api"
+  "game-design-constants-npm:packages/game-design-constants-npm:packages/game-design-constants-npm/:-"
+  "game-logic-constants-npm:packages/game-logic-constants-npm:packages/game-logic-constants-npm/:-"
+  "ws-constants-npm:packages/ws-constants-npm:packages/ws-constants-npm/:-"
+  "shop-constants-npm:packages/shop-constants-npm:packages/shop-constants-npm/:-"
+  "newsfeed-constants-npm:packages/newsfeed-constants-npm:packages/newsfeed-constants-npm/:-"
+  "card-types-npm:packages/card-types-npm:packages/card-types-npm/:-"
+  "game-state-npm:packages/game-state-npm:packages/game-state-npm/:-"
+  "api-client-npm:packages/api-client-npm:packages/api-client-npm/:-"
 )
 
 compute_version() {
@@ -86,7 +97,7 @@ has_changes() {
 }
 
 # output-key は GitHub Actions で参照する matrix 化しやすい形式にする。
-# 例: "changed=game-design-constants,api-client,gamedata-npm"
+# 例: "changed=game-design-constants,api-client,game-design-constants-npm"
 CHANGED=()
 
 for entry in "${PACKAGES[@]}"; do

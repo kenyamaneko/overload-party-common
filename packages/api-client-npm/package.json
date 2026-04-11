@@ -1,0 +1,33 @@
+{
+  "name": "@kenyamaneko/overload-party-api-client",
+  "version": "0.0.0",
+  "description": "Overload Party client ↔ gateway API contract types (REST request/response + WS messages + Deck types). Auto-generated from data/models.yaml.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kenyamaneko/overload-party-common.git",
+    "directory": "packages/api-client-npm"
+  },
+  "dependencies": {
+    "@kenyamaneko/overload-party-game-design-constants": "file:../game-design-constants-npm",
+    "@kenyamaneko/overload-party-card-types": "file:../card-types-npm",
+    "@kenyamaneko/overload-party-game-state": "file:../game-state-npm",
+    "@kenyamaneko/overload-party-shop-constants": "file:../shop-constants-npm",
+    "@kenyamaneko/overload-party-newsfeed-constants": "file:../newsfeed-constants-npm"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.0"
+  }
+}

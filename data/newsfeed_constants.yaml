@@ -8,7 +8,7 @@
 #
 # Consumed by scripts/generate_constants.py → packages/newsfeed-constants/
 #                                            → packages/gamedata-dotnet/Newsfeed/
-#                                            → packages/gamedata-npm/src/newsfeed.ts
+#                                            → packages/newsfeed-constants-npm/src/index.ts
 
 cloud_news_sources:
 - aws

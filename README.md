@@ -56,9 +56,15 @@ psql -U postgres overload_party < db/seed/stamps.sql
 | Go module `api-client` | client ↔ gateway REST + WS 契約 | future gateway |
 | Go module `api-battle-rpc` | gateway ↔ battle 内部 RPC 契約 | future battle |
 | Go module `devdata` | カード・商品 JSON（ローカルモック用） | Go サービス 開発用 |
-| NuGet `OverloadParty.GameData` (`packages/gamedata-dotnet/`) | GameDesign / GameLogic / Ws / Shop / Newsfeed namespace + EventData + GameStateView + VariantTypes + BattleGatewayRpc (Phase 4 で 4 csproj に分割予定) | battle |
-| npm `@kenyamaneko/overload-party-gamedata` (`packages/gamedata-npm/`) | game-design / game-logic / ws / shop / newsfeed / eventData / variantTypes / models サブエントリポイント (Phase 4 で分割予定) | client |
-| npm `@kenyamaneko/overload-party-api` (`packages/api-npm/`) | REST / WS メッセージモデル (Phase 4 で api-client-npm にリネーム予定) | client |
+| NuGet `OverloadParty.GameData` (`packages/gamedata-dotnet/`) | GameDesign / GameLogic / Ws / Shop / Newsfeed namespace + EventData + GameStateView + VariantTypes + BattleGatewayRpc (Phase 5 で 4 csproj に分割予定) | battle |
+| npm `@kenyamaneko/overload-party-game-design-constants` (`packages/game-design-constants-npm/`) | Faction / Zone / CardType / Restriction / DeckSize 等のゲームデザイン定数 (Layer 1) | client |
+| npm `@kenyamaneko/overload-party-game-logic-constants` (`packages/game-logic-constants-npm/`) | Phase / WinReason / TriggerType / EffectOp 等のゲームロジック enum (Layer 1) | client |
+| npm `@kenyamaneko/overload-party-ws-constants` (`packages/ws-constants-npm/`) | WSServerMsg / WSClientMsg 種別 (Layer 1) | client |
+| npm `@kenyamaneko/overload-party-shop-constants` (`packages/shop-constants-npm/`) | ProductType 等 (Layer 1) | client |
+| npm `@kenyamaneko/overload-party-newsfeed-constants` (`packages/newsfeed-constants-npm/`) | CloudNewsSource 等 (Layer 1) | client |
+| npm `@kenyamaneko/overload-party-card-types` (`packages/card-types-npm/`) | CardDefinition / CardStats / PassiveEffect / NpcModel (Layer 2) | client |
+| npm `@kenyamaneko/overload-party-game-state` (`packages/game-state-npm/`) | ClientGameState / PlayerView / Field / EventData / AvailableAction (Layer 2) | client |
+| npm `@kenyamaneko/overload-party-api-client` (`packages/api-client-npm/`) | client ↔ gateway REST + WS + Deck 型 (Layer 3) | client |
 
 ### 実行方法
 
@@ -90,4 +96,4 @@ main への push 時に CI (`publish.yaml`) が自動で publish します。
 4. 各リポでパッケージを更新:
    - Go サービス: 必要な module を個別に `go get` (例: `go get github.com/kenyamaneko/overload-party-common/packages/game-design-constants@latest` など 9 module から選択)
    - battle: `dotnet restore`
-   - client: `npm install`
+   - client: 必要な npm package を個別に install (`npm install @kenyamaneko/overload-party-game-design-constants` など 8 package から選択)

@@ -27,7 +27,7 @@
 - `data/shop_constants.yaml` - ショップ定数（product_types、将来 shop リポへ）
 - `data/newsfeed_constants.yaml` - ニュースフィード定数（cloud_news_sources、将来 newsfeed リポへ）
 - `data/event_schemas.yaml` - イベントデータスキーマ
-- `data/models.yaml` - モデル定義（pkg: gamedata/api で振り分け）
+- `data/models.yaml` - モデル定義（section 名で Go/TS パッケージへ振り分け）
 - `db/schema_postgres.sql` - PostgreSQL DDL（全テーブルの SSoT、インラインコメントが DATA_DESIGN.md のカラム説明の SSoT）
 - `db/grant_iam.sql` - IAM 認証権限付与
 - `db/seed/cards_seed.sql` - カード定義の DB seed（自動生成）
@@ -46,9 +46,15 @@
 - `packages/api-client/` - Go module（client ↔ gateway REST + WS 契約、将来 gateway 移管）
 - `packages/api-battle-rpc/` - Go module（gateway ↔ battle 内部 RPC 契約、将来 battle 移管）
 - `packages/devdata/` - Go module 開発用（カード・商品 JSON、ローカルモック用）
-- `packages/gamedata-dotnet/` - NuGet パッケージ（battle 用、将来 Phase 4 で 4 分割予定）
-- `packages/gamedata-npm/` - npm パッケージ gamedata（game-design / game-logic / ws / shop / newsfeed / eventData / variantTypes / models サブエントリポイント、将来 Phase 4 で分割予定）
-- `packages/api-npm/` - npm パッケージ api（models, wsMessages、将来 Phase 4 で api-client-npm にリネーム予定）
+- `packages/gamedata-dotnet/` - NuGet パッケージ（battle 用、将来 Phase 5 で 4 分割予定）
+- `packages/game-design-constants-npm/` - npm パッケージ（`@kenyamaneko/overload-party-game-design-constants` - Faction / CardType / Restriction 等）
+- `packages/game-logic-constants-npm/` - npm パッケージ（`@kenyamaneko/overload-party-game-logic-constants` - Phase / WinReason / TriggerType 等）
+- `packages/ws-constants-npm/` - npm パッケージ（`@kenyamaneko/overload-party-ws-constants` - WSServerMsg / WSClientMsg）
+- `packages/shop-constants-npm/` - npm パッケージ（`@kenyamaneko/overload-party-shop-constants` - ProductType）
+- `packages/newsfeed-constants-npm/` - npm パッケージ（`@kenyamaneko/overload-party-newsfeed-constants` - CloudNewsSource）
+- `packages/card-types-npm/` - npm パッケージ（`@kenyamaneko/overload-party-card-types` - CardDefinition / CardStats / PassiveEffect / NpcModel）
+- `packages/game-state-npm/` - npm パッケージ（`@kenyamaneko/overload-party-game-state` - ClientGameState / PlayerView / Field / EventData / AvailableAction）
+- `packages/api-client-npm/` - npm パッケージ（`@kenyamaneko/overload-party-api-client` - REST / WS メッセージ / Deck 型）
 - `go.work` - ローカル開発用の Go workspace (8 新 Go module + devdata をまとめる)
 - `docs/architecture/API_REFERENCE.md` - REST API リファレンス
 - `docs/architecture/WS_REFERENCE.md` - WebSocket API リファレンス
@@ -61,7 +67,7 @@
 - カードデータを変更したら `python3 scripts/generate_cards.py` を実行
 - 商品データを変更したら `python3 scripts/generate_products.py` を実行
 - 定数（`data/*_constants.yaml`）・ファクション（`data/factions.yaml`）・イベントスキーマ・モデル定義を変更したら `python3 scripts/generate_constants.py` を実行
-- 定数は 5 分類 (game_design / game_logic / ws / shop / newsfeed) に分かれており、それぞれが独立したパッケージ（Go: `packages/{category}-constants/` トップレベルモジュール、C#: `OverloadParty.GameData.{Category}` namespace、npm: `@kenyamaneko/overload-party-gamedata/{category}` サブエントリポイント）に生成される
+- 定数は 5 分類 (game_design / game_logic / ws / shop / newsfeed) に分かれており、それぞれが独立したパッケージ（Go: `packages/{category}-constants/` トップレベル module、C#: `OverloadParty.GameData.{Category}` namespace、npm: `@kenyamaneko/overload-party-{category}-constants` 独立 package）に生成される
 - main への push 時に CI が自動でパッケージを publish する（patch bump。minor/major は手動 dispatch で指定）
 - **git tag を手動で打ってはいけない。** タグは CI が自動で作成する。手動タグは二重 publish やバージョン不整合の原因になる
 - 生成スクリプトは CI では実行しない。PR の codegen-check で同期を保証
@@ -75,6 +81,10 @@
     - gateway: game-design-constants + game-logic-constants + ws-constants + card-types + api-client + api-battle-rpc + devdata
     - card (将来): game-design-constants + card-types + api-client
     - matchmaking (将来): ws-constants + api-client
-  - battle: NuGet `OverloadParty.GameData` パッケージ (Phase 4 で 4 分割予定)
-  - client: npm `@kenyamaneko/overload-party-gamedata` + `@kenyamaneko/overload-party-api` (Phase 4 で複数分割予定)
+  - battle: NuGet `OverloadParty.GameData` パッケージ (Phase 5 で 4 分割予定)
+  - client: 責務に応じて必要な npm package を install する。例:
+    - 定数のみ: `@kenyamaneko/overload-party-{game-design,game-logic,ws,shop,newsfeed}-constants`
+    - カード表示: `@kenyamaneko/overload-party-card-types`
+    - ゲーム画面: `@kenyamaneko/overload-party-game-state`
+    - REST / WS 通信: `@kenyamaneko/overload-party-api-client`
 - common 内で Go module 間の相互参照がある場合は `go.work` が local 開発時に自動解決する (CI では `GOWORK=off` で独立ビルド)
