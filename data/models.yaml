@@ -18,7 +18,7 @@ files:
       - encoding/json
       - time
     ts_imports:
-      - {names: [CardType, FactionId, Restriction], from: "@kenyamaneko/overload-party-gamedata/constants"}
+      - {names: [CardType, FactionId, Restriction], from: "@kenyamaneko/overload-party-gamedata/game-design"}
       - {names: [CardStats], from: "@kenyamaneko/overload-party-gamedata/models"}
     types:
       - name: PlayerCardWithDef
@@ -379,7 +379,8 @@ files:
       - encoding/json
       - time
     ts_imports:
-      - {names: [CloudNewsSource, ProductType], from: "@kenyamaneko/overload-party-gamedata/constants"}
+      - {names: [CloudNewsSource], from: "@kenyamaneko/overload-party-gamedata/newsfeed"}
+      - {names: [ProductType], from: "@kenyamaneko/overload-party-gamedata/shop"}
     types:
       # ── Response types ──
       - name: VersionResponse
@@ -610,7 +611,8 @@ files:
       - time
     ts_imports:
       - {names: [AvailableAction], from: "./variantTypes"}
-      - {names: [EffectDuration, GamePhase, InstanceFamily, Rank], from: "./constants"}
+      - {names: [InstanceFamily, Rank], from: "./gameDesign"}
+      - {names: [EffectDuration, GamePhase], from: "./gameLogic"}
     types:
       - name: ClientGameState
         fields:

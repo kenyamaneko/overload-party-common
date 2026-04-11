@@ -1,0 +1,66 @@
+# Game design constants (SSoT).
+#
+# Rules of the game — shared across ALL runtime services and client.
+# Owned by common (no runtime service owns these; they are game design itself).
+#
+# Per ADR-015 Phase 1, this file is split out of the former data/constants.yaml.
+# Faction constants are sourced separately from data/factions.yaml.
+#
+# Consumed by scripts/generate_constants.py → packages/gamedata/constants/game_design
+#                                            → packages/gamedata-dotnet/GameDesign
+#                                            → packages/gamedata-npm/src/gameDesign.ts
+
+zones:
+- frontend
+- backend
+- support
+
+ranks:
+- small
+- medium
+- large
+
+instance_families:
+- M
+- C
+- R
+
+card_types:
+  compute:
+  - Compute
+  - Container
+  - Orchestrator
+  - Serverless
+  - AI/ML
+  data:
+  - Database
+  - ObjectStorage
+  - CacheDB
+  support:
+  - Platform
+  - Attachment
+  - Strategy
+  - Reactive
+  - Incident
+  log:
+  - Log
+
+restriction_values:
+- unlimited
+- limited
+- semi_limited
+- forbidden
+
+match_types:
+- pvp
+- npc
+
+stat_types:
+- tp
+- yield
+- av
+
+initial_values:
+  # deck_size は gateway / battle / client の 3 リポジトリから静的に参照されるため
+  # パッケージ定数として配信する。その他のゲーム定数は game_config テーブルで管理。
+  deck_size: 30

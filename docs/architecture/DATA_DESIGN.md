@@ -8,6 +8,78 @@
 
 ---
 
+## スキーマ分割方針 (Service-owned Schemas)
+
+Overload Party の RDB は **1 つの PostgreSQL インスタンスの上で、サービスごとに PostgreSQL スキーマを分離配置する** 構成を採る。物理インスタンスを分けずに論理境界だけを引く狙いは、Cloud SQL インスタンスを増やすコスト（固定費・運用・バックアップ）を避けつつ、将来的に物理 DB 分割へ進む際にアプリコードの書き換えが不要な状態を今から作っておくことにある。
+
+基本ルールは次のとおり。
+
+- 各サービスには専用の DB ユーザー（IAM サービスアカウント）が払い出され、**自分のスキーマに対してのみ** `USAGE` と CRUD 権限を持つ。他サービスのスキーマには一切の権限（`USAGE` すら）を持たない
+- **書き込みは所有サービスのみ** が行う。このルールは DB 権限レベルで強制される
+- **クロスサービスの read は所有サービスの REST API 経由** で行う。別ドメインのテーブルを直接 `SELECT` / `JOIN` することは権限上も設計上も許容しない
+- スキーマ名は所有サービス名（account / card / shop / scenario / battle / newsfeed など）と揃える
+
+### データストア配置
+
+サービス別スキーマ以外に、特定サービスが使うデータストアが存在する。以下が Overload Party の全データ配置。
+
+| ストア | 用途 | 利用サービス |
+|---|---|---|
+| PostgreSQL (Cloud SQL) | サービス別スキーマによる永続化（本ドキュメントの対象） | 各サービス |
+| Upstash Redis (Sorted Set) | マッチメイキングキューの永続化。`matchmaking:queue` に `ZADD`/`ZPOPMIN` で FIFO 管理 | matchmaking |
+| Google Cloud Pub/Sub (Exactly-Once Delivery) | マッチ成立イベントの非同期通知チャネル（matchmaking → gateway）。トピック `matchmaking-events` / サブスクリプション `matchmaking-events-gateway` | matchmaking (publisher), gateway (subscriber) |
+| Google Cloud Pub/Sub (At-Least-Once Delivery) | shop → account のサブスクリプション状態伝搬（Outbox + Pub/Sub パターン）。トピック `subscription-events` / サブスクリプション `subscription-events-account` | shop (publisher via outbox), account (subscriber) |
+| Google Cloud Pub/Sub (At-Least-Once Delivery) | カード定義キャッシュの invalidation 通知（ペイロードは invalidation signal のみ）。トピック `card-definitions-updated` | card (publisher), battle (subscriber) |
+
+matchmaking サービスはキュー状態を Upstash Redis、マッチ成立通知を Cloud Pub/Sub に載せているため、**RDB 上に専用スキーマを持たない**。将来永続化したい項目が出てきた時点で改めて検討する。
+
+shop → account の整合性は Transactional Outbox パターンで担保されている。shop サービスはサブスクリプション購入・更新・失効などの処理時に、`subscriptions` テーブルと `subscription_outbox` テーブルを**同一トランザクション**で書き込み、別プロセスの publisher loop が `subscription_outbox` の未送信行を読み取って `subscription-events` トピックへ publish する。account 側は `subscription-events-account` サブスクリプションでメッセージを受信し、`players.is_premium` / `premium_expires_at` を natural idempotency（同じ状態への再適用は no-op）を用いて更新する。Pub/Sub の at-least-once 配信による重複配送や順序逆転に対しても integrity を保つ設計であり、詳細は [internal/shop.md](internal/shop.md) および [internal/account.md](internal/account.md) を参照。
+
+### スキーマ所有権マップ
+
+各テーブルのスキーマ配置は以下のとおり確定している（`data/factions.yaml` を起点とした陣営マスターの code generation への移行は別ステップで実装予定）。
+
+| スキーマ | 所有サービス | 主な対象テーブル |
+|---|---|---|
+| `shared` | （なし: マイグレーション管理） | `game_config` |
+| `account` | account | `players`, `player_daily_battle`, `player_factions`, `user_settings` |
+| `card` | card | `card_definitions`, `player_cards`, `decks`, `deck_cards` |
+| `shop` | shop | `products`, `subscriptions`, `one_time_purchases`, `cosmetic_items`, `player_items`, `subscription_outbox` |
+| `scenario` | scenario | `scenario_episodes`, `episode_required_factions`, `player_story_progress` |
+| `battle` | battle | `games`, `game_npcs`, `game_decks`, `game_players`, `game_states`, `game_actions`, `game_events` |
+| `newsfeed` | newsfeed | `news_articles` |
+| （なし） | matchmaking | キューは Upstash Redis、通知は Cloud Pub/Sub のため RDB スキーマなし |
+
+#### `shared` スキーマの位置付け
+
+特定サービスに属さず、全サービスが SELECT だけする master / config データの置き場として `shared` スキーマを用意する。
+
+- 所有サービスは存在しない。write 権限は **マイグレーション管理ユーザー**（`db/schema_postgres.sql` に対する DDL 適用、および `db/seed/` 以下のシードデータ投入を行う専用アカウント）にのみ付与する
+- 各サービスユーザーには `USAGE + SELECT` のみを与え、`INSERT/UPDATE/DELETE` は付与しない
+- runtime update を想定しない read-only データの置き場であり、現時点の住人は `game_config` のみ
+- 将来的に複数サービスが同一マスター（たとえば通貨レートやゲームバランス設定など）を参照するケースが出たときに追加する余地を残す
+
+#### `factions` テーブルの廃止
+
+従来 DB に存在した陣営マスター (`factions` テーブル) は完全に廃止し、陣営は constants として code generation 経由で配布する方式に一本化する。
+
+- ID の定数は既に `packages/gamedata/constants/` 以下に `FactionSHE` / `FactionTenki` / `FactionSugar` / `FactionTuners` / `FactionNeutral` および `SelectableFactions` リストとして code-generated されている
+- 表示名（`short_name_ja` / `short_name_en` / `full_name_ja` / `full_name_en`）、`is_collectible`、`sort_order` といった metadata は、`data/factions.yaml` を新設して `scripts/generate_constants.py` から Go / C# / TypeScript 定数および i18n リソースに一括生成する構成へ移行する
+- これまで `players.selected_faction`, `products.faction_id`, `player_factions.faction`, `scenario_episodes.faction`, `episode_required_factions.faction_id` などに張られていた `factions(faction_id)` への FK 制約は全て撤廃する。代わりに各カラムは `VARCHAR(20)` + `CHECK (<col> IN ('SHE','Tenki','Sugar','Tuners','Neutral'))` とし、不正値は DB 層で拒否する
+- クロススキーマ FK を避けることで、将来 Cloud SQL インスタンスをサービス単位に物理分割した際もスキーマ間の依存がなくなり、アプリ側のクエリ書き換えも不要になる
+- 実装フェーズ（`data/factions.yaml` 新設、`generate_constants.py` 拡張、`schema_postgres.sql` から `factions` テーブルと関連 FK の削除、`grant_iam.sql` のスキーマ別 GRANT 整備、`generate_schema_doc.py` 実行による本ドキュメントの再生成）は別ステップで進める
+
+### 権限 (GRANT) の方針
+
+IAM 認証の権限付与 SQL は [`db/grant_iam.sql`](../../db/grant_iam.sql) が SSoT。各サービスユーザーは自スキーマに対してのみ `GRANT USAGE ON SCHEMA <schema>` と必要な CRUD 権限（`SELECT, INSERT, UPDATE, DELETE`）を付与され、他スキーマには `USAGE` すら付与されない。
+
+- Cloud SQL IAM 認証 (`--auto-iam-authn`) 自体は現行構成を維持する
+- 各サービスが使う IAM サービスアカウント名は現行（`overload-party-<service>@<project>.iam`）を踏襲する
+- DDL マイグレーション用には、全スキーマを対象にできる別の管理ユーザーを用意する
+- 具体的な GRANT 文は [`db/grant_iam.sql`](../../db/grant_iam.sql) を参照。本ドキュメントでは SSoT 重複を避けるため SQL は転記しない
+
+---
+
 ## 目次
 
 1. [ゲーム管理](#1-ゲーム管理-game-management)
@@ -316,6 +388,17 @@
 
 カードのステータス・効果テキスト・コスト等の定義データ。`CARDS.md` の内容をDB上で管理する。
 
+> **所有サービス:** `card_definitions` は **`card` スキーマに配置され、card サービスが所有する**。battle / account / shop など他サービスからの参照は、card サービスの REST API 経由で行う（直接の DB 参照はしない）。battle は対戦中に高頻度でカードマスターを参照するため、**battle 側でカードマスターのインメモリキャッシュを保持する** 前提で運用する。
+
+**キャッシュ戦略の概要:**
+
+- battle Pod 起動時に card サービスの内部 REST API `GET /internal/v1/cards` で全カード定義を取得し、in-memory キャッシュに保持する
+- 更新通知は Google Cloud Pub/Sub のトピック `card-definitions-updated` に invalidation signal として publish される（at-least-once で十分、ペイロードは invalidation のみで差分は含まない）
+- battle Pod ごとに別々の subscription を割り当てる broadcast 構成を採る（各 Pod が独立したキャッシュを持つため、全 Pod に配送する必要がある）
+- カードマスターにはバージョン番号があり、`games.card_data_version` に記録することでゲーム状態との整合を検証する
+- Pub/Sub トピック設計やキャッシュ更新戦略の全体像は [ARCHITECTURE.md §5.3 カード定義キャッシュの更新通知](ARCHITECTURE.md#53-カード定義キャッシュの更新通知) を参照
+- 内部 REST API の契約（エンドポイント、レスポンス形状、呼び出し側の責務）は [internal/card.md](internal/card.md) を参照（本ドキュメントでは SSoT 重複を避けるため概要のみ）
+
 ### 5.1 PostgreSQL スキーマ (card_definitions)
 
 **CardDefinitions** (カード定義マスター)
@@ -575,7 +658,7 @@ stats フィールドなし（Platform の場合、`deploy_turns` はトップ�
 | カラム名 | 型 | Nullable | 説明 |
 |---|---|---|---|
 | `player_id` | UUID | No | 親テーブル参照 |
-| `faction` | VARCHAR(20) | No | 陣営名 (SHE / Tenki / Sugar / Tuners) |
+| `faction` | VARCHAR(20) | No | 陣営名 (SHE / Tenki / Sugar / Tuners / Neutral) |
 | `source` | VARCHAR(20) | No | 取得経路 (initial_selection / shop_purchase) |
 | `acquired_at` | TIMESTAMPTZ | No | 取得日時 |
 <!-- END GENERATED: player_factions -->

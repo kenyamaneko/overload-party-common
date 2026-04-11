@@ -1,0 +1,16 @@
+# Shop constants (SSoT).
+#
+# Owned by shop service conceptually (per ADR-015), but physically lives in
+# common until shop repo owns its own code-gen (ADR-011 / ADR-015 Phase 6).
+#
+# Per ADR-015 Phase 1, this file is split out of the former data/constants.yaml.
+# Consumers: shop service (primary), client (product UI).
+#
+# Consumed by scripts/generate_constants.py → packages/gamedata/constants/shop
+#                                            → packages/gamedata-dotnet/Shop
+#                                            → packages/gamedata-npm/src/shop.ts
+
+product_types:
+- faction_set
+- cosmetic
+- subscription

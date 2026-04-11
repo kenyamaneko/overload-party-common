@@ -20,9 +20,21 @@
 
 WebSocket API リファレンスは [WS_REFERENCE.md](WS_REFERENCE.md) を参照。
 
+サービス間（gateway ↔ account / card / shop / scenario / matchmaking / battle、および battle ↔ card など）の**内部 REST API** は本ドキュメントでは扱わない。クラスタ内部でのみ到達可能なエンドポイントは [internal/](internal/README.md) 以下にサービス単位で記述する。
+
 ---
 
 ## 1. 概要
+
+### サービス構成
+
+本リファレンスに記載する **すべての公開エンドポイントの入口は gateway** であり、クライアントは常に gateway のベース URL に対してリクエストを送る。
+
+- gateway は認証検証と WS/REST のルーティングに専念する薄い層として位置づけられており、各エンドポイントは内部的に対応するドメインサービス（account / shop / scenario / card / matchmaking）へ内部 REST で委譲される
+- account / shop / scenario / card / matchmaking / battle の各サービスは ClusterIP でクラスタ内にのみ公開され、クライアントから直接到達することはできない
+- **例外**: shop サービスの Apple / Google からの課金 webhook エンドポイントのみ、外部サービス側の制約により gateway 経由ではなく shop サービス自身の公開エンドポイントで受け付ける。ユーザートラフィックの入口は引き続き gateway 一本であり、webhook はパスとレート制限で明示的に区別する（詳細は [3.8 Webhook](#38-webhook) 参照）
+
+以下のエンドポイントカタログではルーティング先サービスごとの区別は行わず、クライアントから見える gateway のベース URL 基準で記述する。
 
 ### ベース URL
 
@@ -444,7 +456,7 @@ CardDefinition の詳細は PlayerCardWithDef と同構造（+ `effects`, `passi
 
 #### GET `/npc/models`
 
-NPC モデル一覧取得。Gateway が Battle Server の内部 API にプロキシする。
+NPC モデル一覧取得。gateway は本リクエストを受けて battle サービスの内部 REST へ転送する。クライアントは内部実装を意識する必要はない。
 
 **レスポンス (200):** `{ "models": [NpcModel] }`
 
@@ -459,7 +471,7 @@ NPC モデル一覧取得。Gateway が Battle Server の内部 API にプロキ
 ```
 <!-- END GENERATED: NpcModel -->
 
-**内部 API:** Gateway → Battle `GET http://battle:9002/api/v1/npc/models`
+内部 REST の契約詳細は [internal/battle.md](internal/battle.md) を参照。
 
 ---
 

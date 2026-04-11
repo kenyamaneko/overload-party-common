@@ -1,0 +1,51 @@
+# Factions master data (SSoT).
+#
+# This file is the single source of truth for faction identity, display names,
+# and metadata. It replaces the `factions` DB table (removed per ADR-014 supplement)
+# and the `factions` / `selectable_factions` / `faction_display_names` keys
+# previously in constants.yaml (removed per ADR-015 Phase 1).
+#
+# Consumed by scripts/generate_constants.py to generate:
+#   - Faction ID constants (Go / C# / TS)
+#   - SelectableFactions list (derived from is_collectible)
+#   - FactionMetadata struct/record/type
+#
+# is_collectible=false は、プレイヤーの選択対象外となる陣営（Neutral）を意味する。
+# SelectableFactions は is_collectible=true でフィルタして自動導出する。
+
+factions:
+  - id: Neutral
+    short_name_ja: ニュートラル
+    short_name_en: Neutral
+    full_name_ja: ニュートラル
+    full_name_en: Neutral
+    is_collectible: false
+    sort_order: 0
+  - id: SHE
+    short_name_ja: SHE
+    short_name_en: SHE
+    full_name_ja: SHE（Smile Horizon Express）
+    full_name_en: SHE (Smile Horizon Express)
+    is_collectible: true
+    sort_order: 1
+  - id: Tenki
+    short_name_ja: 天気使い
+    short_name_en: Weatherers
+    full_name_ja: 天気使い
+    full_name_en: Weatherers
+    is_collectible: true
+    sort_order: 2
+  - id: Sugar
+    short_name_ja: しゅがーらぼ
+    short_name_en: Sugar Lab
+    full_name_ja: しゅがーらぼ
+    full_name_en: Sugar Lab
+    is_collectible: true
+    sort_order: 3
+  - id: Tuners
+    short_name_ja: 調律部
+    short_name_en: The Tuners
+    full_name_ja: 調律部（チューナーズ）
+    full_name_en: The Tuners
+    is_collectible: true
+    sort_order: 4

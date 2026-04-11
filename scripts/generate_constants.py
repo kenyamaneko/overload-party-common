@@ -1,19 +1,30 @@
 #!/usr/bin/env python3
 """Generate shared constants, event data types, and Go models from YAML definitions.
 
+Per ADR-015 Phase 1, constants are split into 5 categories and emitted as separate
+sub-packages / namespaces / TS modules:
+
+  game_design  — zones, ranks, card_types, factions, etc.
+  game_logic   — phases, events, effects, buffs, etc.
+  ws           — gateway WebSocket message types
+  shop         — product types
+  newsfeed     — cloud news sources
+
 Outputs:
-  - packages/gamedata/constants/constants_gen.go  (Go constants)
-  - packages/gamedata/model/*_gen.go              (Go model structs, pkg: gamedata)
-  - packages/api/model/*_gen.go                   (Go model structs, pkg: api)
-  - packages/gamedata-dotnet/GameConstants_gen.cs   (C# constants)
-  - packages/gamedata-dotnet/EventData_gen.cs       (C# event data types)
-  - packages/gamedata-dotnet/GameStateView_gen.cs   (C# game state view types)
-  - packages/gamedata-npm/src/constants.ts          (TS constants)
-  - packages/gamedata-npm/src/eventData.ts          (TS event data types)
-  - packages/gamedata-npm/src/variantTypes.ts       (TS variant types)
-  - packages/gamedata-npm/src/models.ts             (TS model interfaces, pkg: gamedata)
-  - packages/api-npm/src/wsMessages.ts              (TS WS message types)
-  - packages/api-npm/src/models.ts                  (TS model interfaces, pkg: api)
+  - packages/gamedata/constants/{category}/constants_gen.go
+  - packages/gamedata/model/*_gen.go
+  - packages/api/model/*_gen.go
+  - packages/gamedata-dotnet/{Category}/{Category}Constants_gen.cs
+  - packages/gamedata-dotnet/EventData_gen.cs
+  - packages/gamedata-dotnet/GameStateView_gen.cs
+  - packages/gamedata-dotnet/BattleGatewayRpc_gen.cs
+  - packages/gamedata-dotnet/VariantTypes_gen.cs
+  - packages/gamedata-npm/src/{category}.ts
+  - packages/gamedata-npm/src/eventData.ts
+  - packages/gamedata-npm/src/variantTypes.ts
+  - packages/gamedata-npm/src/models.ts
+  - packages/api-npm/src/wsMessages.ts
+  - packages/api-npm/src/models.ts
 
 Usage:
     python3 scripts/generate_constants.py
@@ -32,15 +43,25 @@ except ImportError:
 
 # ─── Paths ──────────────────────────────────────────────
 ROOT = Path(__file__).resolve().parent.parent
-CONSTANTS_YAML = ROOT / "data" / "constants.yaml"
-EVENT_SCHEMAS_YAML = ROOT / "data" / "event_schemas.yaml"
-MODELS_YAML = ROOT / "data" / "models.yaml"
+DATA_DIR = ROOT / "data"
+
+GAME_DESIGN_YAML = DATA_DIR / "game_design_constants.yaml"
+GAME_LOGIC_YAML = DATA_DIR / "game_logic_constants.yaml"
+GATEWAY_WS_YAML = DATA_DIR / "gateway_ws_constants.yaml"
+SHOP_YAML = DATA_DIR / "shop_constants.yaml"
+NEWSFEED_YAML = DATA_DIR / "newsfeed_constants.yaml"
+FACTIONS_YAML = DATA_DIR / "factions.yaml"
+
+EVENT_SCHEMAS_YAML = DATA_DIR / "event_schemas.yaml"
+MODELS_YAML = DATA_DIR / "models.yaml"
 
 GO_DIR = ROOT / "packages" / "gamedata"
 API_GO_DIR = ROOT / "packages" / "api"
 DOTNET_DIR = ROOT / "packages" / "gamedata-dotnet"
 NPM_DIR = ROOT / "packages" / "gamedata-npm"
 API_NPM_DIR = ROOT / "packages" / "api-npm"
+
+GO_CONSTANTS_DIR = GO_DIR / "constants"
 
 # ─── Helpers ────────────────────────────────────────────
 
@@ -68,38 +89,50 @@ def _to_pascal(value):
     return value.title() if value else value
 
 
-# Keys that follow the simple pattern: flat list → const block / static class / as-const array.
-# (yaml_key, go_prefix, go_comment, cs_class, ts_const, ts_type)
-_SIMPLE_LIST_KEYS = [
-    ("phases", "Phase", "Phases", "Phases", "PHASES", "GamePhase"),
-    ("zones", "Zone", "Zones", "Zones", "ZONES", "Zone"),
-    ("ranks", "Rank", "Ranks", "Ranks", "RANKS", "Rank"),
-    ("instance_families", "InstanceFamily", "Instance families", "InstanceFamilies", "INSTANCE_FAMILIES", "InstanceFamily"),
-    ("game_status", "GameStatus", "Game status", "GameStatus", "GAME_STATUS", "GameStatus"),
-    ("win_reasons", "WinReason", "Win reasons", "WinReasons", "WIN_REASONS", "WinReason"),
-    ("action_types", "ActionType", "Action types", "ActionTypes", "ACTION_TYPES", "GameActionType"),
-    ("event_types", "EventType", "Event types", "EventTypes", "EVENT_TYPES", "EventType"),
-    ("effect_durations", "EffectDuration", "Effect durations", "EffectDurations", "EFFECT_DURATIONS", "EffectDuration"),
-    ("restriction_values", "Restriction", "Restriction values", "RestrictionValues", "RESTRICTION_VALUES", "Restriction"),
-    ("trigger_types", "TriggerType", "Trigger types", "TriggerTypes", "TRIGGER_TYPES", "TriggerType"),
-    ("effect_ops", "EffectOp", "Effect operations", "EffectOps", "EFFECT_OPS", "EffectOp"),
-    ("buff_types", "BuffType", "Buff types", "BuffTypes", "BUFF_TYPES", "BuffType"),
-    ("buff_modes", "BuffMode", "Buff modes", "BuffModes", "BUFF_MODES", "BuffMode"),
-    ("custom_effects", "CustomEffect", "Custom effects", "CustomEffects", "CUSTOM_EFFECTS", "CustomEffect"),
-    ("effect_categories", "EffectCategory", "Effect categories", "EffectCategories", "EFFECT_CATEGORIES", "EffectCategory"),
-    ("effect_target_types", "EffectTargetType", "Effect target types", "EffectTargetTypes", "EFFECT_TARGET_TYPES", "EffectTargetType"),
-    ("player_refs", "PlayerRef", "Player references", "PlayerRefs", "PLAYER_REFS", "PlayerRef"),
-    ("use_limits", "UseLimit", "Use limits", "UseLimits", "USE_LIMITS", "UseLimit"),
-    ("match_types", "MatchType", "Match types", "MatchTypes", "MATCH_TYPES", "MatchType"),
-    ("stat_types", "StatType", "Stat types", "StatTypes", "STAT_TYPES", "StatType"),
-    ("guard_types", "GuardType", "Guard types", "GuardTypes", "GUARD_TYPES", "GuardType"),
-    ("selector_pick_modes", "SelectorPickMode", "Selector pick modes", "SelectorPickModes", "SELECTOR_PICK_MODES", "SelectorPickMode"),
-    ("cloud_news_sources", "CloudNewsSource", "Cloud news sources", "CloudNewsSources", "CLOUD_NEWS_SOURCES", "CloudNewsSource"),
-    ("product_types", "ProductType", "Product types", "ProductTypes", "PRODUCT_TYPES", "ProductType"),
+# ─── Simple list descriptors (per category) ────────────
+#
+# Each tuple: (yaml_key, go_prefix, go_comment, cs_class, ts_const, ts_type, extra_union)
+# extra_union is used only by TS and only for very specific cases (phases, instance_families).
+
+GAME_DESIGN_SIMPLE = [
+    ("zones", "Zone", "Zones", "Zones", "ZONES", "Zone", None),
+    ("ranks", "Rank", "Ranks", "Ranks", "RANKS", "Rank", None),
+    ("instance_families", "InstanceFamily", "Instance families", "InstanceFamilies", "INSTANCE_FAMILIES", "InstanceFamily", "''"),
+    ("restriction_values", "Restriction", "Restriction values", "RestrictionValues", "RESTRICTION_VALUES", "Restriction", None),
+    ("match_types", "MatchType", "Match types", "MatchTypes", "MATCH_TYPES", "MatchType", None),
+    ("stat_types", "StatType", "Stat types", "StatTypes", "STAT_TYPES", "StatType", None),
+]
+
+GAME_LOGIC_SIMPLE = [
+    ("phases", "Phase", "Phases", "Phases", "PHASES", "GamePhase", "'selecting'"),
+    ("game_status", "GameStatus", "Game status", "GameStatus", "GAME_STATUS", "GameStatus", None),
+    ("win_reasons", "WinReason", "Win reasons", "WinReasons", "WIN_REASONS", "WinReason", None),
+    ("action_types", "ActionType", "Action types", "ActionTypes", "ACTION_TYPES", "GameActionType", None),
+    ("event_types", "EventType", "Event types", "EventTypes", "EVENT_TYPES", "EventType", None),
+    ("effect_durations", "EffectDuration", "Effect durations", "EffectDurations", "EFFECT_DURATIONS", "EffectDuration", None),
+    ("trigger_types", "TriggerType", "Trigger types", "TriggerTypes", "TRIGGER_TYPES", "TriggerType", None),
+    ("effect_ops", "EffectOp", "Effect operations", "EffectOps", "EFFECT_OPS", "EffectOp", None),
+    ("buff_types", "BuffType", "Buff types", "BuffTypes", "BUFF_TYPES", "BuffType", None),
+    ("buff_modes", "BuffMode", "Buff modes", "BuffModes", "BUFF_MODES", "BuffMode", None),
+    ("custom_effects", "CustomEffect", "Custom effects", "CustomEffects", "CUSTOM_EFFECTS", "CustomEffect", None),
+    ("effect_categories", "EffectCategory", "Effect categories", "EffectCategories", "EFFECT_CATEGORIES", "EffectCategory", None),
+    ("effect_target_types", "EffectTargetType", "Effect target types", "EffectTargetTypes", "EFFECT_TARGET_TYPES", "EffectTargetType", None),
+    ("player_refs", "PlayerRef", "Player references", "PlayerRefs", "PLAYER_REFS", "PlayerRef", None),
+    ("use_limits", "UseLimit", "Use limits", "UseLimits", "USE_LIMITS", "UseLimit", None),
+    ("guard_types", "GuardType", "Guard types", "GuardTypes", "GUARD_TYPES", "GuardType", None),
+    ("selector_pick_modes", "SelectorPickMode", "Selector pick modes", "SelectorPickModes", "SELECTOR_PICK_MODES", "SelectorPickMode", None),
+]
+
+SHOP_SIMPLE = [
+    ("product_types", "ProductType", "Product types", "ProductTypes", "PRODUCT_TYPES", "ProductType", None),
+]
+
+NEWSFEED_SIMPLE = [
+    ("cloud_news_sources", "CloudNewsSource", "Cloud news sources", "CloudNewsSources", "CLOUD_NEWS_SOURCES", "CloudNewsSource", None),
 ]
 
 
-# ─── Generate Go (constants) ───────────────────────────
+# ─── Go constants: generic emitters ────────────────────
 def _go_const_block(comment, prefix, values):
     """Generate a Go const block from a list of values."""
     lines = [f"// {comment}."]
@@ -112,61 +145,98 @@ def _go_const_block(comment, prefix, values):
     return lines
 
 
-def generate_go_constants(constants, *, out_path):
-    """Generate constants_gen.go for the Go package."""
-    go_out = Path(out_path)
-
-    iv = constants["initial_values"]
-    lines = [
+def _go_header(package):
+    return [
         _GENERATED_HEADER,
         "",
-        "package constants",
-        "",
-        "// Deck size.",
-        "const (",
-        f"\tDeckSize = {iv['deck_size']}",
-        ")",
+        f"package {package}",
         "",
     ]
 
-    # Factions (use value as-is since they're PascalCase/uppercase).
-    lines.append("// Factions.")
+
+def _write_file(out_path, lines):
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(out_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+        f.write("\n")
+
+
+# ─── Go: game_design sub-package ───────────────────────
+def generate_go_game_design(data, factions):
+    """Generate constants/game_design/constants_gen.go."""
+    lines = _go_header("game_design")
+
+    # Deck size.
+    iv = data["initial_values"]
+    lines.append("// Deck size.")
     lines.append("const (")
-    for faction in constants["factions"]:
-        lines.append(f'\tFaction{faction} = "{faction}"')
+    lines.append(f"\tDeckSize = {iv['deck_size']}")
     lines.append(")")
     lines.append("")
 
+    # Factions.
+    sorted_factions = sorted(factions, key=lambda f: f["sort_order"])
+    lines.append("// Factions.")
+    lines.append("const (")
+    for f in sorted_factions:
+        lines.append(f'\tFaction{f["id"]} = "{f["id"]}"')
+    lines.append(")")
+    lines.append("")
+
+    selectable = [f for f in sorted_factions if f.get("is_collectible")]
     lines.append("// SelectableFactions is the list of factions players can choose.")
     lines.append("var SelectableFactions = []string{")
-    for f in constants["selectable_factions"]:
-        lines.append(f"\tFaction{f},")
+    for f in selectable:
+        lines.append(f"\tFaction{f['id']},")
     lines.append("}")
     lines.append("")
 
-    for yaml_key, go_prefix, go_comment, _, _, _ in _SIMPLE_LIST_KEYS:
-        values = constants.get(yaml_key)
+    # FactionMetadata struct + slice + lookup map.
+    lines.append("// FactionMetadata holds display and ordering information for a faction.")
+    lines.append("type FactionMetadata struct {")
+    lines.append("\tID            string")
+    lines.append("\tShortNameJa   string")
+    lines.append("\tShortNameEn   string")
+    lines.append("\tFullNameJa    string")
+    lines.append("\tFullNameEn    string")
+    lines.append("\tIsCollectible bool")
+    lines.append("\tSortOrder     int")
+    lines.append("}")
+    lines.append("")
+
+    lines.append("// FactionsMetadata lists all factions in sort order.")
+    lines.append("var FactionsMetadata = []FactionMetadata{")
+    for f in sorted_factions:
+        lines.append("\t{")
+        lines.append(f'\t\tID:            "{f["id"]}",')
+        lines.append(f'\t\tShortNameJa:   {json.dumps(f["short_name_ja"], ensure_ascii=False)},')
+        lines.append(f'\t\tShortNameEn:   {json.dumps(f["short_name_en"], ensure_ascii=False)},')
+        lines.append(f'\t\tFullNameJa:    {json.dumps(f["full_name_ja"], ensure_ascii=False)},')
+        lines.append(f'\t\tFullNameEn:    {json.dumps(f["full_name_en"], ensure_ascii=False)},')
+        lines.append(f'\t\tIsCollectible: {"true" if f["is_collectible"] else "false"},')
+        lines.append(f'\t\tSortOrder:     {f["sort_order"]},')
+        lines.append("\t},")
+    lines.append("}")
+    lines.append("")
+
+    lines.append("// FactionByID looks up faction metadata by ID.")
+    lines.append("var FactionByID = map[string]FactionMetadata{")
+    for f in sorted_factions:
+        lines.append(f'\t"{f["id"]}": FactionsMetadata[{sorted_factions.index(f)}],')
+    lines.append("}")
+    lines.append("")
+
+    # Simple lists.
+    for yaml_key, go_prefix, go_comment, _, _, _, _ in GAME_DESIGN_SIMPLE:
+        values = data.get(yaml_key)
         if values is None:
             continue
         lines.extend(_go_const_block(go_comment, go_prefix, values))
 
-    # WS message types (nested: server + client share WSMsg prefix).
-    ws = constants["ws_message_types"]
-    lines.append("// WS server message types.")
-    lines.append("const (")
-    for v in ws["server"]:
-        lines.append(f'\tWSServerMsg{_to_pascal(v)} = "{v}"')
-    lines.append(")")
-    lines.append("")
-    lines.append("// WS client message types.")
-    lines.append("const (")
-    for v in ws["client"]:
-        lines.append(f'\tWSClientMsg{_to_pascal(v)} = "{v}"')
-    lines.append(")")
-    lines.append("")
-
-    ct = constants["card_types"]
-    all_types = ct["compute"] + ct["data"] + ct["support"]
+    # Card types (flattened across compute/data/support/log).
+    ct = data["card_types"]
+    all_types = ct["compute"] + ct["data"] + ct["support"] + ct.get("log", [])
     lines.append("// Card types.")
     lines.append("const (")
     for v in all_types:
@@ -240,10 +310,62 @@ def generate_go_constants(constants, *, out_path):
     lines.append("}")
     lines.append("")
 
-    go_out.parent.mkdir(parents=True, exist_ok=True)
-    with open(go_out, "w", encoding="utf-8") as f:
-        f.write("\n".join(lines))
-        f.write("\n")
+    _write_file(GO_CONSTANTS_DIR / "game_design" / "constants_gen.go", lines)
+
+
+# ─── Go: game_logic sub-package ────────────────────────
+def generate_go_game_logic(data):
+    lines = _go_header("game_logic")
+    for yaml_key, go_prefix, go_comment, _, _, _, _ in GAME_LOGIC_SIMPLE:
+        values = data.get(yaml_key)
+        if values is None:
+            continue
+        lines.extend(_go_const_block(go_comment, go_prefix, values))
+    _write_file(GO_CONSTANTS_DIR / "game_logic" / "constants_gen.go", lines)
+
+
+# ─── Go: ws sub-package ────────────────────────────────
+def generate_go_ws(data):
+    lines = _go_header("ws")
+    ws = data["ws_message_types"]
+
+    lines.append("// WS server message types.")
+    lines.append("const (")
+    for v in ws["server"]:
+        lines.append(f'\tWSServerMsg{_to_pascal(v)} = "{v}"')
+    lines.append(")")
+    lines.append("")
+
+    lines.append("// WS client message types.")
+    lines.append("const (")
+    for v in ws["client"]:
+        lines.append(f'\tWSClientMsg{_to_pascal(v)} = "{v}"')
+    lines.append(")")
+    lines.append("")
+
+    _write_file(GO_CONSTANTS_DIR / "ws" / "constants_gen.go", lines)
+
+
+# ─── Go: shop sub-package ──────────────────────────────
+def generate_go_shop(data):
+    lines = _go_header("shop")
+    for yaml_key, go_prefix, go_comment, _, _, _, _ in SHOP_SIMPLE:
+        values = data.get(yaml_key)
+        if values is None:
+            continue
+        lines.extend(_go_const_block(go_comment, go_prefix, values))
+    _write_file(GO_CONSTANTS_DIR / "shop" / "constants_gen.go", lines)
+
+
+# ─── Go: newsfeed sub-package ──────────────────────────
+def generate_go_newsfeed(data):
+    lines = _go_header("newsfeed")
+    for yaml_key, go_prefix, go_comment, _, _, _, _ in NEWSFEED_SIMPLE:
+        values = data.get(yaml_key)
+        if values is None:
+            continue
+        lines.extend(_go_const_block(go_comment, go_prefix, values))
+    _write_file(GO_CONSTANTS_DIR / "newsfeed" / "constants_gen.go", lines)
 
 
 # ─── Generate Go (models) ──────────────────────────────
@@ -274,7 +396,6 @@ def _generate_go_model_file(file_def, *, out_path):
             declared_imports |= _go_type_needs_import(str(field["type"]))
 
     if declared_imports:
-        # 外部パッケージはドメイン名で始まる（最初のセグメントに "." を含む）
         std_imports = sorted(i for i in declared_imports if "." not in i.split("/")[0])
         ext_imports = sorted(i for i in declared_imports if "." in i.split("/")[0])
         lines.append("import (")
@@ -372,7 +493,7 @@ def generate_go_models(*, gamedata_dir, api_dir):
     return gamedata_names, api_names
 
 
-# ─── Generate C# (constants) ───────────────────────────
+# ─── C# constants: generic emitters ────────────────────
 def _cs_static_class(class_name, values, indent="    "):
     """Generate a C# static class with string constants."""
     lines = [f"public static class {class_name}"]
@@ -385,63 +506,87 @@ def _cs_static_class(class_name, values, indent="    "):
     return lines
 
 
-def generate_csharp_constants(constants, *, out_path, namespace="OverloadParty.GameData"):
-    """Generate GameConstants_gen.cs."""
-    cs_out = Path(out_path)
-
-    lines = [
+def _cs_header(namespace):
+    return [
         _GENERATED_HEADER,
         "",
         f"namespace {namespace};",
         "",
     ]
 
-    iv = constants["initial_values"]
-    lines.append("public static class GameConstants")
+
+# ─── C#: game_design namespace ─────────────────────────
+def generate_csharp_game_design(data, factions):
+    lines = _cs_header("OverloadParty.GameData.GameDesign")
+
+    # Deck size wrapper class.
+    iv = data["initial_values"]
+    lines.append("public static class InitialValues")
     lines.append("{")
     lines.append(f"    public const int DeckSize = {iv['deck_size']};")
     lines.append("}")
     lines.append("")
 
-    # Factions (special: use value as-is).
+    sorted_factions = sorted(factions, key=lambda f: f["sort_order"])
+
     lines.append("public static class Factions")
     lines.append("{")
-    for faction in constants["factions"]:
-        lines.append(f'    public const string {faction} = "{faction}";')
+    for f in sorted_factions:
+        lines.append(f'    public const string {f["id"]} = "{f["id"]}";')
     lines.append("}")
     lines.append("")
 
+    selectable = [f for f in sorted_factions if f.get("is_collectible")]
     lines.append("public static class SelectableFactions")
     lines.append("{")
     lines.append("    public static readonly string[] All = [")
-    for f in constants["selectable_factions"]:
-        lines.append(f"        Factions.{f},")
+    for f in selectable:
+        lines.append(f"        Factions.{f['id']},")
     lines.append("    ];")
     lines.append("}")
     lines.append("")
 
-    for yaml_key, _, _, cs_class, _, _ in _SIMPLE_LIST_KEYS:
-        values = constants.get(yaml_key)
+    lines.append("public record FactionMetadata(")
+    lines.append("    string Id,")
+    lines.append("    string ShortNameJa,")
+    lines.append("    string ShortNameEn,")
+    lines.append("    string FullNameJa,")
+    lines.append("    string FullNameEn,")
+    lines.append("    bool IsCollectible,")
+    lines.append("    int SortOrder")
+    lines.append(");")
+    lines.append("")
+
+    lines.append("public static class FactionsMetadata")
+    lines.append("{")
+    lines.append("    public static readonly FactionMetadata[] All = [")
+    for f in sorted_factions:
+        is_col = "true" if f["is_collectible"] else "false"
+        ja_short = json.dumps(f["short_name_ja"], ensure_ascii=False)
+        en_short = json.dumps(f["short_name_en"], ensure_ascii=False)
+        ja_full = json.dumps(f["full_name_ja"], ensure_ascii=False)
+        en_full = json.dumps(f["full_name_en"], ensure_ascii=False)
+        lines.append(
+            f'        new FactionMetadata("{f["id"]}", {ja_short}, {en_short}, '
+            f'{ja_full}, {en_full}, {is_col}, {f["sort_order"]}),'
+        )
+    lines.append("    ];")
+    lines.append("")
+    lines.append("    public static readonly System.Collections.Generic.Dictionary<string, FactionMetadata> ById =")
+    lines.append("        System.Linq.Enumerable.ToDictionary(All, m => m.Id);")
+    lines.append("}")
+    lines.append("")
+
+    # Simple list classes.
+    for yaml_key, _, _, cs_class, _, _, _ in GAME_DESIGN_SIMPLE:
+        values = data.get(yaml_key)
         if values is None:
             continue
         lines.extend(_cs_static_class(cs_class, values))
 
-    ws = constants["ws_message_types"]
-    lines.append("public static class WSServerMsgTypes")
-    lines.append("{")
-    for v in ws["server"]:
-        lines.append(f'    public const string {_to_pascal(v)} = "{v}";')
-    lines.append("}")
-    lines.append("")
-    lines.append("public static class WSClientMsgTypes")
-    lines.append("{")
-    for v in ws["client"]:
-        lines.append(f'    public const string {_to_pascal(v)} = "{v}";')
-    lines.append("}")
-    lines.append("")
-
-    ct = constants["card_types"]
-    all_types = ct["compute"] + ct["data"] + ct["support"]
+    # Card types (flattened).
+    ct = data["card_types"]
+    all_types = ct["compute"] + ct["data"] + ct["support"] + ct.get("log", [])
     lines.append("public static class CardTypes")
     lines.append("{")
     for v in all_types:
@@ -459,29 +604,28 @@ def generate_csharp_constants(constants, *, out_path, namespace="OverloadParty.G
     lines.append("")
 
     lines.append("    public static bool IsResourceType(string cardType) =>")
-    lines.append("        Array.IndexOf(ComputeTypes, cardType) >= 0 || Array.IndexOf(DataTypes, cardType) >= 0;")
+    lines.append("        System.Array.IndexOf(ComputeTypes, cardType) >= 0 || System.Array.IndexOf(DataTypes, cardType) >= 0;")
     lines.append("")
     lines.append("    public static bool IsFrontendEligible(string cardType) =>")
-    lines.append(f"        Array.IndexOf(ComputeTypes, cardType) >= 0 || cardType == ObjectStorage;")
+    lines.append("        System.Array.IndexOf(ComputeTypes, cardType) >= 0 || cardType == ObjectStorage;")
     lines.append("")
     lines.append("    public static bool IsBackendEligible(string cardType) =>")
-    lines.append("        Array.IndexOf(DataTypes, cardType) >= 0 || Array.IndexOf(ComputeTypes, cardType) >= 0;")
+    lines.append("        System.Array.IndexOf(DataTypes, cardType) >= 0 || System.Array.IndexOf(ComputeTypes, cardType) >= 0;")
     lines.append("")
     lines.append("    public static bool IsSupportType(string cardType) =>")
-    lines.append("        Array.IndexOf(SupportTypes, cardType) >= 0;")
+    lines.append("        System.Array.IndexOf(SupportTypes, cardType) >= 0;")
     lines.append("")
     lines.append("    public static bool IsAttachmentType(string cardType) =>")
-    lines.append(f"        cardType == Attachment;")
+    lines.append("        cardType == Attachment;")
     lines.append("")
 
-    lines.append('    public static string GetCategory(string cardType)')
+    lines.append("    public static string GetCategory(string cardType)")
     lines.append("    {")
-    lines.append("        if (Array.IndexOf(ComputeTypes, cardType) >= 0) return \"compute\";")
-    lines.append("        if (Array.IndexOf(DataTypes, cardType) >= 0) return \"data\";")
-    lines.append("        if (Array.IndexOf(SupportTypes, cardType) >= 0 || cardType == Attachment) return \"support\";")
+    lines.append("        if (System.Array.IndexOf(ComputeTypes, cardType) >= 0) return \"compute\";")
+    lines.append("        if (System.Array.IndexOf(DataTypes, cardType) >= 0) return \"data\";")
+    lines.append("        if (System.Array.IndexOf(SupportTypes, cardType) >= 0 || cardType == Attachment) return \"support\";")
     lines.append('        return "unknown";')
     lines.append("    }")
-
     lines.append("}")
     lines.append("")
 
@@ -489,18 +633,70 @@ def generate_csharp_constants(constants, *, out_path, namespace="OverloadParty.G
     lines.append("{")
     lines.append("    public static int CopyCount(string restriction) => restriction switch")
     lines.append("    {")
-    lines.append(f'        RestrictionValues.Forbidden => 0,')
-    lines.append(f'        RestrictionValues.Limited => 1,')
-    lines.append(f'        RestrictionValues.SemiLimited => 2,')
+    lines.append("        RestrictionValues.Forbidden => 0,")
+    lines.append("        RestrictionValues.Limited => 1,")
+    lines.append("        RestrictionValues.SemiLimited => 2,")
     lines.append("        _ => 3,")
     lines.append("    };")
     lines.append("}")
     lines.append("")
 
-    cs_out.parent.mkdir(parents=True, exist_ok=True)
-    with open(cs_out, "w", encoding="utf-8") as f:
-        f.write("\n".join(lines))
-        f.write("\n")
+    _write_file(DOTNET_DIR / "GameDesign" / "GameDesignConstants_gen.cs", lines)
+
+
+# ─── C#: game_logic namespace ──────────────────────────
+def generate_csharp_game_logic(data):
+    lines = _cs_header("OverloadParty.GameData.GameLogic")
+    for yaml_key, _, _, cs_class, _, _, _ in GAME_LOGIC_SIMPLE:
+        values = data.get(yaml_key)
+        if values is None:
+            continue
+        lines.extend(_cs_static_class(cs_class, values))
+    _write_file(DOTNET_DIR / "GameLogic" / "GameLogicConstants_gen.cs", lines)
+
+
+# ─── C#: ws namespace ──────────────────────────────────
+def generate_csharp_ws(data):
+    lines = _cs_header("OverloadParty.GameData.Ws")
+    ws = data["ws_message_types"]
+
+    lines.append("public static class WSServerMsgTypes")
+    lines.append("{")
+    for v in ws["server"]:
+        lines.append(f'    public const string {_to_pascal(v)} = "{v}";')
+    lines.append("}")
+    lines.append("")
+
+    lines.append("public static class WSClientMsgTypes")
+    lines.append("{")
+    for v in ws["client"]:
+        lines.append(f'    public const string {_to_pascal(v)} = "{v}";')
+    lines.append("}")
+    lines.append("")
+
+    _write_file(DOTNET_DIR / "Ws" / "WsConstants_gen.cs", lines)
+
+
+# ─── C#: shop namespace ────────────────────────────────
+def generate_csharp_shop(data):
+    lines = _cs_header("OverloadParty.GameData.Shop")
+    for yaml_key, _, _, cs_class, _, _, _ in SHOP_SIMPLE:
+        values = data.get(yaml_key)
+        if values is None:
+            continue
+        lines.extend(_cs_static_class(cs_class, values))
+    _write_file(DOTNET_DIR / "Shop" / "ShopConstants_gen.cs", lines)
+
+
+# ─── C#: newsfeed namespace ────────────────────────────
+def generate_csharp_newsfeed(data):
+    lines = _cs_header("OverloadParty.GameData.Newsfeed")
+    for yaml_key, _, _, cs_class, _, _, _ in NEWSFEED_SIMPLE:
+        values = data.get(yaml_key)
+        if values is None:
+            continue
+        lines.extend(_cs_static_class(cs_class, values))
+    _write_file(DOTNET_DIR / "Newsfeed" / "NewsfeedConstants_gen.cs", lines)
 
 
 # ─── Generate C# (event data) ──────────────────────────
@@ -588,13 +784,11 @@ def _go_to_cs_type(go_type):
     is_pointer = go_type.startswith("*")
     base = go_type.lstrip("*")
 
-    # Slice of pointers: []*T → T?[]
     if base.startswith("[]*"):
         elem = base[3:]
         cs_elem = _GO_TO_CS_TYPE.get(elem, elem)
         return f"{cs_elem}?[]"
 
-    # Slice: []T → T[] (List for primitives stays as array for view types)
     if base.startswith("[]"):
         elem = base[2:]
         cs_elem = _GO_TO_CS_TYPE.get(elem, elem)
@@ -649,11 +843,9 @@ def generate_csharp_game_state_view(*, out_path, namespace="OverloadParty.GameDa
             is_custom_ref = cs_type not in _GO_TO_CS_TYPE.values() and not cs_type.endswith("?") and not cs_type.endswith("[]")
 
             if go_type.startswith("*"):
-                # Pointer types → nullable in C#
                 lines.append(f"    public {cs_type} {fname} {{ get; init; }}")
             elif go_type.startswith("[]"):
                 if has_omitempty:
-                    # Array with omitempty → nullable array (absent when null)
                     lines.append(f"    public {cs_type}? {fname} {{ get; init; }}")
                 else:
                     lines.append(f"    public {cs_type} {fname} {{ get; init; }} = [];")
@@ -685,11 +877,7 @@ _GO_TO_CS_ENVELOPE_TYPE = {
 
 
 def _go_to_cs_envelope_type(go_type):
-    """Convert a Go type string to a C# type string for envelope types.
-
-    Differs from _go_to_cs_type in that json.RawMessage maps to JsonElement
-    (non-nullable by default) to match the battle server's existing records.
-    """
+    """Convert a Go type string to a C# type string for envelope types."""
     is_pointer = go_type.startswith("*")
     base = go_type.lstrip("*")
 
@@ -707,12 +895,7 @@ def _go_to_cs_envelope_type(go_type):
 
 
 def generate_csharp_battle_gateway_rpc(*, out_path, namespace="OverloadParty.GameData"):
-    """Generate BattleGatewayRpc_gen.cs from the battle_gateway_rpc section.
-
-    Types ending in "Request" become C# records (Gateway sends them); other
-    types become classes (Gateway deserializes responses). JSON keys are
-    snake_case and emitted as explicit [JsonPropertyName(...)] attributes.
-    """
+    """Generate BattleGatewayRpc_gen.cs from the battle_gateway_rpc section."""
     with open(MODELS_YAML, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f)
 
@@ -746,7 +929,6 @@ def generate_csharp_battle_gateway_rpc(*, out_path, namespace="OverloadParty.Gam
             lines.append(f"/// <summary>{td['comment']}</summary>")
 
         if is_request:
-            # Emit as record with [property: JsonPropertyName(...)] on constructor params.
             fields = td.get("fields", [])
             if not fields:
                 lines.append(f"public record {name}();")
@@ -764,7 +946,6 @@ def generate_csharp_battle_gateway_rpc(*, out_path, namespace="OverloadParty.Gam
                 lines.append(f'    [property: JsonPropertyName("{json_key}")] {cs_type} {fname}{trailing}')
             lines.append("")
         else:
-            # Emit as class with [JsonPropertyName(...)] on each property.
             lines.append(f"public class {name}")
             lines.append("{")
             for field in td.get("fields", []):
@@ -777,7 +958,6 @@ def generate_csharp_battle_gateway_rpc(*, out_path, namespace="OverloadParty.Gam
 
                 lines.append(f'    [JsonPropertyName("{json_key}")]')
                 if go_type.startswith("*"):
-                    # Pointer → nullable (already includes ?)
                     lines.append(f"    public {cs_type} {fname} {{ get; init; }}")
                 elif go_type.startswith("[]"):
                     if has_omitempty:
@@ -797,7 +977,7 @@ def generate_csharp_battle_gateway_rpc(*, out_path, namespace="OverloadParty.Gam
         f.write("\n")
 
 
-# ─── Generate TypeScript (constants) ───────────────────
+# ─── TS constants: generic emitters ────────────────────
 def _ts_const_array(const_name, type_name, values, extra_union=None):
     """Generate a TS as-const array with union type."""
     lines = []
@@ -810,44 +990,26 @@ def _ts_const_array(const_name, type_name, values, extra_union=None):
     return lines
 
 
-def generate_ts_constants(constants, *, out_path):
-    """Generate constants.ts."""
-    ts_out = Path(out_path)
-
-    lines = [
+def _ts_header():
+    return [
         _GENERATED_HEADER,
         "",
     ]
 
-    # Phases (special: includes 'selecting' in union type).
-    lines.extend(_ts_const_array("PHASES", "GamePhase", constants["phases"], extra_union="'selecting'"))
 
-    lines.extend(_ts_const_array("ZONES", "Zone", constants["zones"]))
+# ─── TS: gameDesign.ts ─────────────────────────────────
+def generate_ts_game_design(data, factions):
+    lines = _ts_header()
 
-    lines.extend(_ts_const_array("RANKS", "Rank", constants["ranks"]))
-
-    # Instance families (special: includes '' in union type).
-    lines.extend(_ts_const_array("INSTANCE_FAMILIES", "InstanceFamily", constants["instance_families"], extra_union="''"))
-
-    lines.append(f"export const FACTIONS = {json.dumps(constants['factions'])} as const;")
-    lines.append(f"export const SELECTABLE_FACTIONS = {json.dumps(constants['selectable_factions'])} as const;")
-    lines.append("export type FactionId = (typeof SELECTABLE_FACTIONS)[number];")
-    display_names = constants.get("faction_display_names", {})
-    display_entries = ", ".join(f'"{f}": "{display_names.get(f, f)}"' for f in constants["factions"])
-    lines.append(f"export const FACTION_DISPLAY_NAMES: Record<string, string> = {{ {display_entries} }};")
-    lines.append("")
-
-    _ts_skip = {"phases", "zones", "ranks", "instance_families"}
-    for yaml_key, _, _, _, ts_const, ts_type in _SIMPLE_LIST_KEYS:
-        if yaml_key in _ts_skip:
-            continue
-        values = constants.get(yaml_key)
+    for yaml_key, _, _, _, ts_const, ts_type, extra_union in GAME_DESIGN_SIMPLE:
+        values = data.get(yaml_key)
         if values is None:
             continue
-        lines.extend(_ts_const_array(ts_const, ts_type, values))
+        lines.extend(_ts_const_array(ts_const, ts_type, values, extra_union=extra_union))
 
-    ct = constants["card_types"]
-    all_card_types = ct["compute"] + ct["data"] + ct["support"]
+    # Card types.
+    ct = data["card_types"]
+    all_card_types = ct["compute"] + ct["data"] + ct["support"] + ct.get("log", [])
     lines.append(f"export const CARD_TYPES = {json.dumps(all_card_types)} as const;")
     lines.append("export type CardType = (typeof CARD_TYPES)[number];")
     lines.append("")
@@ -858,7 +1020,7 @@ def generate_ts_constants(constants, *, out_path):
     lines.append(f"const DATA_TYPES: ReadonlySet<string> = new Set({data_set});")
     lines.append("")
 
-    lines.append("/** Returns true if the card type is a deployable resource (compute, AI/ML, or data). */")
+    lines.append("/** Returns true if the card type is a deployable resource (compute or data). */")
     lines.append("export function isResourceType(cardType: string): boolean {")
     lines.append("  return COMPUTE_TYPES.has(cardType) || DATA_TYPES.has(cardType);")
     lines.append("}")
@@ -876,11 +1038,14 @@ def generate_ts_constants(constants, *, out_path):
     lines.append("}")
     lines.append("")
 
+    support_types = [t for t in ct["support"] if t != "Attachment"]
     lines.append("/** Returns true if the card goes in the support zone (Platform, Strategy, Incident, Reactive). */")
     lines.append("export function isSupportType(cardType: string): boolean {")
-    support_types = [t for t in ct["support"] if t not in ("Attachment",)]
-    support_cases = " || ".join(f"cardType === '{t}'" for t in support_types)
-    lines.append(f"  return {support_cases};")
+    if support_types:
+        support_cases = " || ".join(f"cardType === '{t}'" for t in support_types)
+        lines.append(f"  return {support_cases};")
+    else:
+        lines.append("  return false;")
     lines.append("}")
     lines.append("")
 
@@ -888,13 +1053,6 @@ def generate_ts_constants(constants, *, out_path):
     lines.append("export function isAttachmentType(cardType: string): boolean {")
     lines.append("  return cardType === 'Attachment';")
     lines.append("}")
-    lines.append("")
-
-    ws_types = constants["ws_message_types"]
-    lines.append(f"export const WS_SERVER_MSG_TYPES = {json.dumps(ws_types['server'])} as const;")
-    lines.append("export type WSServerMsgType = (typeof WS_SERVER_MSG_TYPES)[number];")
-    lines.append(f"export const WS_CLIENT_MSG_TYPES = {json.dumps(ws_types['client'])} as const;")
-    lines.append("export type WSClientMsgType = (typeof WS_CLIENT_MSG_TYPES)[number];")
     lines.append("")
 
     lines.append("/** Returns the maximum number of copies allowed in a deck for a given restriction. */")
@@ -909,7 +1067,51 @@ def generate_ts_constants(constants, *, out_path):
     lines.append("}")
     lines.append("")
 
-    iv = constants["initial_values"]
+    # Factions.
+    sorted_factions = sorted(factions, key=lambda f: f["sort_order"])
+    all_faction_ids = [f["id"] for f in sorted_factions]
+    selectable_ids = [f["id"] for f in sorted_factions if f.get("is_collectible")]
+
+    lines.append(f"export const FACTIONS = {json.dumps(all_faction_ids)} as const;")
+    lines.append(f"export const SELECTABLE_FACTIONS = {json.dumps(selectable_ids)} as const;")
+    lines.append("export type FactionId = (typeof SELECTABLE_FACTIONS)[number];")
+    lines.append("")
+
+    lines.append("export interface FactionMetadata {")
+    lines.append("  id: string;")
+    lines.append("  shortNameJa: string;")
+    lines.append("  shortNameEn: string;")
+    lines.append("  fullNameJa: string;")
+    lines.append("  fullNameEn: string;")
+    lines.append("  isCollectible: boolean;")
+    lines.append("  sortOrder: number;")
+    lines.append("}")
+    lines.append("")
+
+    lines.append("export const FACTIONS_METADATA: readonly FactionMetadata[] = [")
+    for f in sorted_factions:
+        entry = {
+            "id": f["id"],
+            "shortNameJa": f["short_name_ja"],
+            "shortNameEn": f["short_name_en"],
+            "fullNameJa": f["full_name_ja"],
+            "fullNameEn": f["full_name_en"],
+            "isCollectible": f["is_collectible"],
+            "sortOrder": f["sort_order"],
+        }
+        # Emit with JS-style boolean lowercase (json.dumps already produces true/false).
+        lines.append(f"  {json.dumps(entry, ensure_ascii=False)},")
+    lines.append("];")
+    lines.append("")
+
+    lines.append("export const FACTION_BY_ID: Record<string, FactionMetadata> = {")
+    for f in sorted_factions:
+        lines.append(f'  "{f["id"]}": FACTIONS_METADATA[{sorted_factions.index(f)}],')
+    lines.append("};")
+    lines.append("")
+
+    # Initial values.
+    iv = data["initial_values"]
     lines.append("export const INITIAL_VALUES = {")
     for key, val in iv.items():
         camel = re.sub(r'_([a-z])', lambda m: m.group(1).upper(), key)
@@ -917,10 +1119,53 @@ def generate_ts_constants(constants, *, out_path):
     lines.append("} as const;")
     lines.append("")
 
-    ts_out.parent.mkdir(parents=True, exist_ok=True)
-    with open(ts_out, "w", encoding="utf-8") as f:
-        f.write("\n".join(lines))
-        f.write("\n")
+    _write_file(NPM_DIR / "src" / "gameDesign.ts", lines)
+
+
+# ─── TS: gameLogic.ts ──────────────────────────────────
+def generate_ts_game_logic(data):
+    lines = _ts_header()
+    for yaml_key, _, _, _, ts_const, ts_type, extra_union in GAME_LOGIC_SIMPLE:
+        values = data.get(yaml_key)
+        if values is None:
+            continue
+        lines.extend(_ts_const_array(ts_const, ts_type, values, extra_union=extra_union))
+    _write_file(NPM_DIR / "src" / "gameLogic.ts", lines)
+
+
+# ─── TS: ws.ts ─────────────────────────────────────────
+def generate_ts_ws(data):
+    lines = _ts_header()
+    ws_types = data["ws_message_types"]
+    lines.append(f"export const WS_SERVER_MSG_TYPES = {json.dumps(ws_types['server'])} as const;")
+    lines.append("export type WSServerMsgType = (typeof WS_SERVER_MSG_TYPES)[number];")
+    lines.append("")
+    lines.append(f"export const WS_CLIENT_MSG_TYPES = {json.dumps(ws_types['client'])} as const;")
+    lines.append("export type WSClientMsgType = (typeof WS_CLIENT_MSG_TYPES)[number];")
+    lines.append("")
+    _write_file(NPM_DIR / "src" / "ws.ts", lines)
+
+
+# ─── TS: shop.ts ───────────────────────────────────────
+def generate_ts_shop(data):
+    lines = _ts_header()
+    for yaml_key, _, _, _, ts_const, ts_type, extra_union in SHOP_SIMPLE:
+        values = data.get(yaml_key)
+        if values is None:
+            continue
+        lines.extend(_ts_const_array(ts_const, ts_type, values, extra_union=extra_union))
+    _write_file(NPM_DIR / "src" / "shop.ts", lines)
+
+
+# ─── TS: newsfeed.ts ───────────────────────────────────
+def generate_ts_newsfeed(data):
+    lines = _ts_header()
+    for yaml_key, _, _, _, ts_const, ts_type, extra_union in NEWSFEED_SIMPLE:
+        values = data.get(yaml_key)
+        if values is None:
+            continue
+        lines.extend(_ts_const_array(ts_const, ts_type, values, extra_union=extra_union))
+    _write_file(NPM_DIR / "src" / "newsfeed.ts", lines)
 
 
 # ─── Generate TypeScript (event data) ──────────────────
@@ -1005,7 +1250,6 @@ def generate_ts_ws_messages(*, out_path):
         "",
     ]
 
-    # Collect ts_imports for ws_messages section.
     ws_imports: dict[str, list[str]] = {}
     for imp in ws_file.get("ts_imports", []):
         from_path = imp["from"]
@@ -1068,20 +1312,18 @@ def _go_to_ts_model_field(go_type, json_tag, type_map=None, *, nullable_as_optio
     is_pointer = go_type.startswith("*")
     base_type = go_type.lstrip("*")
 
-    # Slice of pointers: []*T → (T | null)[]
     if base_type.startswith("[]*"):
         elem = base_type[3:]
         ts_elem = type_map.get(elem, elem)
         ts_type = f"({ts_elem} | null)[]"
         return json_key, ts_type, optional
 
-    # Slice type: []T
     if base_type.startswith("[]"):
         elem = base_type[2:]
         ts_elem = type_map.get(elem, elem)
         ts_type = f"{ts_elem}[]"
         return json_key, ts_type, optional
-    # Map type
+
     if base_type.startswith("map["):
         ts_type = type_map.get(base_type, "Record<string, unknown>")
         return json_key, ts_type, optional
@@ -1090,29 +1332,20 @@ def _go_to_ts_model_field(go_type, json_tag, type_map=None, *, nullable_as_optio
 
     if is_pointer:
         if optional:
-            # *T + omitempty -> optional field, non-null type
             return json_key, ts_base, True
         elif nullable_as_optional:
-            # nullable_as_optional mode: *T without omitempty -> optional field
             return json_key, ts_base, True
         else:
-            # *T without omitempty -> T | null
             return json_key, f"{ts_base} | null", False
 
     return json_key, ts_base, optional
 
 
 def generate_ts_models(*, out_path, pkg_filter=None):
-    """Generate models.ts from the files section of models.yaml (excluding ws_messages).
-
-    Args:
-        out_path: Output file path.
-        pkg_filter: If set, only include file sections with matching pkg field.
-    """
+    """Generate models.ts from the files section of models.yaml (excluding ws_messages)."""
     with open(MODELS_YAML, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f)
 
-    # Collect type_aliases so we can map them to their base TS type.
     alias_map = dict(_GO_TO_TS_MODEL_TYPE)
     for file_def in data["files"]:
         for ta in file_def.get("type_aliases", []):
@@ -1126,8 +1359,7 @@ def generate_ts_models(*, out_path, pkg_filter=None):
         "",
     ]
 
-    # Collect ts_imports from all matching file definitions.
-    ts_imports: dict[str, list[str]] = {}  # from_path -> [names]
+    ts_imports: dict[str, list[str]] = {}
     matching_files = []
     for file_def in data["files"]:
         file_target = file_def.get("target", "both")
@@ -1154,7 +1386,6 @@ def generate_ts_models(*, out_path, pkg_filter=None):
     for file_def in matching_files:
         file_nullable_as_optional = file_def.get("nullable_as_optional", False)
 
-        # TS-only type aliases (e.g., CardStats = ComputeStats | DataStats)
         for ta in file_def.get("ts_type_aliases", []):
             lines.append(f"export type {ta['name']} = {ta['value']};")
         if file_def.get("ts_type_aliases"):
@@ -1189,11 +1420,7 @@ def generate_ts_models(*, out_path, pkg_filter=None):
 
 # ─── Generate C# (variant types) ─────────────────────────
 def generate_csharp_variant_types(variant_types, *, out_path, namespace="OverloadParty.GameData"):
-    """Generate VariantTypes_gen.cs from variant_types in models.yaml.
-
-    Each variant type becomes a flat C# class where the discriminator field
-    is required and all variant-specific fields are nullable.
-    """
+    """Generate VariantTypes_gen.cs from variant_types in models.yaml."""
     cs_out = Path(out_path)
 
     lines = [
@@ -1214,10 +1441,9 @@ def generate_csharp_variant_types(variant_types, *, out_path, namespace="Overloa
         lines.append(f"public class {name}")
         lines.append("{")
 
-        # Discriminator field (always required string).
         lines.append(f'    public required string {disc_prop} {{ get; init; }} = "";')
 
-        seen = {}  # field_name -> (cs_prop, cs_nullable_type)
+        seen = {}
         for variant in vt["variants"]:
             for field in variant.get("fields", []):
                 fname = field["name"]
@@ -1244,8 +1470,8 @@ def generate_csharp_variant_types(variant_types, *, out_path, namespace="Overloa
 def generate_ts_variant_types(variant_types, *, out_path):
     """Generate variantTypes.ts from variant_types in models.yaml.
 
-    Each variant type becomes a TS discriminated union where the
-    discriminator field has a string literal type per variant.
+    Current variant types only reference game_design symbols (InstanceFamily, Rank),
+    so imports are hardcoded to './gameDesign'.
     """
     ts_out = Path(out_path)
 
@@ -1264,7 +1490,7 @@ def generate_ts_variant_types(variant_types, *, out_path):
 
     if ref_types:
         sorted_refs = sorted(ref_types)
-        lines.append(f"import type {{ {', '.join(sorted_refs)} }} from './constants';")
+        lines.append(f"import type {{ {', '.join(sorted_refs)} }} from './gameDesign';")
         lines.append("")
 
     for vt in variant_types:
@@ -1358,10 +1584,7 @@ def _json_placeholder(go_type):
 
 
 def _generate_field_table(type_def):
-    """Generate a Markdown field table + JSON skeleton for a type definition.
-
-    Only includes fields that have a 'doc' key.
-    """
+    """Generate a Markdown field table + JSON skeleton for a type definition."""
     doc_fields = []
     for field in type_def.get("fields", []):
         if "doc" not in field:
@@ -1374,7 +1597,6 @@ def _generate_field_table(type_def):
     if not doc_fields:
         return None
 
-    # JSON with inline comments (JSONC style)
     json_entries = []
     for json_key, go_type, doc in doc_fields:
         json_entries.append(f'  "{json_key}": {_json_placeholder(go_type)} // {doc}')
@@ -1383,10 +1605,7 @@ def _generate_field_table(type_def):
 
 
 def update_doc_field_tables(doc_path):
-    """Replace marker-delimited sections in a Markdown file with generated field tables.
-
-    Markers: <!-- BEGIN GENERATED: TypeName --> ... <!-- END GENERATED: TypeName -->
-    """
+    """Replace marker-delimited sections in a Markdown file with generated field tables."""
     doc_file = Path(doc_path)
     if not doc_file.exists():
         return False
@@ -1394,7 +1613,6 @@ def update_doc_field_tables(doc_path):
     with open(MODELS_YAML, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f)
 
-    # Build a lookup: type_name -> type_def (across all file sections).
     type_map = {}
     for file_def in data.get("files", []):
         for td in file_def.get("types", []):
@@ -1431,20 +1649,43 @@ def update_doc_field_tables(doc_path):
 
 
 # ─── Main ──────────────────────────────────────────────
-def main():
-    with open(CONSTANTS_YAML, "r", encoding="utf-8") as f:
-        constants = yaml.safe_load(f)
-    with open(EVENT_SCHEMAS_YAML, "r", encoding="utf-8") as f:
-        event_schemas = yaml.safe_load(f)
-    with open(MODELS_YAML, "r", encoding="utf-8") as f:
-        models = yaml.safe_load(f)
+def _load_yaml(path):
+    with open(path, "r", encoding="utf-8") as f:
+        return yaml.safe_load(f)
 
+
+def main():
+    # Load split constants yamls.
+    game_design = _load_yaml(GAME_DESIGN_YAML)
+    game_logic = _load_yaml(GAME_LOGIC_YAML)
+    gateway_ws = _load_yaml(GATEWAY_WS_YAML)
+    shop = _load_yaml(SHOP_YAML)
+    newsfeed = _load_yaml(NEWSFEED_YAML)
+    factions_doc = _load_yaml(FACTIONS_YAML)
+    factions = factions_doc["factions"]
+
+    # Load event schemas and models.
+    event_schemas = _load_yaml(EVENT_SCHEMAS_YAML)
+    models = _load_yaml(MODELS_YAML)
     variant_types = models.get("variant_types", [])
 
-    # Go
-    generate_go_constants(constants, out_path=GO_DIR / "constants" / "constants_gen.go")
-    print("Generated → packages/gamedata/constants/constants_gen.go", file=sys.stderr)
+    # ── Go constants (5 sub-packages) ──
+    generate_go_game_design(game_design, factions)
+    print("Generated → packages/gamedata/constants/game_design/constants_gen.go", file=sys.stderr)
 
+    generate_go_game_logic(game_logic)
+    print("Generated → packages/gamedata/constants/game_logic/constants_gen.go", file=sys.stderr)
+
+    generate_go_ws(gateway_ws)
+    print("Generated → packages/gamedata/constants/ws/constants_gen.go", file=sys.stderr)
+
+    generate_go_shop(shop)
+    print("Generated → packages/gamedata/constants/shop/constants_gen.go", file=sys.stderr)
+
+    generate_go_newsfeed(newsfeed)
+    print("Generated → packages/gamedata/constants/newsfeed/constants_gen.go", file=sys.stderr)
+
+    # ── Go models ──
     gamedata_names, api_names = generate_go_models(
         gamedata_dir=GO_DIR / "model",
         api_dir=API_GO_DIR / "model",
@@ -1452,10 +1693,23 @@ def main():
     print(f"Generated models → packages/gamedata/model/ [{', '.join(gamedata_names)}]", file=sys.stderr)
     print(f"Generated models → packages/api/model/ [{', '.join(api_names)}]", file=sys.stderr)
 
-    # C#
-    generate_csharp_constants(constants, out_path=DOTNET_DIR / "GameConstants_gen.cs")
-    print("Generated → packages/gamedata-dotnet/GameConstants_gen.cs", file=sys.stderr)
+    # ── C# constants (5 namespaces) ──
+    generate_csharp_game_design(game_design, factions)
+    print("Generated → packages/gamedata-dotnet/GameDesign/GameDesignConstants_gen.cs", file=sys.stderr)
 
+    generate_csharp_game_logic(game_logic)
+    print("Generated → packages/gamedata-dotnet/GameLogic/GameLogicConstants_gen.cs", file=sys.stderr)
+
+    generate_csharp_ws(gateway_ws)
+    print("Generated → packages/gamedata-dotnet/Ws/WsConstants_gen.cs", file=sys.stderr)
+
+    generate_csharp_shop(shop)
+    print("Generated → packages/gamedata-dotnet/Shop/ShopConstants_gen.cs", file=sys.stderr)
+
+    generate_csharp_newsfeed(newsfeed)
+    print("Generated → packages/gamedata-dotnet/Newsfeed/NewsfeedConstants_gen.cs", file=sys.stderr)
+
+    # ── C# other generators (unchanged) ──
     generate_csharp_event_data(event_schemas, out_path=DOTNET_DIR / "EventData_gen.cs")
     print("Generated → packages/gamedata-dotnet/EventData_gen.cs", file=sys.stderr)
 
@@ -1469,10 +1723,23 @@ def main():
     generate_csharp_battle_gateway_rpc(out_path=DOTNET_DIR / "BattleGatewayRpc_gen.cs")
     print("Generated → packages/gamedata-dotnet/BattleGatewayRpc_gen.cs", file=sys.stderr)
 
-    # TypeScript (gamedata)
-    generate_ts_constants(constants, out_path=NPM_DIR / "src" / "constants.ts")
-    print("Generated → packages/gamedata-npm/src/constants.ts", file=sys.stderr)
+    # ── TypeScript constants (5 files) ──
+    generate_ts_game_design(game_design, factions)
+    print("Generated → packages/gamedata-npm/src/gameDesign.ts", file=sys.stderr)
 
+    generate_ts_game_logic(game_logic)
+    print("Generated → packages/gamedata-npm/src/gameLogic.ts", file=sys.stderr)
+
+    generate_ts_ws(gateway_ws)
+    print("Generated → packages/gamedata-npm/src/ws.ts", file=sys.stderr)
+
+    generate_ts_shop(shop)
+    print("Generated → packages/gamedata-npm/src/shop.ts", file=sys.stderr)
+
+    generate_ts_newsfeed(newsfeed)
+    print("Generated → packages/gamedata-npm/src/newsfeed.ts", file=sys.stderr)
+
+    # ── TypeScript other generators ──
     generate_ts_event_data(event_schemas, out_path=NPM_DIR / "src" / "eventData.ts")
     print("Generated → packages/gamedata-npm/src/eventData.ts", file=sys.stderr)
 
@@ -1480,18 +1747,16 @@ def main():
         generate_ts_variant_types(variant_types, out_path=NPM_DIR / "src" / "variantTypes.ts")
         print("Generated → packages/gamedata-npm/src/variantTypes.ts", file=sys.stderr)
 
-    # TypeScript (gamedata models)
     generate_ts_models(out_path=NPM_DIR / "src" / "models.ts", pkg_filter="gamedata")
     print("Generated → packages/gamedata-npm/src/models.ts", file=sys.stderr)
 
-    # TypeScript (api)
     generate_ts_ws_messages(out_path=API_NPM_DIR / "src" / "wsMessages.ts")
     print("Generated → packages/api-npm/src/wsMessages.ts", file=sys.stderr)
 
     generate_ts_models(out_path=API_NPM_DIR / "src" / "models.ts", pkg_filter="api")
     print("Generated → packages/api-npm/src/models.ts", file=sys.stderr)
 
-    # Docs (marker-based field table replacement)
+    # ── Docs (marker-based field table replacement) ──
     for doc_name in ("API_REFERENCE.md", "WS_REFERENCE.md"):
         if update_doc_field_tables(DOCS_DIR / doc_name):
             print(f"Updated field tables → docs/architecture/{doc_name}", file=sys.stderr)

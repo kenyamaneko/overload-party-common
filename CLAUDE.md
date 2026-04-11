@@ -20,7 +20,12 @@
 
 - `data/cards/*.yaml` - カード定義（5ファクション）
 - `data/mock/` - 開発用モックデータ（news, products, starter_decks）
-- `data/constants.yaml` - ゲーム定数
+- `data/factions.yaml` - ファクションマスター SSoT（id / 表示名 / sort_order / is_collectible）
+- `data/game_design_constants.yaml` - ゲームデザイン定数（zones, ranks, card_types, restrictions 等、全リポジトリ共通）
+- `data/game_logic_constants.yaml` - ゲームロジック定数（phases, win_reasons, effect_ops 等、将来 battle リポへ）
+- `data/gateway_ws_constants.yaml` - WS メッセージタイプ定数（将来 gateway リポへ）
+- `data/shop_constants.yaml` - ショップ定数（product_types、将来 shop リポへ）
+- `data/newsfeed_constants.yaml` - ニュースフィード定数（cloud_news_sources、将来 newsfeed リポへ）
 - `data/event_schemas.yaml` - イベントデータスキーマ
 - `data/models.yaml` - モデル定義（pkg: gamedata/api で振り分け）
 - `db/schema_postgres.sql` - PostgreSQL DDL（全テーブルの SSoT、インラインコメントが DATA_DESIGN.md のカラム説明の SSoT）
@@ -36,7 +41,7 @@
 - `packages/api/` - Go パッケージ（API コントラクト: REST 型・WS メッセージ・デッキ型）
 - `packages/devdata/` - Go パッケージ 開発用（カード・商品 JSON、ローカルモック用）
 - `packages/gamedata-dotnet/` - NuGet パッケージ（battle 用、GitHub Packages で publish）
-- `packages/gamedata-npm/` - npm パッケージ gamedata（constants, eventData, variantTypes）
+- `packages/gamedata-npm/` - npm パッケージ gamedata（game-design / game-logic / ws / shop / newsfeed / eventData / variantTypes / models サブエントリポイント）
 - `packages/api-npm/` - npm パッケージ api（models, wsMessages）
 - `docs/architecture/API_REFERENCE.md` - REST API リファレンス
 - `docs/architecture/WS_REFERENCE.md` - WebSocket API リファレンス
@@ -48,7 +53,8 @@
 
 - カードデータを変更したら `python3 scripts/generate_cards.py` を実行
 - 商品データを変更したら `python3 scripts/generate_products.py` を実行
-- 定数・イベントスキーマ・モデル定義を変更したら `python3 scripts/generate_constants.py` を実行
+- 定数（`data/*_constants.yaml`）・ファクション（`data/factions.yaml`）・イベントスキーマ・モデル定義を変更したら `python3 scripts/generate_constants.py` を実行
+- 定数は 5 分類 (game_design / game_logic / ws / shop / newsfeed) に分かれており、それぞれが独立したサブパッケージ（Go: `packages/gamedata/constants/{category}/`、C#: `OverloadParty.GameData.{Category}` namespace、npm: `@kenyamaneko/overload-party-gamedata/{category}` サブエントリポイント）に生成される
 - main への push 時に CI が自動でパッケージを publish する（patch bump。minor/major は手動 dispatch で指定）
 - **git tag を手動で打ってはいけない。** タグは CI が自動で作成する。手動タグは二重 publish やバージョン不整合の原因になる
 - 生成スクリプトは CI では実行しない。PR の codegen-check で同期を保証
@@ -57,8 +63,9 @@
 - DB スキーマを変更したら `db/schema_postgres.sql` のみ編集する（server リポの schema は廃止）。カラムのインラインコメント（`-- 説明`）も必ず記述する
 - DB スキーマを変更したら `python3 scripts/generate_schema_doc.py` を実行して DATA_DESIGN.md を更新する
 - DATA_DESIGN.md の `<!-- BEGIN/END GENERATED: table_name -->` マーカー間は自動生成。カラム説明を変更する場合は `db/schema_postgres.sql` のインラインコメントを編集して `python3 scripts/generate_schema_doc.py` を実行する
-- 各リポはパッケージをインストールして生成コードを使う:
-  - gateway: `go get .../packages/gamedata@latest` + `go get .../packages/api@latest`
-  - gateway 開発用: `go get .../packages/devdata@latest`
+- 各リポはパッケージをインストールして生成コードを使う（Gateway は gateway / account / matchmaking / shop / scenario / card / battle の 7 サービスに分割済み）:
+  - Go サービス（gateway / account / matchmaking / shop / scenario / card）: `go get .../packages/gamedata@latest` + `go get .../packages/api@latest`
+  - Go サービス 開発用: `go get .../packages/devdata@latest`
   - battle: NuGet `OverloadParty.GameData` パッケージ
   - client: npm `@kenyamaneko/overload-party-gamedata` + `@kenyamaneko/overload-party-api`
+  - 各 Go サービスが実際にどのパッケージを必要とするかは責務に応じて取捨する（例: card サービスはカードマスター関連、matchmaking は WS メッセージ型など）

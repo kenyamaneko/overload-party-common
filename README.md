@@ -47,18 +47,23 @@ psql -U postgres overload_party < db/seed/stamps.sql
 
 | パッケージ | 内容 | 利用リポ |
 |-----------|------|---------|
-| Go module (`packages/gamedata/`) | model, constants, cardno, cards_gen.json (embed) | gateway |
-| NuGet `OverloadParty.GameData` (`packages/dotnet/`) | GameConstants, EventData, cards_gen.json | battle |
-| npm `@kenyamaneko/overload-party-gamedata` (`packages/npm/`) | constants.ts, eventData.ts | client |
+| Go module (`packages/gamedata/`) | model, constants サブパッケージ (game_design / game_logic / ws / shop / newsfeed) | Go サービス各種（gateway / account / matchmaking / shop / scenario / card） |
+| Go module (`packages/api/`) | REST / WS / battle-gateway RPC 契約モデル | Go サービス各種 |
+| Go module (`packages/devdata/`) | カード・商品 JSON（ローカルモック用） | Go サービス 開発用 |
+| NuGet `OverloadParty.GameData` (`packages/gamedata-dotnet/`) | GameDesign / GameLogic / Ws / Shop / Newsfeed namespace + EventData + GameStateView + VariantTypes + BattleGatewayRpc | battle |
+| npm `@kenyamaneko/overload-party-gamedata` (`packages/gamedata-npm/`) | game-design / game-logic / ws / shop / newsfeed / eventData / variantTypes / models サブエントリポイント | client |
+| npm `@kenyamaneko/overload-party-api` (`packages/api-npm/`) | REST / WS メッセージモデル | client |
 
 ### 実行方法
 
 ```bash
-# パッケージモード（推奨）
-python3 packages/generate_from_yaml.py --gen-dir packages/
+python3 scripts/generate_cards.py       # カードデータ
+python3 scripts/generate_products.py    # 商品データ
+python3 scripts/generate_constants.py   # 定数・モデル・イベントスキーマ
+python3 scripts/generate_schema_doc.py  # DATA_DESIGN.md のスキーマドキュメント
 ```
 
-main への push 時に CI (`publish-packages.yaml`) が自動で生成・publish します。
+main への push 時に CI (`publish.yaml`) が自動で publish します。
 
 ### 前提条件
 
@@ -67,10 +72,16 @@ main への push 時に CI (`publish-packages.yaml`) が自動で生成・publis
 
 ## 定数を変更するとき
 
-1. `data/constants.json` を編集
-2. `python3 packages/generate_from_yaml.py --gen-dir packages/` を実行
+1. 対象の yaml を編集:
+   - ゲームデザイン: `data/game_design_constants.yaml`
+   - ゲームロジック: `data/game_logic_constants.yaml`
+   - WS メッセージタイプ: `data/gateway_ws_constants.yaml`
+   - ショップ: `data/shop_constants.yaml`
+   - ニュースフィード: `data/newsfeed_constants.yaml`
+   - ファクション: `data/factions.yaml`
+2. `python3 scripts/generate_constants.py` を実行
 3. main に push → CI が自動でパッケージ publish
 4. 各リポでパッケージを更新:
-   - gateway: `go get github.com/kenyamaneko/overload-party-common/packages/gamedata@latest`
+   - Go サービス（gateway / account / matchmaking / shop / scenario / card）: `go get github.com/kenyamaneko/overload-party-common/packages/gamedata@latest`
    - battle: `dotnet restore`
    - client: `npm install`

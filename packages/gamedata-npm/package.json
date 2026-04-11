@@ -7,15 +7,31 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": "./dist/index.js",
-    "./constants": "./dist/constants.js",
+    "./game-design": "./dist/gameDesign.js",
+    "./game-logic": "./dist/gameLogic.js",
+    "./ws": "./dist/ws.js",
+    "./shop": "./dist/shop.js",
+    "./newsfeed": "./dist/newsfeed.js",
     "./eventData": "./dist/eventData.js",
     "./variantTypes": "./dist/variantTypes.js",
     "./models": "./dist/models.js"
   },
   "typesVersions": {
     "*": {
-      "constants": [
-        "dist/constants.d.ts"
+      "game-design": [
+        "dist/gameDesign.d.ts"
+      ],
+      "game-logic": [
+        "dist/gameLogic.d.ts"
+      ],
+      "ws": [
+        "dist/ws.d.ts"
+      ],
+      "shop": [
+        "dist/shop.d.ts"
+      ],
+      "newsfeed": [
+        "dist/newsfeed.d.ts"
       ],
       "eventData": [
         "dist/eventData.d.ts"

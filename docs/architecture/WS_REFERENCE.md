@@ -31,6 +31,35 @@ Gateway Server が提供する WebSocket API。リアルタイムのゲーム通
 
 REST API リファレンスは [API_REFERENCE.md](API_REFERENCE.md) を参照。
 
+### サービス構成と WS 接続の関係
+
+**クライアントとの WebSocket 接続は gateway がすべて終端する**。WS 通信のハンドリング・ルーティング・認証検証は gateway の責務であり、account / matchmaking / shop / scenario / card / battle といったドメインサービスはクライアントと直接 WS を張らない。gateway は受け取ったメッセージを内部 REST で各ドメインサービスへ委譲し、その結果を保持している WS コネクションにプッシュする。
+
+matchmaking のように非同期にマッチ結果を返す必要があるフローでは、ドメインサービスから gateway への通知は後述の Cloud Pub/Sub 経由で行われる（詳細は [Matchmaking フロー](#matchmaking-フロー) 参照）。gateway は水平スケールする前提のため、gateway Pod 間でプレイヤーの WS 接続先 Pod を追跡する必要はなく、Pub/Sub の competing consumers によって解決する。
+
+### Matchmaking フロー
+
+マッチメイキングは **キュー永続化** と **非同期通知** の 2 層で構成されるハイブリッド設計を採用している。
+
+- **キュー永続化**: Upstash Redis の Sorted Set を使用する。matchmaking サービスは `matchmaking:queue` という Sorted Set に `ZADD <joinedAt_ms> <playerID>` でエンキューし、マッチングループが `ZPOPMIN matchmaking:queue 2` で先着 2 名をアトミックに取り出す。個別キャンセルは `ZREM` で行う
+- **非同期通知**: Google Cloud Pub/Sub を **Exactly-Once Delivery** 有効で使用する。matchmaking はマッチ成立後、トピック `matchmaking-events` に `match_made` を publish する。gateway Pod 群は共通の pull subscription `matchmaking-events-gateway`（ack deadline 10 秒、Dead Letter Topic 付き）を購読しており、**competing consumers パターン** により 1 メッセージは 1 Pod にのみ配送される
+- **WS push の経路**: メッセージを受信した gateway Pod は、自 Pod が持つ `playerID → *websocket.Conn` の in-memory session map を参照し、該当プレイヤーの WS 接続を保持していれば `match_found` を push する。保持していなければそのまま ack して無視する（別 Pod で該当プレイヤーの接続が解決される前提ではなく、**送信先プレイヤーは ping 済みの 1 Pod に一意に存在する**）
+- **冪等性（保険）**: gateway は受信した `matchId` を in-memory map でトラッキングし、同一 `matchId` に対する `match_found` push は 1 回のみに抑える。これは Exactly-Once Delivery の subscription 境界外（ack 前クラッシュなど）での重複配送に対する安全弁である
+
+```
+  Client              Gateway                Matchmaking            Upstash Redis       Cloud Pub/Sub
+    |                    |                       |                        |                   |
+    | -- WS: matchmaking_start >                 |                        |                   |
+    |                    | -- REST enqueue -----> ZADD queue ------------->|                   |
+    |                    | <-- 202 Accepted ----|                        |                   |
+    |                    |                       | (loop) ZPOPMIN 2 ----->|                   |
+    |                    |                       | -- Publish match_made --------------------->|
+    |                    | <== Pull (EO) ======= matchmaking-events-gateway subscription ======|
+    |                    | matchId dedup check                                                |
+    | <-- WS: match_found|                       |                        |                   |
+    |                    | -- ack ----------------------------------------------------------> |
+```
+
 ### エンドポイント
 
 | 環境 | URL |

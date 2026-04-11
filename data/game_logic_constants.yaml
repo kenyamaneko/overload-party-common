@@ -1,67 +1,26 @@
-# Shared game constants for Overload Party. Single source of truth for server (Go) and client (TypeScript).
+# Game logic constants (SSoT).
+#
+# Runtime game state machine enums — owned by battle conceptually (per ADR-015),
+# but physically lives in common until battle repo is created (ADR-011).
+#
+# Per ADR-015 Phase 1, this file is split out of the former data/constants.yaml.
+# Consumers: battle (primary), gateway (subset for RPC dispatch), client (subset for display).
+#
+# Consumed by scripts/generate_constants.py → packages/gamedata/constants/game_logic
+#                                            → packages/gamedata-dotnet/GameLogic
+#                                            → packages/gamedata-npm/src/gameLogic.ts
 
 phases:
 - draw
 - main
 - battle
 - end
-zones:
-- frontend
-- backend
-- support
-ranks:
-- small
-- medium
-- large
-instance_families:
-- M
-- C
-- R
-factions:
-- SHE
-- Tenki
-- Sugar
-- Tuners
-- Neutral
-selectable_factions:
-- SHE
-- Tenki
-- Sugar
-- Tuners
-faction_display_names:
-  SHE: SHE（Smile Horizon Express）
-  Tenki: 天気使い
-  Sugar: しゅがーらぼ
-  Tuners: 調律部（チューナーズ）
-  Neutral: Neutral
-card_types:
-  compute:
-  - Compute
-  - Container
-  - Orchestrator
-  - Serverless
-  - AI/ML
-  data:
-  - Database
-  - ObjectStorage
-  - CacheDB
-  support:
-  - Platform
-  - Attachment
-  - Strategy
-  - Reactive
-  - Incident
-  log:
-  - Log
-restriction_values:
-- unlimited
-- limited
-- semi_limited
-- forbidden
+
 game_status:
 - waiting
 - playing
 - finished
+
 win_reasons:
 - budget_zero
 - system_down
@@ -72,6 +31,7 @@ win_reasons:
 - draw
 - launch_failure
 - surrender
+
 action_types:
 - play_card
 - attack
@@ -84,6 +44,7 @@ action_types:
 - forfeit
 - select_slot
 - reactive
+
 event_types:
 - play_card
 - attach_card
@@ -99,40 +60,7 @@ event_types:
 - turn_start
 - game_over
 - battle_start
-ws_message_types:
-  server:
-  - game_state
-  - game_over
-  - error
-  - game_entered
-  - matchmaking_started
-  - matchmaking_cancelled
-  - action_rejected
-  - stamp_used
-  - pong
-  - match_found
-  - action_performed
-  - turn_controls
-  - npc_battle_created
-  - opponent_disconnected
-  - opponent_reconnected
-  - spectate_joined
-  - spectate_error
-  - spectate_update
-  - spectate_ended
-  - spectate_stamp_broadcast
-  - game_state_restore
-  client:
-  - game_enter
-  - matchmaking_start
-  - matchmaking_cancel
-  - game_action
-  - use_stamp
-  - ping
-  - npc_battle_start
-  - spectate_join
-  - spectate_leave
-  - spectate_stamp
+
 effect_durations:
 - this_turn
 - until_next_turn_end
@@ -140,6 +68,7 @@ effect_durations:
 - while_on_field
 - permanent
 - next_turn
+
 trigger_types:
 - deploy
 - activate
@@ -152,6 +81,7 @@ trigger_types:
 - on_destroy
 - reactive
 - on_enemy_deploy
+
 effect_ops:
 - gain_budget
 - lose_budget
@@ -175,6 +105,7 @@ effect_ops:
 - reduce_deploy_turns
 - absorb_insight
 - gain_insight
+
 buff_types:
 - tp
 - yield
@@ -194,9 +125,11 @@ buff_types:
 - sla_penalty
 - sla_penalty_reduction
 - tp_suppressed
+
 buff_modes:
 - flat
 - percent
+
 custom_effects:
 - cancel_nth_deploy
 - chain_attack_bonus
@@ -208,6 +141,7 @@ custom_effects:
 - scale_to_zero
 - spot_expiry
 - target_shield
+
 effect_categories:
 - budget_gain
 - budget_penalty
@@ -226,44 +160,28 @@ effect_categories:
 - destroy_platform
 - cancel_action
 - survive
+
 effect_target_types:
 - none
 - choice
 - all_opp
 - self
+
 player_refs:
 - self
 - opponent
 - both
+
 use_limits:
 - once_per_turn
 - once_per_game
-match_types:
-- pvp
-- npc
-stat_types:
-- tp
-- yield
-- av
+
 guard_types:
 - count
 - stat
 - match
 - not_same
+
 selector_pick_modes:
 - all
 - choice
-cloud_news_sources:
-- aws
-- google-cloud
-- azure
-- oci
-- other
-product_types:
-- faction_set
-- cosmetic
-- subscription
-initial_values:
-  # deck_size は gateway / battle / client の 3 リポジトリから静的に参照されるため
-  # パッケージ定数として配信する。その他のゲーム定数は game_config テーブルで管理。
-  deck_size: 30
