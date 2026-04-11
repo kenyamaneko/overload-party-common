@@ -741,7 +741,7 @@ files:
 
 # ─── Variant Types (C# flat class + TS discriminated union) ───
 # generate_constants.py reads this section and outputs:
-#   - packages/gamedata-dotnet/VariantTypes_gen.cs
+#   - packages/game-state-dotnet/VariantTypes_gen.cs
 #   - packages/game-state-npm/src/variantTypes.ts
 #
 # Field types: string, int, long, bool, string[]

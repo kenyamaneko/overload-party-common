@@ -109,11 +109,10 @@ overload-party-common/          # 共有データ・定義の SSoT
 │   ├── api-client/             # Go module: client ↔ gateway REST/WS 契約
 │   ├── api-battle-rpc/         # Go module: gateway ↔ battle 内部 RPC 契約
 │   ├── devdata/                # Go module 開発用: cards_gen.json / products_gen.json embed
-│   ├── gamedata-dotnet/        # NuGet パッケージ (battle 用、Phase 5 で 4 csproj に分割予定)
-│   │   ├── GameDesign/GameDesignConstants_gen.cs
-│   │   ├── GameLogic/GameLogicConstants_gen.cs
-│   │   ├── EventData_gen.cs / GameStateView_gen.cs / VariantTypes_gen.cs / BattleGatewayRpc_gen.cs
-│   │   └── Ws/ Shop/ Newsfeed/ （battle は未使用だが生成）
+│   ├── game-design-constants-dotnet/  # NuGet: OverloadParty.GameDesignConstants
+│   ├── game-logic-constants-dotnet/   # NuGet: OverloadParty.GameLogicConstants
+│   ├── game-state-dotnet/             # NuGet: OverloadParty.GameState (EventData / GameStateView / VariantTypes + cards_gen.json EmbeddedResource)
+│   ├── api-battle-rpc-dotnet/         # NuGet: OverloadParty.ApiBattleRpc (gateway ↔ battle RPC 契約)
 │   ├── game-design-constants-npm/   # npm Layer 1: @kenyamaneko/overload-party-game-design-constants
 │   ├── game-logic-constants-npm/    # npm Layer 1: @kenyamaneko/overload-party-game-logic-constants
 │   ├── ws-constants-npm/            # npm Layer 1: @kenyamaneko/overload-party-ws-constants
@@ -124,7 +123,7 @@ overload-party-common/          # 共有データ・定義の SSoT
 │   └── api-client-npm/              # npm Layer 3: @kenyamaneko/overload-party-api-client (REST + WS + Deck)
 └── .github/workflows/
     ├── ci.yaml                 # DB マイグレーション CI
-    └── publish.yaml            # 統合 publish (18 パッケージを並列/依存順に)
+    └── publish.yaml            # 統合 publish (21 パッケージを並列/依存順に)
 
 overload-party-gateway/         # Go API サーバー
 ├── internal/
@@ -136,7 +135,7 @@ overload-party-gateway/         # Go API サーバー
 overload-party-battle/          # C# 対戦エンジン
 ├── src/
 │   └── OverloadParty.Battle.Models/
-│       └── GlobalUsings.cs     # global using OverloadParty.GameData
+│       └── GlobalUsings.cs     # global using OverloadParty.GameDesignConstants / GameLogicConstants / GameState / ApiBattleRpc
 └── nuget.config                # GitHub Packages NuGet feed
 
 overload-party-client/          # React + Capacitor クライアント
@@ -154,22 +153,24 @@ overload-party-client/          # React + Capacitor クライアント
 |------|-----------|--------|-----------|
 | `data/cards/*.yaml` | `generate_cards.py` | `docs/CARDS.md` | — |
 | `data/cards/*.yaml` | `generate_cards.py` | `packages/devdata/cache/cards_gen.json` | Go devdata (embed) |
-| `data/cards/*.yaml` | `generate_cards.py` | `packages/gamedata-dotnet/cache/cards_gen.json` | NuGet (EmbeddedResource) |
+| `data/cards/*.yaml` | `generate_cards.py` | `packages/game-state-dotnet/cache/cards_gen.json` | NuGet `OverloadParty.GameState` (EmbeddedResource) |
 | `data/cards/*.yaml` | `generate_cards.py` | `db/seed/cards_seed.sql` | — |
 | `data/mock/products.yaml` | `generate_products.py` | `packages/devdata/cache/products_gen.json` | Go devdata (embed) |
 | `data/mock/products.yaml` | `generate_products.py` | `db/seed/products.sql` | — |
 | `data/models.yaml` | `generate_constants.py` | `packages/card-types/*_gen.go` / `packages/api-client/*_gen.go` / `packages/api-battle-rpc/*_gen.go` | Go (3 module) |
 | `data/*_constants.yaml` | `generate_constants.py` | `packages/{game-design,game-logic,ws,shop,newsfeed}-constants/constants_gen.go` | Go (5 module) |
-| `data/*_constants.yaml` | `generate_constants.py` | `packages/gamedata-dotnet/{GameDesign,GameLogic,Ws,Shop,Newsfeed}/{Category}Constants_gen.cs` | NuGet (`OverloadParty.GameData`) |
+| `data/*_constants.yaml` | `generate_constants.py` | `packages/{game-design,game-logic}-constants-dotnet/{Category}Constants_gen.cs` | NuGet (`OverloadParty.{GameDesign,GameLogic}Constants`) — ws/shop/newsfeed は battle 未使用なので生成しない |
 | `data/*_constants.yaml` | `generate_constants.py` | `packages/{game-design,game-logic,ws,shop,newsfeed}-constants-npm/src/index.ts` | npm (5 Layer 1 packages) |
-| `data/event_schemas.yaml` | `generate_constants.py` | `packages/gamedata-dotnet/EventData_gen.cs` | NuGet |
+| `data/event_schemas.yaml` | `generate_constants.py` | `packages/game-state-dotnet/EventData_gen.cs` | NuGet `OverloadParty.GameState` |
+| `data/models.yaml` (game_state_view / variant_types) | `generate_constants.py` | `packages/game-state-dotnet/{GameStateView,VariantTypes}_gen.cs` | NuGet `OverloadParty.GameState` |
+| `data/models.yaml` (battle_gateway_rpc) | `generate_constants.py` | `packages/api-battle-rpc-dotnet/BattleGatewayRpc_gen.cs` | NuGet `OverloadParty.ApiBattleRpc` |
 | `data/event_schemas.yaml` | `generate_constants.py` | `packages/game-state-npm/src/eventData.ts` | npm (`@kenyamaneko/overload-party-game-state`) |
 
 各リポはパッケージをインストールして使う（gateway: 必要な Go module を個別に `go get`, battle: NuGet, client: npm）。生成されたファイルには `DO NOT EDIT` コメントが付く。
 
-#### パッケージ責務 (ADR-015 Phase 3/4 後)
+#### パッケージ責務 (ADR-015 Phase 3/4/5 後)
 
-Go と npm は責務単位でそれぞれ 9 module / 8 package に分割済み。C# は Phase 5 で 4 csproj に分割予定で、現状は既存の `gamedata-dotnet` を維持。
+Go / C# / npm すべて責務単位に分割済み (Go 9 module / C# 4 csproj / npm 8 package)。
 
 | パッケージ | 形式 | 責務 | 消費先 | Phase 6 移管先 |
 |---|---|---|---|---|
@@ -182,7 +183,10 @@ Go と npm は責務単位でそれぞれ 9 module / 8 package に分割済み�
 | `packages/api-client/` | Go module | client ↔ gateway REST + WS 契約 (Deck 型含む) | gateway | gateway |
 | `packages/api-battle-rpc/` | Go module | gateway ↔ battle 内部 RPC 契約 | gateway (呼び出し) / future battle (受信) | battle |
 | `packages/devdata/` | Go module | ローカル開発用モックデータ (cards_gen.json, products_gen.json embed) | gateway (dev) | common 永続 |
-| `packages/gamedata-dotnet/` | NuGet | カード定義・定数・イベントデータ・ゲームステート View 型・AvailableAction (Phase 5 で 4 csproj に分割予定) | battle | 各サービス分散 |
+| `packages/game-design-constants-dotnet/` | NuGet | Faction / Zone / CardType / Restriction / DeckSize 等のゲームデザイン定数 (`OverloadParty.GameDesignConstants`) | battle | common 永続 |
+| `packages/game-logic-constants-dotnet/` | NuGet | Phase / WinReason / TriggerType / EffectOp 等のゲームロジック enum (`OverloadParty.GameLogicConstants`) | battle | battle |
+| `packages/game-state-dotnet/` | NuGet | ClientGameState / PlayerView / Field / EventData / VariantTypes (`OverloadParty.GameState`)。`cache/cards_gen.json` を EmbeddedResource で同梱 | battle | battle |
+| `packages/api-battle-rpc-dotnet/` | NuGet | gateway ↔ battle 内部 RPC 契約 (`OverloadParty.ApiBattleRpc`) | battle | battle |
 | `packages/game-design-constants-npm/` | npm (Layer 1) | Faction / Zone / CardType / Restriction / DeckSize 等のゲームデザイン定数 | client | common 永続 |
 | `packages/game-logic-constants-npm/` | npm (Layer 1) | Phase / WinReason / TriggerType / EffectOp 等のゲームロジック enum | client | battle |
 | `packages/ws-constants-npm/` | npm (Layer 1) | WSServerMsg / WSClientMsg 種別 | client | gateway |
@@ -192,7 +196,7 @@ Go と npm は責務単位でそれぞれ 9 module / 8 package に分割済み�
 | `packages/game-state-npm/` | npm (Layer 2) | ClientGameState / PlayerView / Field / EventData / AvailableAction | client | battle |
 | `packages/api-client-npm/` | npm (Layer 3) | client ↔ gateway REST + WS + Deck 型 | client | gateway |
 
-**責務境界の原則:** 各 Go module / npm package は**単一の責務**を持つ (e.g., `card-types` はカード定義型のみ、`api-client` は client ↔ gateway 契約のみ)。将来 Phase 6 で各 module は対応するサービスリポへ物理移管される。C# の責務分離は現状 namespace でのみ行われており、Phase 5 で csproj 単位の分離に進む。
+**責務境界の原則:** 各 Go module / C# csproj / npm package は**単一の責務**を持つ (e.g., `card-types` はカード定義型のみ、`api-client` は client ↔ gateway 契約のみ)。将来 Phase 6 で各 package は対応するサービスリポへ物理移管される。C# では battle 未使用の ws / shop / newsfeed constants は生成せず、代わりに cards_gen.json を `game-state-dotnet` に EmbeddedResource として同梱している (Phase 5 暫定)。
 
 **npm Layer 構造:** Layer 1 (独立 5 package) → Layer 2 (Layer 1 に依存する `card-types-npm` / `game-state-npm`) → Layer 3 (Layer 1/2 に依存する `api-client-npm`)。Local dev では `"file:../*-npm"` 参照で、CI publish 時は sed で `"*"` (registry 最新) に書き換える。
 

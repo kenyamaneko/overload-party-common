@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Generate shared constants, event data types, and Go models from YAML definitions.
 
-Per ADR-015 Phase 1 / Phase 3 / Phase 4, constants and models are split into
-responsibility-based packages and emitted to 9 Go modules (Phase 3) + C#
-namespaces (Phase 1) + 8 npm packages (Phase 4).
+Per ADR-015 Phase 1 / Phase 3 / Phase 4 / Phase 5, constants and models are
+split into responsibility-based packages and emitted to 9 Go modules (Phase 3)
++ 4 C# csproj (Phase 5) + 8 npm packages (Phase 4).
 
 Outputs (Go — each directory is an independent Go module per ADR-015 Phase 3):
   - packages/game-design-constants/constants_gen.go
@@ -15,12 +15,17 @@ Outputs (Go — each directory is an independent Go module per ADR-015 Phase 3):
   - packages/api-client/{deck,rest_api,ws_messages}_gen.go
   - packages/api-battle-rpc/battle_gateway_rpc_gen.go
 
-Outputs (C# — Phase 5 で csproj 分割予定、現状 1 csproj 内で namespace 分離):
-  - packages/gamedata-dotnet/{GameDesign,GameLogic,Ws,Shop,Newsfeed}/{Category}Constants_gen.cs
-  - packages/gamedata-dotnet/EventData_gen.cs
-  - packages/gamedata-dotnet/GameStateView_gen.cs
-  - packages/gamedata-dotnet/BattleGatewayRpc_gen.cs
-  - packages/gamedata-dotnet/VariantTypes_gen.cs
+Outputs (C# — each directory is an independent NuGet csproj per ADR-015 Phase 5;
+ws / shop / newsfeed constants are NOT generated because battle does not
+consume them):
+  - packages/game-design-constants-dotnet/GameDesignConstants_gen.cs
+    (namespace OverloadParty.GameDesignConstants)
+  - packages/game-logic-constants-dotnet/GameLogicConstants_gen.cs
+    (namespace OverloadParty.GameLogicConstants)
+  - packages/game-state-dotnet/{EventData,GameStateView,VariantTypes}_gen.cs
+    (namespace OverloadParty.GameState; also embeds cache/cards_gen.json)
+  - packages/api-battle-rpc-dotnet/BattleGatewayRpc_gen.cs
+    (namespace OverloadParty.ApiBattleRpc)
 
 Outputs (TS — ADR-015 Phase 4 — 各ディレクトリが独立した npm package):
   - packages/game-design-constants-npm/src/index.ts
@@ -86,7 +91,13 @@ _GO_MODELS_ROUTING = {
     "battle_gateway_rpc": (GO_API_BATTLE_RPC_DIR, "apibattle"),
 }
 
-DOTNET_DIR = PACKAGES_DIR / "gamedata-dotnet"
+# C# csproj directories (one per logical package — ADR-015 Phase 5 naming).
+# ws / shop / newsfeed constants are NOT generated for C# because battle does
+# not consume them.
+DOTNET_GAME_DESIGN_DIR = PACKAGES_DIR / "game-design-constants-dotnet"
+DOTNET_GAME_LOGIC_DIR = PACKAGES_DIR / "game-logic-constants-dotnet"
+DOTNET_GAME_STATE_DIR = PACKAGES_DIR / "game-state-dotnet"
+DOTNET_API_BATTLE_RPC_DIR = PACKAGES_DIR / "api-battle-rpc-dotnet"
 
 # npm package directories (one per logical package — ADR-015 Phase 4 naming).
 NPM_GAME_DESIGN_DIR = PACKAGES_DIR / "game-design-constants-npm"
@@ -573,7 +584,7 @@ def _cs_header(namespace):
 
 # ─── C#: game_design namespace ─────────────────────────
 def generate_csharp_game_design(data, factions):
-    lines = _cs_header("OverloadParty.GameData.GameDesign")
+    lines = _cs_header("OverloadParty.GameDesignConstants")
 
     # Deck size wrapper class.
     iv = data["initial_values"]
@@ -698,62 +709,22 @@ def generate_csharp_game_design(data, factions):
     lines.append("}")
     lines.append("")
 
-    _write_file(DOTNET_DIR / "GameDesign" / "GameDesignConstants_gen.cs", lines)
+    _write_file(DOTNET_GAME_DESIGN_DIR / "GameDesignConstants_gen.cs", lines)
 
 
 # ─── C#: game_logic namespace ──────────────────────────
 def generate_csharp_game_logic(data):
-    lines = _cs_header("OverloadParty.GameData.GameLogic")
+    lines = _cs_header("OverloadParty.GameLogicConstants")
     for yaml_key, _, _, cs_class, _, _, _ in GAME_LOGIC_SIMPLE:
         values = data.get(yaml_key)
         if values is None:
             continue
         lines.extend(_cs_static_class(cs_class, values))
-    _write_file(DOTNET_DIR / "GameLogic" / "GameLogicConstants_gen.cs", lines)
+    _write_file(DOTNET_GAME_LOGIC_DIR / "GameLogicConstants_gen.cs", lines)
 
 
-# ─── C#: ws namespace ──────────────────────────────────
-def generate_csharp_ws(data):
-    lines = _cs_header("OverloadParty.GameData.Ws")
-    ws = data["ws_message_types"]
-
-    lines.append("public static class WSServerMsgTypes")
-    lines.append("{")
-    for v in ws["server"]:
-        lines.append(f'    public const string {_to_pascal(v)} = "{v}";')
-    lines.append("}")
-    lines.append("")
-
-    lines.append("public static class WSClientMsgTypes")
-    lines.append("{")
-    for v in ws["client"]:
-        lines.append(f'    public const string {_to_pascal(v)} = "{v}";')
-    lines.append("}")
-    lines.append("")
-
-    _write_file(DOTNET_DIR / "Ws" / "WsConstants_gen.cs", lines)
-
-
-# ─── C#: shop namespace ────────────────────────────────
-def generate_csharp_shop(data):
-    lines = _cs_header("OverloadParty.GameData.Shop")
-    for yaml_key, _, _, cs_class, _, _, _ in SHOP_SIMPLE:
-        values = data.get(yaml_key)
-        if values is None:
-            continue
-        lines.extend(_cs_static_class(cs_class, values))
-    _write_file(DOTNET_DIR / "Shop" / "ShopConstants_gen.cs", lines)
-
-
-# ─── C#: newsfeed namespace ────────────────────────────
-def generate_csharp_newsfeed(data):
-    lines = _cs_header("OverloadParty.GameData.Newsfeed")
-    for yaml_key, _, _, cs_class, _, _, _ in NEWSFEED_SIMPLE:
-        values = data.get(yaml_key)
-        if values is None:
-            continue
-        lines.extend(_cs_static_class(cs_class, values))
-    _write_file(DOTNET_DIR / "Newsfeed" / "NewsfeedConstants_gen.cs", lines)
+# ws / shop / newsfeed C# generators were removed — battle does not consume
+# these constants, so no C# package is published for them (ADR-015 Phase 5).
 
 
 # ─── Generate C# (event data) ──────────────────────────
@@ -774,7 +745,7 @@ _CS_NULLABLE_DEFAULTS = {
 }
 
 
-def generate_csharp_event_data(schemas, *, out_path, namespace="OverloadParty.GameData"):
+def generate_csharp_event_data(schemas, *, out_path, namespace="OverloadParty.GameState"):
     """Generate EventData_gen.cs."""
     cs_out = Path(out_path)
 
@@ -859,7 +830,7 @@ def _go_to_cs_type(go_type):
     return cs_base
 
 
-def generate_csharp_game_state_view(*, out_path, namespace="OverloadParty.GameData"):
+def generate_csharp_game_state_view(*, out_path, namespace="OverloadParty.GameState"):
     """Generate GameStateView_gen.cs from the game_state_view section of models.yaml."""
     with open(MODELS_YAML, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f)
@@ -951,7 +922,7 @@ def _go_to_cs_envelope_type(go_type):
     return cs_base
 
 
-def generate_csharp_battle_gateway_rpc(*, out_path, namespace="OverloadParty.GameData"):
+def generate_csharp_battle_gateway_rpc(*, out_path, namespace="OverloadParty.ApiBattleRpc"):
     """Generate BattleGatewayRpc_gen.cs from the battle_gateway_rpc section."""
     with open(MODELS_YAML, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f)
@@ -1499,7 +1470,7 @@ def generate_ts_models():
 
 
 # ─── Generate C# (variant types) ─────────────────────────
-def generate_csharp_variant_types(variant_types, *, out_path, namespace="OverloadParty.GameData"):
+def generate_csharp_variant_types(variant_types, *, out_path, namespace="OverloadParty.GameState"):
     """Generate VariantTypes_gen.cs from variant_types in models.yaml."""
     cs_out = Path(out_path)
 
@@ -1773,35 +1744,29 @@ def main():
         rel = module_dir.relative_to(ROOT)
         print(f"Generated models → {rel}/ [{', '.join(names)}]", file=sys.stderr)
 
-    # ── C# constants (5 namespaces) ──
+    # ── C# csproj (4 packages — ADR-015 Phase 5) ──
+    # game-design-constants-dotnet / game-logic-constants-dotnet /
+    # game-state-dotnet / api-battle-rpc-dotnet.
+    # ws / shop / newsfeed C# outputs are intentionally skipped: battle does
+    # not consume those constants.
     generate_csharp_game_design(game_design, factions)
-    print("Generated → packages/gamedata-dotnet/GameDesign/GameDesignConstants_gen.cs", file=sys.stderr)
+    print("Generated → packages/game-design-constants-dotnet/GameDesignConstants_gen.cs", file=sys.stderr)
 
     generate_csharp_game_logic(game_logic)
-    print("Generated → packages/gamedata-dotnet/GameLogic/GameLogicConstants_gen.cs", file=sys.stderr)
+    print("Generated → packages/game-logic-constants-dotnet/GameLogicConstants_gen.cs", file=sys.stderr)
 
-    generate_csharp_ws(gateway_ws)
-    print("Generated → packages/gamedata-dotnet/Ws/WsConstants_gen.cs", file=sys.stderr)
-
-    generate_csharp_shop(shop)
-    print("Generated → packages/gamedata-dotnet/Shop/ShopConstants_gen.cs", file=sys.stderr)
-
-    generate_csharp_newsfeed(newsfeed)
-    print("Generated → packages/gamedata-dotnet/Newsfeed/NewsfeedConstants_gen.cs", file=sys.stderr)
-
-    # ── C# other generators (unchanged) ──
-    generate_csharp_event_data(event_schemas, out_path=DOTNET_DIR / "EventData_gen.cs")
-    print("Generated → packages/gamedata-dotnet/EventData_gen.cs", file=sys.stderr)
+    generate_csharp_event_data(event_schemas, out_path=DOTNET_GAME_STATE_DIR / "EventData_gen.cs")
+    print("Generated → packages/game-state-dotnet/EventData_gen.cs", file=sys.stderr)
 
     if variant_types:
-        generate_csharp_variant_types(variant_types, out_path=DOTNET_DIR / "VariantTypes_gen.cs")
-        print("Generated → packages/gamedata-dotnet/VariantTypes_gen.cs", file=sys.stderr)
+        generate_csharp_variant_types(variant_types, out_path=DOTNET_GAME_STATE_DIR / "VariantTypes_gen.cs")
+        print("Generated → packages/game-state-dotnet/VariantTypes_gen.cs", file=sys.stderr)
 
-    generate_csharp_game_state_view(out_path=DOTNET_DIR / "GameStateView_gen.cs")
-    print("Generated → packages/gamedata-dotnet/GameStateView_gen.cs", file=sys.stderr)
+    generate_csharp_game_state_view(out_path=DOTNET_GAME_STATE_DIR / "GameStateView_gen.cs")
+    print("Generated → packages/game-state-dotnet/GameStateView_gen.cs", file=sys.stderr)
 
-    generate_csharp_battle_gateway_rpc(out_path=DOTNET_DIR / "BattleGatewayRpc_gen.cs")
-    print("Generated → packages/gamedata-dotnet/BattleGatewayRpc_gen.cs", file=sys.stderr)
+    generate_csharp_battle_gateway_rpc(out_path=DOTNET_API_BATTLE_RPC_DIR / "BattleGatewayRpc_gen.cs")
+    print("Generated → packages/api-battle-rpc-dotnet/BattleGatewayRpc_gen.cs", file=sys.stderr)
 
     # ── TypeScript constants — Layer 1 (5 independent packages) ──
     generate_ts_game_design(game_design, factions)

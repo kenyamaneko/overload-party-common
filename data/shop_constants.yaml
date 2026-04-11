@@ -7,8 +7,8 @@
 # Consumers: shop service (primary), client (product UI).
 #
 # Consumed by scripts/generate_constants.py → packages/shop-constants/
-#                                            → packages/gamedata-dotnet/Shop/
 #                                            → packages/shop-constants-npm/src/index.ts
+# Note: no C# output — battle does not consume shop constants.
 
 product_types:
 - faction_set

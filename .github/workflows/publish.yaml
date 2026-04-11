@@ -33,7 +33,10 @@ on:
           - api-client
           - api-battle-rpc
           - devdata
-          - gamedata-dotnet
+          - game-design-constants-dotnet
+          - game-logic-constants-dotnet
+          - game-state-dotnet
+          - api-battle-rpc-dotnet
           - game-design-constants-npm
           - game-logic-constants-npm
           - ws-constants-npm
@@ -75,9 +78,15 @@ jobs:
       api_battle_rpc_version: ${{ steps.detect.outputs.api_battle_rpc_version }}
       devdata: ${{ steps.detect.outputs.devdata }}
       devdata_version: ${{ steps.detect.outputs.devdata_version }}
-      # C# csproj
-      gamedata_dotnet: ${{ steps.detect.outputs.gamedata_dotnet }}
-      gamedata_dotnet_version: ${{ steps.detect.outputs.gamedata_dotnet_version }}
+      # C# csproj (4 packages — ADR-015 Phase 5)
+      game_design_constants_dotnet: ${{ steps.detect.outputs.game_design_constants_dotnet }}
+      game_design_constants_dotnet_version: ${{ steps.detect.outputs.game_design_constants_dotnet_version }}
+      game_logic_constants_dotnet: ${{ steps.detect.outputs.game_logic_constants_dotnet }}
+      game_logic_constants_dotnet_version: ${{ steps.detect.outputs.game_logic_constants_dotnet_version }}
+      game_state_dotnet: ${{ steps.detect.outputs.game_state_dotnet }}
+      game_state_dotnet_version: ${{ steps.detect.outputs.game_state_dotnet_version }}
+      api_battle_rpc_dotnet: ${{ steps.detect.outputs.api_battle_rpc_dotnet }}
+      api_battle_rpc_dotnet_version: ${{ steps.detect.outputs.api_battle_rpc_dotnet_version }}
       # npm packages (Layer 1: independent)
       game_design_constants_npm: ${{ steps.detect.outputs.game_design_constants_npm }}
       game_design_constants_npm_version: ${{ steps.detect.outputs.game_design_constants_npm_version }}
@@ -139,9 +148,17 @@ jobs:
             echo "::endgroup::"
           done
 
-      - name: .NET build
-        working-directory: packages/gamedata-dotnet
-        run: dotnet build -c Release --nologo -v quiet
+      - name: .NET build (all csproj)
+        run: |
+          for pkg in \
+            game-design-constants-dotnet \
+            game-logic-constants-dotnet \
+            game-state-dotnet \
+            api-battle-rpc-dotnet; do
+            echo "::group::dotnet build $pkg"
+            (cd "packages/$pkg" && dotnet build -c Release --nologo -v quiet)
+            echo "::endgroup::"
+          done
 
       # npm packages are built in layer order so downstream packages can resolve
       # dependency type declarations via "file:.." references during local tsc.
@@ -197,32 +214,97 @@ jobs:
           done
 
   # ──────────────────────────────────────────────
-  # 4. Publish gamedata-dotnet (NuGet)
+  # 4. Publish C# csproj packages (NuGet)
+  #    4 packages with no cross-project references, so they publish in
+  #    parallel.
   # ──────────────────────────────────────────────
-  publish-gamedata-dotnet:
-    name: Publish gamedata-dotnet
+  publish-game-design-constants-dotnet:
+    name: Publish game-design-constants-dotnet
     needs: [detect, build]
-    if: needs.detect.outputs.gamedata_dotnet == 'true'
+    if: needs.detect.outputs.game_design_constants_dotnet == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
-
       - name: Publish NuGet
-        working-directory: packages/gamedata-dotnet
+        working-directory: packages/game-design-constants-dotnet
         run: |
-          dotnet pack -c Release -p:Version=${{ needs.detect.outputs.gamedata_dotnet_version }} -o ./nupkg
+          dotnet pack -c Release -p:Version=${{ needs.detect.outputs.game_design_constants_dotnet_version }} -o ./nupkg
           dotnet nuget push ./nupkg/*.nupkg \
             --source "https://nuget.pkg.github.com/kenyamaneko/index.json" \
             --api-key ${{ secrets.GITHUB_TOKEN }}
-
       - name: Tag
         run: |
-          git tag "packages/gamedata-dotnet/v${{ needs.detect.outputs.gamedata_dotnet_version }}"
-          git push origin "packages/gamedata-dotnet/v${{ needs.detect.outputs.gamedata_dotnet_version }}"
+          git tag "packages/game-design-constants-dotnet/v${{ needs.detect.outputs.game_design_constants_dotnet_version }}"
+          git push origin "packages/game-design-constants-dotnet/v${{ needs.detect.outputs.game_design_constants_dotnet_version }}"
+
+  publish-game-logic-constants-dotnet:
+    name: Publish game-logic-constants-dotnet
+    needs: [detect, build]
+    if: needs.detect.outputs.game_logic_constants_dotnet == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Publish NuGet
+        working-directory: packages/game-logic-constants-dotnet
+        run: |
+          dotnet pack -c Release -p:Version=${{ needs.detect.outputs.game_logic_constants_dotnet_version }} -o ./nupkg
+          dotnet nuget push ./nupkg/*.nupkg \
+            --source "https://nuget.pkg.github.com/kenyamaneko/index.json" \
+            --api-key ${{ secrets.GITHUB_TOKEN }}
+      - name: Tag
+        run: |
+          git tag "packages/game-logic-constants-dotnet/v${{ needs.detect.outputs.game_logic_constants_dotnet_version }}"
+          git push origin "packages/game-logic-constants-dotnet/v${{ needs.detect.outputs.game_logic_constants_dotnet_version }}"
+
+  publish-game-state-dotnet:
+    name: Publish game-state-dotnet
+    needs: [detect, build]
+    if: needs.detect.outputs.game_state_dotnet == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Publish NuGet
+        working-directory: packages/game-state-dotnet
+        run: |
+          dotnet pack -c Release -p:Version=${{ needs.detect.outputs.game_state_dotnet_version }} -o ./nupkg
+          dotnet nuget push ./nupkg/*.nupkg \
+            --source "https://nuget.pkg.github.com/kenyamaneko/index.json" \
+            --api-key ${{ secrets.GITHUB_TOKEN }}
+      - name: Tag
+        run: |
+          git tag "packages/game-state-dotnet/v${{ needs.detect.outputs.game_state_dotnet_version }}"
+          git push origin "packages/game-state-dotnet/v${{ needs.detect.outputs.game_state_dotnet_version }}"
+
+  publish-api-battle-rpc-dotnet:
+    name: Publish api-battle-rpc-dotnet
+    needs: [detect, build]
+    if: needs.detect.outputs.api_battle_rpc_dotnet == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Publish NuGet
+        working-directory: packages/api-battle-rpc-dotnet
+        run: |
+          dotnet pack -c Release -p:Version=${{ needs.detect.outputs.api_battle_rpc_dotnet_version }} -o ./nupkg
+          dotnet nuget push ./nupkg/*.nupkg \
+            --source "https://nuget.pkg.github.com/kenyamaneko/index.json" \
+            --api-key ${{ secrets.GITHUB_TOKEN }}
+      - name: Tag
+        run: |
+          git tag "packages/api-battle-rpc-dotnet/v${{ needs.detect.outputs.api_battle_rpc_dotnet_version }}"
+          git push origin "packages/api-battle-rpc-dotnet/v${{ needs.detect.outputs.api_battle_rpc_dotnet_version }}"
 
   # ──────────────────────────────────────────────
   # 5. Publish npm Layer 1 (independent packages — parallel)
@@ -238,6 +320,7 @@ jobs:
         with:
           node-version: "22"
           registry-url: "https://npm.pkg.github.com"
+          scope: "@kenyamaneko"
       - name: Publish npm
         working-directory: packages/game-design-constants-npm
         env:
@@ -263,6 +346,7 @@ jobs:
         with:
           node-version: "22"
           registry-url: "https://npm.pkg.github.com"
+          scope: "@kenyamaneko"
       - name: Publish npm
         working-directory: packages/game-logic-constants-npm
         env:
@@ -288,6 +372,7 @@ jobs:
         with:
           node-version: "22"
           registry-url: "https://npm.pkg.github.com"
+          scope: "@kenyamaneko"
       - name: Publish npm
         working-directory: packages/ws-constants-npm
         env:
@@ -313,6 +398,7 @@ jobs:
         with:
           node-version: "22"
           registry-url: "https://npm.pkg.github.com"
+          scope: "@kenyamaneko"
       - name: Publish npm
         working-directory: packages/shop-constants-npm
         env:
@@ -338,6 +424,7 @@ jobs:
         with:
           node-version: "22"
           registry-url: "https://npm.pkg.github.com"
+          scope: "@kenyamaneko"
       - name: Publish npm
         working-directory: packages/newsfeed-constants-npm
         env:
@@ -376,6 +463,7 @@ jobs:
         with:
           node-version: "22"
           registry-url: "https://npm.pkg.github.com"
+          scope: "@kenyamaneko"
       - name: Publish npm
         working-directory: packages/card-types-npm
         env:
@@ -413,6 +501,7 @@ jobs:
         with:
           node-version: "22"
           registry-url: "https://npm.pkg.github.com"
+          scope: "@kenyamaneko"
       - name: Publish npm
         working-directory: packages/game-state-npm
         env:
@@ -453,6 +542,7 @@ jobs:
         with:
           node-version: "22"
           registry-url: "https://npm.pkg.github.com"
+          scope: "@kenyamaneko"
       - name: Publish npm
         working-directory: packages/api-client-npm
         env:

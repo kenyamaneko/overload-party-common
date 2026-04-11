@@ -2,15 +2,19 @@
 # Detect package changes since last tag and compute next versions.
 # Called from publish.yaml — outputs are written to $GITHUB_OUTPUT.
 #
-# Package list (18 publish units, ADR-015 Phase 3/4 naming):
+# Package list (21 publish units, ADR-015 Phase 3/4/5 naming):
 #
 #   Go modules (9):
 #     - game-design-constants, game-logic-constants, ws-constants,
 #       shop-constants, newsfeed-constants, card-types, api-client,
 #       api-battle-rpc, devdata
 #
-#   C# csproj (1):
-#     - gamedata-dotnet (Phase 5 で 4 分割予定、現状 1 csproj)
+#   C# csproj (4 — ADR-015 Phase 5 で分割済み):
+#     - game-design-constants-dotnet (OverloadParty.GameDesignConstants)
+#     - game-logic-constants-dotnet  (OverloadParty.GameLogicConstants)
+#     - game-state-dotnet            (OverloadParty.GameState)
+#     - api-battle-rpc-dotnet        (OverloadParty.ApiBattleRpc)
+#     ws / shop / newsfeed 定数は battle 未使用なので C# 版は publish しない。
 #
 #   npm packages (8 — ADR-015 Phase 4 で分割済み):
 #     - game-design-constants-npm, game-logic-constants-npm,
@@ -44,7 +48,10 @@ PACKAGES=(
   "api-client:packages/api-client:packages/api-client/:-"
   "api-battle-rpc:packages/api-battle-rpc:packages/api-battle-rpc/:-"
   "devdata:packages/devdata:packages/devdata/:-"
-  "gamedata-dotnet:packages/gamedata-dotnet:packages/gamedata-dotnet/:packages/gamedata"
+  "game-design-constants-dotnet:packages/game-design-constants-dotnet:packages/game-design-constants-dotnet/:-"
+  "game-logic-constants-dotnet:packages/game-logic-constants-dotnet:packages/game-logic-constants-dotnet/:-"
+  "game-state-dotnet:packages/game-state-dotnet:packages/game-state-dotnet/:-"
+  "api-battle-rpc-dotnet:packages/api-battle-rpc-dotnet:packages/api-battle-rpc-dotnet/:-"
   "game-design-constants-npm:packages/game-design-constants-npm:packages/game-design-constants-npm/:-"
   "game-logic-constants-npm:packages/game-logic-constants-npm:packages/game-logic-constants-npm/:-"
   "ws-constants-npm:packages/ws-constants-npm:packages/ws-constants-npm/:-"

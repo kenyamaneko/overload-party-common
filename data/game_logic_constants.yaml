@@ -7,7 +7,7 @@
 # Consumers: battle (primary), gateway (subset for RPC dispatch), client (subset for display).
 #
 # Consumed by scripts/generate_constants.py → packages/game-logic-constants/
-#                                            → packages/gamedata-dotnet/GameLogic/
+#                                            → packages/game-logic-constants-dotnet/
 #                                            → packages/game-logic-constants-npm/src/index.ts
 
 phases:

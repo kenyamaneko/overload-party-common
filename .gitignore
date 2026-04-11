@@ -29,8 +29,8 @@ docs/handoff/
 docs/STORY/
 
 # Generated packages (build artifacts)
-packages/gamedata-dotnet/obj/
-packages/gamedata-dotnet/bin/
+packages/*-dotnet/obj/
+packages/*-dotnet/bin/
 packages/*-npm/dist/
 packages/*-npm/node_modules/
 

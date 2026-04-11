@@ -3,7 +3,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace OverloadParty.GameData;
+namespace OverloadParty.ApiBattleRpc;
 
 /// <summary>BattleDeckCard is a single card entry in a deck snapshot sent to the battle server.</summary>
 public class BattleDeckCard

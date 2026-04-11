@@ -56,7 +56,10 @@ psql -U postgres overload_party < db/seed/stamps.sql
 | Go module `api-client` | client ↔ gateway REST + WS 契約 | future gateway |
 | Go module `api-battle-rpc` | gateway ↔ battle 内部 RPC 契約 | future battle |
 | Go module `devdata` | カード・商品 JSON（ローカルモック用） | Go サービス 開発用 |
-| NuGet `OverloadParty.GameData` (`packages/gamedata-dotnet/`) | GameDesign / GameLogic / Ws / Shop / Newsfeed namespace + EventData + GameStateView + VariantTypes + BattleGatewayRpc (Phase 5 で 4 csproj に分割予定) | battle |
+| NuGet `OverloadParty.GameDesignConstants` (`packages/game-design-constants-dotnet/`) | Faction / Zone / CardType / Restriction / DeckSize 等のゲームデザイン定数 | battle |
+| NuGet `OverloadParty.GameLogicConstants` (`packages/game-logic-constants-dotnet/`) | Phase / WinReason / TriggerType / EffectOp 等のゲームロジック enum | battle |
+| NuGet `OverloadParty.GameState` (`packages/game-state-dotnet/`) | ClientGameState / PlayerView / Field / EventData / VariantTypes + cards_gen.json を EmbeddedResource で同梱 | battle |
+| NuGet `OverloadParty.ApiBattleRpc` (`packages/api-battle-rpc-dotnet/`) | gateway ↔ battle 内部 RPC 契約 (NpcBattleRequest / ActionEvent / ActionResult 等) | battle |
 | npm `@kenyamaneko/overload-party-game-design-constants` (`packages/game-design-constants-npm/`) | Faction / Zone / CardType / Restriction / DeckSize 等のゲームデザイン定数 (Layer 1) | client |
 | npm `@kenyamaneko/overload-party-game-logic-constants` (`packages/game-logic-constants-npm/`) | Phase / WinReason / TriggerType / EffectOp 等のゲームロジック enum (Layer 1) | client |
 | npm `@kenyamaneko/overload-party-ws-constants` (`packages/ws-constants-npm/`) | WSServerMsg / WSClientMsg 種別 (Layer 1) | client |

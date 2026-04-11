@@ -7,8 +7,8 @@
 # Consumers: gateway (primary), client (for WS dispatch).
 #
 # Consumed by scripts/generate_constants.py → packages/ws-constants/
-#                                            → packages/gamedata-dotnet/Ws/
 #                                            → packages/ws-constants-npm/src/index.ts
+# Note: no C# output — battle does not consume WS constants.
 
 ws_message_types:
   server:

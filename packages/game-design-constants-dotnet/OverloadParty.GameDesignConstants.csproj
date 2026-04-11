@@ -3,9 +3,9 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <PackageId>OverloadParty.GameData</PackageId>
+    <PackageId>OverloadParty.GameDesignConstants</PackageId>
     <Version>0.0.0</Version>
-    <Description>Auto-generated game constants, event data types, and card definitions for Overload Party.</Description>
+    <Description>Overload Party game design constants (Faction / Zone / CardType / Restriction / DeckSize / FactionMetadata). Auto-generated from data/game_design_constants.yaml.</Description>
     <RepositoryUrl>https://github.com/kenyamaneko/overload-party-common</RepositoryUrl>
   </PropertyGroup>
 </Project>

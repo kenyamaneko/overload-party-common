@@ -7,8 +7,8 @@
 # Consumers: newsfeed service (primary), client (news source filtering/display).
 #
 # Consumed by scripts/generate_constants.py → packages/newsfeed-constants/
-#                                            → packages/gamedata-dotnet/Newsfeed/
 #                                            → packages/newsfeed-constants-npm/src/index.ts
+# Note: no C# output — battle does not consume newsfeed constants.
 
 cloud_news_sources:
 - aws

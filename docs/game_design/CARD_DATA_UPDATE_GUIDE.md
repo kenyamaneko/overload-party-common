@@ -170,7 +170,7 @@ python3 scripts/generate_constants.py
 |-------------|------|
 | `docs/game_design/CARDS.md` | カード一覧ドキュメント（目視確認用） |
 | `packages/devdata/cache/cards_gen.json` | Gateway サーバー用カードデータ（ローカル開発用） |
-| `packages/gamedata-dotnet/cache/cards_gen.json` | Battle サーバー用カードデータ（ローカル開発用） |
+| `packages/game-state-dotnet/cache/cards_gen.json` | Battle サーバー用カードデータ（`OverloadParty.GameState` の EmbeddedResource として同梱、ローカル開発用） |
 | `db/seed/cards_seed.sql` | PostgreSQL カード定義 seed（UPSERT） |
 
 #### generate_products.py の生成物
@@ -188,10 +188,11 @@ python3 scripts/generate_constants.py
 | `packages/card-types/*_gen.go` | Gateway サーバー用 Go 型定義 (Card / CardStats / PassiveEffect / NPC) |
 | `packages/api-client/*_gen.go` | Gateway サーバー用 Go 型定義 (REST / WS / Deck) |
 | `packages/api-battle-rpc/*_gen.go` | Gateway サーバー用 Go 型定義 (battle-gateway RPC) |
-| `packages/gamedata-dotnet/{GameDesign,GameLogic,Ws,Shop,Newsfeed}/*Constants_gen.cs` | Battle サーバー用定数 |
-| `packages/gamedata-dotnet/EventData_gen.cs` | Battle サーバー用イベント型 |
-| `packages/gamedata-dotnet/GameStateView_gen.cs` / `VariantTypes_gen.cs` | Battle サーバー用ゲーム状態型 |
-| `packages/gamedata-dotnet/BattleGatewayRpc_gen.cs` | Battle サーバー用 gateway-battle RPC 契約 |
+| `packages/game-design-constants-dotnet/GameDesignConstants_gen.cs` | Battle サーバー用ゲームデザイン定数 (`OverloadParty.GameDesignConstants`) |
+| `packages/game-logic-constants-dotnet/GameLogicConstants_gen.cs` | Battle サーバー用ゲームロジック定数 (`OverloadParty.GameLogicConstants`) |
+| `packages/game-state-dotnet/EventData_gen.cs` | Battle サーバー用イベント型 (`OverloadParty.GameState`) |
+| `packages/game-state-dotnet/GameStateView_gen.cs` / `VariantTypes_gen.cs` | Battle サーバー用ゲーム状態型・AvailableAction (`OverloadParty.GameState`) |
+| `packages/api-battle-rpc-dotnet/BattleGatewayRpc_gen.cs` | Battle サーバー用 gateway-battle RPC 契約 (`OverloadParty.ApiBattleRpc`) |
 | `packages/{game-design,game-logic,ws,shop,newsfeed}-constants-npm/src/index.ts` | クライアント用定数 (Layer 1: 5 独立 npm package) |
 | `packages/card-types-npm/src/models.ts` | クライアント用カード型 (Layer 2) |
 | `packages/game-state-npm/src/{models,eventData,variantTypes}.ts` | クライアント用ゲーム状態型・イベント型・AvailableAction (Layer 2) |
