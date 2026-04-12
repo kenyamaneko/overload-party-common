@@ -1,16 +1,10 @@
 go 1.25.1
 
-// Workspace for local development across multiple common packages.
-// CI builds each module independently with GOWORK=off (or equivalent),
-// relying on published module versions resolved via go.sum per-module.
+// Workspace for local development.
+// After ADR-015 Phase 6/7 only game-design-constants lives in common; all
+// other Go modules moved to their respective service repos.
+//
 use (
+	./packages/pubsub-events
 	./packages/game-design-constants
-	./packages/game-logic-constants
-	./packages/ws-constants
-	./packages/shop-constants
-	./packages/newsfeed-constants
-	./packages/card-types
-	./packages/api-client
-	./packages/api-battle-rpc
-	./packages/devdata
 )
