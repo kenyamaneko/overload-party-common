@@ -2,7 +2,7 @@
 -- Grant permissions to IAM service account users per-schema.
 -- The user name follows the format: <sa-name>@<project-id>.iam
 --
--- Schema layout (ADR-014):
+-- Schema layout:
 --   - 各サービスは自スキーマのみに RW 権限を持つ
 --   - 全サービスが shared スキーマに read-only アクセスを持つ
 --   - サービス間の参照は REST API 経由。DB 越境参照は行わない
@@ -94,8 +94,7 @@ BEGIN
 
   -- ---------------------------------------------------------------------------
   -- gateway service account (dev): DB 直接アクセスなし。
-  -- ADR-014 に従い、gateway は各サービス API 経由でデータを取得する設計。
-  -- ロールが存在しても DB 権限は一切付与しない。
+  -- gateway は各サービス API 経由でデータを取得する。
   -- ---------------------------------------------------------------------------
 
   -- ---------------------------------------------------------------------------

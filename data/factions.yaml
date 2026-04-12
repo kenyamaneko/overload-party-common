@@ -1,9 +1,7 @@
 # Factions master data (SSoT).
 #
 # This file is the single source of truth for faction identity, display names,
-# and metadata. It replaces the `factions` DB table (removed per ADR-014 supplement)
-# and the `factions` / `selectable_factions` / `faction_display_names` keys
-# previously in constants.yaml (removed per ADR-015 Phase 1).
+# and metadata.
 #
 # Consumed by scripts/generate_constants.py to generate:
 #   - Faction ID constants (Go / C# / TS)
