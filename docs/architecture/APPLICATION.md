@@ -48,7 +48,7 @@ Cloud SQL インスタンスは 1 つのまま維持したうえで、**PostgreS
 | `newsfeed` | newsfeed | `news_articles` |
 | （なし） | matchmaking | キューは Upstash Redis、通知は Cloud Pub/Sub のため RDB スキーマを持たない |
 
-- **`shared` スキーマは廃止**: 旧 `shared.game_config` はサービス横断の動的設定値（バトル上限数・経験値・タイムバンク等）を保持していたが、リポジトリ完全分割後にスキーマ DDL の配布が原理的に解決できないため、Cloud Firestore (Native モード) のコレクション `game_config` に移管する。各サービスは Firestore クライアントから KV で読み取る
+- **動的設定値**: サービス横断で参照する設定値（バトル上限数・経験値・タイムバンク等）は **Cloud Firestore (Native モード)** のコレクション `game_config` に格納し、各サービスは Firestore クライアントから KV で読み取る
 
 ### 1.2 カード定義のサービス間参照
 

@@ -49,8 +49,6 @@ matchmaking は RDB スキーマを持たない（Redis + Pub/Sub のみ）。
 | `gateway` | gateway | `game_players` |
 | `newsfeed` | newsfeed | `news_articles` |
 
-`shared` スキーマは廃止。動的設定値（旧 `shared.game_config`）は Cloud Firestore に移管する。
-
 ### ゲーム動的設定値 (Cloud Firestore)
 
 サービス横断で参照する動的設定値（バトル上限数、経験値、タイムバンク等）は **Cloud Firestore (Native モード、asia-northeast1)** のコレクション `game_config` に格納する。ドキュメント ID = key、フィールド `value`（型は値ごとの number / string / bool）。各サービスは公式 Firestore クライアントから読み取り、キー不在は fail-fast。書き込みは運営オペレーター + ops SA に限定。

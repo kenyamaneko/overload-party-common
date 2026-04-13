@@ -159,13 +159,15 @@ Cloud SQL PostgreSQL 16 (Regional: asia-northeast1)
 ├── IAM DB 認証 (Cloud SQL Auth Proxy 経由)
 ├── JSONB による複雑な状態管理
 └── Backup: Daily (prod)
+
+Cloud Firestore (Native, asia-northeast1)
+├── コレクション: game_config (運営チューニング可能な動的設定値の SSoT)
+└── サービス横断 KV ストア。各サービスは公式 Firestore クライアントで読み取り
 ```
 
 **選定理由:**
-- ACID トランザクション + SELECT FOR UPDATE による行ロック
-- JSONB でゲーム状態を柔軟に格納
-- Cloud SQL Auth Proxy + IAM 認証でセキュアな接続
-- コスト効率 (Spanner 比 ~90% 削減)
+- Cloud SQL: ACID トランザクション + SELECT FOR UPDATE による行ロック / JSONB でゲーム状態を柔軟に格納 / Cloud SQL Auth Proxy + IAM 認証でセキュアな接続 / コスト効率 (Spanner 比 ~90% 削減)
+- Firestore: スキーマ DDL 配布が不要な NoSQL KV ストアで、サービス横断の動的設定値を一元管理
 
 ### 3.4 認証
 
@@ -245,6 +247,7 @@ graph TD
     subgraph Data
         db["Cloud SQL PostgreSQL"]
         redis["Upstash Redis"]
+        firestore["Cloud Firestore<br/>(game_config)"]
     end
 
     subgraph Storage
@@ -269,6 +272,9 @@ graph TD
 
     %% matchmaking → Redis
     matchmaking --> redis
+
+    %% Firestore (game_config) — game_config を参照するサービスから読み取り
+    account -->|game_config 読み取り| firestore
 
     %% Pub/Sub: publish
     matchmaking -->|publish| match_events

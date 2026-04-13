@@ -6,8 +6,7 @@ Overload Party の **横断的な共有リソース** を管理するリポジ�
 
 - **ゲームデザイン定数** (faction / card_type / restriction / zone 等。全リポ共通)
 - **アーキテクチャ / ゲームデザイン / ビジネスドキュメント**
-
-> 旧 `shared` スキーマ DDL は Cloud Firestore へ移管予定。`db/schema_postgres.sql` および `db/seed/game_config.sql` は移管完了後に削除する。
+- **`shared` スキーマ DDL** (`shared.update_updated_at()` トリガー関数。各サービスのスキーマから参照される)
 
 ## 構成
 
@@ -67,7 +66,7 @@ main への push 時に CI (`.github/workflows/publish.yaml`) が自動で publi
 
 ## DB スキーマ管理
 
-common は現状 `shared` スキーマ（`shared.game_config` + `shared.update_updated_at()`）のみ所有するが、`shared.game_config` は Cloud Firestore へ移管予定。`update_updated_at()` は各サービススキーマ内に再定義し、`shared` スキーマごと廃止する。移管完了後、本セクションは削除する。
+common は `shared` スキーマ（`shared.update_updated_at()` トリガー関数）を所有する。各サービスのスキーマから参照される共通ヘルパー。動的設定値は Cloud Firestore (Native) コレクション `game_config` 側で管理する。
 
 ```bash
 psqldef -U postgres overload_party < db/schema_postgres.sql
