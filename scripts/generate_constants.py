@@ -17,6 +17,7 @@
 import json
 import re
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 try:
@@ -51,13 +52,33 @@ def _to_pascal(value):
     return value.title() if value else value
 
 
-GAME_DESIGN_SIMPLE = [
-    ("zones", "Zone", "Zones", "Zones", "ZONES", "Zone", None),
-    ("ranks", "Rank", "Ranks", "Ranks", "RANKS", "Rank", None),
-    ("instance_families", "InstanceFamily", "Instance families", "InstanceFamilies", "INSTANCE_FAMILIES", "InstanceFamily", "''"),
-    ("restriction_values", "Restriction", "Restriction values", "RestrictionValues", "RESTRICTION_VALUES", "Restriction", None),
-    ("match_types", "MatchType", "Match types", "MatchTypes", "MATCH_TYPES", "MatchType", None),
-    ("stat_types", "StatType", "Stat types", "StatTypes", "STAT_TYPES", "StatType", None),
+@dataclass(frozen=True)
+class EnumCodegenRule:
+    """YAML の flat string list を 3 言語の string const 列挙型として codegen するルール。
+
+    対象は data/game_design_constants.yaml のトップレベルキーのうち、値が単純な
+    文字列配列 (`["a", "b", "c"]`) になっているもの。faction metadata のような
+    構造体 codegen や card_types のような入れ子分類は対象外。
+    """
+
+    yaml_key: str
+    go_prefix: str
+    go_comment: str
+    cs_class: str
+    ts_const: str
+    ts_type: str
+    # TS の union 型に追加する追加リテラル (例: "''" で空文字許容)。
+    # 業務ルール上 YAML の値以外に特定リテラルを許容したい場合のみ指定する。
+    ts_extra_union: str | None = None
+
+
+ENUM_CODEGEN_RULES = [
+    EnumCodegenRule("zones", "Zone", "Zones", "Zones", "ZONES", "Zone"),
+    EnumCodegenRule("ranks", "Rank", "Ranks", "Ranks", "RANKS", "Rank"),
+    EnumCodegenRule("instance_families", "InstanceFamily", "Instance families", "InstanceFamilies", "INSTANCE_FAMILIES", "InstanceFamily", ts_extra_union="''"),
+    EnumCodegenRule("restriction_values", "Restriction", "Restriction values", "RestrictionValues", "RESTRICTION_VALUES", "Restriction"),
+    EnumCodegenRule("match_types", "MatchType", "Match types", "MatchTypes", "MATCH_TYPES", "MatchType"),
+    EnumCodegenRule("stat_types", "StatType", "Stat types", "StatTypes", "STAT_TYPES", "StatType"),
 ]
 
 
@@ -153,11 +174,11 @@ def generate_go_game_design(data, factions):
     lines.append("}")
     lines.append("")
 
-    for yaml_key, go_prefix, go_comment, _, _, _, _ in GAME_DESIGN_SIMPLE:
-        values = data.get(yaml_key)
+    for rule in ENUM_CODEGEN_RULES:
+        values = data.get(rule.yaml_key)
         if values is None:
             continue
-        lines.extend(_go_const_block(go_comment, go_prefix, values))
+        lines.extend(_go_const_block(rule.go_comment, rule.go_prefix, values))
 
     # `log` サブカテゴリは内部ログカード専用のため除外
     ct = data["card_types"]
@@ -167,72 +188,6 @@ def generate_go_game_design(data, factions):
     for v in all_types:
         lines.append(f'\tCardType{_to_pascal(v)} = "{v}"')
     lines.append(")")
-    lines.append("")
-
-    compute_set = ", ".join(f'CardType{_to_pascal(v)}' for v in ct["compute"])
-    data_set = ", ".join(f'CardType{_to_pascal(v)}' for v in ct["data"])
-    support_non_attach = [t for t in ct["support"] if t != "Attachment"]
-    support_set = ", ".join(f'CardType{_to_pascal(v)}' for v in support_non_attach)
-
-    lines.append("// IsResourceType returns true if the card type is a deployable resource (compute or data).")
-    lines.append("func IsResourceType(cardType string) bool {")
-    lines.append("\tswitch cardType {")
-    lines.append(f"\tcase {compute_set}, {data_set}:")
-    lines.append("\t\treturn true")
-    lines.append("\t}")
-    lines.append("\treturn false")
-    lines.append("}")
-    lines.append("")
-
-    lines.append("// IsFrontendEligible returns true if the card can be placed in the frontend zone.")
-    lines.append("func IsFrontendEligible(cardType string) bool {")
-    lines.append("\tswitch cardType {")
-    lines.append(f"\tcase {compute_set}, CardTypeObjectStorage:")
-    lines.append("\t\treturn true")
-    lines.append("\t}")
-    lines.append("\treturn false")
-    lines.append("}")
-    lines.append("")
-
-    lines.append("// IsBackendEligible returns true if the card can be placed in the backend zone.")
-    lines.append("func IsBackendEligible(cardType string) bool {")
-    lines.append("\tswitch cardType {")
-    lines.append(f"\tcase {data_set}, {compute_set}:")
-    lines.append("\t\treturn true")
-    lines.append("\t}")
-    lines.append("\treturn false")
-    lines.append("}")
-    lines.append("")
-
-    lines.append("// IsSupportType returns true if the card goes in the support zone.")
-    lines.append("func IsSupportType(cardType string) bool {")
-    lines.append("\tswitch cardType {")
-    lines.append(f"\tcase {support_set}:")
-    lines.append("\t\treturn true")
-    lines.append("\t}")
-    lines.append("\treturn false")
-    lines.append("}")
-    lines.append("")
-
-    lines.append("// IsAttachmentType returns true if the card is an Attachment.")
-    lines.append("func IsAttachmentType(cardType string) bool {")
-    lines.append("\treturn cardType == CardTypeAttachment")
-    lines.append("}")
-    lines.append("")
-
-    lines.append("// RestrictionCopyCount returns the maximum number of copies allowed in a deck.")
-    lines.append("func RestrictionCopyCount(restriction string) int {")
-    lines.append("\tswitch restriction {")
-    lines.append("\tcase RestrictionForbidden:")
-    lines.append("\t\treturn 0")
-    lines.append("\tcase RestrictionLimited:")
-    lines.append("\t\treturn 1")
-    lines.append("\tcase RestrictionSemiLimited:")
-    lines.append("\t\treturn 2")
-    lines.append("\tdefault:")
-    lines.append("\t\treturn 3")
-    lines.append("\t}")
-    lines.append("}")
     lines.append("")
 
     _write_file(GO_GAME_DESIGN_DIR / "constants_gen.go", lines)
@@ -321,11 +276,11 @@ def generate_csharp_game_design(data, factions):
     lines.append("}")
     lines.append("")
 
-    for yaml_key, _, _, cs_class, _, _, _ in GAME_DESIGN_SIMPLE:
-        values = data.get(yaml_key)
+    for rule in ENUM_CODEGEN_RULES:
+        values = data.get(rule.yaml_key)
         if values is None:
             continue
-        lines.extend(_cs_static_class(cs_class, values))
+        lines.extend(_cs_static_class(rule.cs_class, values))
 
     ct = data["card_types"]
     all_types = ct["compute"] + ct["data"] + ct["support"]
@@ -333,53 +288,6 @@ def generate_csharp_game_design(data, factions):
     lines.append("{")
     for v in all_types:
         lines.append(f'    public const string {_to_pascal(v)} = "{v}";')
-    lines.append("")
-
-    compute_refs = ", ".join(_to_pascal(v) for v in ct["compute"])
-    data_refs = ", ".join(_to_pascal(v) for v in ct["data"])
-    support_non_attach = [t for t in ct["support"] if t != "Attachment"]
-    support_refs = ", ".join(_to_pascal(v) for v in support_non_attach)
-
-    lines.append(f"    public static readonly string[] ComputeTypes = [{compute_refs}];")
-    lines.append(f"    public static readonly string[] DataTypes = [{data_refs}];")
-    lines.append(f"    public static readonly string[] SupportTypes = [{support_refs}];")
-    lines.append("")
-
-    lines.append("    public static bool IsResourceType(string cardType) =>")
-    lines.append("        System.Array.IndexOf(ComputeTypes, cardType) >= 0 || System.Array.IndexOf(DataTypes, cardType) >= 0;")
-    lines.append("")
-    lines.append("    public static bool IsFrontendEligible(string cardType) =>")
-    lines.append("        System.Array.IndexOf(ComputeTypes, cardType) >= 0 || cardType == ObjectStorage;")
-    lines.append("")
-    lines.append("    public static bool IsBackendEligible(string cardType) =>")
-    lines.append("        System.Array.IndexOf(DataTypes, cardType) >= 0 || System.Array.IndexOf(ComputeTypes, cardType) >= 0;")
-    lines.append("")
-    lines.append("    public static bool IsSupportType(string cardType) =>")
-    lines.append("        System.Array.IndexOf(SupportTypes, cardType) >= 0;")
-    lines.append("")
-    lines.append("    public static bool IsAttachmentType(string cardType) =>")
-    lines.append("        cardType == Attachment;")
-    lines.append("")
-
-    lines.append("    public static string GetCategory(string cardType)")
-    lines.append("    {")
-    lines.append("        if (System.Array.IndexOf(ComputeTypes, cardType) >= 0) return \"compute\";")
-    lines.append("        if (System.Array.IndexOf(DataTypes, cardType) >= 0) return \"data\";")
-    lines.append("        if (System.Array.IndexOf(SupportTypes, cardType) >= 0 || cardType == Attachment) return \"support\";")
-    lines.append('        return "unknown";')
-    lines.append("    }")
-    lines.append("}")
-    lines.append("")
-
-    lines.append("public static class RestrictionHelper")
-    lines.append("{")
-    lines.append("    public static int CopyCount(string restriction) => restriction switch")
-    lines.append("    {")
-    lines.append("        RestrictionValues.Forbidden => 0,")
-    lines.append("        RestrictionValues.Limited => 1,")
-    lines.append("        RestrictionValues.SemiLimited => 2,")
-    lines.append("        _ => 3,")
-    lines.append("    };")
     lines.append("}")
     lines.append("")
 
@@ -410,69 +318,16 @@ def generate_ts_game_design(data, factions):
     """TypeScript の game-design-constants npm パッケージを生成します。"""
     lines = _ts_header()
 
-    for yaml_key, _, _, _, ts_const, ts_type, extra_union in GAME_DESIGN_SIMPLE:
-        values = data.get(yaml_key)
+    for rule in ENUM_CODEGEN_RULES:
+        values = data.get(rule.yaml_key)
         if values is None:
             continue
-        lines.extend(_ts_const_array(ts_const, ts_type, values, extra_union=extra_union))
+        lines.extend(_ts_const_array(rule.ts_const, rule.ts_type, values, extra_union=rule.ts_extra_union))
 
     ct = data["card_types"]
     all_card_types = ct["compute"] + ct["data"] + ct["support"]
     lines.append(f"export const CARD_TYPES = {json.dumps(all_card_types)} as const;")
     lines.append("export type CardType = (typeof CARD_TYPES)[number];")
-    lines.append("")
-
-    compute_set = json.dumps(ct["compute"])
-    data_set = json.dumps(ct["data"])
-    lines.append(f"const COMPUTE_TYPES: ReadonlySet<string> = new Set({compute_set});")
-    lines.append(f"const DATA_TYPES: ReadonlySet<string> = new Set({data_set});")
-    lines.append("")
-
-    lines.append("/** Returns true if the card type is a deployable resource (compute or data). */")
-    lines.append("export function isResourceType(cardType: string): boolean {")
-    lines.append("  return COMPUTE_TYPES.has(cardType) || DATA_TYPES.has(cardType);")
-    lines.append("}")
-    lines.append("")
-
-    lines.append("/** Returns true if the card can be placed in the frontend zone. */")
-    lines.append("export function isFrontendEligible(cardType: string): boolean {")
-    lines.append("  return COMPUTE_TYPES.has(cardType) || cardType === 'ObjectStorage';")
-    lines.append("}")
-    lines.append("")
-
-    lines.append("/** Returns true if the card can be placed in the backend zone. */")
-    lines.append("export function isBackendEligible(cardType: string): boolean {")
-    lines.append("  return DATA_TYPES.has(cardType) || COMPUTE_TYPES.has(cardType);")
-    lines.append("}")
-    lines.append("")
-
-    support_types = [t for t in ct["support"] if t != "Attachment"]
-    lines.append("/** Returns true if the card goes in the support zone (Platform, Strategy, Incident, Reactive). */")
-    lines.append("export function isSupportType(cardType: string): boolean {")
-    if support_types:
-        support_cases = " || ".join(f"cardType === '{t}'" for t in support_types)
-        lines.append(f"  return {support_cases};")
-    else:
-        lines.append("  return false;")
-    lines.append("}")
-    lines.append("")
-
-    lines.append("/** Returns true if the card is an Attachment (attaches to resources, not support zone). */")
-    lines.append("export function isAttachmentType(cardType: string): boolean {")
-    lines.append("  return cardType === 'Attachment';")
-    lines.append("}")
-    lines.append("")
-
-    lines.append("/** Returns the maximum number of copies allowed in a deck for a given restriction. */")
-    lines.append("export function restrictionCopyCount(restriction: Restriction): number {")
-    lines.append("  switch (restriction) {")
-    lines.append("    case 'forbidden': return 0;")
-    lines.append("    case 'limited': return 1;")
-    lines.append("    case 'semi_limited': return 2;")
-    lines.append("    case 'unlimited': return 3;")
-    lines.append("    default: return 3;")
-    lines.append("  }")
-    lines.append("}")
     lines.append("")
 
     sorted_factions = sorted(factions, key=lambda f: f["sort_order"])

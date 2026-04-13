@@ -107,43 +107,5 @@ public static class CardTypes
     public const string Strategy = "Strategy";
     public const string Reactive = "Reactive";
     public const string Incident = "Incident";
-
-    public static readonly string[] ComputeTypes = [Compute, Container, Orchestrator, Serverless, AIML];
-    public static readonly string[] DataTypes = [Database, ObjectStorage, CacheDB];
-    public static readonly string[] SupportTypes = [Platform, Strategy, Reactive, Incident];
-
-    public static bool IsResourceType(string cardType) =>
-        System.Array.IndexOf(ComputeTypes, cardType) >= 0 || System.Array.IndexOf(DataTypes, cardType) >= 0;
-
-    public static bool IsFrontendEligible(string cardType) =>
-        System.Array.IndexOf(ComputeTypes, cardType) >= 0 || cardType == ObjectStorage;
-
-    public static bool IsBackendEligible(string cardType) =>
-        System.Array.IndexOf(DataTypes, cardType) >= 0 || System.Array.IndexOf(ComputeTypes, cardType) >= 0;
-
-    public static bool IsSupportType(string cardType) =>
-        System.Array.IndexOf(SupportTypes, cardType) >= 0;
-
-    public static bool IsAttachmentType(string cardType) =>
-        cardType == Attachment;
-
-    public static string GetCategory(string cardType)
-    {
-        if (System.Array.IndexOf(ComputeTypes, cardType) >= 0) return "compute";
-        if (System.Array.IndexOf(DataTypes, cardType) >= 0) return "data";
-        if (System.Array.IndexOf(SupportTypes, cardType) >= 0 || cardType == Attachment) return "support";
-        return "unknown";
-    }
-}
-
-public static class RestrictionHelper
-{
-    public static int CopyCount(string restriction) => restriction switch
-    {
-        RestrictionValues.Forbidden => 0,
-        RestrictionValues.Limited => 1,
-        RestrictionValues.SemiLimited => 2,
-        _ => 3,
-    };
 }
 

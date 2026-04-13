@@ -54,6 +54,16 @@ matchmaking は RDB スキーマを持たない（Redis + Pub/Sub のみ）。
 
 全サービスが SELECT のみで参照する read-only データの置き場。write はマイグレーション管理ユーザーのみ。現時点の住人は `game_config` のみ。
 
+**game_config** (schema: `shared`)
+
+<!-- BEGIN GENERATED: game_config -->
+| カラム名 | 型 | Nullable | 説明 |
+|---|---|---|---|
+| `key` | VARCHAR(100) | No | 設定キー |
+| `value` | JSONB | No | 設定値 |
+| `updated_at` | TIMESTAMPTZ | No | 更新日時 |
+<!-- END GENERATED: game_config -->
+
 ### 権限 (GRANT)
 
 IAM 認証の権限付与 SQL は `ops/db-migrate/grant_iam.sql` が SSoT。

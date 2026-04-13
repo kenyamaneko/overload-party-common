@@ -21,45 +21,6 @@ export type StatType = (typeof STAT_TYPES)[number];
 export const CARD_TYPES = ["Compute", "Container", "Orchestrator", "Serverless", "AI/ML", "Database", "ObjectStorage", "CacheDB", "Platform", "Attachment", "Strategy", "Reactive", "Incident"] as const;
 export type CardType = (typeof CARD_TYPES)[number];
 
-const COMPUTE_TYPES: ReadonlySet<string> = new Set(["Compute", "Container", "Orchestrator", "Serverless", "AI/ML"]);
-const DATA_TYPES: ReadonlySet<string> = new Set(["Database", "ObjectStorage", "CacheDB"]);
-
-/** Returns true if the card type is a deployable resource (compute or data). */
-export function isResourceType(cardType: string): boolean {
-  return COMPUTE_TYPES.has(cardType) || DATA_TYPES.has(cardType);
-}
-
-/** Returns true if the card can be placed in the frontend zone. */
-export function isFrontendEligible(cardType: string): boolean {
-  return COMPUTE_TYPES.has(cardType) || cardType === 'ObjectStorage';
-}
-
-/** Returns true if the card can be placed in the backend zone. */
-export function isBackendEligible(cardType: string): boolean {
-  return DATA_TYPES.has(cardType) || COMPUTE_TYPES.has(cardType);
-}
-
-/** Returns true if the card goes in the support zone (Platform, Strategy, Incident, Reactive). */
-export function isSupportType(cardType: string): boolean {
-  return cardType === 'Platform' || cardType === 'Strategy' || cardType === 'Reactive' || cardType === 'Incident';
-}
-
-/** Returns true if the card is an Attachment (attaches to resources, not support zone). */
-export function isAttachmentType(cardType: string): boolean {
-  return cardType === 'Attachment';
-}
-
-/** Returns the maximum number of copies allowed in a deck for a given restriction. */
-export function restrictionCopyCount(restriction: Restriction): number {
-  switch (restriction) {
-    case 'forbidden': return 0;
-    case 'limited': return 1;
-    case 'semi_limited': return 2;
-    case 'unlimited': return 3;
-    default: return 3;
-  }
-}
-
 export const FACTIONS = ["Neutral", "SHE", "Tenki", "Sugar", "Tuners"] as const;
 export const SELECTABLE_FACTIONS = ["SHE", "Tenki", "Sugar", "Tuners"] as const;
 export type FactionId = (typeof SELECTABLE_FACTIONS)[number];
