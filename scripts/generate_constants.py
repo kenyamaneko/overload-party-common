@@ -52,6 +52,14 @@ def _to_pascal(value):
     return value.title() if value else value
 
 
+def _screaming_snake(value):
+    """YAML 値を SCREAMING_SNAKE_CASE 識別子に変換します（TS 定数名用）。"""
+    value = value.replace("/", "").replace("-", "_")
+    if "_" in value:
+        return value.upper()
+    return value.upper()
+
+
 @dataclass(frozen=True)
 class EnumCodegenRule:
     """YAML の flat string list を 3 言語の string const 列挙型として codegen するルール。
@@ -190,6 +198,17 @@ def generate_go_game_design(data, factions):
     lines.append(")")
     lines.append("")
 
+    # 新3階層分類（段階移行中、旧 Card types と並存）
+    categories = data.get("card_categories")
+    if categories:
+        lines.extend(_go_const_block("Card categories", "CardCategory", categories))
+
+    subtypes = data.get("card_subtypes")
+    if subtypes:
+        for category, subs in subtypes.items():
+            prefix = f"Subtype{_to_pascal(category)}"
+            lines.extend(_go_const_block(f"Card subtypes ({category})", prefix, subs))
+
     _write_file(GO_GAME_DESIGN_DIR / "constants_gen.go", lines)
 
 
@@ -291,6 +310,28 @@ def generate_csharp_game_design(data, factions):
     lines.append("}")
     lines.append("")
 
+    # 新3階層分類（段階移行中、旧 CardTypes と並存）
+    categories = data.get("card_categories")
+    if categories:
+        lines.extend(_cs_static_class("CardCategories", categories))
+
+    subtypes = data.get("card_subtypes")
+    if subtypes:
+        lines.append("public static class Subtypes")
+        lines.append("{")
+        first = True
+        for category, subs in subtypes.items():
+            if not first:
+                lines.append("")
+            first = False
+            lines.append(f"    public static class {_to_pascal(category)}")
+            lines.append("    {")
+            for v in subs:
+                lines.append(f'        public const string {_to_pascal(v)} = "{v}";')
+            lines.append("    }")
+        lines.append("}")
+        lines.append("")
+
     _write_file(DOTNET_GAME_DESIGN_DIR / "GameDesignConstants_gen.cs", lines)
 
 
@@ -329,6 +370,23 @@ def generate_ts_game_design(data, factions):
     lines.append(f"export const CARD_TYPES = {json.dumps(all_card_types)} as const;")
     lines.append("export type CardType = (typeof CARD_TYPES)[number];")
     lines.append("")
+
+    # 新3階層分類（段階移行中、旧 CARD_TYPES と並存）
+    categories = data.get("card_categories")
+    if categories:
+        lines.append(f"export const CARD_CATEGORIES = {json.dumps(categories)} as const;")
+        lines.append("export type CardCategory = (typeof CARD_CATEGORIES)[number];")
+        lines.append("")
+
+    subtypes = data.get("card_subtypes")
+    if subtypes:
+        for category, subs in subtypes.items():
+            upper = _screaming_snake(category)
+            const_name = f"{upper}_SUBTYPES"
+            type_name = f"{_to_pascal(category)}Subtype"
+            lines.append(f"export const {const_name} = {json.dumps(subs)} as const;")
+            lines.append(f"export type {type_name} = (typeof {const_name})[number];")
+            lines.append("")
 
     sorted_factions = sorted(factions, key=lambda f: f["sort_order"])
     all_faction_ids = [f["id"] for f in sorted_factions]

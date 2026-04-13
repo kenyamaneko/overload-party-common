@@ -44,6 +44,34 @@ card_types:
   log:
   - Log
 
+# 新しい3階層分類（Zone / CardCategory / Subtype）。段階移行中のため
+# 上の旧 card_types とは並存する。移行完了後に card_types を削除し、
+# card_categories を CardTypes にリネームする。
+# 参考: memory/project_card_taxonomy.md
+card_categories:
+- Compute
+- Data
+- Platform
+- Attachment
+- Strategy
+- Reactive
+- Incident
+
+# Subtype を持つ CardCategory のみ列挙する（Compute / Data）。
+# 旧 CardTypes では個別 "Compute" と category "Compute" が同名衝突していたため、
+# 個別側は VM にリネームする。
+card_subtypes:
+  Compute:
+  - VM
+  - Container
+  - Orchestrator
+  - Serverless
+  - AI/ML
+  Data:
+  - Database
+  - ObjectStorage
+  - CacheDB
+
 restriction_values:
 - unlimited
 - limited

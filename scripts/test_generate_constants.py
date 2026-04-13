@@ -48,6 +48,10 @@ def fixture_data():
             "support": ["Platform"],
             "log": ["Log"],
         },
+        "card_categories": ["Compute", "Platform"],
+        "card_subtypes": {
+            "Compute": ["VM"],
+        },
         "initial_values": {"deck_size": 30},
     }
 
@@ -182,6 +186,17 @@ class TestGoldenGo:
             \tCardTypePlatform = "Platform"
             )
 
+            // Card categories.
+            const (
+            \tCardCategoryCompute = "Compute"
+            \tCardCategoryPlatform = "Platform"
+            )
+
+            // Card subtypes (Compute).
+            const (
+            \tSubtypeComputeVM = "VM"
+            )
+
             ''')
         assert got == expected
 
@@ -276,6 +291,20 @@ class TestGoldenCSharp:
                 public const string Platform = "Platform";
             }
 
+            public static class CardCategories
+            {
+                public const string Compute = "Compute";
+                public const string Platform = "Platform";
+            }
+
+            public static class Subtypes
+            {
+                public static class Compute
+                {
+                    public const string VM = "VM";
+                }
+            }
+
             ''')
         assert got == expected
 
@@ -308,6 +337,12 @@ class TestGoldenTs:
 
             export const CARD_TYPES = ["Compute", "Database", "Platform"] as const;
             export type CardType = (typeof CARD_TYPES)[number];
+
+            export const CARD_CATEGORIES = ["Compute", "Platform"] as const;
+            export type CardCategory = (typeof CARD_CATEGORIES)[number];
+
+            export const COMPUTE_SUBTYPES = ["VM"] as const;
+            export type ComputeSubtype = (typeof COMPUTE_SUBTYPES)[number];
 
             export const FACTIONS = ["Neutral", "SHE"] as const;
             export const SELECTABLE_FACTIONS = ["SHE"] as const;

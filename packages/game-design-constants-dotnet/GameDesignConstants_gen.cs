@@ -109,3 +109,33 @@ public static class CardTypes
     public const string Incident = "Incident";
 }
 
+public static class CardCategories
+{
+    public const string Compute = "Compute";
+    public const string Data = "Data";
+    public const string Platform = "Platform";
+    public const string Attachment = "Attachment";
+    public const string Strategy = "Strategy";
+    public const string Reactive = "Reactive";
+    public const string Incident = "Incident";
+}
+
+public static class Subtypes
+{
+    public static class Compute
+    {
+        public const string VM = "VM";
+        public const string Container = "Container";
+        public const string Orchestrator = "Orchestrator";
+        public const string Serverless = "Serverless";
+        public const string AIML = "AI/ML";
+    }
+
+    public static class Data
+    {
+        public const string Database = "Database";
+        public const string ObjectStorage = "ObjectStorage";
+        public const string CacheDB = "CacheDB";
+    }
+}
+
