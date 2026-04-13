@@ -40,7 +40,6 @@ Cloud SQL インスタンスは 1 つのまま維持したうえで、**PostgreS
 
 | スキーマ | 所有サービス | 主な対象テーブル |
 |---|---|---|
-| `shared` | （なし: マイグレーション管理） | `game_config` |
 | `account` | account | `players`, `player_daily_battle`, `player_factions`, `user_settings` |
 | `card` | card | `card_definitions`, `player_cards`, `decks`, `deck_cards` |
 | `shop` | shop | `products`, `subscriptions`, `one_time_purchases`, `cosmetic_items`, `player_items` |
@@ -49,7 +48,7 @@ Cloud SQL インスタンスは 1 つのまま維持したうえで、**PostgreS
 | `newsfeed` | newsfeed | `news_articles` |
 | （なし） | matchmaking | キューは Upstash Redis、通知は Cloud Pub/Sub のため RDB スキーマを持たない |
 
-- **`shared` スキーマ**: 特定サービスに属さず、全サービスが SELECT のみで参照する master / config データを配置するスキーマ。write はマイグレーション管理ユーザー（psqldef などで DDL とシードデータを投入する管理専用アカウント）にのみ許可し、各サービスユーザーには `USAGE + SELECT` のみ付与する。現時点の住人は `game_config` のみで、runtime update を想定しない「シードで投入する read-only データ」の置き場として予約する
+- **`shared` スキーマは廃止**: 旧 `shared.game_config` はサービス横断の動的設定値（バトル上限数・経験値・タイムバンク等）を保持していたが、リポジトリ完全分割後にスキーマ DDL の配布が原理的に解決できないため、Cloud Firestore (Native モード) のコレクション `game_config` に移管する。各サービスは Firestore クライアントから KV で読み取る
 
 ### 1.2 カード定義のサービス間参照
 

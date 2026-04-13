@@ -41,7 +41,6 @@ matchmaking は RDB スキーマを持たない（Redis + Pub/Sub のみ）。
 
 | スキーマ | 所有サービス | テーブル |
 |---|---|---|
-| `shared` | （マイグレーション管理） | `game_config` |
 | `account` | account | `players`, `player_daily_battle`, `player_factions`, `user_settings`, `processed_events` |
 | `card` | card | `card_definitions`, `player_cards`, `decks`, `deck_cards`, `processed_events` |
 | `shop` | shop | `products`, `subscriptions`, `one_time_purchases`, `cosmetic_items`, `player_items`, `player_owned_factions` |
@@ -50,19 +49,11 @@ matchmaking は RDB スキーマを持たない（Redis + Pub/Sub のみ）。
 | `gateway` | gateway | `game_players` |
 | `newsfeed` | newsfeed | `news_articles` |
 
-### `shared` スキーマ
+`shared` スキーマは廃止。動的設定値（旧 `shared.game_config`）は Cloud Firestore に移管する。
 
-全サービスが SELECT のみで参照する read-only データの置き場。write はマイグレーション管理ユーザーのみ。現時点の住人は `game_config` のみ。
+### ゲーム動的設定値 (Cloud Firestore)
 
-**game_config** (schema: `shared`)
-
-<!-- BEGIN GENERATED: game_config -->
-| カラム名 | 型 | Nullable | 説明 |
-|---|---|---|---|
-| `key` | VARCHAR(100) | No | 設定キー |
-| `value` | JSONB | No | 設定値 |
-| `updated_at` | TIMESTAMPTZ | No | 更新日時 |
-<!-- END GENERATED: game_config -->
+サービス横断で参照する動的設定値（バトル上限数、経験値、タイムバンク等）は **Cloud Firestore (Native モード、asia-northeast1)** のコレクション `game_config` に格納する。ドキュメント ID = key、フィールド `value`（型は値ごとの number / string / bool）。各サービスは公式 Firestore クライアントから読み取り、キー不在は fail-fast。書き込みは運営オペレーター + ops SA に限定。
 
 ### 権限 (GRANT)
 
