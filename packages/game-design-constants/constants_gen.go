@@ -138,29 +138,12 @@ const (
 // Card types.
 const (
 	CardTypeCompute = "Compute"
-	CardTypeContainer = "Container"
-	CardTypeOrchestrator = "Orchestrator"
-	CardTypeServerless = "Serverless"
-	CardTypeAIML = "AI/ML"
-	CardTypeDatabase = "Database"
-	CardTypeObjectStorage = "ObjectStorage"
-	CardTypeCacheDB = "CacheDB"
+	CardTypeData = "Data"
 	CardTypePlatform = "Platform"
 	CardTypeAttachment = "Attachment"
 	CardTypeStrategy = "Strategy"
 	CardTypeReactive = "Reactive"
 	CardTypeIncident = "Incident"
-)
-
-// Card categories.
-const (
-	CardCategoryCompute = "Compute"
-	CardCategoryData = "Data"
-	CardCategoryPlatform = "Platform"
-	CardCategoryAttachment = "Attachment"
-	CardCategoryStrategy = "Strategy"
-	CardCategoryReactive = "Reactive"
-	CardCategoryIncident = "Incident"
 )
 
 // Card subtypes (Compute).

@@ -188,22 +188,11 @@ def generate_go_game_design(data, factions):
             continue
         lines.extend(_go_const_block(rule.go_comment, rule.go_prefix, values))
 
-    # `log` サブカテゴリは内部ログカード専用のため除外
-    ct = data["card_types"]
-    all_types = ct["compute"] + ct["data"] + ct["support"]
-    lines.append("// Card types.")
-    lines.append("const (")
-    for v in all_types:
-        lines.append(f'\tCardType{_to_pascal(v)} = "{v}"')
-    lines.append(")")
-    lines.append("")
+    # CardType (3階層: Zone / CardType / Subtype のうち category 層)
+    lines.extend(_go_const_block("Card types", "CardType", data["card_types"]))
 
-    # 新3階層分類（段階移行中、旧 Card types と並存）
-    categories = data.get("card_categories")
-    if categories:
-        lines.extend(_go_const_block("Card categories", "CardCategory", categories))
-
-    subtypes = data.get("card_subtypes")
+    # Subtype (Compute / Data 配下のみ)
+    subtypes = data.get("subtypes")
     if subtypes:
         for category, subs in subtypes.items():
             prefix = f"Subtype{_to_pascal(category)}"
@@ -301,21 +290,11 @@ def generate_csharp_game_design(data, factions):
             continue
         lines.extend(_cs_static_class(rule.cs_class, values))
 
-    ct = data["card_types"]
-    all_types = ct["compute"] + ct["data"] + ct["support"]
-    lines.append("public static class CardTypes")
-    lines.append("{")
-    for v in all_types:
-        lines.append(f'    public const string {_to_pascal(v)} = "{v}";')
-    lines.append("}")
-    lines.append("")
+    # CardType (3階層: Zone / CardType / Subtype のうち category 層)
+    lines.extend(_cs_static_class("CardTypes", data["card_types"]))
 
-    # 新3階層分類（段階移行中、旧 CardTypes と並存）
-    categories = data.get("card_categories")
-    if categories:
-        lines.extend(_cs_static_class("CardCategories", categories))
-
-    subtypes = data.get("card_subtypes")
+    # Subtype (Compute / Data 配下のみ)
+    subtypes = data.get("subtypes")
     if subtypes:
         lines.append("public static class Subtypes")
         lines.append("{")
@@ -365,20 +344,13 @@ def generate_ts_game_design(data, factions):
             continue
         lines.extend(_ts_const_array(rule.ts_const, rule.ts_type, values, extra_union=rule.ts_extra_union))
 
-    ct = data["card_types"]
-    all_card_types = ct["compute"] + ct["data"] + ct["support"]
-    lines.append(f"export const CARD_TYPES = {json.dumps(all_card_types)} as const;")
+    # CardType (3階層: Zone / CardType / Subtype のうち category 層)
+    lines.append(f"export const CARD_TYPES = {json.dumps(data['card_types'])} as const;")
     lines.append("export type CardType = (typeof CARD_TYPES)[number];")
     lines.append("")
 
-    # 新3階層分類（段階移行中、旧 CARD_TYPES と並存）
-    categories = data.get("card_categories")
-    if categories:
-        lines.append(f"export const CARD_CATEGORIES = {json.dumps(categories)} as const;")
-        lines.append("export type CardCategory = (typeof CARD_CATEGORIES)[number];")
-        lines.append("")
-
-    subtypes = data.get("card_subtypes")
+    # Subtype (Compute / Data 配下のみ)
+    subtypes = data.get("subtypes")
     if subtypes:
         for category, subs in subtypes.items():
             upper = _screaming_snake(category)

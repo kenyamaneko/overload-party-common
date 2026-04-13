@@ -42,14 +42,8 @@ def fixture_data():
         "restriction_values": ["forbidden", "limited"],
         "match_types": ["pvp"],
         "stat_types": ["tp"],
-        "card_types": {
-            "compute": ["Compute"],
-            "data": ["Database"],
-            "support": ["Platform"],
-            "log": ["Log"],
-        },
-        "card_categories": ["Compute", "Platform"],
-        "card_subtypes": {
+        "card_types": ["Compute", "Platform"],
+        "subtypes": {
             "Compute": ["VM"],
         },
         "initial_values": {"deck_size": 30},
@@ -182,14 +176,7 @@ class TestGoldenGo:
             // Card types.
             const (
             \tCardTypeCompute = "Compute"
-            \tCardTypeDatabase = "Database"
             \tCardTypePlatform = "Platform"
-            )
-
-            // Card categories.
-            const (
-            \tCardCategoryCompute = "Compute"
-            \tCardCategoryPlatform = "Platform"
             )
 
             // Card subtypes (Compute).
@@ -287,13 +274,6 @@ class TestGoldenCSharp:
             public static class CardTypes
             {
                 public const string Compute = "Compute";
-                public const string Database = "Database";
-                public const string Platform = "Platform";
-            }
-
-            public static class CardCategories
-            {
-                public const string Compute = "Compute";
                 public const string Platform = "Platform";
             }
 
@@ -335,11 +315,8 @@ class TestGoldenTs:
             export const STAT_TYPES = ["tp"] as const;
             export type StatType = (typeof STAT_TYPES)[number];
 
-            export const CARD_TYPES = ["Compute", "Database", "Platform"] as const;
+            export const CARD_TYPES = ["Compute", "Platform"] as const;
             export type CardType = (typeof CARD_TYPES)[number];
-
-            export const CARD_CATEGORIES = ["Compute", "Platform"] as const;
-            export type CardCategory = (typeof CARD_CATEGORIES)[number];
 
             export const COMPUTE_SUBTYPES = ["VM"] as const;
             export type ComputeSubtype = (typeof COMPUTE_SUBTYPES)[number];
