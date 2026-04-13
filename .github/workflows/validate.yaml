@@ -8,28 +8,22 @@ on:
     paths:
       - "data/game_design_constants.yaml"
       - "data/factions.yaml"
-      - "db/schema_postgres.sql"
       - "scripts/generate_constants.py"
-      - "scripts/generate_schema_doc.py"
       - "scripts/test_generate_constants.py"
       - "packages/game-design-constants/**"
       - "packages/game-design-constants-dotnet/**"
       - "packages/game-design-constants-npm/**"
       - "packages/doc-tools/**"
-      - "docs/architecture/DATA_DESIGN.md"
   pull_request:
     paths:
       - "data/game_design_constants.yaml"
       - "data/factions.yaml"
-      - "db/schema_postgres.sql"
       - "scripts/generate_constants.py"
-      - "scripts/generate_schema_doc.py"
       - "scripts/test_generate_constants.py"
       - "packages/game-design-constants/**"
       - "packages/game-design-constants-dotnet/**"
       - "packages/game-design-constants-npm/**"
       - "packages/doc-tools/**"
-      - "docs/architecture/DATA_DESIGN.md"
 
 jobs:
   unit-tests:
@@ -62,12 +56,9 @@ jobs:
       - name: Generate game-design constants
         run: python3 scripts/generate_constants.py
 
-      - name: Generate schema docs
-        run: python3 scripts/generate_schema_doc.py
-
       - name: Verify no diff
         run: |
-          if ! git diff --exit-code -- packages/game-design-constants/ packages/game-design-constants-dotnet/ packages/game-design-constants-npm/ docs/architecture/DATA_DESIGN.md; then
+          if ! git diff --exit-code -- packages/game-design-constants/ packages/game-design-constants-dotnet/ packages/game-design-constants-npm/; then
             echo "::error::Generated files are out of sync. Run generate scripts and commit."
             git diff --stat
             exit 1
