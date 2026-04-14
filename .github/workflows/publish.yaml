@@ -7,7 +7,7 @@ on:
     branches: [main]
     paths:
       - "packages/**"
-      - "scripts/ci/**"
+      - ".github/scripts/**"
   workflow_dispatch:
     inputs:
       bump:

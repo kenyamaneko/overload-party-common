@@ -35,19 +35,27 @@ docs/
 | `packages/game-design-constants` | Go module | 全 Go サービス |
 | `packages/game-design-constants-dotnet` (`OverloadParty.GameDesignConstants`) | NuGet | battle |
 | `packages/game-design-constants-npm` (`@kenyamaneko/overload-party-game-design-constants`) | npm | client |
+| `packages/pubsub-events` | Go module | 全 Go サービス (Pub/Sub event schema SSoT) |
 
 ## コード生成
 
-```bash
-python3 scripts/generate_constants.py   # game-design constants を Go/C#/npm に生成
+`game-design-constants` 系の 3 パッケージは `data/*.yaml` から自動生成する (`pubsub-events` は手書き)。
+
+```
+data/game_design_constants.yaml ┐
+data/factions.yaml              ┼─► scripts/generate_constants.py ─► packages/game-design-constants{,-dotnet,-npm}/ の *_gen.* ファイル
 ```
 
-main への push 時に CI (`.github/workflows/publish.yaml`) が自動で publish する。
+YAML を編集したら `python3 scripts/generate_constants.py` を実行してコミットする。前提: Python 3.8+ と `pip install pyyaml`。
 
-### 前提条件
+## 配信 (CI publish)
 
-- Python 3.8+
-- `pip install pyyaml`
+main への push で [.github/workflows/publish.yaml](.github/workflows/publish.yaml) が走り、変更のあったパッケージだけを publish する。
+
+- **変更検知**: [.github/scripts/detect-changes.sh](.github/scripts/detect-changes.sh) が前回タグとの diff を見てどのパッケージを bump するか決める。デフォルトは patch。
+- **バージョン bump**: 手動で minor/major にしたい場合は Actions から `workflow_dispatch` で `bump` と `target` を指定して実行。
+- **タグ規約**: `packages/<name>/v<semver>` (例: `packages/game-design-constants/v1.2.3`)
+- **レジストリ**: Go は git tag のみ (`go get` が解決)、NuGet / npm は GitHub Packages (`nuget.pkg.github.com` / `npm.pkg.github.com`)
 
 ## 定数を変更するとき
 
@@ -58,19 +66,3 @@ main への push 時に CI (`.github/workflows/publish.yaml`) が自動で publi
    - Go サービス: `go get github.com/kenyamaneko/overload-party-common/packages/game-design-constants@latest`
    - battle: `dotnet add package OverloadParty.GameDesignConstants`
    - client: `npm install @kenyamaneko/overload-party-game-design-constants@latest`
-
-## DB スキーマ管理
-
-common は DDL を所有しない。各サービスが自スキーマを所有する。
-動的設定値 (`game_config`) は Cloud Firestore Native コレクションとして管理する。
-
-per-service スキーマ:
-- `overload-party-account/db/schema.sql` (account)
-- `overload-party-card/db/schema.sql` (card)
-- `overload-party-shop/db/schema.sql` (shop)
-- `overload-party-scenario/db/schema.sql` (scenario)
-- `overload-party-battle/db/schema.sql` (battle)
-- `overload-party-gateway/db/schema.sql` (gateway)
-- `overload-party-newsfeed/db/schema.sql` (newsfeed)
-
-IAM grants (`grant_iam.sql`) + psqldef union は `overload-party-ops/db-migrate/` が所有する。
