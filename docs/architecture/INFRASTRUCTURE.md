@@ -16,7 +16,7 @@
 
 ### 1.1 インフラ管理 (Terraform)
 
-GCP リソースは Terraform で管理する。管理対象リソースの詳細は infra リポの README を参照。
+Google Cloud リソースは Terraform で管理する。管理対象リソースの詳細は infra リポの README を参照。
 
 | プロジェクト | 用途 |
 |-------------|------|
@@ -165,7 +165,7 @@ Service Account (用途別)
 
 ### 2.8 環境戦略
 
-| 環境 | GCP プロジェクト | デプロイ条件 |
+| 環境 | Google Cloud プロジェクト | デプロイ条件 |
 |------|-----------------|------------|
 | dev | overload-party-dev | main push 自動（ops ジョブ、infra）/ 手動 dispatch（GKE サービス） |
 | stg | overload-party-stg | 手動 dispatch |

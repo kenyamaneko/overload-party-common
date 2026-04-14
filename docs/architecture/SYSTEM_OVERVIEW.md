@@ -57,7 +57,7 @@ Overload Party は複数の独立した Git リポジトリで構成される。
 | **card** | カードマスターデータ管理・デッキバリデーション・カード一覧 | Go 1.25 | lint → test → Docker push |
 | **battle** | 対戦ゲームエンジン | C# / .NET 10 | test → Docker push |
 | **client** | モバイル/Web フロントエンド | React 19, TypeScript, Vite, Capacitor | lint → typecheck → test |
-| **infra** | GCP リソース管理 | Terraform | plan → apply（パス変更時のみ） |
+| **infra** | Google Cloud リソース管理 | Terraform | plan → apply（パス変更時のみ） |
 | **k8s** | GKE デプロイ・運用 | Kustomize, GitHub Actions | deploy / startup / shutdown / scale |
 | **ops** | DB マイグレーション・監視ジョブ・Slack コマンド | Docker, Cloud Run, Cloudflare Workers, Python | CI + 手動 dispatch |
 | **analytics** | Spanner → BigQuery エクスポート | Go, Cloud Functions | 手動デプロイ |
@@ -180,7 +180,7 @@ Firebase Authentication
 ### 3.5 インフラ
 
 ```
-Google Cloud Platform (4プロジェクト構成)
+Google Cloud (4プロジェクト構成)
 ├── keyandnotes-platform
 │   ├── GKE Standard (全 7 サービス相乗り — 全環境共有)
 │   │     e2-standard-2 (2 vCPU / 8 GiB) × 1 ノード

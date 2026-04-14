@@ -17,7 +17,7 @@ package pubsubevents
 
 import "time"
 
-// Topic names (per env — the actual GCP Pub/Sub topic ID is just the name;
+// Topic names (per env — the actual Google Cloud Pub/Sub topic ID is just the name;
 // environments are separated at the project level, so the names are stable
 // across dev / stg / prod).
 const (
