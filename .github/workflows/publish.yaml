@@ -59,7 +59,7 @@ jobs:
 
       - name: Detect changes and compute versions
         id: detect
-        run: bash scripts/ci/detect-changes.sh "${{ inputs.target || 'auto' }}" "${{ inputs.bump || 'patch' }}"
+        run: bash .github/scripts/detect-changes.sh "${{ inputs.target || 'auto' }}" "${{ inputs.bump || 'patch' }}"
 
   # ──────────────────────────────────────────────
   # 2. Build & validate before publishing

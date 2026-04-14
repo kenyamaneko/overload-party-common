@@ -19,7 +19,8 @@ packages/
   game-design-constants-npm/      # npm package
 scripts/
   generate_constants.py           # game-design constants 生成 (Go + C# + npm)
-  ci/detect-changes.sh            # CI publish 対象検知
+.github/
+  scripts/detect-changes.sh       # CI publish 対象検知
 docs/
   architecture/                   # システム設計 (ARCHITECTURE, CI_CD, DATA_DESIGN, I18N)
   game_design/                    # ゲームデザイン (ルール, カード, UI 等)
