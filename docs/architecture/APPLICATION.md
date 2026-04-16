@@ -434,7 +434,7 @@ gateway リポの `docs/API_REFERENCE.md` を参照。
 |------|-------------|
 | dev | 未設定（全オリジン許可） |
 | stg | `https://overloadparty-stg.keyandnotes.com`, `capacitor://localhost`, `http://localhost` |
-| prod | `https://overloadparty.keyandnotes.com`, `capacitor://localhost`, `http://localhost` |
+| prod | `https://overloadparty-prod.keyandnotes.com`, `capacitor://localhost`, `http://localhost` |
 | ローカル | 全オリジン許可 |
 
 - REST: `middleware.CORS()` で HTTP レスポンスヘッダを設定
@@ -460,7 +460,7 @@ gateway リポの `docs/API_REFERENCE.md` を参照。
 |------|------------|-----|
 | dev | `overloadparty-dev.keyandnotes.com` | 動的（Ingress 起動時に割当） |
 | stg | `overloadparty-stg.keyandnotes.com` | 動的（Ingress 起動時に割当） |
-| prod | `overloadparty.keyandnotes.com` | 未定 |
+| prod | `overloadparty-prod.keyandnotes.com` | 未定 |
 
 - Cloudflare Universal SSL は `*.keyandnotes.com` をカバー（1 階層のみ）
 - そのため `overloadparty-dev` 形式を採用（`dev.overloadparty.keyandnotes.com` は証明書対象外）
