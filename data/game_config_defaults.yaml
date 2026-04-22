@@ -1,0 +1,34 @@
+# Cloud Firestore `game_config` コレクションの初期値 (SSoT)。
+#
+# 性質: 運営チューニング値 (実行時に GCP Console / admin SDK で動的に調整)
+# 配置ルールの根拠: docs/architecture/DATA_DESIGN.md#定数設定値の配置ルール
+# Seed ツール: overload-party-ops/firestore-seed/seed_game_config.py
+#
+# この YAML は Firestore への初期投入時にのみ参照される。運用中の値は Firestore が
+# SSoT となる (本 YAML を後から変更しても既存ドキュメントは上書きされない)。
+#
+# value の型は YAML 型がそのまま Firestore の number / string / bool に対応する
+# (int → number, float → number, str → string, bool → bool)。
+
+defaults:
+  free_daily_battle_limit:
+    value: 10
+    description: 無料プレイヤーの 1 日あたりバトル上限数
+  premium_daily_battle_limit:
+    value: 30
+    description: プレミアムプレイヤーの 1 日あたりバトル上限数
+  initial_time_bank:
+    value: 480
+    description: バトル開始時のタイムバンク (秒)
+  exp_win:
+    value: 40
+    description: 勝利時の獲得経験値
+  exp_loss:
+    value: 20
+    description: 敗北時の獲得経験値
+  exp_draw:
+    value: 30
+    description: 引き分け時の獲得経験値
+  exp_formula_coefficient:
+    value: 60
+    description: 経験値計算式の係数

@@ -66,5 +66,6 @@ stat_types:
 
 initial_values:
   # deck_size は gateway / battle / client の 3 リポジトリから静的に参照されるため
-  # パッケージ定数として配信する。その他のゲーム定数は game_config テーブルで管理。
+  # パッケージ定数として配信する。運営チューニング値は Firestore game_config コレクションで管理。
+  # 配置ルールの SSoT: docs/architecture/DATA_DESIGN.md#定数設定値の配置ルール
   deck_size: 30

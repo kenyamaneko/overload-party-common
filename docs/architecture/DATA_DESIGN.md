@@ -27,6 +27,7 @@ Overload Party の RDB は **1 つの PostgreSQL インスタンスの上で、�
 | ストア | 用途 | 利用サービス |
 |---|---|---|
 | PostgreSQL (Cloud SQL) | サービス別スキーマによる永続化 | 各サービス |
+| Cloud Firestore (Native, asia-northeast1) | サービス横断の動的設定値 `game_config` コレクション ([ADR-017](../adr/017-game-config-firestore.md)) | account, shop, battle, card, scenario, gateway |
 | Upstash Redis (Sorted Set) | マッチメイキングキュー | matchmaking |
 | Cloud Pub/Sub (Exactly-Once) | マッチ成立イベント `matchmaking-events` | matchmaking → gateway |
 | Cloud Pub/Sub (At-Least-Once) | オンボーディング完了イベント `player-onboarded` ([ADR-022](../adr/022-faction-selected-decomposition.md)) | scenario → account, card, gateway |
@@ -36,6 +37,31 @@ Overload Party の RDB は **1 つの PostgreSQL インスタンスの上で、�
 | Google Cloud Storage | ストーリースクリプト | scenario |
 
 matchmaking は RDB スキーマを持たない（Redis + Pub/Sub のみ）。
+
+---
+
+## 定数／設定値の配置ルール
+
+サービス横断で参照される値は、**変更頻度と参照形態**で 3 分類し、それぞれ置き場を分ける。
+
+| 種類 | 性質 | 置き場 | SSoT | 変更反映 |
+|---|---|---|---|---|
+| ゲーム語彙 | コンパイル時固定。switch 判定・型判別子・DB 列値としてコードにリテラル参照される | common パッケージ配信 | `overload-party-common/data/{game_design_constants,factions}.yaml` → `scripts/generate_constants.py` で Go/C#/TS に codegen | パッケージ再配信（go get / nuget / npm） |
+| 運営チューニング値 | 実行時に調整する動的値（バトル上限、経験値係数、タイムバンク等） | Cloud Firestore `game_config` コレクション | 初期値: `overload-party-common/data/game_config_defaults.yaml` / 運用中: Firestore が SSoT | 初期投入: `overload-party-ops/firestore-seed/seed_game_config.py`。運用中の変更: GCP Console / Firestore admin SDK で即時反映（[ADR-017](../adr/017-game-config-firestore.md)） |
+| サービス固有設定 | サービス単位・環境（dev/stg/prod）単位で変わる値（DB URL、`FIRESTORE_PROJECT_ID` 等） | env var | 各サービスの `internal/config/` + `overload-party-k8s` の Deployment manifest | デプロイ |
+
+### 判断の境界
+
+- **コードが文字列リテラルを知っている必要があるか？** → Yes なら「ゲーム語彙」。タイポをコンパイルで捕まえる価値の方が、実行時の柔軟性より重い
+- **運営がバランス調整で触るか？** → Yes なら「運営チューニング値」。PostgreSQL マイグレーション経由ではなく Firestore 書き込みで即時反映する
+- **環境（dev/stg/prod）で値が変わるか？** → Yes なら env var。common にも Firestore にも置かない
+
+### Firestore `game_config` の詳細
+
+- コレクション `game_config`、ドキュメント ID = key、フィールド `value`（型は値ごとの number / string / bool）
+- 各サービスは公式 Firestore クライアントから読み取る（Go: `cloud.google.com/go/firestore` / C#: `Google.Cloud.Firestore` / Python: `google-cloud-firestore`）
+- キー不在は **fail-fast**（`port.ErrNotFound` を即伝播）
+- 書き込みは運営オペレーター + ops SA のみ
 
 ---
 
@@ -51,10 +77,6 @@ matchmaking は RDB スキーマを持たない（Redis + Pub/Sub のみ）。
 | `gateway` | gateway | `game_players` |
 | `news` | news | `news_articles`, `news_article_translations` |
 | `support` | support | `announcements`, `announcement_translations`, `inquiries` |
-
-### ゲーム動的設定値 (Cloud Firestore)
-
-サービス横断で参照する動的設定値（バトル上限数、経験値、タイムバンク等）は **Cloud Firestore (Native モード、asia-northeast1)** のコレクション `game_config` に格納する。ドキュメント ID = key、フィールド `value`（型は値ごとの number / string / bool）。各サービスは公式 Firestore クライアントから読み取り、キー不在は fail-fast。書き込みは運営オペレーター + ops SA に限定。
 
 ### 権限 (GRANT)
 
