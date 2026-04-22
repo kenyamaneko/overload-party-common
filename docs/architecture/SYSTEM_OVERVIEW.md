@@ -43,7 +43,7 @@ Overload Partyは、クラウドインフラをテーマにした対戦型デジ
 
 Overload Party は複数の独立した Git リポジトリで構成される。`overload-party-common` がゲームデザイン・カードデータ・ドキュメントの Single Source of Truth（SSoT）となり、コード生成パイプラインで各リポに成果物を配布する。
 
-バックエンドは 7 つのサービス（gateway / account / matchmaking / shop / scenario / card / battle）で構成され、Gateway 以外はすべて Go 1.25、Battle のみ C# / .NET 10 である。Gateway は WS 通信ハンドリング・認証検証・ルーティングに専念し、ドメインロジックは各サービスに閉じる。ドメインごとに独立したリポジトリ・デプロイ単位を持たせることで、変更リスクと責務を局所化する。
+バックエンドは 9 つのサービス（gateway / account / matchmaking / shop / scenario / card / battle / news / support）で構成され、Battle のみ C# / .NET 10、それ以外はすべて Go 1.25 である。Gateway は WS 通信ハンドリング・認証検証・ルーティングに専念し、ドメインロジックは各サービスに閉じる。ドメインごとに独立したリポジトリ・デプロイ単位を持たせることで、変更リスクと責務を局所化する。
 
 ### 2.1 リポジトリ一覧
 
@@ -62,11 +62,17 @@ Overload Party は複数の独立した Git リポジトリで構成される。
 | **k8s** | GKE デプロイ・運用 | Kustomize, GitHub Actions | deploy / startup / shutdown / scale |
 | **ops** | DB マイグレーション・監視ジョブ・Slack コマンド | Docker, Cloud Run, Cloudflare Workers, Python | CI + 手動 dispatch |
 | **analytics** | Spanner → BigQuery エクスポート | Go, Cloud Functions | 手動デプロイ |
-| **newsfeed** | ニュースフィード生成 | Python, Vertex AI | 手動デプロイ |
+| **newsfeed** | ニュース記事収集・要約（RSS → Gemini → Pub/Sub publish） | Python 3.12, Vertex AI, Upstash Redis | CI で自動デプロイ |
+| **news** | 収集記事の校閲・配信（newsfeed から Pub/Sub 購読 → gateway 経由で配信） | Go 1.25, Gin, HTMX | 未整備 |
+| **support** | お知らせ配信・問い合わせ受付（Slack / SendGrid 連携） | Go 1.25, Gin | 未整備 |
 | **assets** | ゲームアセットパイプライン（イラスト・スタンプ・SE 等の管理・配信） | GCS, Cloudflare CDN | CI でマニフェスト生成 |
 | **web** | ティザーサイト（未作成） | — | — |
 
-**サービス間通信:** Gateway 以外のサービス（account / matchmaking / shop / scenario / card / battle）はクラスタ内ネットワークに閉じ、原則 Gateway からの内部 REST 経由でのみ到達可能とする。唯一の例外は shop サービスの Webhook 受信エンドポイントで、Apple / Google の課金サーバーからのサーバー間通知を受けるために外部公開する（詳細は 8.6 参照）。
+**サービス間通信:** Gateway 以外のサービス（account / matchmaking / shop / scenario / card / battle / news / support）はクラスタ内ネットワークに閉じ、原則 Gateway からの内部 REST 経由でのみ到達可能とする。外部公開の例外は以下:
+
+- **shop** の Webhook 受信エンドポイント（Apple / Google の課金サーバー通知受信用、詳細は [APPLICATION.md](APPLICATION.md) 参照）
+- **support** の問い合わせ受付フォーム（CORS で Origin 制限）
+- **news / support** の管理 UI（IAP で運用者認証）
 
 ### 2.2 コード生成パイプライン
 
@@ -80,7 +86,7 @@ Overload Party は複数の独立した Git リポジトリで構成される。
 graph TD
     common["common<br/>SSoT: 定数 / ドキュメント"]
 
-    common -->|"Go pkg"| gosvcs["Go サービス群<br/>gateway / account / matchmaking<br/>shop / scenario / card"]
+    common -->|"Go pkg"| gosvcs["Go サービス群<br/>gateway / account / matchmaking<br/>shop / scenario / card / news / support"]
     common -->|"NuGet"| battle["battle (C#)"]
     common -->|"npm"| client["client (React)"]
 
@@ -238,13 +244,18 @@ graph TD
             scenario["scenario"]
             card["card"]
             battle["battle (C#)"]
+            news["news"]
+            support["support"]
         end
     end
+
+    newsfeed_job["newsfeed<br/>(Cloud Run Job)"]
 
     subgraph Pub/Sub Topics
         match_events["matchmaking-events"]
         faction_events["faction-selected"]
         premium_events["premium-updated"]
+        news_events["news-article-collected"]
     end
 
     subgraph Data
@@ -267,14 +278,20 @@ graph TD
     %% Apple / Google → shop (webhook)
     apple_google["Apple / Google"] -->|"Webhook"| shop
 
+    %% 外部 → support (問い合わせフォーム) / support → Slack, SendGrid
+    user_form["問い合わせフォーム"] -->|"外部 REST<br/>(CORS)"| support
+    support -->|"通知"| slack["Slack"]
+    support -->|"受付メール"| sendgrid["SendGrid"]
+
     %% gateway → 各サービス (内部 REST)
-    gw -->|内部 REST| account & matchmaking & shop & scenario & card & battle
+    gw -->|内部 REST| account & matchmaking & shop & scenario & card & battle & news & support
 
     %% 各サービス → DB (Cloud SQL Auth Proxy sidecar 経由)
-    account & card & shop & scenario & battle & gw -->|"Auth Proxy<br/>(sidecar)"| db
+    account & card & shop & scenario & battle & gw & news & support -->|"Auth Proxy<br/>(sidecar)"| db
 
-    %% matchmaking → Redis
+    %% matchmaking / newsfeed → Redis
     matchmaking --> redis
+    newsfeed_job --> redis
 
     %% Firestore (game_config) — game_config を参照するサービスから読み取り
     account -->|game_config 読み取り| firestore
@@ -284,11 +301,13 @@ graph TD
     scenario -->|publish| faction_events
     shop -->|publish| faction_events
     shop -->|publish| premium_events
+    newsfeed_job -->|publish| news_events
 
     %% Pub/Sub: subscribe
     match_events -->|subscribe| gw
     faction_events -->|subscribe| account & card & gw
     premium_events -->|subscribe| account & gw
+    news_events -->|subscribe| news
 
     %% GCS
     scenario -->|スクリプト取得| gcs_scenario
@@ -297,10 +316,14 @@ graph TD
 
 **サーバー間通信:**
 - サービス間は内部 REST API（クラスタ内ネットワーク）。battle を含むドメインサービスは認証を行わず、gateway を信頼
-- 外部公開は gateway（クライアント向け WS/REST）と shop（Apple / Google webhook 受信用）のみ
+- 外部公開は gateway（クライアント向け WS/REST）を主とし、例外は以下:
+  - **shop** の Webhook 受信（Apple / Google の課金サーバー通知）
+  - **support** の問い合わせ受付フォーム（CORS で Origin 制限）
+  - **news / support** の管理 UI（IAP で運用者認証）
 - マッチ成立通知: matchmaking → Cloud Pub/Sub `matchmaking-events` → gateway
 - ファクション選択 / 初期パック付与: scenario / shop → Cloud Pub/Sub `faction-selected` → account / card / gateway
 - プレミアム状態更新: shop → Cloud Pub/Sub `premium-updated` → account / gateway
+- ニュース記事収集: newsfeed (Cloud Run Job) → Cloud Pub/Sub `news-article-collected` → news
 - DB 所有権はサービス単位に分離（DATA_DESIGN.md 参照）
 
 ### 4.2 通信フロー
