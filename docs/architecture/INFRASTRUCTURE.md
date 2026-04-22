@@ -63,6 +63,8 @@ overload-party 全リポジトリの CI/CD に関する横断的な設計情報�
 | scenario | golangci-lint | go test -race | scenario イメージ | api-scenario (Go) |
 | matchmaking | golangci-lint | go test -race | matchmaking イメージ | api-matchmaking (Go) |
 | newsfeed | ruff | pytest | newsfeed イメージ | newsfeed-constants (Go + npm) |
+| news | — | — | — | — （CI 未整備） |
+| support | — | — | — | — （CI 未整備） |
 | common | — | — | — | game-design-constants (Go + C# + npm), pubsub-events (Go) |
 | client | eslint | vitest | — | — |
 | infra | — | — | — | — (terraform plan/apply のみ) |
@@ -155,6 +157,7 @@ Service Account (用途別)
 | サービス | デプロイ先 | 自動/手動 |
 |---------|----------|----------|
 | gateway / battle / card / account / matchmaking / shop / scenario | GKE (kustomize + kubectl) | 手動 dispatch |
+| news / support | GKE (kustomize + kubectl) | CI 未整備（ローカルビルド → 手動 push） |
 | db-migrate | Cloud Run Job | dev 自動 / stg 手動 |
 | nightly-review / cost-monitor / drift-monitor | Cloud Run Job | main push 自動 |
 | slack-commands | Cloud Run Service | main push 自動 |

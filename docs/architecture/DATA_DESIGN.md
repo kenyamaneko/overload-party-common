@@ -31,6 +31,7 @@ Overload Party の RDB は **1 つの PostgreSQL インスタンスの上で、�
 | Cloud Pub/Sub (Exactly-Once) | マッチ成立イベント `matchmaking-events` | matchmaking → gateway |
 | Cloud Pub/Sub (At-Least-Once) | ファクション選択イベント `faction-selected` | scenario, shop → account, card, gateway |
 | Cloud Pub/Sub (At-Least-Once) | プレミアム状態変更 `premium-updated` | shop → account, gateway |
+| Cloud Pub/Sub (At-Least-Once) | ニュース記事収集 `news-article-collected` | newsfeed → news |
 | Google Cloud Storage | ストーリースクリプト | scenario |
 
 matchmaking は RDB スキーマを持たない（Redis + Pub/Sub のみ）。
@@ -47,7 +48,8 @@ matchmaking は RDB スキーマを持たない（Redis + Pub/Sub のみ）。
 | `scenario` | scenario | `scenario_episodes`, `episode_required_factions`, `player_story_progress` |
 | `battle` | battle | `games`, `game_npcs`, `game_decks`, `game_states`, `game_actions`, `game_events` |
 | `gateway` | gateway | `game_players` |
-| `newsfeed` | newsfeed | `news_articles` |
+| `news` | news | `news_articles`, `news_article_translations` |
+| `support` | support | `announcements`, `announcement_translations`, `inquiries` |
 
 ### ゲーム動的設定値 (Cloud Firestore)
 

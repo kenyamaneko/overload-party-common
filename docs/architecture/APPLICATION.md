@@ -45,8 +45,10 @@ Cloud SQL インスタンスは 1 つのまま維持したうえで、**PostgreS
 | `shop` | shop | `products`, `subscriptions`, `one_time_purchases`, `cosmetic_items`, `player_items` |
 | `scenario` | scenario | `scenario_episodes`, `episode_required_factions`, `player_story_progress` |
 | `battle` | battle | `games`, `game_npcs`, `game_decks`, `game_players`, `game_states`, `game_actions`, `game_events` |
-| `newsfeed` | newsfeed | `news_articles` |
+| `news` | news | `news_articles`, `news_article_translations` |
+| `support` | support | `announcements`, `announcement_translations`, `inquiries` |
 | （なし） | matchmaking | キューは Upstash Redis、通知は Cloud Pub/Sub のため RDB スキーマを持たない |
+| （なし） | newsfeed | Cloud Run Job。DB を持たず、記事を Pub/Sub `news-article-collected` に publish するのみ |
 
 - **動的設定値**: サービス横断で参照する設定値（バトル上限数・経験値・タイムバンク等）は **Cloud Firestore (Native モード)** のコレクション `game_config` に格納し、各サービスは Firestore クライアントから KV で読み取る
 
@@ -80,7 +82,7 @@ battle 側のインメモリキャッシュの更新戦略は以下のとおり�
 
 - **REST API**（クライアント向け公開 API、入口は gateway）: プレイヤー管理、デッキ管理、NPC 対戦、ショップなど
 - **WebSocket API**（クライアント ↔ gateway）: PvP マッチメイキング、リアルタイム対戦、スタンプ送信など
-- **内部 REST API**（サービス間通信、クラスタ内部のみ）: gateway ↔ account / card / shop / scenario / matchmaking / battle、および battle ↔ card など
+- **内部 REST API**（サービス間通信、クラスタ内部のみ）: gateway ↔ account / card / shop / scenario / matchmaking / battle / news / support、および battle ↔ card など
 
 各エンドポイントの詳細は以下を参照する。
 
