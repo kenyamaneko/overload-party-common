@@ -29,7 +29,8 @@ Overload Party の RDB は **1 つの PostgreSQL インスタンスの上で、�
 | PostgreSQL (Cloud SQL) | サービス別スキーマによる永続化 | 各サービス |
 | Upstash Redis (Sorted Set) | マッチメイキングキュー | matchmaking |
 | Cloud Pub/Sub (Exactly-Once) | マッチ成立イベント `matchmaking-events` | matchmaking → gateway |
-| Cloud Pub/Sub (At-Least-Once) | ファクション選択イベント `faction-selected` | scenario, shop → account, card, gateway |
+| Cloud Pub/Sub (At-Least-Once) | オンボーディング完了イベント `player-onboarded` ([ADR-022](../adr/022-faction-selected-decomposition.md)) | scenario → account, card, gateway |
+| Cloud Pub/Sub (At-Least-Once) | ファクション購入イベント `faction-purchased` ([ADR-022](../adr/022-faction-selected-decomposition.md)) | shop → account, card, gateway |
 | Cloud Pub/Sub (At-Least-Once) | プレミアム状態変更 `premium-updated` | shop → account, gateway |
 | Cloud Pub/Sub (At-Least-Once) | ニュース記事収集 `news-article-collected` | newsfeed → news |
 | Google Cloud Storage | ストーリースクリプト | scenario |

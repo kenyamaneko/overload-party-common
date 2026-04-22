@@ -253,7 +253,8 @@ graph TD
 
     subgraph Pub/Sub Topics
         match_events["matchmaking-events"]
-        faction_events["faction-selected"]
+        onboarded_events["player-onboarded"]
+        faction_purchased_events["faction-purchased"]
         premium_events["premium-updated"]
         news_events["news-article-collected"]
     end
@@ -298,14 +299,15 @@ graph TD
 
     %% Pub/Sub: publish
     matchmaking -->|publish| match_events
-    scenario -->|publish| faction_events
-    shop -->|publish| faction_events
+    scenario -->|publish| onboarded_events
+    shop -->|publish| faction_purchased_events
     shop -->|publish| premium_events
     newsfeed_job -->|publish| news_events
 
     %% Pub/Sub: subscribe
     match_events -->|subscribe| gw
-    faction_events -->|subscribe| account & card & gw
+    onboarded_events -->|subscribe| account & card & gw
+    faction_purchased_events -->|subscribe| account & card & gw
     premium_events -->|subscribe| account & gw
     news_events -->|subscribe| news
 
@@ -321,7 +323,8 @@ graph TD
   - **support** の問い合わせ受付フォーム（CORS で Origin 制限）
   - **news / support** の管理 UI（IAP で運用者認証）
 - マッチ成立通知: matchmaking → Cloud Pub/Sub `matchmaking-events` → gateway
-- ファクション選択 / 初期パック付与: scenario / shop → Cloud Pub/Sub `faction-selected` → account / card / gateway
+- オンボーディング完了 / 初期ファクション付与 / 初期パック配布: scenario → Cloud Pub/Sub `player-onboarded` → account / card / gateway ([ADR-022](../adr/022-faction-selected-decomposition.md))
+- ファクション購入: shop → Cloud Pub/Sub `faction-purchased` → account / card / gateway ([ADR-022](../adr/022-faction-selected-decomposition.md))
 - プレミアム状態更新: shop → Cloud Pub/Sub `premium-updated` → account / gateway
 - ニュース記事収集: newsfeed (Cloud Run Job) → Cloud Pub/Sub `news-article-collected` → news
 - DB 所有権はサービス単位に分離（DATA_DESIGN.md 参照）
