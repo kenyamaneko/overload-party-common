@@ -13,6 +13,7 @@
 
 ---
 
+## 1. 概要
 
 ### 1.1 プロジェクト概要
 
@@ -91,6 +92,8 @@ graph TD
     analytics["analytics (BQ export)"]
     assets["assets (CDN 配信)"]
     newsfeed["newsfeed (Cloud Run Job)"]
+
+    common -->|"設計ドキュメント / 定数"| infra & ops & analytics & assets & newsfeed
 ```
 
 ---
@@ -302,7 +305,7 @@ graph TD
 
 ### 4.2 通信フロー
 
-#### 4.3.1 ゲーム開始フロー
+#### 4.2.1 ゲーム開始フロー
 
 ```
 Client              Gateway Pod          Battle Pod           Cloud SQL
@@ -323,7 +326,7 @@ Client              Gateway Pod          Battle Pod           Cloud SQL
      │<───────────────────┤                    │                    │
 ```
 
-#### 4.3.2 アクション実行フロー
+#### 4.2.2 アクション実行フロー
 
 ```
 Player A (Client)   Gateway Pod          Battle Pod           Cloud SQL      Player B (Client)
@@ -352,13 +355,3 @@ Player A (Client)   Gateway Pod          Battle Pod           Cloud SQL      Pla
 > サーバーが毎状態更新時にフェーズごとの有効アクションを計算し送信することで、
 > クライアント側にゲームロジックを重複して持たせない設計（Master Duel 方式）。
 > 詳細は `API_REFERENCE.md` の `game_state` / `turn_controls` セクションを参照。
-
-#### 4.3.3 ゲーム開始フロー
-
-マッチ成立後、スターター選出フェーズは存在しない。デッキ30枚をシャッフルし、初期手札5枚をドローして即座に T1 が開始される（フィールドは空の状態）。
-
-プレイヤーは手札からカードをデプロイして盤面を構築していく。デプロイターンが 0 のカード（Serverless 等）は即座に表向きで稼働し、1 以上のカードは裏向きで配置される。
-
----
-
-## 5. データ設計 (Data Architecture)
