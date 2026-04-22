@@ -65,7 +65,7 @@ overload-party 全リポジトリの CI/CD に関する横断的な設計情報�
 | newsfeed | ruff | pytest | newsfeed イメージ | newsfeed-constants (Go + npm) |
 | news | — | — | — | — （CI 未整備） |
 | support | — | — | — | — （CI 未整備） |
-| common | — | — | — | game-design-constants (Go + C# + npm), pubsub-events (Go) |
+| common | — | — | — | game-design-constants (Go + C# + npm) |
 | client | eslint | vitest | — | — |
 | infra | — | — | — | — (terraform plan/apply のみ) |
 | k8s | — | — | — | — (kustomize + kubectl のみ) |

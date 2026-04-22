@@ -20,7 +20,6 @@ PACKAGES=(
   "game-design-constants:packages/game-design-constants:packages/game-design-constants/"
   "game-design-constants-dotnet:packages/game-design-constants-dotnet:packages/game-design-constants-dotnet/"
   "game-design-constants-npm:packages/game-design-constants-npm:packages/game-design-constants-npm/"
-  "pubsub-events:packages/pubsub-events:packages/pubsub-events/"
 )
 
 compute_version() {

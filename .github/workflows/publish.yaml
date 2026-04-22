@@ -29,7 +29,6 @@ on:
           - game-design-constants
           - game-design-constants-dotnet
           - game-design-constants-npm
-          - pubsub-events
 
 permissions:
   contents: write
@@ -50,8 +49,6 @@ jobs:
       game_design_constants_dotnet_version: ${{ steps.detect.outputs.game_design_constants_dotnet_version }}
       game_design_constants_npm: ${{ steps.detect.outputs.game_design_constants_npm }}
       game_design_constants_npm_version: ${{ steps.detect.outputs.game_design_constants_npm_version }}
-      pubsub_events: ${{ steps.detect.outputs.pubsub_events }}
-      pubsub_events_version: ${{ steps.detect.outputs.pubsub_events_version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -92,12 +89,6 @@ jobs:
           go vet ./...
           go build ./...
 
-      - name: Go vet + build (pubsub-events)
-        run: |
-          cd packages/pubsub-events
-          go vet ./...
-          go build ./...
-
       - name: .NET build
         run: |
           cd packages/game-design-constants-dotnet
@@ -123,20 +114,6 @@ jobs:
       - name: Tag Go module
         run: |
           tag="packages/game-design-constants/v${{ needs.detect.outputs.game_design_constants_version }}"
-          git tag "$tag"
-          git push origin "$tag"
-
-  publish-pubsub-events-go:
-    name: Publish pubsub-events (Go)
-    needs: [detect, build]
-    if: needs.detect.outputs.pubsub_events == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Tag Go module
-        run: |
-          tag="packages/pubsub-events/v${{ needs.detect.outputs.pubsub_events_version }}"
           git tag "$tag"
           git push origin "$tag"
 

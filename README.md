@@ -35,11 +35,10 @@ docs/
 | `packages/game-design-constants` | Go module | 全 Go サービス |
 | `packages/game-design-constants-dotnet` (`OverloadParty.GameDesignConstants`) | NuGet | battle |
 | `packages/game-design-constants-npm` (`@kenyamaneko/overload-party-game-design-constants`) | npm | client |
-| `packages/pubsub-events` | Go module | 全 Go サービス (Pub/Sub event schema SSoT) |
 
 ## コード生成
 
-`game-design-constants` 系の 3 パッケージは `data/*.yaml` から自動生成する (`pubsub-events` は手書き)。
+`game-design-constants` 系の 3 パッケージは `data/*.yaml` から自動生成する。
 
 ```
 data/game_design_constants.yaml ┐

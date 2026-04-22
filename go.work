@@ -4,7 +4,4 @@ go 1.25.1
 // After ADR-015 Phase 6/7 only game-design-constants lives in common; all
 // other Go modules moved to their respective service repos.
 //
-use (
-	./packages/pubsub-events
-	./packages/game-design-constants
-)
+use ./packages/game-design-constants
