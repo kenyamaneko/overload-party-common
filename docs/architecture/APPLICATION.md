@@ -82,7 +82,7 @@ battle 側のインメモリキャッシュの更新戦略は以下のとおり�
 
 - **REST API**（クライアント向け公開 API、入口は gateway）: プレイヤー管理、デッキ管理、NPC 対戦、ショップなど
 - **WebSocket API**（クライアント ↔ gateway）: PvP マッチメイキング、リアルタイム対戦、スタンプ送信など
-- **内部 REST API**（サービス間通信、クラスタ内部のみ）: gateway ↔ account / card / shop / scenario / matchmaking / battle / news / support、および battle ↔ card など
+- **内部 REST API**（サービス間通信、クラスタ内部のみ）: gateway ↔ account / card / shop / scenario / matchmaking / battle / news / support、および battle ↔ card など。ドメインサービス間の HTTP 直叩きは原則禁止し、連携は Pub/Sub に集約する。例外として scenario の onboarding 内 name 確定と再開判定に限り scenario → account の直叩きを許容する（[ADR-025](../adr/025-onboarding-name-via-rest-and-cross-service-http.md)）
 
 各エンドポイントの詳細は以下を参照する。
 

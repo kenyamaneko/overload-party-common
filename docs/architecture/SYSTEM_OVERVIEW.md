@@ -68,7 +68,7 @@ Overload Party は複数の独立した Git リポジトリで構成される。
 | **assets** | ゲームアセットパイプライン（イラスト・スタンプ・SE 等の管理・配信） | GCS, Cloudflare CDN | CI でマニフェスト生成 |
 | **web** | ティザーサイト（未作成） | — | — |
 
-**サービス間通信:** Gateway 以外のサービス（account / matchmaking / shop / scenario / card / battle / news / support）はクラスタ内ネットワークに閉じ、原則 Gateway からの内部 REST 経由でのみ到達可能とする。外部公開の例外は以下:
+**サービス間通信:** Gateway 以外のサービス（account / matchmaking / shop / scenario / card / battle / news / support）はクラスタ内ネットワークに閉じ、原則 Gateway からの内部 REST 経由でのみ到達可能とする。ドメインサービス間の連携は Pub/Sub に集約し、HTTP 直叩きは行わない。例外として scenario の onboarding 内 name 入力ステップと再開判定に限り scenario → account の直叩きを許容する（[ADR-025](../adr/025-onboarding-name-via-rest-and-cross-service-http.md)）。外部公開の例外は以下:
 
 - **shop** の Webhook 受信エンドポイント（Apple / Google の課金サーバー通知受信用、詳細は [APPLICATION.md](APPLICATION.md) 参照）
 - **support** の問い合わせ受付フォーム（CORS で Origin 制限）
@@ -287,6 +287,9 @@ graph TD
     %% gateway → 各サービス (内部 REST)
     gw -->|内部 REST| account & matchmaking & shop & scenario & card & battle & news & support
 
+    %% scenario → account: onboarding 内 name 確定 / 再開判定の REST 直叩き (ADR-025)
+    scenario -->|"内部 REST<br/>(onboarding name / resume)"| account
+
     %% 各サービス → DB (Cloud SQL Auth Proxy sidecar 経由)
     account & card & shop & scenario & battle & gw & news & support -->|"Auth Proxy<br/>(sidecar)"| db
 
@@ -318,11 +321,13 @@ graph TD
 
 **サーバー間通信:**
 - サービス間は内部 REST API（クラスタ内ネットワーク）。battle を含むドメインサービスは認証を行わず、gateway を信頼
+- ドメインサービス間の連携は Pub/Sub に集約し、HTTP 直叩きは原則禁止。例外は scenario → account の onboarding 内 name 確定と再開判定のみ（[ADR-025](../adr/025-onboarding-name-via-rest-and-cross-service-http.md)）
 - 外部公開は gateway（クライアント向け WS/REST）を主とし、例外は以下:
   - **shop** の Webhook 受信（Apple / Google の課金サーバー通知）
   - **support** の問い合わせ受付フォーム（CORS で Origin 制限）
   - **news / support** の管理 UI（IAP で運用者認証）
 - マッチ成立通知: matchmaking → Cloud Pub/Sub `matchmaking-events` → gateway
+- オンボーディング表示名確定: scenario → account 内部 REST `PUT /internal/v1/players/:playerId/name`（onboarding 内 name 入力ステップ。[ADR-025](../adr/025-onboarding-name-via-rest-and-cross-service-http.md)）
 - オンボーディング完了 / 初期ファクション付与 / 初期パック配布: scenario → Cloud Pub/Sub `player-onboarded` → account / card / gateway ([ADR-022](../adr/022-faction-selected-decomposition.md))
 - ファクション購入: shop → Cloud Pub/Sub `faction-purchased` → account / card / gateway ([ADR-022](../adr/022-faction-selected-decomposition.md))
 - プレミアム状態更新: shop → Cloud Pub/Sub `premium-updated` → account / gateway
