@@ -10,10 +10,10 @@
 | `base/` | 全リポ | 設計思想・コーディング方針・ログ方針・テスト方針・実装フロー・共通禁止事項、Issue 起票 skill |
 | `flow-gitflow/` | Git flow 採用リポ | ブランチ・Issue 運用、BRANCHING.md、Issue 実装 skill |
 | `flow-githubflow/` | GitHub Flow 採用リポ | (未実装 — Phase 3 で追加) |
-| `lang-go/` | Go リポ | (未実装 — Phase 2 で追加) |
-| `lang-csharp/` | C# リポ | (未実装) |
-| `lang-python/` | Python リポ | (未実装) |
-| `lang-iac/` | Terraform / k8s リポ | (未実装) |
+| `lang-go/` | Go リポ | テーブル駆動テスト等の Go 固有方針 |
+| `lang-csharp/` | C# (battle service) | スケルトンのみ。内容追加待ち |
+| `lang-python/` | Python (ジョブ系・ops 系) | スケルトンのみ。内容追加待ち。ジョブ系も ops 系も同じレイヤを使う (品質基準は共通) |
+| `lang-iac/` | Terraform / k8s リポ | スケルトンのみ。内容追加待ち |
 
 ## 消費リポ側の使い方
 
