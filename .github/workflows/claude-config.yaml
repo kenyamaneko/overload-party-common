@@ -14,13 +14,13 @@ on:
       - "claude/**"
       - ".github/claude-consumers.yaml"
       - ".github/workflows/claude-config.yaml"
-      - "scripts/claude-config/**"
+      - ".github/scripts/claude-config/**"
   pull_request:
     paths:
       - "claude/**"
       - ".github/claude-consumers.yaml"
       - ".github/workflows/claude-config.yaml"
-      - "scripts/claude-config/**"
+      - ".github/scripts/claude-config/**"
   workflow_dispatch:
 
 jobs:
@@ -29,9 +29,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Validate skill frontmatter
-        run: python3 scripts/claude-config/validate_skill_frontmatter.py
+        run: python3 .github/scripts/claude-config/validate_skill_frontmatter.py
       - name: Validate @import paths
-        run: python3 scripts/claude-config/validate_import_paths.py
+        run: python3 .github/scripts/claude-config/validate_import_paths.py
 
   load-consumers:
     needs: validate
@@ -85,7 +85,7 @@ jobs:
 
       - name: Sync files
         if: steps.manifest.outputs.skip == 'false'
-        run: bash common/scripts/claude-config/sync_files.sh common consumer "${{ steps.manifest.outputs.layers }}"
+        run: bash common/.github/scripts/claude-config/sync_files.sh common consumer "${{ steps.manifest.outputs.layers }}"
 
       - name: Create PR
         if: steps.manifest.outputs.skip == 'false'
