@@ -51,7 +51,8 @@ jobs:
       game_design_constants_npm: ${{ steps.detect.outputs.game_design_constants_npm }}
       game_design_constants_npm_version: ${{ steps.detect.outputs.game_design_constants_npm_version }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -70,17 +71,21 @@ jobs:
     env:
       GOWORK: "off"
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-go@v5
+      - name: Setup Go
+        uses: actions/setup-go@v5
         with:
           go-version-file: packages/game-design-constants/go.mod
 
-      - uses: actions/setup-dotnet@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: "22"
 
@@ -110,7 +115,8 @@ jobs:
     if: needs.detect.outputs.game_design_constants == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Tag Go module
         run: |
@@ -127,8 +133,10 @@ jobs:
     if: needs.detect.outputs.game_design_constants_dotnet == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
       - name: Publish NuGet
@@ -152,8 +160,10 @@ jobs:
     if: needs.detect.outputs.game_design_constants_npm == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: "22"
           registry-url: "https://npm.pkg.github.com"

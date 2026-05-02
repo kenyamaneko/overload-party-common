@@ -22,7 +22,9 @@ jobs:
     outputs:
       matrix: ${{ steps.read.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout common
+        uses: actions/checkout@v4
+
       - name: Read consumers
         id: read
         run: |
