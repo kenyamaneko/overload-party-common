@@ -1,10 +1,10 @@
-name: Claude Config
+name: Claude Config Sync
 
-# claude/ 配下の検証と消費リポへの同期を 1 workflow で扱う。
-# - validate: PR / push(main) で実行。skill frontmatter と @import パスを検証
-# - sync: push(main) のみ。validate 成功後に消費リポへ自動 PR を作成
+# claude/ 配下の変更を消費リポに同期する。
+# 消費リポリスト: .github/claude-consumers.yaml
+# 各消費リポは .claude-common.yaml で適用レイヤを宣言する。
 #
-# 必要な Secret (sync 用): CLAUDE_SYNC_TOKEN
+# 必要な Secret: CLAUDE_SYNC_TOKEN
 #   消費リポの Contents: write + Pull requests: write 権限を持つ PAT
 
 on:
@@ -13,27 +13,12 @@ on:
     paths:
       - "claude/**"
       - ".github/claude-consumers.yaml"
-      - ".github/workflows/claude-config.yaml"
-      - ".github/scripts/claude-config/**"
-  pull_request:
-    paths:
-      - "claude/**"
-      - ".github/claude-consumers.yaml"
-      - ".github/workflows/claude-config.yaml"
+      - ".github/workflows/claude-config-sync.yaml"
       - ".github/scripts/claude-config/**"
   workflow_dispatch:
 
 jobs:
-  validate:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Validate skill frontmatter
-        run: python3 .github/scripts/claude-config/validate_skill_frontmatter.py
-
   load-consumers:
-    needs: validate
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.read.outputs.matrix }}
