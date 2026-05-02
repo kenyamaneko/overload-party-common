@@ -1,0 +1,111 @@
+name: Claude Config Sync
+
+# claude/ 配下の変更を消費リポに同期する。
+# 消費リポリスト: .github/claude-consumers.yaml
+# 各消費リポは .claude-common.yaml で適用レイヤを宣言する。
+#
+# 動作概要:
+#   1. 消費リポを checkout
+#   2. 消費リポの .claude-common.yaml から layers を読む
+#   3. 各レイヤの top-level *.md を消費リポの .claude-common/<layer>/ にコピー
+#   4. 各レイヤの skills/*.md を消費リポの .claude/skills/ にコピー
+#   5. peter-evans/create-pull-request で消費リポに PR 作成
+#
+# 必要な Secret: CLAUDE_SYNC_TOKEN
+#   - 消費リポの Contents: write + Pull requests: write 権限を持つ PAT
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "claude/**"
+      - ".github/claude-consumers.yaml"
+      - ".github/workflows/claude-config-sync.yaml"
+  workflow_dispatch:
+
+jobs:
+  load-consumers:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.read.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read consumers
+        id: read
+        run: |
+          set -e
+          matrix=$(yq -o=json '.consumers' .github/claude-consumers.yaml | jq -c .)
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+
+  sync:
+    needs: load-consumers
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        consumer: ${{ fromJson(needs.load-consumers.outputs.matrix) }}
+    steps:
+      - name: Checkout common
+        uses: actions/checkout@v4
+        with:
+          path: common
+
+      - name: Checkout consumer
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ matrix.consumer.repo }}
+          token: ${{ secrets.CLAUDE_SYNC_TOKEN }}
+          path: consumer
+          ref: ${{ matrix.consumer.target_branch }}
+
+      - name: Read consumer manifest
+        id: manifest
+        working-directory: consumer
+        run: |
+          set -e
+          if [ ! -f .claude-common.yaml ]; then
+            echo "::warning::Consumer ${{ matrix.consumer.repo }} has no .claude-common.yaml; skipping"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          layers=$(yq -o=json '.layers' .claude-common.yaml | jq -r 'join(" ")')
+          echo "layers=$layers" >> "$GITHUB_OUTPUT"
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+      - name: Sync files
+        if: steps.manifest.outputs.skip == 'false'
+        run: |
+          set -e
+          for layer in ${{ steps.manifest.outputs.layers }}; do
+            src="common/claude/$layer"
+            if [ ! -d "$src" ]; then
+              echo "::error::Layer $layer not found in common"
+              exit 1
+            fi
+
+            mkdir -p "consumer/.claude-common/$layer"
+            find "$src" -maxdepth 1 -type f -name "*.md" -exec cp -v {} "consumer/.claude-common/$layer/" \;
+
+            if [ -d "$src/skills" ]; then
+              mkdir -p consumer/.claude/skills
+              cp -rv "$src/skills/." consumer/.claude/skills/
+            fi
+          done
+
+      - name: Create PR
+        if: steps.manifest.outputs.skip == 'false'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.CLAUDE_SYNC_TOKEN }}
+          path: consumer
+          branch: chore/sync-claude-common
+          base: ${{ matrix.consumer.target_branch }}
+          title: "chore: sync claude config from overload-party-common"
+          commit-message: "chore: sync claude config from overload-party-common"
+          body: |
+            Automated sync from `overload-party-common@${{ github.sha }}`.
+
+            Layers applied: `${{ steps.manifest.outputs.layers }}`
+
+            Triggered by [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }}).
+          delete-branch: true
