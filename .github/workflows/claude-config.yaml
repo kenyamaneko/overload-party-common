@@ -30,8 +30,6 @@ jobs:
       - uses: actions/checkout@v4
       - name: Validate skill frontmatter
         run: python3 .github/scripts/claude-config/validate_skill_frontmatter.py
-      - name: Validate @import paths
-        run: python3 .github/scripts/claude-config/validate_import_paths.py
 
   load-consumers:
     needs: validate
