@@ -14,6 +14,7 @@ on:
       - "packages/game-design-constants-dotnet/**"
       - "packages/game-design-constants-npm/**"
       - "packages/doc-tools/**"
+      - "packages/codegen-tools/**"
   pull_request:
     paths:
       - "data/game_design_constants.yaml"
@@ -24,6 +25,7 @@ on:
       - "packages/game-design-constants-dotnet/**"
       - "packages/game-design-constants-npm/**"
       - "packages/doc-tools/**"
+      - "packages/codegen-tools/**"
 
 jobs:
   unit-tests:
@@ -40,8 +42,10 @@ jobs:
         run: pip install pyyaml pytest
       - name: Install doc-tools
         run: pip install -e packages/doc-tools
+      - name: Install codegen-tools
+        run: pip install -e packages/codegen-tools
       - name: Run tests
-        run: python3 -m pytest scripts/ packages/doc-tools/tests/ -v
+        run: python3 -m pytest scripts/ packages/doc-tools/tests/ packages/codegen-tools/tests/ -v
 
   codegen-sync:
     name: Codegen sync check
