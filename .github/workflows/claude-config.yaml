@@ -1,18 +1,11 @@
-name: Claude Config Sync
+name: Claude Config
 
-# claude/ 配下の変更を消費リポに同期する。
-# 消費リポリスト: .github/claude-consumers.yaml
-# 各消費リポは .claude-common.yaml で適用レイヤを宣言する。
+# claude/ 配下の検証と消費リポへの同期を 1 workflow で扱う。
+# - validate: PR / push(main) で実行。skill frontmatter と @import パスを検証
+# - sync: push(main) のみ。validate 成功後に消費リポへ自動 PR を作成
 #
-# 動作概要:
-#   1. 消費リポを checkout
-#   2. 消費リポの .claude-common.yaml から layers を読む
-#   3. 各レイヤの top-level *.md を消費リポの .claude-common/<layer>/ にコピー
-#   4. 各レイヤの skills/*.md を消費リポの .claude/skills/ にコピー
-#   5. peter-evans/create-pull-request で消費リポに PR 作成
-#
-# 必要な Secret: CLAUDE_SYNC_TOKEN
-#   - 消費リポの Contents: write + Pull requests: write 権限を持つ PAT
+# 必要な Secret (sync 用): CLAUDE_SYNC_TOKEN
+#   消費リポの Contents: write + Pull requests: write 権限を持つ PAT
 
 on:
   push:
@@ -20,11 +13,29 @@ on:
     paths:
       - "claude/**"
       - ".github/claude-consumers.yaml"
-      - ".github/workflows/claude-config-sync.yaml"
+      - ".github/workflows/claude-config.yaml"
+      - "scripts/claude-config/**"
+  pull_request:
+    paths:
+      - "claude/**"
+      - ".github/claude-consumers.yaml"
+      - ".github/workflows/claude-config.yaml"
+      - "scripts/claude-config/**"
   workflow_dispatch:
 
 jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate skill frontmatter
+        run: python3 scripts/claude-config/validate_skill_frontmatter.py
+      - name: Validate @import paths
+        run: python3 scripts/claude-config/validate_import_paths.py
+
   load-consumers:
+    needs: validate
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.read.outputs.matrix }}
@@ -74,23 +85,7 @@ jobs:
 
       - name: Sync files
         if: steps.manifest.outputs.skip == 'false'
-        run: |
-          set -e
-          for layer in ${{ steps.manifest.outputs.layers }}; do
-            src="common/claude/$layer"
-            if [ ! -d "$src" ]; then
-              echo "::error::Layer $layer not found in common"
-              exit 1
-            fi
-
-            mkdir -p "consumer/.claude-common/$layer"
-            find "$src" -maxdepth 1 -type f -name "*.md" -exec cp -v {} "consumer/.claude-common/$layer/" \;
-
-            if [ -d "$src/skills" ]; then
-              mkdir -p consumer/.claude/skills
-              cp -rv "$src/skills/." consumer/.claude/skills/
-            fi
-          done
+        run: bash common/scripts/claude-config/sync_files.sh common consumer "${{ steps.manifest.outputs.layers }}"
 
       - name: Create PR
         if: steps.manifest.outputs.skip == 'false'
