@@ -20,7 +20,7 @@ packages/
 scripts/
   generate_constants.py           # game-design constants 生成 (Go + C# + npm)
 .github/
-  scripts/detect-changes.sh       # CI publish 対象検知
+  scripts/publish/detect-changes.sh   # CI publish 対象検知
 docs/
   architecture/                   # システム設計 (ARCHITECTURE, CI_CD, DATA_DESIGN, I18N)
   game_design/                    # ゲームデザイン (ルール, カード, UI 等)
@@ -51,7 +51,7 @@ YAML を編集したら `python3 scripts/generate_constants.py` を実行して�
 
 main への push で [.github/workflows/publish.yaml](.github/workflows/publish.yaml) が走り、変更のあったパッケージだけを publish する。
 
-- **変更検知**: [.github/scripts/detect-changes.sh](.github/scripts/detect-changes.sh) が前回タグとの diff を見てどのパッケージを bump するか決める。デフォルトは patch。
+- **変更検知**: [.github/scripts/publish/detect-changes.sh](.github/scripts/publish/detect-changes.sh) が前回タグとの diff を見てどのパッケージを bump するか決める。デフォルトは patch。
 - **バージョン bump**: 手動で minor/major にしたい場合は Actions から `workflow_dispatch` で `bump` と `target` を指定して実行。
 - **タグ規約**: `packages/<name>/v<semver>` (例: `packages/game-design-constants/v1.2.3`)
 - **レジストリ**: Go は git tag のみ (`go get` が解決)、NuGet / npm は GitHub Packages (`nuget.pkg.github.com` / `npm.pkg.github.com`)

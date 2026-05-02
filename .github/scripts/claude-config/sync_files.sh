@@ -7,8 +7,11 @@
 #   $3 = スペース区切りのレイヤ名
 #
 # 動作:
-#   各レイヤの top-level *.md を $consumer/.claude-common/<layer>/ に
+#   各レイヤの top-level *.md を $consumer/.claude/docs/<bucket>/ に
 #   skills/*.md を $consumer/.claude/skills/ にコピーする
+#
+#   bucket は base / flow / lang のいずれか。flow/<variant> や lang/<variant>
+#   のレイヤは consumer 側で variant を落とす (1 リポに 1 variant しかないため)。
 
 set -euo pipefail
 
@@ -23,8 +26,14 @@ for layer in $layers; do
     exit 1
   fi
 
-  mkdir -p "$consumer_dir/.claude-common/$layer"
-  find "$src" -maxdepth 1 -type f -name "*.md" -exec cp -v {} "$consumer_dir/.claude-common/$layer/" \;
+  case "$layer" in
+    flow/*) bucket="flow" ;;
+    lang/*) bucket="lang" ;;
+    *)      bucket="$layer" ;;
+  esac
+
+  mkdir -p "$consumer_dir/.claude/docs/$bucket"
+  find "$src" -maxdepth 1 -type f -name "*.md" -exec cp -v {} "$consumer_dir/.claude/docs/$bucket/" \;
 
   if [ -d "$src/skills" ]; then
     mkdir -p "$consumer_dir/.claude/skills"
