@@ -1,4 +1,4 @@
-# claude-config-sync workflow が同期対象とする消費リポの一覧。
+# claude-presets-sync workflow が同期対象とする消費リポの一覧。
 #
 # 新リポを追加する場合:
 #   1. このファイルに追記

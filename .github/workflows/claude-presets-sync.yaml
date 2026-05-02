@@ -1,7 +1,7 @@
-name: Claude Config Sync
+name: Claude Presets Sync
 
-# claude-config/ 配下の変更を消費リポに同期する。
-# 消費リポリスト: claude-config/.consumers.yaml
+# presets/claude/ 配下の変更を消費リポに同期する。
+# 消費リポリスト: presets/claude/.consumers.yaml
 # 各消費リポは .claude/docs.yaml で適用レイヤを宣言する。
 #
 # 必要な Secret: CLAUDE_SYNC_TOKEN
@@ -11,9 +11,9 @@ on:
   push:
     branches: [main]
     paths:
-      - "claude-config/**"
-      - ".github/workflows/claude-config-sync.yaml"
-      - ".github/scripts/claude-config/**"
+      - "presets/claude/**"
+      - ".github/workflows/claude-presets-sync.yaml"
+      - ".github/scripts/claude-presets/**"
   workflow_dispatch:
 
 jobs:
@@ -29,7 +29,7 @@ jobs:
         id: read
         run: |
           set -e
-          matrix=$(yq -o=json '.consumers' claude-config/.consumers.yaml | jq -c .)
+          matrix=$(yq -o=json '.consumers' presets/claude/.consumers.yaml | jq -c .)
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
 
   sync:
@@ -55,11 +55,11 @@ jobs:
 
       - name: Read consumer manifest
         id: manifest
-        run: bash common/.github/scripts/claude-config/read_consumer_manifest.sh consumer "${{ matrix.consumer.repo }}"
+        run: bash common/.github/scripts/claude-presets/read_consumer_manifest.sh consumer "${{ matrix.consumer.repo }}"
 
       - name: Sync files
         if: steps.manifest.outputs.skip == 'false'
-        run: bash common/.github/scripts/claude-config/sync_files.sh common consumer "${{ steps.manifest.outputs.layers }}"
+        run: bash common/.github/scripts/claude-presets/sync_files.sh common consumer "${{ steps.manifest.outputs.layers }}"
 
       - name: Create PR
         if: steps.manifest.outputs.skip == 'false'
@@ -67,10 +67,10 @@ jobs:
         with:
           token: ${{ secrets.CLAUDE_SYNC_TOKEN }}
           path: consumer
-          branch: chore/sync-claude-common
+          branch: chore/sync-claude-presets
           base: ${{ matrix.consumer.target_branch }}
-          title: "chore: sync claude config from overload-party-common"
-          commit-message: "chore: sync claude config from overload-party-common"
+          title: "chore: sync claude presets from overload-party-common"
+          commit-message: "chore: sync claude presets from overload-party-common"
           body: |
             Automated sync from `overload-party-common@${{ github.sha }}`.
 

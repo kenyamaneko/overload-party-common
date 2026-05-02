@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# common の claude/ 配下を消費リポの作業ツリーに同期する。
+# common の presets/claude/ 配下を消費リポの作業ツリーに同期する。
 #
 # 引数:
 #   $1 = checkout 済みの common リポのパス
@@ -20,7 +20,7 @@ consumer_dir="${2:?consumer dir required}"
 layers="${3:?layers required}"
 
 for layer in $layers; do
-  src="$common_dir/claude-config/$layer"
+  src="$common_dir/presets/claude/$layer"
   if [ ! -d "$src" ]; then
     echo "::error::Layer $layer not found in common"
     exit 1

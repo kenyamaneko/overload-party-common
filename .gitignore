@@ -3,8 +3,8 @@
 .gemini/
 .aider*
 CLAUDE.md
-# 共通設定として配布する claude-config/ 配下の CLAUDE.md は追跡する
-!claude-config/**/CLAUDE.md
+# presets/claude/ 配下の CLAUDE.md は配布物 SSoT として追跡する
+!presets/claude/**/CLAUDE.md
 
 # OS
 .DS_Store

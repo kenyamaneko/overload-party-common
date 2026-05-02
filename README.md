@@ -6,6 +6,7 @@ Overload Party の **横断的な共有リソース** を管理するリポジ�
 
 - **ゲームデザイン定数** (faction / card_type / restriction / zone 等。全リポ共通)
 - **アーキテクチャ / ゲームデザイン / ビジネスドキュメント**
+- **共通設定プリセット** (Claude 用ルール集、各リポへ配布)
 
 ## 構成
 
@@ -17,10 +18,15 @@ packages/
   game-design-constants/          # Go module
   game-design-constants-dotnet/   # NuGet csproj
   game-design-constants-npm/      # npm package
+presets/
+  claude/                         # Claude Code 用ルール集 (各リポに自動配布)
+    base/, flow/, lang/, skills/
+    .consumers.yaml               # 配布先リスト
 scripts/
   generate_constants.py           # game-design constants 生成 (Go + C# + npm)
 .github/
-  scripts/publish/detect-changes.sh   # CI publish 対象検知
+  scripts/publish/                # CI publish 用スクリプト
+  scripts/claude-presets/         # Claude presets 同期用スクリプト
 docs/
   architecture/                   # システム設計 (ARCHITECTURE, CI_CD, DATA_DESIGN, I18N)
   game_design/                    # ゲームデザイン (ルール, カード, UI 等)
@@ -65,3 +71,7 @@ main への push で [.github/workflows/publish.yaml](.github/workflows/publish.
    - Go サービス: `go get github.com/kenyamaneko/overload-party-common/packages/game-design-constants@latest`
    - battle: `dotnet add package OverloadParty.GameDesignConstants`
    - client: `npm install @kenyamaneko/overload-party-game-design-constants@latest`
+
+## Claude プリセットの配信
+
+main への push で [.github/workflows/claude-presets-sync.yaml](.github/workflows/claude-presets-sync.yaml) が走り、[presets/claude/](presets/claude/) 配下を `.consumers.yaml` で宣言された各 consumer リポに同期 PR を作成する。レイヤ構成・onboarding 手順・規約は [presets/claude/README.md](presets/claude/README.md) を参照。
