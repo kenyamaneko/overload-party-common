@@ -87,7 +87,7 @@ layers:
 
 ## 消費リポの登録
 
-[`claude/.consumers.yaml`](.consumers.yaml) に登録された消費リポにのみ同期される。新リポを追加する場合はこのファイルに追記する。
+[`claude-config/.consumers.yaml`](.consumers.yaml) に登録された消費リポにのみ同期される。新リポを追加する場合はこのファイルに追記する。
 
 ## 必要な GitHub Secret
 

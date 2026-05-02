@@ -1,7 +1,7 @@
 name: Claude Config Sync
 
-# claude/ 配下の変更を消費リポに同期する。
-# 消費リポリスト: claude/.consumers.yaml
+# claude-config/ 配下の変更を消費リポに同期する。
+# 消費リポリスト: claude-config/.consumers.yaml
 # 各消費リポは .claude/docs.yaml で適用レイヤを宣言する。
 #
 # 必要な Secret: CLAUDE_SYNC_TOKEN
@@ -11,7 +11,7 @@ on:
   push:
     branches: [main]
     paths:
-      - "claude/**"
+      - "claude-config/**"
       - ".github/workflows/claude-config-sync.yaml"
       - ".github/scripts/claude-config/**"
   workflow_dispatch:
@@ -27,7 +27,7 @@ jobs:
         id: read
         run: |
           set -e
-          matrix=$(yq -o=json '.consumers' claude/.consumers.yaml | jq -c .)
+          matrix=$(yq -o=json '.consumers' claude-config/.consumers.yaml | jq -c .)
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
 
   sync:
@@ -53,17 +53,7 @@ jobs:
 
       - name: Read consumer manifest
         id: manifest
-        working-directory: consumer
-        run: |
-          set -e
-          if [ ! -f .claude/docs.yaml ]; then
-            echo "::warning::Consumer ${{ matrix.consumer.repo }} has no .claude/docs.yaml; skipping"
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          layers=$(yq -o=json '.layers' .claude/docs.yaml | jq -r 'join(" ")')
-          echo "layers=$layers" >> "$GITHUB_OUTPUT"
-          echo "skip=false" >> "$GITHUB_OUTPUT"
+        run: bash common/.github/scripts/claude-config/read_consumer_manifest.sh consumer "${{ matrix.consumer.repo }}"
 
       - name: Sync files
         if: steps.manifest.outputs.skip == 'false'

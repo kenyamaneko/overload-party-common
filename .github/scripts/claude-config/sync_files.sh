@@ -20,7 +20,7 @@ consumer_dir="${2:?consumer dir required}"
 layers="${3:?layers required}"
 
 for layer in $layers; do
-  src="$common_dir/claude/$layer"
+  src="$common_dir/claude-config/$layer"
   if [ ! -d "$src" ]; then
     echo "::error::Layer $layer not found in common"
     exit 1
