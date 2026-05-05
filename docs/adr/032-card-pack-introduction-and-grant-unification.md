@@ -1,9 +1,9 @@
 # ADR-032: card_pack 概念導入と GrantPack 統一
 
-- Status: Proposed (shop 担当による draft、card 担当レビュー待ち)
+- Status: Accepted
 - Date: 2026-05-05
 - Deciders: kenyamaneko
-- Related: [ADR-031](031-shop-products-normalization-and-faction-purchased-decomposition.md) (shop 側、本 ADR と相互補完), [ADR-022](022-faction-selected-decomposition.md) (業務事実分解、本 ADR の精神的前駆), [ADR-021](021-onboarding-scenario.md) (player-onboarded、本 ADR で subscriber 改修対象), [ADR-014](014-db-schema-split-per-service.md) (schema 分離原則)
+- Related: [ADR-031](031-shop-products-normalization-and-faction-purchased-decomposition.md) (shop 側、本 ADR と相互補完), [ADR-026](026-onboarding-status-as-account-responsibility.md) (account REST 縮退、本 ADR で REST grant 一掃と整合), [ADR-022](022-faction-selected-decomposition.md) (業務事実分解、本 ADR の精神的前駆), [ADR-021](021-onboarding-scenario.md) (player-onboarded、本 ADR で subscriber 改修対象), [ADR-014](014-db-schema-split-per-service.md) (schema 分離原則)
 
 ## Context
 
@@ -97,12 +97,20 @@ func (s *GrantInteractor) GrantPack(ctx context.Context, playerID, packID string
 
 **実装方針**:
 
-1. `card_pack` テーブルから `packID` の行を取得 (存在しなければ `port.ErrNotFound`)
+1. `card_pack` テーブルから `packID` の行を **配布リクエストごとに DB 参照する** (存在しなければ `port.ErrNotFound`)
 2. `is_active = false` なら `port.ErrPackInactive` (運用停止 pack の防御)
 3. `selection.type` で分岐し対象 card_id 集合を決定:
    - `by_factions`: `cardRepo.FindCardIDsByFactions(factions)` を呼ぶ (既存 repo 流用)
    - `by_card_ids`: そのまま使う
 4. `playerCardRepo.AddCards(playerID, cardIDs, copies_per_card)` で配布
+
+**pack マスターはキャッシュしない**: `card.card_pack` は件数が小さく (10〜20 行オーダー) で `cache.CardCache` と似た性質に見えるが、配布業務には以下の運用要件があるため毎回 DB 参照する:
+
+- **配布履歴の audit 性**: 各購入が「その時点の pack 定義に従って配布された」ことを再現可能にする
+- **遡及配布**: 後から pack 内容を変更したとき、既存購入者にも差分配布する運用を許容する
+- **配布タイミングの即時反映**: pack 定義変更が次の配布リクエストから直ちに効く (Pod 再起動不要)
+
+キャッシュ (Pod 起動時 fail-fast ロード) だと pack 定義が事実上「Pod 起動時スナップショット」となり、ローリング再起動中の中間窓で「新 Pod は新定義 / 旧 Pod は旧定義」が混在し audit / 遡及配布の運用と相性が悪い。配布リクエストは onboarding / shop 購入の頻度でホットパスではなく、PK lookup は ms オーダーなので毎回 DB 参照のコストは無視できる。CardCache は静的なカードマスターを参照する read-heavy ホットパスで使う前提で、性質が違う。
 
 **廃止される hard-coded 値**:
 
@@ -110,7 +118,9 @@ func (s *GrantInteractor) GrantPack(ctx context.Context, playerID, packID string
 - `gamedesign.SelectableFactions` の値域検査 → DB 上の pack マスターに存在する pack_id か否かで判定 (selectable faction という概念自体が card 側から消える)
 - `validateSelectableFaction` 関数 → 削除
 
-### 3. subscriber 改修
+### 3. subscriber 改修と REST grant エンドポイントの一掃
+
+#### Pub/Sub subscriber の改修
 
 | subscriber | 旧 | 新 |
 |---|---|---|
@@ -118,15 +128,31 @@ func (s *GrantInteractor) GrantPack(ctx context.Context, playerID, packID string
 | `faction-purchased` | `GrantFactionPack(playerID, ev.Faction)` | **subscriber 削除** (event 自体が ADR-031 で廃止) |
 | `card-pack-purchased` (新規) | — | `GrantPack(playerID, ev.CardPackID)` |
 
-新 subscriber `card_pack_purchased_subscriber.go` を新設し、`apishop.CardPackPurchasedEvent` を購読して `GrantPack` を呼ぶ。実装は既存 `faction_purchased_subscriber.go` の構造をそのまま流用 (processed_events 冪等チェック → handler 実行)。
+新 subscriber `card_pack_purchased_subscriber.go` を新設し、`apishop.CardPackPurchasedEvent` を購読して `GrantPack` を呼ぶ。実装は既存 `faction_purchased_subscriber.go` の構造をそのまま流用 (processed_events 冪等チェック → handler 実行)。冪等性は既存 subscriber と同じ **at-most-once 相当** を継承する (`processed_events` INSERT と `GrantPack` を同一 tx に乗せられない既存制約。詳細は card ARCHITECTURE.md「Pub/Sub subscriber の冪等性」)。
 
 `player-onboarded` subscriber は pack_id を **`"initial_" + faction` で組み立てる** ため、`PlayerOnboardedEvent` payload 自体は変更不要。
+
+#### REST grant エンドポイントの削除 (ADR-026 の積み残し片付け)
+
+card 側には現状 `POST /internal/v1/players/:playerId/grant-initial-pack` / `grant-faction-pack` の REST 同期エンドポイントがあるが、grep 確認の結果 **どこからも呼ばれていない dead code** であった。実 caller は [ADR-026](026-onboarding-status-as-account-responsibility.md) で account REST がバリデーション目的に縮退・業務データ書き込みが Pub/Sub に統一された時点で消失している。本 ADR の `GrantPack` 統一に乗せて以下を一掃する:
+
+- **card**: `internal/handler/rest/grant_handler.go` 削除 + router からルート除去 + ARCHITECTURE.md「カード配布 API の非冪等契約」セクションを Pub/Sub 経路のみに整理
+- **account**: `SelectInitialFactionRequest` のコメント文言から `then calls card.grant-initial-pack` を削除 (`models.yaml` 編集 → codegen)
+- **common**: `docs/architecture/APPLICATION.md` の REST grant 記述 (L191 / L282 相当) を Pub/Sub 経路に書き換え
+
+これらは ADR-026 の波及で本来やるべきだった片付けで、本 ADR で `GrantPack` 統一する流れに合わせて完了する。
 
 ### 4. faction という概念の card 側からの撤退
 
 card 側 code から `gamedesign.SelectableFactions` 依存を削除。faction の値域検証は **card_pack マスターの pack_id 存在性**で代替される (例: 不正 faction で `initial_xxx` を引こうとすると pack マスターヒットせず `ErrNotFound`)。
 
-ただし `card.card_definitions.faction` 列は残す (カード自体は faction 属性を持つドメインデータ)。これは「**カードに対する faction**」と「**配布フローの faction**」を分離する整理:
+#### 等価性の確認
+
+card 側で `SelectableFactions` を参照しているのは [internal/usecase/grant.go](https://github.com/kenyamaneko/overload-party-card/blob/main/internal/usecase/grant.go) の `validateSelectableFaction` のみ (deck validation は restriction/copies で検査しており faction 値域は見ていない)。さらに `card.card_definitions.faction` 列は DB CHECK 制約で `('SHE','Tenki','Sugar','Tuners','Neutral')` に縛られているため、faction 値域は DB レベルで担保される。pack マスター存在性で代替しても **機能的に完全に等価**であり、削除可能と確認済み。
+
+#### 残す概念
+
+`card.card_definitions.faction` 列は残す (カード自体は faction 属性を持つドメインデータ)。これは「**カードに対する faction**」と「**配布フローの faction**」を分離する整理:
 
 - card_definitions.faction: カードの内在属性 (デッキ構築・効果計算で利用)
 - pack の selection に書かれた faction: pack 側の配布ルール記述
@@ -143,6 +169,16 @@ shop / card 跨ぎの責務分界:
 | 商品 → card_pack の関係 | shop | `shop.product_card_pack.card_pack_id` ([ADR-031](031-shop-products-normalization-and-faction-purchased-decomposition.md)) |
 | card_pack_id の存在性 | card | shop は論理参照のみ (FK なし、DLQ 経由で検出) |
 | seed 整合性 | overload-party-common | shop seed の `card_pack_id` ⊂ card seed の `pack_id` を CI 検証 |
+
+#### pack 非アクティブ化の運用順序
+
+shop product (`shop.product_card_pack.card_pack_id`) から参照されている pack を card 側で先に非アクティブ化すると、shop product の購入が `ErrPackInactive` で nack されて DLQ に流れ続ける。事故防止のため以下の運用順序を厳守:
+
+1. **shop product** (`shop.products.is_active`) を先に false 化
+2. shop の outbox drain を待つ (該当 product への新規購入が止まる)
+3. **card_pack** (`card.card_pack.is_active`) を false 化
+
+緊急停止 (e.g. 配布内容に重大バグがあり即時停止したい) では順序が逆転しうるが、その間 `card-pack-purchased` は DLQ に積まれる。DLQ から手動で再投入する運用前提。これは [ADR-031](031-shop-products-normalization-and-faction-purchased-decomposition.md) §5 「shop は論理参照のみ (FK なし、DLQ 経由で検出)」の表裏として運用ルールで担保する。
 
 ## 検討した代替案
 
@@ -197,6 +233,16 @@ card 側 subscriber が `ev.Faction` を `"faction_set_<faction>"` に内部マ�
 - **配布フローが単一 API (`GrantPack`) に統一**: subscriber は pack_id を渡すだけ。新しい配布シナリオ (季節限定 / ログインボーナス / イベント報酬) を追加しても `GrantPack` 1 個で受けられる
 - **shop / card のイベント契約整合**: [ADR-031](031-shop-products-normalization-and-faction-purchased-decomposition.md) の `card-pack-purchased` を card 側が正しく消費できる
 - **ADR-022 の精神を card publish/subscribe 両端で完遂**: 業務事実 (pack 配布) と業務文脈 (initial / 購入 / 限定) を分離し、後者は subscriber 側の組み立てに残す
+- **REST grant エンドポイントの一掃**: ADR-026 の波及で本来やるべきだった片付けが完了
+
+### `RestrictionUnlimited = 3` と `copies_per_card = 3` の意図的独立性
+
+両者の値は同じ `3` だが、本 ADR では **論理的に独立した 2 つの設定値**として扱う:
+
+- [internal/constants/restriction.go](https://github.com/kenyamaneko/overload-party-card/blob/main/internal/constants/restriction.go) の `RestrictionUnlimited → 3`: **デッキ投入上限** (デッキ構築時のバランス制約)
+- `card_pack.copies_per_card = 3`: **配布枚数** (pack 購入時に各カードを何枚渡すか)
+
+将来の運営チューニングで「unlimited は 3 のまま、初期パックの限定カードだけ 1 枚にしたい」「unlimited を 4 に変えたい (バランス調整)」といった独立変更を許容する設計。値が一致しているのは初期設定の偶然であり、共通化したり相互参照したりしてはいけない。
 
 ### トレードオフ
 
@@ -210,18 +256,24 @@ card 側 subscriber が `ev.Faction` を `"faction_set_<faction>"` に内部マ�
 `develop` → `main` のリリースフローに乗せるため Git Flow リポは feature ブランチ → develop で進める。
 
 1. **本 ADR 採用** (overload-party-common main にマージ)
-2. **overload-party-card**: `card.card_pack` テーブル + seed 投入 (`initial_<faction>` / `faction_set_<faction>`)
-3. **overload-party-card**: `GrantPack(pack_id)` 実装 + 既存 `GrantInitialPack` / `GrantFactionPack` の置換
-4. **overload-party-card**: `player-onboarded` subscriber を `"initial_" + faction` 組み立てに変更
-5. **overload-party-card**: `card_pack_purchased_subscriber` 新設、`faction_purchased_subscriber` 削除 (shop 側の topic 切替と同期)
-6. **overload-party-shop**: [shop#59](https://github.com/kenyamaneko/overload-party-shop/issues/59) で `card-pack-purchased` / `faction-acquired` の 2 イベント分割を実装 + api-shop bump
-7. **overload-party-account**: `faction-purchased` subscriber を `faction-acquired` subscriber にリネーム
-8. **overload-party-gateway**: `faction-purchased` 受信を `faction-acquired` (一次通知) + `card-pack-purchased` (副次) に分割
-9. **overload-party-infra**: Pub/Sub topic / subscription / IAM の付け替え ([ADR-031](031-shop-products-normalization-and-faction-purchased-decomposition.md) §4)
-10. **overload-party-k8s**: 新 env (`CARD_PACK_PURCHASED_SUBSCRIPTION` 等) 追加、旧 env 削除
-11. **overload-party-common (CI)**: shop seed の `card_pack_id` ⊂ card seed の `pack_id` 整合検証 CI を追加
+2. **overload-party-card PR 1 (shop 切替前にマージ可)**: card_pack 概念を内部導入し旧 `GrantInitialPack` を完全置換するまで
+   - `card.card_pack` テーブル + seed 投入 (`initial_<faction>` / `faction_set_<faction>`)
+   - `GrantPack(pack_id)` 実装 + 既存 `GrantInitialPack` / `GrantFactionPack` の置換
+   - `player-onboarded` subscriber を `"initial_" + faction` 組み立てに変更
+   - REST grant エンドポイント一掃 (`grant_handler.go` 削除 / router 除去 / ARCHITECTURE.md 更新)
+   - account の `SelectInitialFactionRequest` コメント文言更新 (codegen 経由)
+   - common `docs/architecture/APPLICATION.md` の REST grant 記述を Pub/Sub 経路に書き換え
+3. **overload-party-card PR 2 (shop と同期)**: shop 側 `card-pack-purchased` publish 開始と同タイミングでマージ
+   - 旧 `faction_purchased_subscriber` 削除
+   - `card_pack_purchased_subscriber` 新設 (`apishop.CardPackPurchasedEvent` 購読)
+4. **overload-party-shop**: [shop#59](https://github.com/kenyamaneko/overload-party-shop/issues/59) で `card-pack-purchased` / `faction-acquired` の 2 イベント分割を実装 + api-shop bump
+5. **overload-party-account**: `faction-purchased` subscriber を `faction-acquired` subscriber にリネーム
+6. **overload-party-gateway**: `faction-purchased` 受信を `faction-acquired` (一次通知) + `card-pack-purchased` (副次) に分割
+7. **overload-party-infra**: Pub/Sub topic / subscription / IAM の付け替え ([ADR-031](031-shop-products-normalization-and-faction-purchased-decomposition.md) §4)
+8. **overload-party-k8s**: 新 env (`CARD_PACK_PURCHASED_SUBSCRIPTION` 等) 追加、旧 env 削除
+9. **overload-party-common (CI)**: shop seed の `card_pack_id` ⊂ card seed の `pack_id` 整合検証 CI を追加
 
-各リポの実装 issue は ADR-031 / 本 ADR の合意後に起票する。順序は `card_pack マスター追加 → card 側 GrantPack 実装 → shop 側 publish 切替 → 他 subscriber 切替 → infra 反映` で進める。
+各リポの実装 issue は ADR-031 / 本 ADR の合意後に起票する。順序は `card 側 PR 1 (内部導入) → shop publisher 切替 + card PR 2 + 他 subscriber 切替 を同期 → infra 反映` で進める。card PR 1 は shop の publish 切替とは独立に先行できる (旧 `GrantInitialPack` の完全置換まで進めても旧 `faction-purchased` subscriber は残るので互換性が保たれる)。
 
 ## 関連 ADR / Issue
 
