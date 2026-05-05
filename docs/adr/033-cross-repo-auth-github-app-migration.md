@@ -59,6 +59,15 @@ GitHub 公式ドキュメントは数年前から PAT を automation / CI 用途
 ### 死蔵 PAT の扱い
 
 - `COMMON_CI_DISPATCH` (#11) は GitHub audit log で最終使用元を確認した上で revoke する。App 化対象外
+- audit log で trace できなかった場合 (Free plan は 90 日制限) は revoke した上で 1 週間 monitoring する。問題が発生したら App 化対象に追加して再発行する
+
+### App private key の rotation ポリシー
+
+App private key は **明示 revoke しない限り無期限** で使える。本 ADR では:
+
+- **定期 rotate を行わない**: PAT で問題になっていた「期限切れに気付くのが事故時」という構造的問題を、期限を排除することで解消する
+- **漏洩疑い・key 保有者離脱時のみ revoke + 新 key 発行 → org secret を更新**: GitHub App は同じ App に対して複数の private key を同時発行・段階的差し替えが可能なため、ダウンタイムなしで rotation できる
+- 期限管理を運用から完全に切り離すことを目的とする
 
 ### 認証フロー
 
@@ -75,6 +84,21 @@ GitHub 公式ドキュメントは数年前から PAT を automation / CI 用途
     # 例: workflow_dispatch
     gh workflow run ... --token ${{ steps.app-token.outputs.token }}
 ```
+
+App ID は **organization variable**、private key は **organization secret** に登録する (App ID は単独では認証情報にならず、private key と組み合わせて初めて token が発行できるため variable で公開しても問題ない)。新リポ作成時に repo-level secret/variable を個別に貼る運用を必要としないため、設定漏れが構造的に発生しない。
+
+#### Common Read App は reusable workflow 経由に統一する
+
+Common Read App の利用は `overload-party-common/.github/workflows/setup-go-private-modules.yaml` (reusable workflow) 経由に統一する。各サービスリポの ci.yaml は以下のように呼び出すだけ:
+
+```yaml
+jobs:
+  setup-auth:
+    uses: kenyamaneko/overload-party-common/.github/workflows/setup-go-private-modules.yaml@main
+    secrets: inherit
+```
+
+`actions/create-github-app-token` 呼び出し + `git config insteadOf` のセットアップを 1 箇所に集約し、行儀を組織横断で揃える。Reusable は **auth 専用**で、Go install / cache 等のセットアップはリポごとに事情が違うため呼び出し側に残す。
 
 #### GitHub Actions の外で動くサービスから使う場合 (#8 ArgoCD Image Updater, #12 slack-commands Cloud Run)
 
@@ -101,10 +125,12 @@ ArgoCD Image Updater は GitHub App authentication を公式サポートして�
 - **書き込み App の影響範囲を最小化**: Image Updater App は overload-party-k8s のみインストール、Claude Sync App は sync 対象リポのみインストールで、漏洩時の被害を構造的に限定
 - **insteadOf スコープと scope ミスマッチ問題の構造的解消**: App scope は組織配下全リポ Read なので新規依存追加で落ちなくなる
 - **死蔵 PAT の発見・除去**: #11 の死蔵 PAT が棚卸しで判明。本 ADR の作業中に revoke する
+- **API rate limit の改善**: App installation token は per-installation で 15,000 req/hr (PAT は per-user で 5,000 req/hr)。複数 workflow が並行する場合や workflow 数が増えた際に PAT で頻発しがちな rate limit に当たる懸念が下がる
+- **重複コードの集約**: 6 サービスリポに散在する auth セットアップ (~30+ 行) が reusable workflow 1 箇所に集約され、新リポ追加時は workflow を call するか否かの二択になる
 
 ### Negative
 
-- **GitHub Actions の外で動くサービスは実装変更が必要**: slack-commands Cloud Run の GitHub API 呼び出しを App private key + installation token に書き換える工数が発生する。ArgoCD は設定変更のみで済むが、Secret Manager への PEM 投入と Image Updater Pod の roll が必要
+- **GitHub Actions の外で動くサービスは実装変更が必要**: slack-commands Cloud Run の GitHub API 呼び出しを App private key + installation token に書き換える工数が発生する (Go なら [`github.com/bradleyfalzon/ghinstallation/v2`](https://github.com/bradleyfalzon/ghinstallation) が標準的、`http.RoundTripper` 経由で installation token を透過注入できるため HTTP client 差し替えが最小で済む)。ArgoCD は設定変更のみで済むが、Secret Manager への PEM 投入と Image Updater Pod の roll が必要
 - **e2e ローカル開発者の運用変更**: PAT を直書きしていた `secrets/*` ファイルを CLI スクリプト経由で再生成する手順に変わる。各開発者が一度 App private key (or 払い出された short token) を環境に設定する必要がある
 - **App 数が増える**: 4 App それぞれに ID / Installation ID / private key を管理する必要がある。ただし PAT 12 種を管理する現状より総量は少ない
 
