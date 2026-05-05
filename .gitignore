@@ -25,7 +25,6 @@ __pycache__/
 venv/
 
 # Docs (local only)
-docs/adr/
 docs/notes/
 docs/postmortem/
 docs/handoff/
