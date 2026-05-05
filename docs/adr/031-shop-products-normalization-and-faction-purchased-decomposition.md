@@ -1,6 +1,6 @@
 # ADR-031: shop products テーブル正規化と faction-purchased の業務事実分割
 
-- Status: Proposed
+- Status: Accepted (shop 実装は [overload-party-shop#60](https://github.com/kenyamaneko/overload-party-shop/pull/60) で完了)
 - Date: 2026-05-05
 - Deciders: kenyamaneko
 - Related: [ADR-022](022-faction-selected-decomposition.md) (faction-selected 分解、本 ADR の前駆), [ADR-029](029-type-layer-separation.md) (型レイヤ分離), [ADR-015](015-package-split.md) (パッケージ分割と SSoT 分散), [ADR-012](012-matchmaking-pubsub.md) (Pub/Sub 設計原則)
@@ -46,44 +46,54 @@ card 側で `card_pack.pack_id` を **faction ごとに分ける** 設計が確�
 
 ### 1. shop products を type 別副表に分解する
 
+副表は **singular `product_<type>`** 形式で命名統一する (1:1 派生の SQL 慣習に従い、master の plural との対比で役割が読み取れる形)。
+
 ```
 shop.products (              -- type 横断の共通商品マスター
   product_id PK, name, type, price,
   requires_product_id, description, image_url, is_active
 )
 
-shop.product_card_pack_refs (
+shop.product_card_pack (
   product_id   PK / FK -> products,
   card_pack_id VARCHAR(50) NOT NULL  -- card.card_pack.pack_id への論理参照
 )
 -- type IN ('faction_set','card_pack') の行が必ず 1 件持つ
 
-shop.product_faction_grants (
+shop.product_faction (
   product_id PK / FK -> products,
   faction    VARCHAR(20) NOT NULL CHECK (faction IN ('SHE','Tenki','Sugar','Tuners'))
 )
 -- type='faction_set' の行が必ず 1 件持つ
 -- shop が faction-acquired publish 時に参照
 
-shop.product_cosmetics (
+shop.product_cosmetic (
   product_id PK / FK -> products,
   item_type  VARCHAR(20) NOT NULL,
   item_no    BIGINT NOT NULL,
   FOREIGN KEY (item_type, item_no) REFERENCES shop.cosmetic_items
 )
 -- type='cosmetic' の行が必ず 1 件持つ
+
+shop.product_subscription (
+  product_id    PK / FK -> products,
+  period_months INT NOT NULL CHECK (period_months > 0)  -- 課金周期 (月数)
+)
+-- type='subscription' の行が必ず 1 件持つ
 ```
 
 整合性ルール:
 
 | type | 必須副表 |
 |---|---|
-| `faction_set` | `product_card_pack_refs` + `product_faction_grants` |
-| `card_pack` | `product_card_pack_refs` のみ |
-| `cosmetic` | `product_cosmetics` のみ |
-| `subscription` | なし |
+| `faction_set` | `product_card_pack` + `product_faction` |
+| `card_pack` | `product_card_pack` のみ |
+| `cosmetic` | `product_cosmetic` のみ |
+| `subscription` | `product_subscription` のみ |
 
 `type` discriminator と副表の存在/不在の整合は **application 層**で担保する (DB CHECK で完全に縛ると `type` を副表側にも持たせる必要があり overengineering)。
+
+`product_subscription` は subscription variant 拡張 (将来の `premium_yearly` / `premium_family` 等) を見据えて `period_months` 列を持つ。本 ADR 採用時点では `premium_monthly` のみ存在し `period_months=1` で seed する。
 
 ### 副次効果
 
@@ -91,6 +101,7 @@ shop.product_cosmetics (
 - `cosmetic_items` への FK が DB レベルで成立 (現状 app 整合)
 - 新 type 追加時は **新副表追加のみ**で `products` 共通表に変更が及ばない
 - shop の domain 型は `Product` 共通型 + per-type 型 (`FactionSetProduct` / `CardPackProduct` / `CosmeticProduct` / `SubscriptionProduct`) に分離される ([ADR-029](029-type-layer-separation.md) の domain 層強化)
+- 副表 dispatch は `domain.NewProductView(common, faction *string, itemType *string, itemNo *int64, periodMonths *int64) (ProductView, error)` の factory 関数として domain 層に閉じる (repository は Scan + factory 委譲のみ)
 
 ### 2. `faction-purchased` を 2 イベントに分割
 
@@ -124,12 +135,12 @@ card は `card_pack_id` を受け取り `GrantPack(card_pack_id)` で配布す�
 
 faction_set 商品購入時、shop は **outbox に 2 行 enqueue** する (同一トランザクション):
 
-1. `card-pack-purchased`: `product_card_pack_refs.card_pack_id` から組み立て
-2. `faction-acquired`: `product_faction_grants.faction` から組み立て
+1. `card-pack-purchased`: `product_card_pack.card_pack_id` から組み立て
+2. `faction-acquired`: `product_faction.faction` から組み立て
 
 card_pack 商品 (将来) 購入時は `card-pack-purchased` の 1 行のみ。
 
-副表分解により、shop が faction-acquired publish に必要な faction 情報は **`product_faction_grants` 副表に正規化された状態**で参照できる (sparse 列を引かなくて済む)。
+副表分解により、shop が faction-acquired publish に必要な faction 情報は **`product_faction` 副表に正規化された状態**で参照できる (sparse 列を引かなくて済む)。
 
 ### 3. 各 subscriber の副作用 (移行後)
 
@@ -159,7 +170,7 @@ card は `faction-acquired` を購読**しない** (card の関心は pack 配�
 | 領域 | SSoT | 物理的な所有 |
 |---|---|---|
 | card_pack マスター (どのカードを何枚配るか) | card | `card.card_pack` テーブル |
-| 商品 → card_pack の関係 | shop | `shop.product_card_pack_refs.card_pack_id` |
+| 商品 → card_pack の関係 | shop | `shop.product_card_pack.card_pack_id` |
 | card_pack_id の存在性 | card | shop は論理参照のみ (FK なし) |
 | 整合性検証 | overload-party-common | CI で「shop seed の card_pack_id ⊂ card seed の pack_id」を検証 |
 
