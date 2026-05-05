@@ -1,6 +1,9 @@
 <!-- このファイルは overload-party-common/presets/claude/flow/githubflow/CLAUDE.md から同期されています。編集はそちらで行ってください。 -->
 
-<!-- TODO: GitHub Flow 採用リポ (ops / infra / k8s 系) 向けのブランチ・Issue 運用方針を追加する。
-     - main へ直接 PR (develop 経由しない)
-     - 短命 feature ブランチ
-     - Issue 実装 skill は flow/gitflow/skills/implementing-from-issue.md を base にして main 直 PR 版を作成 -->
+## [flow/githubflow] ブランチ・Issue 運用
+
+- 開発は GitHub Issue を起点に行う
+- Issue 起票・コミット作成時の type / タイトル / メッセージ形式は対応する skill を参照
+  (`creating-issue-from-request` / `implementing-from-issue`)
+- ブランチ戦略の詳細は [.claude/docs/flow/BRANCHING.md](.claude/docs/flow/BRANCHING.md) を参照
+- 本リポ固有の CI/CD・タグ自動生成は各リポの `docs/CI_AND_RELEASE.md` (または同等のファイル) を参照
