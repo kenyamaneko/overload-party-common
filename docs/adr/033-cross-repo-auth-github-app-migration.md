@@ -43,16 +43,16 @@ GitHub 公式ドキュメントは数年前から PAT を automation / CI 用途
 
 ### App 構成
 
-| App 名 (仮) | permissions | installation 範囲 | カバー PAT | 主な consumer |
+| App 名 | permissions | installation 範囲 | カバー PAT | 主な consumer |
 |---|---|---|---|---|
-| **Common Read App** (`overload-party-go-modules`) | `Contents: Read` | 組織配下全リポ | #4 DB_MIGRATE / #5 COMMON_GO_MODULES_FETCH / #9 SERVICES_GO_MODULES_FETCH / #10 BATTLE_GO_MODULES_FETCH | 6 サービスリポの CI、ops の db-migrate、e2e ローカル開発者 |
-| **Ops Automation App** (`overload-party-ops-automation`) | `Actions: Write` + `Issues: Write` + `Contents: Read` | 組織配下全リポ | #1 INFRA_DRIFT_MONITOR / #2 INFRA_DISPATCH / #3 K8S_DISPATCH / #7 PLATFORM_DISPATCH / #12 SLACK_COMMANDS | ops workflow 群、k8s/env-lifecycle、slack-commands Cloud Run |
-| **Claude Sync App** (`overload-party-claude-sync`) | `Contents: Write` + `Pull-requests: Write` | sync 対象リポのみ | #6 CLAUDE_SYNC | common/claude-presets-sync workflow |
+| **Common Read App** (`overload-party-cross-repo-deps`) | `Contents: Read` | overload-party-* リポ全部 (個人の無関係リポは除外) | #4 DB_MIGRATE / #5 COMMON_GO_MODULES_FETCH / #9 SERVICES_GO_MODULES_FETCH / #10 BATTLE_GO_MODULES_FETCH | 6 サービスリポの CI、ops の db-migrate、e2e ローカル開発者 |
+| **Ops Automation App** (`overload-party-ops-automation`) | `Actions: Write` + `Issues: Write` + `Contents: Read` | overload-party-* + keyandnotes-platform (PLATFORM_DISPATCH 用) | #1 INFRA_DRIFT_MONITOR / #2 INFRA_DISPATCH / #3 K8S_DISPATCH / #7 PLATFORM_DISPATCH / #12 SLACK_COMMANDS | ops workflow 群、k8s/env-lifecycle、slack-commands Cloud Run |
+| **Claude Sync App** (`overload-party-claude-sync`) | `Contents: Write` + `Pull-requests: Write` | overload-party-* リポ全部 (実 sync 対象は consumers.yaml で制御、将来 consumers が増えた際に再インストール不要にする) | #6 CLAUDE_SYNC | common/claude-presets-sync workflow |
 | **Image Updater App** (`overload-party-image-updater`) | `Contents: Write` | overload-party-k8s のみ | #8 ARGOCD_IMAGE_UPDATE | k8s クラスタ内 ArgoCD Image Updater Pod |
 
 #### App 分割の判断根拠
 
-- **Read と Write を混ぜない**: Common Read App は組織全リポ Read で済むので広く配っても影響が低い。Write は用途別に分割
+- **Read と Write を混ぜない**: Common Read App は overload-party-* 全リポ Read で済むので広く配っても影響が低い。Write は用途別に分割
 - **ArgoCD と CLAUDE_SYNC を同じ Write App に相乗りさせない**: ArgoCD は k8s リポ 1 つの Contents:Write で済むのに対し、CLAUDE_SYNC は複数リポへの Contents:Write + Pull-requests:Write が必要。混ぜるとどちらかが過剰権限になり、漏洩時の blast radius が拡大する
 - **Ops Automation を 1 App にまとめる**: workflow_dispatch / Issue 起票 / 他リポ schema fetch (Read) は Ops の自動化系として一体運用されており、separate しても運用コストが増えるだけ。Read を含めても Read-only の Common Read App と permission レイヤーは分かれている
 
@@ -123,7 +123,7 @@ ArgoCD Image Updater は GitHub App authentication を公式サポートして�
 - **token の長期存続を解消**: App token は 1 時間 expire。漏洩時の窓が PAT (数か月〜数年) から 1 時間に短縮
 - **token 数の削減**: 12 PAT → 4 App に集約。Secret 管理 (各リポ secret + GCP Secret Manager) のメンテナンス対象が劇的に減る
 - **書き込み App の影響範囲を最小化**: Image Updater App は overload-party-k8s のみインストール、Claude Sync App は sync 対象リポのみインストールで、漏洩時の被害を構造的に限定
-- **insteadOf スコープと scope ミスマッチ問題の構造的解消**: App scope は組織配下全リポ Read なので新規依存追加で落ちなくなる
+- **insteadOf スコープと scope ミスマッチ問題の構造的解消**: App scope は overload-party-* 全リポ Read なので新規依存追加で落ちなくなる
 - **死蔵 PAT の発見・除去**: #11 の死蔵 PAT が棚卸しで判明。本 ADR の作業中に revoke する
 - **API rate limit の改善**: App installation token は per-installation で 15,000 req/hr (PAT は per-user で 5,000 req/hr)。複数 workflow が並行する場合や workflow 数が増えた際に PAT で頻発しがちな rate limit に当たる懸念が下がる
 - **重複コードの集約**: 6 サービスリポに散在する auth セットアップ (~30+ 行) が reusable workflow 1 箇所に集約され、新リポ追加時は workflow を call するか否かの二択になる
