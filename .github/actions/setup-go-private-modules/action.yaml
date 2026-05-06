@@ -1,0 +1,30 @@
+# Cross-Repo Deps App token で git insteadOf を設定し、private Go module 解決を通す。
+
+name: Setup Go private modules
+description: Configure git so the runner can fetch overload-party-* private Go modules via the Cross-Repo Deps GitHub App.
+
+inputs:
+  app-id:
+    description: Cross-Repo Deps App ID.
+    required: true
+  private-key:
+    description: Cross-Repo Deps App private key (PEM).
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Generate Cross-Repo Deps App token
+      id: app-token
+      uses: actions/create-github-app-token@v1
+      with:
+        app-id: ${{ inputs.app-id }}
+        private-key: ${{ inputs.private-key }}
+        owner: kenyamaneko
+
+    - name: Configure git insteadOf for kenyamaneko/*
+      shell: bash
+      env:
+        APP_TOKEN: ${{ steps.app-token.outputs.token }}
+      run: |
+        git config --global url."https://x-access-token:${APP_TOKEN}@github.com/kenyamaneko/".insteadOf "https://github.com/kenyamaneko/"

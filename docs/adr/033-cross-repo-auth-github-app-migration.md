@@ -87,18 +87,23 @@ App private key は **明示 revoke しない限り無期限** で使える。�
 
 App ID は **organization variable**、private key は **organization secret** に登録する (App ID は単独では認証情報にならず、private key と組み合わせて初めて token が発行できるため variable で公開しても問題ない)。新リポ作成時に repo-level secret/variable を個別に貼る運用を必要としないため、設定漏れが構造的に発生しない。
 
-#### Common Read App は reusable workflow 経由に統一する
+#### Common Read App は composite action 経由に統一する
 
-Common Read App の利用は `overload-party-common/.github/workflows/setup-go-private-modules.yaml` (reusable workflow) 経由に統一する。各サービスリポの ci.yaml は以下のように呼び出すだけ:
+Common Read App の利用は `overload-party-common/.github/actions/setup-go-private-modules` (composite action) 経由に統一する。各サービスリポの ci.yaml は各 job の Checkout 直後で以下のように呼び出すだけ:
 
 ```yaml
-jobs:
-  setup-auth:
-    uses: kenyamaneko/overload-party-common/.github/workflows/setup-go-private-modules.yaml@main
-    secrets: inherit
+- uses: actions/checkout@v4
+- uses: kenyamaneko/overload-party-common/.github/actions/setup-go-private-modules@main
+  with:
+    app-id: ${{ vars.CROSS_REPO_DEPS_APP_ID }}
+    private-key: ${{ secrets.CROSS_REPO_DEPS_APP_PRIVATE_KEY }}
+- uses: actions/setup-go@v5
+  with: { go-version-file: go.mod }
 ```
 
-`actions/create-github-app-token` 呼び出し + `git config insteadOf` のセットアップを 1 箇所に集約し、行儀を組織横断で揃える。Reusable は **auth 専用**で、Go install / cache 等のセットアップはリポごとに事情が違うため呼び出し側に残す。
+`actions/create-github-app-token` 呼び出し + `git config insteadOf` のセットアップを 1 箇所に集約し、行儀を組織横断で揃える。Composite action は **auth 専用**で、Go install / cache 等のセットアップはリポごとに事情が違うため呼び出し側に残す。
+
+reusable workflow ではなく composite action を選んだ理由は次のとおり: reusable workflow は呼び出し側と別 runner 上で動くため、`git config --global url.insteadOf` の効果が呼び出し側 job (lint / test 等) の runner には伝搬しない。token を job output で受け渡す回避策はあるが、token のログマスキング保証が secret より弱く、Go module fetch のためのセットアップとしてはオーバーヘッドも大きい。composite action なら同一 runner 内で git config が即座に有効になり、`actions/checkout` 直後に 1 行追加するだけで済む。
 
 #### GitHub Actions の外で動くサービスから使う場合 (#8 ArgoCD Image Updater)
 
@@ -110,6 +115,25 @@ PAT を渡す代わりに **App private key (PEM) を Secret Manager に投入**
 4. token は **1 リクエスト内で都度取得 or short TTL キャッシュ** で運用
 
 ArgoCD Image Updater は GitHub App authentication を公式サポートしているため設定変更で完結。
+
+### 限界事項: user-owned GitHub Packages は App token で読めない
+
+`overload-party-cross-repo-deps` App は `Contents: Read` (+ 検証済みで `Packages: Read` 追加) を持つが、**`kenyamaneko` が User account である**ことに起因する以下の制約がある:
+
+- **対象**: `https://nuget.pkg.github.com/kenyamaneko/index.json` 等の **user-level package feed** (NuGet / npm / Maven 等で同型)
+- **症状**: App installation token を渡しても `Restore operation failed` で 401 になる
+- **原因**: GitHub の documented limitation。App installation token は **organization-owned** GitHub Packages にのみアクセスでき、user-owned package には届かない (実際に battle CI の `COMMON_PKG_FETCH` 移行検証で再現)
+- **影響範囲**: 現状 `overload-party-battle` のみ (NuGet `OverloadParty.GameDesignConstants` / npm published packages を user-level feed から fetch している)
+
+このため `COMMON_PKG_FETCH` (#12 とは別の battle 専用 PAT) は本 ADR の App 移行対象から外し、PAT 維持とする。代わりに `COMMON_CONTENT_FETCH` (Contents:Read のみ要求する `cards_gen.json` の curl 取得) は git protocol 経由のため App token で代替可能。
+
+抜本対応の選択肢 (本 ADR scope 外):
+
+1. **kenyamaneko User → Org 移行**: User account を Org に変換すれば App token で packages 読めるようになる。account 種別変更は影響範囲が大きいため慎重判断
+2. **Fine-grained PAT 化**: User PAT のままだが scope を `read:packages` のみ・対象 user に限定して security 改善
+3. **現状維持**: PAT を継続利用 (現行採用)
+
+`setup-go-private-modules` composite action は git protocol (`https://github.com/kenyamaneko/...` の insteadOf) 専用であり、上記 user-owned packages は対象外であることを併記しておく。
 
 ### e2e ローカル開発の認証
 
@@ -126,7 +150,7 @@ ArgoCD Image Updater は GitHub App authentication を公式サポートして�
 - **insteadOf スコープと scope ミスマッチ問題の構造的解消**: App scope は overload-party-* 全リポ Read なので新規依存追加で落ちなくなる
 - **死蔵 PAT の発見・除去**: #11 の死蔵 PAT が棚卸しで判明。本 ADR の作業中に revoke する
 - **API rate limit の改善**: App installation token は per-installation で 15,000 req/hr (PAT は per-user で 5,000 req/hr)。複数 workflow が並行する場合や workflow 数が増えた際に PAT で頻発しがちな rate limit に当たる懸念が下がる
-- **重複コードの集約**: 6 サービスリポに散在する auth セットアップ (~30+ 行) が reusable workflow 1 箇所に集約され、新リポ追加時は workflow を call するか否かの二択になる
+- **重複コードの集約**: 6 サービスリポに散在する auth セットアップ (~30+ 行) が composite action 1 箇所に集約され、新リポ追加時は action を呼ぶか否かの二択になる
 
 ### Negative
 
