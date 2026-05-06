@@ -156,7 +156,7 @@ battle 側のインメモリキャッシュの更新戦略は以下のとおり�
 
 購入レシートは**必ずサーバーサイドで検証**する。クライアント側の検証結果は信頼しない。検証処理は shop サービスが担当し、gateway は認証済みのリクエストを shop サービスに中継するのみ。所有スキーマが複数サービスに分かれているため、買い切り商品とサブスクリプションでフローが大きく異なる点に注意する（詳細は [internal/shop.md](internal/shop.md) / [internal/account.md](internal/account.md) 参照）。
 
-**買い切り商品（`faction_set` / `cosmetic`）の購入フロー:**
+**買い切り商品（`faction_set` / `card_pack` / `cosmetic`）の購入フロー:**
 
 ```
 Client         gateway           shop サービス           Apple / Google
@@ -183,18 +183,30 @@ Client         gateway           shop サービス           Apple / Google
   │                │                    │       UNIQUE)            │
   │                │                    │     - cosmetic の場合のみ│
   │                │                    │       player_items UPDATE│
+  │                │                    │     - faction_set の場合: │
+  │                │                    │       outbox に           │
+  │                │                    │       card-pack-purchased │
+  │                │                    │       + faction-acquired  │
+  │                │                    │       を同一 tx で enqueue│
+  │                │                    │     - card_pack の場合:   │
+  │                │                    │       outbox に           │
+  │                │                    │       card-pack-purchased │
+  │                │                    │       のみ enqueue        │
   │                │<───────────────────┤                         │
-  │                │                    │                         │
-  │  （faction_set の場合のみ）           │                         │
-  │                │  5. gateway が後続オーケストレーションを実行   │
-  │                │     - account: POST /internal/v1/players/{id}/factions
-  │                │     - card:    POST /internal/v1/players/{id}/grant-faction-pack
-  │                │                    │                         │
-  │  6. 購入結果    │                    │                         │
+  │  5. 購入結果   │                    │                         │
   │<───────────────┤                    │                         │
+  │                │                    │                         │
+  │  ６. shop outbox worker が Pub/Sub に publish:                  │
+  │       - card-pack-purchased  → card  (GrantPack で配布)         │
+  │       - faction-acquired     → account (player_factions INSERT) │
+  │                              → gateway (WS 一次通知)            │
 ```
 
-`faction_set` の場合、shop 自身は `one_time_purchases` のみ更新し、ファクションアンロックとカード付与は gateway が account / card に対して順次内部 REST を呼び出すオーケストレーションとして行う（所有権境界は §8.7 参照）。shop の DB 書き込みはアトミックだが、後続の account / card 呼び出しは eventually consistent であり、途中失敗時は運用で手動修復する（補償トランザクションは採用しない）。
+`faction_set` の場合、shop は `one_time_purchases` 更新と outbox 行 (card-pack-purchased + faction-acquired) を **同一トランザクションで書く** (Transactional Outbox)。後続の account へのファクションアンロック / card のカード付与 / gateway の WS 通知は、shop outbox worker が Pub/Sub に publish した後に各 subscriber が非同期に処理する。`card_pack` 商品 (将来追加) は shop が `card-pack-purchased` のみを publish し、card 側で `card_pack_id` 指定のパックを配布する (faction-acquired は発生しない)。
+
+旧設計では gateway が account / card に同期 REST (`POST /internal/v1/players/{id}/factions` / `/grant-faction-pack`) を呼び分けるオーケストレーションを行っていたが、ADR-031 で **業務事実分割と shop publish への集約**が確定し、ADR-032 で card 側の REST grant エンドポイント (`/grant-initial-pack` / `/grant-faction-pack`) は完全削除された。所有権境界は §8.7、shop / card / account の責務分界は ADR-031 §5 を参照。
+
+shop の DB 書き込みはアトミックで outbox 経由の eventually consistent 配送になるため、shop / 各 subscriber 間の補償トランザクションは不要。配送失敗は DLQ で観測し、手動再投入を行う。
 
 **サブスクリプション（プレミアムプラン）:**
 
@@ -270,19 +282,28 @@ COMMIT
 
 > shop スキーマ内で完結するため、「決済済みだが所持反映されない」状態は発生しない。
 
-**買い切り商品（`faction_set`）:**
+**買い切り商品（`faction_set` / `card_pack`）:**
 
-shop トランザクションでは `one_time_purchases` のみ更新する。ファクションアンロックとカード付与は gateway オーケストレーションにより account / card へ順次内部 REST を呼び出す形で eventually consistent に反映される。
+shop は `one_time_purchases` 更新と outbox 行を **同一トランザクションで書く** (Transactional Outbox / ADR-031 §2)。ファクションアンロック (account) / カード付与 (card) / WS 通知 (gateway) は outbox worker が publish する Pub/Sub event を各 subscriber が消費する形で eventually consistent に反映される。
 
 ```
 1. BEGIN (shop)
      one_time_purchases に INSERT (purchase_token, player_id, product_id, verified_at)
+     -- product.type = 'faction_set' の場合:
+     outbox_events に INSERT (card-pack-purchased: pack_id = product_card_pack_refs.card_pack_id)
+     outbox_events に INSERT (faction-acquired   : faction = product_faction_grants.faction)
+     -- product.type = 'card_pack' の場合 (将来追加):
+     outbox_events に INSERT (card-pack-purchased: pack_id = product_card_pack_refs.card_pack_id)
    COMMIT
-2. gateway: account に POST /internal/v1/players/{id}/factions （ファクションアンロック）
-3. gateway: card    に POST /internal/v1/players/{id}/grant-faction-pack （カード付与）
+2. shop outbox worker が ClaimUnpublished → Cloud Pub/Sub に publish
+   → card    subscriber: card-pack-purchased を受け、GrantPack(pack_id) で配布
+   → account subscriber: faction-acquired を受け、player_factions に INSERT
+   → gateway subscriber: faction-acquired を一次通知 / card-pack-purchased を副次通知として WS push
 ```
 
-> 2 / 3 のいずれかが失敗した場合、shop の `one_time_purchases` は既にコミット済みであり、補償トランザクションは採用しない。運用による手動修復を前提とする（`feedback_no_fallback` の方針に整合: フォールバックによる不整合状態を作らず、失敗は失敗として記録する）。
+> 2 で各 subscriber が失敗した場合、Pub/Sub の at-least-once 配送と DLQ で再試行し、最終的に DLQ から手動で再投入する。shop 側のトランザクションは既にコミット済みのため補償トランザクションは採用しない（`feedback_no_fallback` の方針に整合）。
+
+> 旧設計では gateway が account / card に対して同期 REST (`/factions` / `/grant-faction-pack`) を呼び分けるオーケストレーションを行っていたが、ADR-031 (業務事実分割) と ADR-032 (card_pack 概念導入と GrantPack 統一) により **shop publish への集約 + Pub/Sub 駆動**へ移行した。card の REST grant エンドポイントは削除済み。
 
 **サブスクリプション（プレミアムプラン）:**
 
