@@ -1,0 +1,58 @@
+# overload-party-* 配下のプライベート Go モジュールを CI runner で fetch できるようにする。
+#
+# Cross-Repo Deps GitHub App から短命 installation token を発行し、
+# git の insteadOf 設定で https://github.com/kenyamaneko/ 配下を
+# token 認証経由で透過的に解決させる。
+#
+# 適用範囲: git protocol (HTTPS clone) 経由でアクセスする private module 全般。
+#   - Go module fetch (本来の主用途)
+#   - 各リポの schema.sql などを git clone 経由で取得するスクリプト
+#
+# 適用外: user-owned GitHub Packages (NuGet / npm の kenyamaneko user-level feed) は
+#   App installation token では読めない (documented limitation, ADR-033 §限界事項)。
+#   battle のような C# / npm 系 package fetch には PAT が必要。
+#
+# 利用前提:
+#   呼び出し元リポに以下が登録されていること
+#     - vars.CROSS_REPO_DEPS_APP_ID         (Cross-Repo Deps App の ID)
+#     - secrets.CROSS_REPO_DEPS_APP_PRIVATE_KEY (同 App の private key)
+#
+# 利用例 (composite action は呼び出し元の vars/secrets を直接参照できないため、with: で受け渡す):
+#   - uses: actions/checkout@v4
+#   - uses: kenyamaneko/overload-party-common/.github/actions/setup-go-private-modules@main
+#     with:
+#       app-id: ${{ vars.CROSS_REPO_DEPS_APP_ID }}
+#       private-key: ${{ secrets.CROSS_REPO_DEPS_APP_PRIVATE_KEY }}
+#   - uses: actions/setup-go@v5
+#     with: { go-version-file: go.mod }
+#   - run: go test ./...
+#     env: { GOPRIVATE: github.com/kenyamaneko/* }
+#
+# 設計判断は ADR-033 を参照。
+
+name: Setup Go private modules
+description: Configure git auth so the runner can fetch overload-party-* private Go modules via the Cross-Repo Deps GitHub App.
+
+inputs:
+  app-id:
+    description: Cross-Repo Deps App ID. Defaults to vars.CROSS_REPO_DEPS_APP_ID via the calling workflow.
+    required: true
+  private-key:
+    description: Cross-Repo Deps App private key (PEM). Pass secrets.CROSS_REPO_DEPS_APP_PRIVATE_KEY from the calling workflow.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - id: app-token
+      uses: actions/create-github-app-token@v1
+      with:
+        app-id: ${{ inputs.app-id }}
+        private-key: ${{ inputs.private-key }}
+        owner: kenyamaneko
+
+    - shell: bash
+      env:
+        APP_TOKEN: ${{ steps.app-token.outputs.token }}
+      run: |
+        git config --global url."https://x-access-token:${APP_TOKEN}@github.com/kenyamaneko/".insteadOf "https://github.com/kenyamaneko/"
