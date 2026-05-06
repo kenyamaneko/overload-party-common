@@ -105,6 +105,8 @@ Common Read App の利用は `overload-party-common/.github/actions/setup-go-pri
 
 reusable workflow ではなく composite action を選んだ理由は次のとおり: reusable workflow は呼び出し側と別 runner 上で動くため、`git config --global url.insteadOf` の効果が呼び出し側 job (lint / test 等) の runner には伝搬しない。token を job output で受け渡す回避策はあるが、token のログマスキング保証が secret より弱く、Go module fetch のためのセットアップとしてはオーバーヘッドも大きい。composite action なら同一 runner 内で git config が即座に有効になり、`actions/checkout` 直後に 1 行追加するだけで済む。
 
+加えて、private リポの composite action を外部 workflow から `uses:` で参照するには、配布側 (overload-party-common) の **Settings → Actions → General → Access** を `Accessible from repositories owned by the user 'kenyamaneko'` に設定する必要がある (REST: `PUT /repos/.../actions/permissions/access` で `access_level=user`)。default 値は `none` で、未設定だと呼び出し側の `Set up job` ステップで composite action のフェッチに失敗する (`GITHUB_TOKEN` のスコープが自リポ限定で、他リポ取得権限がないため)。本 ADR の Phase 1 着手時点で `kenyamaneko/overload-party-common` 側を `user` に変更済み。
+
 #### GitHub Actions の外で動くサービスから使う場合 (#8 ArgoCD Image Updater)
 
 PAT を渡す代わりに **App private key (PEM) を Secret Manager に投入** し、サービス側で:
