@@ -2,6 +2,8 @@
 
 ## ステータス
 
+Superseded (2026-05-06): Slack コマンド機能自体を廃止 (overload-party-ops `8934e3d` / overload-party-infra `#21`)。代替は GitHub Actions UI の `workflow_dispatch`。本 ADR で採用した「Slack → GitHub Actions dispatch」の責務分離自体は適切だったが、Slack 経由のラッパが維持コストに見合わないと判断したため Slack 受け口ごと撤去した。
+
 Accepted (2026-03-19)
 
 ## コンテキスト

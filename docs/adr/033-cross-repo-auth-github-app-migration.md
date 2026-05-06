@@ -24,7 +24,7 @@
 | 9 | `SERVICES_GO_MODULES_FETCH` | `overload-party-e2e/docker/docker-compose.yml` で BuildKit secret として開発者ローカル使用 | Contents:Read |
 | 10 | `BATTLE_GO_MODULES_FETCH` | 同上 (e2e ローカル)。`overload-party-account/.github/scripts/deploy/build-image.sh` には死コード残骸あり | Contents:Read |
 | 11 | `COMMON_CI_DISPATCH` | grep ヒットなし (Last used 5 週間前)。死蔵候補 | — |
-| 12 | `SLACK_COMMANDS` | `overload-party-ops/slack-commands/` Cloud Run service (GCP Secret Manager `github-pat-slack-commands` 経由、ユーザの Slack コマンドから workflow_dispatch / repository_dispatch / Issue 操作を発火) | Actions:Write + Contents:Read (用途により Issues:Write も) |
+| 12 | `SLACK_COMMANDS` | (廃止済) `overload-party-ops/slack-commands/` Cloud Run service が使用していたが、2026-05-06 に Slack コマンド機能自体を廃止 (代替: GitHub Actions UI の workflow_dispatch)。本 ADR の App 化対象外、PAT 単体 revoke で完了 | — |
 
 ### PAT 運用の構造的問題
 
@@ -46,7 +46,7 @@ GitHub 公式ドキュメントは数年前から PAT を automation / CI 用途
 | App 名 | permissions | installation 範囲 | カバー PAT | 主な consumer |
 |---|---|---|---|---|
 | **Common Read App** (`overload-party-cross-repo-deps`) | `Contents: Read` | overload-party-* リポ全部 (個人の無関係リポは除外) | #4 DB_MIGRATE / #5 COMMON_GO_MODULES_FETCH / #9 SERVICES_GO_MODULES_FETCH / #10 BATTLE_GO_MODULES_FETCH | 6 サービスリポの CI、ops の db-migrate、e2e ローカル開発者 |
-| **Ops Automation App** (`overload-party-ops-automation`) | `Actions: Write` + `Issues: Write` + `Contents: Read` | overload-party-* + keyandnotes-platform (PLATFORM_DISPATCH 用) | #1 INFRA_DRIFT_MONITOR / #2 INFRA_DISPATCH / #3 K8S_DISPATCH / #7 PLATFORM_DISPATCH / #12 SLACK_COMMANDS | ops workflow 群、k8s/env-lifecycle、slack-commands Cloud Run |
+| **Ops Automation App** (`overload-party-ops-automation`) | `Actions: Write` + `Issues: Write` + `Contents: Read` | overload-party-* + keyandnotes-platform (PLATFORM_DISPATCH 用) | #1 INFRA_DRIFT_MONITOR / #2 INFRA_DISPATCH / #3 K8S_DISPATCH / #7 PLATFORM_DISPATCH | ops workflow 群、k8s/env-lifecycle |
 | **Claude Sync App** (`overload-party-claude-sync`) | `Contents: Write` + `Pull-requests: Write` | overload-party-* リポ全部 (実 sync 対象は consumers.yaml で制御、将来 consumers が増えた際に再インストール不要にする) | #6 CLAUDE_SYNC | common/claude-presets-sync workflow |
 | **Image Updater App** (`overload-party-image-updater`) | `Contents: Write` | overload-party-k8s のみ | #8 ARGOCD_IMAGE_UPDATE | k8s クラスタ内 ArgoCD Image Updater Pod |
 
@@ -100,7 +100,7 @@ jobs:
 
 `actions/create-github-app-token` 呼び出し + `git config insteadOf` のセットアップを 1 箇所に集約し、行儀を組織横断で揃える。Reusable は **auth 専用**で、Go install / cache 等のセットアップはリポごとに事情が違うため呼び出し側に残す。
 
-#### GitHub Actions の外で動くサービスから使う場合 (#8 ArgoCD Image Updater, #12 slack-commands Cloud Run)
+#### GitHub Actions の外で動くサービスから使う場合 (#8 ArgoCD Image Updater)
 
 PAT を渡す代わりに **App private key (PEM) を Secret Manager に投入** し、サービス側で:
 
@@ -109,7 +109,7 @@ PAT を渡す代わりに **App private key (PEM) を Secret Manager に投入**
 3. 取得した token で GitHub API を呼び出す (Bearer auth)
 4. token は **1 リクエスト内で都度取得 or short TTL キャッシュ** で運用
 
-ArgoCD Image Updater は GitHub App authentication を公式サポートしているため設定変更で完結。slack-commands Cloud Run service は実装変更が必要。
+ArgoCD Image Updater は GitHub App authentication を公式サポートしているため設定変更で完結。
 
 ### e2e ローカル開発の認証
 
@@ -130,7 +130,7 @@ ArgoCD Image Updater は GitHub App authentication を公式サポートして�
 
 ### Negative
 
-- **GitHub Actions の外で動くサービスは実装変更が必要**: slack-commands Cloud Run の GitHub API 呼び出しを App private key + installation token に書き換える工数が発生する (Go なら [`github.com/bradleyfalzon/ghinstallation/v2`](https://github.com/bradleyfalzon/ghinstallation) が標準的、`http.RoundTripper` 経由で installation token を透過注入できるため HTTP client 差し替えが最小で済む)。ArgoCD は設定変更のみで済むが、Secret Manager への PEM 投入と Image Updater Pod の roll が必要
+- **GitHub Actions の外で動くサービスは実装変更が必要**: ArgoCD Image Updater の git write-back を App auth に切り替えるため、Secret Manager への PEM 投入と Image Updater Pod の roll が必要 (設定変更のみで Pod 自体の実装変更は不要)
 - **e2e ローカル開発者の運用変更**: PAT を直書きしていた `secrets/*` ファイルを CLI スクリプト経由で再生成する手順に変わる。各開発者が一度 App private key (or 払い出された short token) を環境に設定する必要がある
 - **App 数が増える**: 4 App それぞれに ID / Installation ID / private key を管理する必要がある。ただし PAT 12 種を管理する現状より総量は少ない
 
@@ -140,8 +140,8 @@ ArgoCD Image Updater は GitHub App authentication を公式サポートして�
   - Phase 1: Common Read App (#4, #5) — 影響リポ多いが Read-only で安全。ops#18 / common#34 で並行進行
   - Phase 2: Ops Automation App の workflow 系 (#1, #2, #3, #7) — workflow 書き換えのみ
   - Phase 3: Image Updater App (#8) と Claude Sync App (#6) — Write 系で慎重に
-  - Phase 4: Ops Automation App の Cloud Run 系 (#12) — slack-commands の実装変更を要するため最後
-  - Phase 5: e2e ローカル (#9, #10) と死蔵 (#11) のクリーンアップ
+  - Phase 4: e2e ローカル (#9, #10) と死蔵 (#11) のクリーンアップ
+- #12 SLACK_COMMANDS は本 ADR 着手後に Slack コマンド機能ごと廃止 (2026-05-06) したため App 化対象から外し、PAT は単独 revoke で完了させる
 - 各 Phase で旧 PAT を **すぐ revoke せず一定期間並走** させ、App 移行後の workflow が安定して green であることを確認してから revoke する
 
 ## 関連 issue

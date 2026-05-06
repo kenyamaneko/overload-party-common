@@ -146,10 +146,8 @@ Service Account (用途別)
 | `shop` | shop | `{SHA}`, `latest` |
 | `scenario` | scenario | `{SHA}`, `latest` |
 | `db-migrate` | ops | `{SHA}`, `latest` |
-| `nightly-review` | ops | `{SHA}`, `latest` |
 | `cost-monitor` | ops | `{SHA}`, `latest` |
 | `drift-monitor` | ops | `{SHA}`, `latest` |
-| `slack-commands` | ops | `{SHA}`, `latest` |
 | `newsfeed` | newsfeed | `{SHA}`, `latest` |
 
 ### 2.7 デプロイ先と方式
@@ -159,9 +157,7 @@ Service Account (用途別)
 | gateway / battle / card / account / matchmaking / shop / scenario | GKE (kustomize + kubectl) | 手動 dispatch |
 | news / support | GKE (kustomize + kubectl) | CI 未整備（ローカルビルド → 手動 push） |
 | db-migrate | Cloud Run Job | dev 自動 / stg 手動 |
-| nightly-review / cost-monitor / drift-monitor | Cloud Run Job | main push 自動 |
-| slack-commands | Cloud Run Service | main push 自動 |
-| slack-commands-worker | Cloudflare Worker | main push 自動 |
+| cost-monitor / drift-monitor | GitHub Actions schedule | schedule (Cloud Run Job ではなくランナー上で実行) |
 | newsfeed | Cloud Run Job | main push 自動 |
 | analytics | Cloud Function Gen2 | main push 自動 |
 | infra | Terraform apply | main push 自動 |
