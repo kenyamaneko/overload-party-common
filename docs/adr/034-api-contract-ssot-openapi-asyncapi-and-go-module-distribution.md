@@ -3,7 +3,7 @@
 - Status: Accepted
 - Date: 2026-05-09
 - Deciders: kenyamaneko
-- Related: TBD (移行 issue は本 ADR Accepted 後に各リポへ起票)
+- Related: [overload-party-common#39](https://github.com/kenyamaneko/overload-party-common/issues/39) (全体トラッカー), [overload-party-shop#66](https://github.com/kenyamaneko/overload-party-shop/issues/66) (Phase 1: shop 移行)
 
 ## Context
 
@@ -239,4 +239,6 @@ battle は現状 fake を持っていないため、本移行を機に追加す�
 
 ## 関連 issue
 
-- TBD: ADR Accepted 後、Phase 1 (shop) / Phase 2 (battle) / Phase 3 (その他) の各リポに移行 issue を起票し、本 ADR 冒頭の Related に追記する
+- [overload-party-common#39](https://github.com/kenyamaneko/overload-party-common/issues/39) — ADR-034 全体トラッカー
+- [overload-party-shop#66](https://github.com/kenyamaneko/overload-party-shop/issues/66) — Phase 1: shop の OpenAPI/AsyncAPI 化
+- Phase 2 (battle) / Phase 3 (その他サービス) の issue は Phase 1 完了後に起票し、本 ADR と全体トラッカーに追記する
