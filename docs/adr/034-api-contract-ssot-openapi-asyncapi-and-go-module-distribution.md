@@ -1,6 +1,6 @@
 # ADR-034: 外部 API 契約 SSoT を OpenAPI / AsyncAPI に統一し、配布物を Go / npm モジュールに集約する
 
-- Status: Accepted (Amended 2026-05-09: AR 配布、WS-AsyncAPI、client scope を追加)
+- Status: Accepted (Amended 2026-05-09: AR 配布、WS-AsyncAPI、client scope を追加 / 2026-05-09: AR → Cloudsmith 再切替)
 - Date: 2026-05-09
 - Deciders: kenyamaneko
 - Related: [overload-party-common#39](https://github.com/kenyamaneko/overload-party-common/issues/39) (全体トラッカー), [overload-party-shop#66](https://github.com/kenyamaneko/overload-party-shop/issues/66) (Phase 1: shop 移行)
@@ -309,4 +309,41 @@ Phase 2 / Phase 3b 着手前に以下が完了している必要がある:
 - `overload-party-infra` で AR を Terraform プロビジョン (NuGet repo + npm repo + WIF service account binding)
 - `overload-party-common` に `setup-ar-auth` / `publish-to-ar` 共通 composite action を追加
 - 各 publisher リポ (common / battle / shop / 各サービス) の publish workflow を AR 向けに書き換え
+
+## Update 2026-05-09 (Second) — Artifact Registry → Cloudsmith に変更
+
+### 経緯
+
+前段 amendment の AR 一本化方針を受けて `overload-party-infra` で AR プロビジョン作業 ([overload-party-infra#22](https://github.com/kenyamaneko/overload-party-infra/issues/22)) を開始したところ、**Google Cloud Artifact Registry が NuGet を native format としてサポートしていない**ことが判明した。
+
+- AR がサポートする format は `DOCKER / MAVEN / NPM / PYTHON / APT / YUM / GENERIC / GO / KFP` の 9 種類のみ
+- NuGet は 2021 年から open feature request 状態 ([Google Issue Tracker #180810242](https://issuetracker.google.com/issues/180810242))。2026-05 時点で未実装
+- GENERIC format に .nupkg を置くワークアラウンドは、NuGet client (`dotnet add package` / `dotnet restore`) が V2/V3 protocol を喋れず読めないため成立しない (CLAUDE.md「ワークアラウンド禁止」にも抵触)
+
+つまり前段 amendment の AR 一本化前提 (「言語横断で同一機構」) は npm では成立するが NuGet では成立せず、AR 一本化はそもそも技術的に不可能だった。
+
+### 決定
+
+1. **NuGet / npm の cross-repo 配布チャンネルを Cloudsmith に変更する**。SaaS package registry で 28 format に対応 (NuGet / npm / Docker / Maven / Python / Go 等)、OIDC native 対応で GitHub Actions から PAT 不要で認証可能
+2. AR は本 ADR scope の NuGet/npm 配布用途では採用しない (Docker container image など他用途で使う場面とは別話)
+3. `overload-party-infra` での Terraform 管理は `providers/cloudsmith/` ディレクトリ配下で行う (`providers/google-cloud/` は Google Cloud リソース専用に保つ)
+4. publisher / consumer の SA 分離方針 (`overload-party-publisher` / `overload-party-reader`) と OIDC trust scope (per-repo 明示リスト) は前段 amendment の方針を踏襲
+
+### 影響を受ける既存決定 / 撤回
+
+- (前段 amendment の) 「Artifact Registry を NuGet/npm の cross-repo 配布チャンネルとして採用」 → **「Cloudsmith を採用」に変更**
+- (前段 amendment の) 「WIF binding と service account を整備」 → **「Cloudsmith service account + OIDC trust」に変更**
+- (前段 amendment の) `setup-ar-auth` / `publish-to-ar` composite action → **`setup-cloudsmith-auth` / `publish-to-cloudsmith` 命名に変更**
+- (前段 amendment の) `nuget.config` / `.npmrc` の AR endpoint 書き換え → **Cloudsmith endpoint (`https://nuget.cloudsmith.io/keyandnotes/overload-party-nuget/v3/index.json` / `https://npm.cloudsmith.io/keyandnotes/overload-party-npm/`) に書き換え**
+
+### コスト・運用上の留意点
+
+- Cloudsmith Free (Core) tier: storage 500MB / delivery 1GB/月 (overage なし、超過で停止)
+- Pro plan: $89/月 (overage $1.50/GB)
+- 本プロジェクトでは **public repository** として運用する (overload-party の source code が GitHub 公開のため、package を private にする必然性が薄く、Free tier で運用可能)
+- storage region は `sg-singapore` (日本から最寄り)
+
+### 前段 amendment との関係
+
+前段 amendment の AR 関連記述 (「NuGet / npm 配布」セクション、`setup-ar-auth` 等) は本 update でレジストリ部分が Cloudsmith に置換される以外、配布構造の方針 (publisher/consumer SA 分離、PAT 全廃、cross-repo は registry 経由) は維持する。
 
