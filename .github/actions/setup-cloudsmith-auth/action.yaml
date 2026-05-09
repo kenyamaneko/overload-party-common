@@ -1,5 +1,5 @@
 name: Setup Cloudsmith authentication
-description: Exchange GitHub Actions OIDC for a Cloudsmith API key and configure NuGet/npm clients to use it.
+description: 'Exchange GitHub Actions OIDC for a Cloudsmith API key and configure NuGet/npm clients to use it. Caller job must grant permissions.id-token write.'
 
 inputs:
   role:
@@ -17,48 +17,14 @@ runs:
       shell: bash
       env:
         ROLE: ${{ inputs.role }}
-      run: |
-        case "${ROLE}" in
-          reader)
-            slug="overload-party-reader"
-            ;;
-          publisher)
-            slug="overload-party-publisher"
-            ;;
-          *)
-            echo "::error::role must be 'reader' or 'publisher' (got '${ROLE}')"
-            exit 1
-            ;;
-        esac
-        echo "service_slug=${slug}" >> "${GITHUB_OUTPUT}"
+      run: bash ${{ github.action_path }}/../../scripts/setup-cloudsmith-auth/resolve-service-account.sh
 
     - name: Exchange GitHub OIDC token for Cloudsmith API key
       id: exchange
       shell: bash
       env:
         SERVICE_SLUG: ${{ steps.resolve-sa.outputs.service_slug }}
-      run: |
-        github_token="$(curl -fsSL \
-          -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
-          "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=cloudsmith" | jq -r '.value')"
-
-        payload="$(jq -nc \
-          --arg token "${github_token}" \
-          --arg slug "${SERVICE_SLUG}" \
-          '{oidc_token: $token, service_slug: $slug}')"
-
-        response="$(curl -fsSL -X POST \
-          -H "Content-Type: application/json" \
-          -d "${payload}" \
-          "https://api.cloudsmith.io/openid/keyandnotes/")"
-
-        cloudsmith_token="$(echo "${response}" | jq -r '.token')"
-        if [ -z "${cloudsmith_token}" ] || [ "${cloudsmith_token}" = "null" ]; then
-          echo "::error::Cloudsmith OIDC exchange did not return a token"
-          exit 1
-        fi
-        echo "::add-mask::${cloudsmith_token}"
-        echo "token=${cloudsmith_token}" >> "${GITHUB_OUTPUT}"
+      run: bash ${{ github.action_path }}/../../scripts/setup-cloudsmith-auth/exchange-oidc.sh
 
     - name: Configure NuGet source for Cloudsmith
       if: contains(inputs.formats, 'nuget')

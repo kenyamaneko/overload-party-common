@@ -1,5 +1,5 @@
 name: Publish package to Cloudsmith
-description: Exchange GitHub Actions OIDC for a Cloudsmith publisher API key and push the given NuGet/npm package.
+description: 'Exchange GitHub Actions OIDC for a Cloudsmith publisher API key and push the given NuGet/npm package. Caller job must grant permissions.id-token write.'
 
 inputs:
   format:
@@ -16,41 +16,14 @@ runs:
       shell: bash
       env:
         FORMAT: ${{ inputs.format }}
-      run: |
-        case "${FORMAT}" in
-          nuget|npm)
-            ;;
-          *)
-            echo "::error::format must be 'nuget' or 'npm' (got '${FORMAT}')"
-            exit 1
-            ;;
-        esac
+      run: bash ${{ github.action_path }}/../../scripts/publish-to-cloudsmith/validate-format.sh
 
     - name: Exchange GitHub OIDC token for Cloudsmith publisher API key
       id: exchange
       shell: bash
-      run: |
-        github_token="$(curl -fsSL \
-          -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
-          "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=cloudsmith" | jq -r '.value')"
-
-        payload="$(jq -nc \
-          --arg token "${github_token}" \
-          --arg slug "overload-party-publisher" \
-          '{oidc_token: $token, service_slug: $slug}')"
-
-        response="$(curl -fsSL -X POST \
-          -H "Content-Type: application/json" \
-          -d "${payload}" \
-          "https://api.cloudsmith.io/openid/keyandnotes/")"
-
-        cloudsmith_token="$(echo "${response}" | jq -r '.token')"
-        if [ -z "${cloudsmith_token}" ] || [ "${cloudsmith_token}" = "null" ]; then
-          echo "::error::Cloudsmith OIDC exchange did not return a token"
-          exit 1
-        fi
-        echo "::add-mask::${cloudsmith_token}"
-        echo "token=${cloudsmith_token}" >> "${GITHUB_OUTPUT}"
+      env:
+        SERVICE_SLUG: overload-party-publisher
+      run: bash ${{ github.action_path }}/../../scripts/publish-to-cloudsmith/exchange-oidc.sh
 
     - name: Push NuGet package to Cloudsmith
       if: inputs.format == 'nuget'
