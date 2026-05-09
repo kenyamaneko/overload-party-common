@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from asyncapi_codegen_tools.parser import (
     parse_spec,
     strip_event_suffix,
@@ -65,6 +67,33 @@ class TestToGoType:
 
     def test_object_falls_back_to_map(self):
         assert to_go_type({"type": "object"}, required=True) == "map[string]interface{}"
+
+    def test_required_local_ref_resolves_to_schema_name(self):
+        assert (
+            to_go_type({"$ref": "#/components/schemas/EventTranslation"}, required=True)
+            == "EventTranslation"
+        )
+
+    def test_optional_local_ref_is_pointer(self):
+        assert (
+            to_go_type({"$ref": "#/components/schemas/EventTranslation"}, required=False)
+            == "*EventTranslation"
+        )
+
+    def test_array_of_ref_emits_slice_of_schema(self):
+        prop = {
+            "type": "array",
+            "items": {"$ref": "#/components/schemas/EventTranslation"},
+        }
+        assert to_go_type(prop, required=True) == "[]EventTranslation"
+
+    def test_external_ref_raises_value_error(self):
+        with pytest.raises(ValueError):
+            to_go_type({"$ref": "external.yaml#/Foo"}, required=True)
+
+    def test_empty_local_ref_raises_value_error(self):
+        with pytest.raises(ValueError):
+            to_go_type({"$ref": "#/components/schemas/"}, required=True)
 
 
 class TestParseSpec:
