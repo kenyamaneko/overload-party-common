@@ -1,0 +1,52 @@
+name: Setup Cloudsmith authentication
+description: 'Exchange GitHub Actions OIDC for a Cloudsmith API key and configure NuGet/npm clients to use it. Caller job must grant permissions.id-token write.'
+
+inputs:
+  role:
+    description: Cloudsmith service account role. "reader" (consume) or "publisher" (push).
+    required: true
+  formats:
+    description: Comma-separated list of formats to configure. Any combination of "nuget" and "npm".
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve Cloudsmith service account from role
+      id: resolve-sa
+      shell: bash
+      env:
+        ROLE: ${{ inputs.role }}
+      run: bash ${{ github.action_path }}/../../scripts/setup-cloudsmith-auth/resolve-service-account.sh
+
+    - name: Exchange GitHub OIDC token for Cloudsmith API key
+      id: exchange
+      shell: bash
+      env:
+        SERVICE_SLUG: ${{ steps.resolve-sa.outputs.service_slug }}
+      run: bash ${{ github.action_path }}/../../scripts/setup-cloudsmith-auth/exchange-oidc.sh
+
+    - name: Configure NuGet source for Cloudsmith
+      if: contains(inputs.formats, 'nuget')
+      shell: bash
+      env:
+        CLOUDSMITH_TOKEN: ${{ steps.exchange.outputs.token }}
+        SERVICE_SLUG: ${{ steps.resolve-sa.outputs.service_slug }}
+      run: |
+        dotnet nuget add source \
+          "https://nuget.cloudsmith.io/keyandnotes/overload-party-nuget/v3/index.json" \
+          --name "cloudsmith-overload-party-nuget" \
+          --username "${SERVICE_SLUG}" \
+          --password "${CLOUDSMITH_TOKEN}" \
+          --store-password-in-clear-text
+
+    - name: Configure npm registry for Cloudsmith
+      if: contains(inputs.formats, 'npm')
+      shell: bash
+      env:
+        CLOUDSMITH_TOKEN: ${{ steps.exchange.outputs.token }}
+      run: |
+        {
+          echo "//npm.cloudsmith.io/keyandnotes/overload-party-npm/:_authToken=${CLOUDSMITH_TOKEN}"
+          echo "//npm.cloudsmith.io/keyandnotes/overload-party-npm/:always-auth=true"
+        } >> "${HOME}/.npmrc"

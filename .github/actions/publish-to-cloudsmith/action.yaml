@@ -1,0 +1,51 @@
+name: Publish package to Cloudsmith
+description: 'Exchange GitHub Actions OIDC for a Cloudsmith publisher API key and push the given NuGet/npm package. Caller job must grant permissions.id-token write.'
+
+inputs:
+  format:
+    description: Package format. "nuget" or "npm".
+    required: true
+  package-path:
+    description: Path to the package artifact (.nupkg for nuget, .tgz or directory containing package.json for npm).
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Validate format input
+      shell: bash
+      env:
+        FORMAT: ${{ inputs.format }}
+      run: bash ${{ github.action_path }}/../../scripts/publish-to-cloudsmith/validate-format.sh
+
+    - name: Exchange GitHub OIDC token for Cloudsmith publisher API key
+      id: exchange
+      shell: bash
+      env:
+        SERVICE_SLUG: overload-party-publisher
+      run: bash ${{ github.action_path }}/../../scripts/publish-to-cloudsmith/exchange-oidc.sh
+
+    - name: Push NuGet package to Cloudsmith
+      if: inputs.format == 'nuget'
+      shell: bash
+      env:
+        CLOUDSMITH_TOKEN: ${{ steps.exchange.outputs.token }}
+        PACKAGE_PATH: ${{ inputs.package-path }}
+      run: |
+        dotnet nuget push "${PACKAGE_PATH}" \
+          --source "https://nuget.cloudsmith.io/keyandnotes/overload-party-nuget/v3/index.json" \
+          --api-key "${CLOUDSMITH_TOKEN}"
+
+    - name: Publish npm package to Cloudsmith
+      if: inputs.format == 'npm'
+      shell: bash
+      env:
+        CLOUDSMITH_TOKEN: ${{ steps.exchange.outputs.token }}
+        PACKAGE_PATH: ${{ inputs.package-path }}
+      run: |
+        {
+          echo "//npm.cloudsmith.io/keyandnotes/overload-party-npm/:_authToken=${CLOUDSMITH_TOKEN}"
+          echo "//npm.cloudsmith.io/keyandnotes/overload-party-npm/:always-auth=true"
+        } >> "${HOME}/.npmrc"
+        npm publish "${PACKAGE_PATH}" \
+          --registry "https://npm.cloudsmith.io/keyandnotes/overload-party-npm/"
