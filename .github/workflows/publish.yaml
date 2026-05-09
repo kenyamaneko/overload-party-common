@@ -33,7 +33,7 @@ on:
 
 permissions:
   contents: write
-  packages: write
+  id-token: write
 
 jobs:
   # ──────────────────────────────────────────────
@@ -139,13 +139,14 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
-      - name: Publish NuGet
+      - name: Pack game-design-constants-dotnet
         working-directory: packages/game-design-constants-dotnet
-        run: |
-          dotnet pack -c Release -p:Version=${{ needs.detect.outputs.game_design_constants_dotnet_version }} -o ./nupkg
-          dotnet nuget push ./nupkg/*.nupkg \
-            --source "https://nuget.pkg.github.com/kenyamaneko/index.json" \
-            --api-key ${{ secrets.GITHUB_TOKEN }}
+        run: dotnet pack -c Release -p:Version=${{ needs.detect.outputs.game_design_constants_dotnet_version }} -o ./nupkg
+      - name: Publish to Cloudsmith
+        uses: kenyamaneko/overload-party-common/.github/actions/publish-to-cloudsmith@main
+        with:
+          format: nuget
+          package-path: packages/game-design-constants-dotnet/nupkg/OverloadParty.GameDesignConstants.${{ needs.detect.outputs.game_design_constants_dotnet_version }}.nupkg
       - name: Tag
         run: |
           git tag "packages/game-design-constants-dotnet/v${{ needs.detect.outputs.game_design_constants_dotnet_version }}"
@@ -166,17 +167,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-          registry-url: "https://npm.pkg.github.com"
-          scope: "@kenyamaneko"
-      - name: Publish npm
+      - name: Build & version npm package
         working-directory: packages/game-design-constants-npm
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           npm install
           npm version ${{ needs.detect.outputs.game_design_constants_npm_version }} --no-git-tag-version
           npm run build
-          npm publish
+      - name: Publish to Cloudsmith
+        uses: kenyamaneko/overload-party-common/.github/actions/publish-to-cloudsmith@main
+        with:
+          format: npm
+          package-path: packages/game-design-constants-npm
       - name: Tag
         run: |
           git tag "packages/game-design-constants-npm/v${{ needs.detect.outputs.game_design_constants_npm_version }}"
