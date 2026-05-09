@@ -1,0 +1,86 @@
+name: Setup Cloudsmith authentication
+description: Exchange GitHub Actions OIDC for a Cloudsmith API key and configure NuGet/npm clients to use it.
+
+inputs:
+  role:
+    description: Cloudsmith service account role. "reader" (consume) or "publisher" (push).
+    required: true
+  formats:
+    description: Comma-separated list of formats to configure. Any combination of "nuget" and "npm".
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve Cloudsmith service account from role
+      id: resolve-sa
+      shell: bash
+      env:
+        ROLE: ${{ inputs.role }}
+      run: |
+        case "${ROLE}" in
+          reader)
+            slug="overload-party-reader"
+            ;;
+          publisher)
+            slug="overload-party-publisher"
+            ;;
+          *)
+            echo "::error::role must be 'reader' or 'publisher' (got '${ROLE}')"
+            exit 1
+            ;;
+        esac
+        echo "service_slug=${slug}" >> "${GITHUB_OUTPUT}"
+
+    - name: Exchange GitHub OIDC token for Cloudsmith API key
+      id: exchange
+      shell: bash
+      env:
+        SERVICE_SLUG: ${{ steps.resolve-sa.outputs.service_slug }}
+      run: |
+        github_token="$(curl -fsSL \
+          -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+          "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=cloudsmith" | jq -r '.value')"
+
+        payload="$(jq -nc \
+          --arg token "${github_token}" \
+          --arg slug "${SERVICE_SLUG}" \
+          '{oidc_token: $token, service_slug: $slug}')"
+
+        response="$(curl -fsSL -X POST \
+          -H "Content-Type: application/json" \
+          -d "${payload}" \
+          "https://api.cloudsmith.io/openid/keyandnotes/")"
+
+        cloudsmith_token="$(echo "${response}" | jq -r '.token')"
+        if [ -z "${cloudsmith_token}" ] || [ "${cloudsmith_token}" = "null" ]; then
+          echo "::error::Cloudsmith OIDC exchange did not return a token"
+          exit 1
+        fi
+        echo "::add-mask::${cloudsmith_token}"
+        echo "token=${cloudsmith_token}" >> "${GITHUB_OUTPUT}"
+
+    - name: Configure NuGet source for Cloudsmith
+      if: contains(inputs.formats, 'nuget')
+      shell: bash
+      env:
+        CLOUDSMITH_TOKEN: ${{ steps.exchange.outputs.token }}
+        SERVICE_SLUG: ${{ steps.resolve-sa.outputs.service_slug }}
+      run: |
+        dotnet nuget add source \
+          "https://nuget.cloudsmith.io/keyandnotes/overload-party-nuget/v3/index.json" \
+          --name "cloudsmith-overload-party-nuget" \
+          --username "${SERVICE_SLUG}" \
+          --password "${CLOUDSMITH_TOKEN}" \
+          --store-password-in-clear-text
+
+    - name: Configure npm registry for Cloudsmith
+      if: contains(inputs.formats, 'npm')
+      shell: bash
+      env:
+        CLOUDSMITH_TOKEN: ${{ steps.exchange.outputs.token }}
+      run: |
+        {
+          echo "//npm.cloudsmith.io/keyandnotes/overload-party-npm/:_authToken=${CLOUDSMITH_TOKEN}"
+          echo "//npm.cloudsmith.io/keyandnotes/overload-party-npm/:always-auth=true"
+        } >> "${HOME}/.npmrc"
