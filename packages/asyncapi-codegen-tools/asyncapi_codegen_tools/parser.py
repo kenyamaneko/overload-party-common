@@ -55,8 +55,32 @@ def strip_event_suffix(name: str) -> str:
     return name
 
 
+_LOCAL_REF_PREFIX = "#/components/schemas/"
+
+
+def _resolve_local_ref(ref: str) -> str:
+    """`#/components/schemas/X` を `X` に解決する. 外部 ref / 形式不正は例外."""
+    if not isinstance(ref, str) or not ref.startswith(_LOCAL_REF_PREFIX):
+        raise ValueError(
+            f"only local component refs are supported, got {ref!r} "
+            f"(expected prefix {_LOCAL_REF_PREFIX!r})"
+        )
+    name = ref[len(_LOCAL_REF_PREFIX):]
+    if not name:
+        raise ValueError(f"empty schema name in $ref: {ref!r}")
+    return name
+
+
 def to_go_type(prop: dict[str, Any], required: bool) -> str:
-    """JSON Schema の型情報から Go 型文字列に変換する."""
+    """JSON Schema の型情報から Go 型文字列に変換する.
+
+    `$ref` はローカル component schema 名にのみ解決し、required に応じて値型 /
+    ポインタ型 / 配列要素型を切り替える。外部 ref や形式不正は例外で fail-fast。
+    """
+    if "$ref" in prop:
+        base = _resolve_local_ref(prop["$ref"])
+        return base if required else f"*{base}"
+
     json_type = prop.get("type", "object")
 
     if json_type == "string":
