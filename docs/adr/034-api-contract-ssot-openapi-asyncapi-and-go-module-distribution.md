@@ -1,6 +1,6 @@
 # ADR-034: 外部 API 契約 SSoT を OpenAPI / AsyncAPI に統一し、配布物を Go / npm モジュールに集約する
 
-- Status: Accepted
+- Status: Accepted (Amended 2026-05-09: AR 配布、WS-AsyncAPI、client scope を追加)
 - Date: 2026-05-09
 - Deciders: kenyamaneko
 - Related: [overload-party-common#39](https://github.com/kenyamaneko/overload-party-common/issues/39) (全体トラッカー), [overload-party-shop#66](https://github.com/kenyamaneko/overload-party-shop/issues/66) (Phase 1: shop 移行)
@@ -37,10 +37,12 @@
 
 本 ADR の **OpenAPI / AsyncAPI 移行**は overload-party 配下の全サービスリポの **外部公開 API 契約**を対象とする。具体的には:
 
-- REST エンドポイント (path / method / request / response / errors)
-- wire 型 (request body / response body / webhook payload)
-- Pub/Sub イベント (channel / message / payload schema / `event_type` discriminator)
+- REST エンドポイント (path / method / request / response / errors) — OpenAPI 3.x
+- wire 型 (request body / response body / webhook payload) — OpenAPI 3.x の `components/schemas`
+- Pub/Sub イベント (channel / message / payload schema / `event_type` discriminator) — AsyncAPI 3.0
+- **WebSocket プロトコル** (gateway ↔ client、battle 由来のゲーム状態フレーム等) — **AsyncAPI 3.0 の WebSocket binding** で表現する。OpenAPI は WS を表現できないため AsyncAPI 側に寄せる。`gateway/data/ws_constants.yaml` のメッセージ型集合や `battle/packages/game-state-*/` のフレーム payload はこの一環として AsyncAPI に移行
 - 上記に登場する **外部に流出する enum** (例: `Platform = "ios" | "android"`, `ProductType = "faction_set" | ...`)
+- **client (overload-party-client) の npm 依存全般** も本 ADR の scope。`@kenyamaneko/*` 名前空間の npm パッケージは GitHub Packages から Artifact Registry に切替え、生成元 spec が OpenAPI/AsyncAPI に変わる場合は併せて追従
 
 **対象外** (本 ADR では現行構造を据え置く):
 
@@ -82,13 +84,27 @@
 - 既存 `packages/game-state-npm` の役割は `data/openapi.yaml` から `openapi-typescript` で生成する `packages/api-{service}-ts` 等に置き換える
 - client が現在依存している 6 つの `@kenyamaneko/*` npm パッケージのうち、API 契約由来のものは本移行で OpenAPI 由来生成に置換する。ゲーム定数由来 (`game-design-constants`, `game-logic-constants`) は据え置き
 
-#### NuGet モジュール (廃止して ProjectReference 化)
+#### NuGet / npm 配布 (intra-repo は ProjectReference 化、cross-repo は AR に移行)
 
-`packages/*-dotnet` の NuGet 配布チャンネルを **完全廃止**する。対象は API 契約用 (`api-battle-rpc-dotnet`, `game-state-dotnet`) およびゲーム定数用 (`game-logic-constants-dotnet`, `game-design-constants-dotnet`) を含む全 dotnet パッケージ。
+dotnet と npm の cross-repo 配布チャンネルを **GitHub Packages から Google Cloud Artifact Registry (AR) に全面移行**する。あわせて intra-repo の self-NuGet (battle が自リポを自リポに NuGet で配るパターン) は ProjectReference 化で廃止する。
 
-廃止する理由は、`PackageReference` の消費先が battle 自身の csproj に限られており、**他リポからの NuGet 参照が一件も存在しない**ため (Go services は Go module 経由、TS client は npm 経由で別途消費しているため、NuGet パッケージ化する必要がない)。
+##### 動機
 
-代替として、battle リポ内では sln 内ローカル参照 (`<ProjectReference>`) で csproj 同士の依存を解決する。例:
+GitHub Packages を利用する上で構造的な認証問題がある:
+
+- kenyamaneko は **User account** であり、user-owned packages は **GitHub App token で読めない** (ADR-033 限界事項として記載済み)
+- 結果として NuGet feed の認証は PAT 必須で、ADR-033 で全廃した PAT 運用パターンに逆戻りしていた
+- `dotnet add package` には User-owned NuGet feed の限界が無いため、レジストリ側を切り替えれば PAT を全廃できる
+
+AR の特徴:
+
+- NuGet / npm / Go module / Maven / Python / Apt / Yum 等を単一インフラで配布
+- 認証は GCP service account ベース。**GitHub Actions からは Workload Identity Federation (WIF) で short-lived token を取得**して使う (PAT 不要)
+- 既に GCP を本番インフラとして利用しているため、追加コストは AR の storage / egress のみ
+
+##### intra-repo: ProjectReference 化 (battle 内 self-NuGet を廃止)
+
+battle が自リポ内の `packages/*-dotnet/` を NuGet 経由で自分自身に参照しているのは無意味。sln 内ローカル参照に置換する:
 
 ```xml
 <!-- 旧: src/OverloadParty.Battle.Server/OverloadParty.Battle.Server.csproj -->
@@ -108,13 +124,40 @@
 
 `OverloadParty.Battle.slnx` 内で `packages/*-dotnet/*.csproj` を solution-level に追加する形になる。
 
-廃止に伴い以下も撤去する:
+##### cross-repo: AR に切替 (NuGet と npm 双方)
 
-- `battle/.github/workflows/publish.yaml` の `dotnet pack` / `dotnet nuget push` ステップ
-- `nuget.config` ファイルおよび GitHub Packages の dotnet feed 認証関連
-- battle CI で dotnet feed 認証用に使用していた PAT (例: `COMMON_PKG_FETCH`)
+cross-repo の dotnet / npm 依存 (例: battle が common の `OverloadParty.GameDesignConstants` を消費、client が common / battle / shop 等の `@kenyamaneko/*` npm パッケージを消費) は AR を経由する:
 
-C# 側 csproj およびソース (`packages/*-dotnet/`) 自体は **ファイルとして残す**。発行先が NuGet feed から sln 内 ProjectReference に変わるだけで、C# 内部消費の必要性自体は維持される (battle の minimal API は controller ハンドラ引数に DTO 型をバインドするため、何らかの C# 型が server 内に必要)。
+```
+[Publisher リポ]
+  └─ CI: WIF で GCP token 取得 → dotnet nuget push / npm publish to AR
+
+[Consumer リポ]
+  └─ CI: WIF で GCP token 取得 → nuget.config / .npmrc を AR endpoint に向け restore/install
+```
+
+実装上の方針:
+
+- AR を `overload-party-infra` の Terraform module でプロビジョン (NuGet repo / npm repo / 必要に応じ Go repo)
+- WIF binding と service account を整備し、publisher 用 (write) と consumer 用 (read) を分離
+- `overload-party-common` に `setup-ar-auth` および `publish-to-ar` の **共通 composite action** を追加 (ADR-033 の `setup-go-private-modules` と同パターン)。各リポはこの composite を import するだけで AR 認証が完了する
+- `nuget.config` は **AR endpoint を指す形に書き換え** (撤去ではない)。`.npmrc` も同様
+- 認証 PAT (`COMMON_PKG_FETCH` 等) は **全廃**。WIF が代替
+
+##### 廃止される認証経路 / 撤去されるもの
+
+- 各リポの `nuget.config` における `https://nuget.pkg.github.com/kenyamaneko/...` フィード設定
+- `.github/workflows/*.yaml` における GitHub Packages の dotnet/npm 認証ステップ (`actions/setup-dotnet` の `nuget-auth-token` パラメタ等)
+- 各リポの `.github/scripts/` 配下にある GitHub Packages 向け auth wrapper
+- `COMMON_PKG_FETCH` などパッケージ取得用 PAT (organization secret / vars)
+
+##### Go module の扱い
+
+Go module は ADR-033 で `setup-go-private-modules` composite action 経由の App token 認証が確立済みで、現状で破綻していない。本 ADR 改訂の **AR 移行は Go については任意 (将来的選択肢として残す)**。Go module だけ GitHub の git protocol で引き続き ADR-033 経路を使ってよい。
+
+##### C# 側 csproj とソースの所在は不変
+
+`packages/*-dotnet/` のディレクトリ・csproj 構成は維持。発行先が GitHub Packages から AR に変わるだけで、C# 側からの consumption 体験 (`<PackageReference>` で書く) は変わらない。
 
 API 契約用の `packages/api-{service}-dotnet/` のソース生成は OpenAPI (NSwag) に切替、ゲーム定数用の `packages/game-*-constants-dotnet/` は現行 codegen を維持する。
 
@@ -239,6 +282,31 @@ battle は現状 fake を持っていないため、本移行を機に追加す�
 
 ## 関連 issue
 
-- [overload-party-common#39](https://github.com/kenyamaneko/overload-party-common/issues/39) — ADR-034 全体トラッカー
-- [overload-party-shop#66](https://github.com/kenyamaneko/overload-party-shop/issues/66) — Phase 1: shop の OpenAPI/AsyncAPI 化
-- Phase 2 (battle) / Phase 3 (その他サービス) の issue は Phase 1 完了後に起票し、本 ADR と全体トラッカーに追記する
+- [overload-party-common#39](https://github.com/kenyamaneko/overload-party-common/issues/39) — ADR-034 全体トラッカー (Phase 別 issue リンクは tracker 側で集約)
+
+## Update 2026-05-09 — Artifact Registry 採用 / WS-AsyncAPI / client scope
+
+### 経緯
+
+shop Phase 1 完了後、battle Phase 2 で **cross-repo dotnet 依存** (battle の C# csproj が `overload-party-common/packages/game-design-constants-dotnet/` を NuGet 経由で消費) という、shop では遭遇しなかったケースが顕在化した。当初の「NuGet 完全廃止 + ProjectReference 化」方針は intra-repo の self-NuGet を念頭に置いた論拠だったため、cross-repo dotnet には適用できないことが判明。
+
+### 決定
+
+1. **Artifact Registry を NuGet/npm の cross-repo 配布チャンネルとして採用** (前述の「NuGet / npm 配布」セクションで詳細)。GitHub Packages 経由の dotnet/npm 配布を全廃する
+2. **WebSocket プロトコルは AsyncAPI 3.0 で記述する** (前述の「適用範囲」セクションで明記)。OpenAPI は WS を扱えない。`gateway/data/ws_constants.yaml` および `battle/packages/game-state-*/` の WS payload schemas は Phase 2/3b で AsyncAPI に移行する
+3. **client (overload-party-client) を本 ADR scope に正式に組み込む** (前述の「適用範囲」セクションで明記)。`@kenyamaneko/*` の 6 npm パッケージを GitHub Packages から AR に切替、AsyncAPI/OpenAPI 由来の生成物に追従させる
+
+### 影響を受ける既存決定 / 撤回
+
+- (Update 前の) 「NuGet 完全廃止」 → 「intra-repo self-NuGet は ProjectReference 化、cross-repo は AR 経由」に絞り直し
+- (Update 前の) 「nuget.config 撤去」 → 「AR endpoint を指す形に書き換え」に変更
+- (Update 前の) 「NuGet 認証 PAT (`COMMON_PKG_FETCH`) revoke」 → 引き続き revoke (代替が WIF になっただけで方針は維持)
+
+### 必要な前提作業
+
+Phase 2 / Phase 3b 着手前に以下が完了している必要がある:
+
+- `overload-party-infra` で AR を Terraform プロビジョン (NuGet repo + npm repo + WIF service account binding)
+- `overload-party-common` に `setup-ar-auth` / `publish-to-ar` 共通 composite action を追加
+- 各 publisher リポ (common / battle / shop / 各サービス) の publish workflow を AR 向けに書き換え
+
