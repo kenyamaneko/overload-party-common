@@ -16,7 +16,7 @@ overload-party 配下のリポ群 (約 15 リポ) は現状、ユーザが各リ
 | 開発拠点 | リポごとに Claude Code セッションを開く |
 | ルール SSoT | `overload-party-common/rules/` |
 | ルール配布 | `claude-presets-sync` workflow が consumer リポへ PR で同期 |
-| consumer 宣言 | `rules/.consumers.yaml` (現状 shop のみ) |
+| consumer 宣言 | `rules/.consumers.yaml` |
 | consumer 側のルール参照 | 各リポの `CLAUDE.md` から `@.claude/docs/{base,flow,lang}/CLAUDE.md` を `@import` |
 
 ### 構造的問題
