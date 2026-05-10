@@ -3,7 +3,7 @@
 - Status: Accepted
 - Date: 2026-05-10
 - Deciders: kenyamaneko
-- Related: ADR-034 (本 ADR の前提)、[overload-party-common#39](https://github.com/kenyamaneko/overload-party-common/issues/39) (ADR-034 全体トラッカー)
+- Related: ADR-034 (本 ADR の前提)、ADR-037 (本 ADR の認証 token 引き渡し方式を更新)、[overload-party-common#39](https://github.com/kenyamaneko/overload-party-common/issues/39) (ADR-034 全体トラッカー)
 
 ## Context
 
@@ -79,6 +79,8 @@ client から見たエンドポイントは引き続き gateway 1 つ (`VITE_API
 `auth_handler` は gateway 残置。Firebase ID Token 検証と Firebase UID → player_id 解決は gateway middleware の責務とし、各サービスは gateway から渡される player_id を信頼する。
 
 将来的に Firebase custom claims に player_id を埋め込んで各サービスが独立検証する案もあり得るが、本 ADR の scope 外とする。
+
+> **更新**: gateway → 各サービス間の player_id 引き渡し方式は ADR-037 で `X-Player-Id` 平文 header から HMAC 署名 JWT (`X-Internal-Auth`) に変更された。本 Decision 5 (gateway 中央認証フロー全体) は引き続き有効。
 
 ## Consequences
 

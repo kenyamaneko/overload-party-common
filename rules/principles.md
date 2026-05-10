@@ -37,6 +37,7 @@
 ## [base] サービス境界
 
 - 各サービスは自身が所有する master data の唯一の SSoT。他サービスから DB 直アクセス禁止、アクセスは所有サービスの API 経由で行う
+- 内部認証 token (`X-Internal-Auth` HMAC JWT) を受ける側は middleware で検証し、context に `player_id` を書き込む。handler は context 経由で取得し、認証 header を handler から直読しない (header 直読は偽造耐性を失うため)
 
 ## [base] 実装フロー
 
