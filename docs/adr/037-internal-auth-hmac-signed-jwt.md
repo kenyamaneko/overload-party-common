@@ -90,6 +90,23 @@ shop は既に `X-Player-Id` を採用済。card 以降の Phase 3c でいきな
 - **Phase 3**: account / scenario / matchmaking 順次移行
 - **Phase 4**: 全サービス移行完了後、`X-Player-Id` 受付を撤廃
 
+#### player_id 引き渡し経路の現状とゴール
+
+各サービスは現状以下の方法で player_id を受け取っている:
+
+| サービス | 現状の引き渡し方 |
+|---|---|
+| shop | `X-Player-Id` header |
+| card / account / scenario | URL path (`/internal/v1/players/{playerID}/...`) |
+| matchmaking | JSON body フィールド |
+
+いずれも偽造耐性を持たない (path / body も header 同様にネットワーク境界依存)。本 ADR の最終形は **JWT `sub` クレームのみを唯一の信頼源** とする。各 Phase で path / body 経由の player_id も併せて撤廃する:
+
+- **shop (Phase 1)**: 既存の `X-Player-Id` を中間形として並走 → Phase 4 で撤廃
+- **card / news (Phase 2)**: 新規 Phase 3c のため最初から JWT `sub` 一本で実装 (path / body の player_id は実装しない)
+- **account / scenario / matchmaking (Phase 3)**: 既存の path / body 引き渡しを **X-Player-Id を経由せず JWT `sub` に直接置換**。中間形を導入しない (二度手間を避ける)
+- **Phase 4**: shop の `X-Player-Id` 受付撤廃で全サービスが JWT `sub` 一本になる
+
 ## Consequences
 
 ### Positive
@@ -183,15 +200,15 @@ env:
 
 ### Phase 2: card / news Phase 3c
 
-card / news は新規に公開 API を整備するタイミングで HMAC JWT 化を同時に実施する。`X-Player-Id` は実装しない。
+card / news は新規に公開 API を整備するタイミングで HMAC JWT 化を同時に実施する。`X-Player-Id` は実装しない。path / body 経由の player_id も実装せず、JWT `sub` を唯一の信頼源とする。
 
 ### Phase 3: 残りサービス順次移行
 
-account / scenario / matchmaking で同パターン。
+account / scenario / matchmaking で同パターン。path / body 経由の player_id 引き渡しを JWT `sub` への直接置換で撤廃する (X-Player-Id 中間形は導入しない)。
 
 ### Phase 4: X-Player-Id 撤廃
 
-全サービスが JWT 方式に移行した後、`X-Player-Id` 受付ロジックを各サービスから削除する。
+全サービスが JWT 方式に移行した後、`X-Player-Id` 受付ロジックを各サービスから削除する。この時点で全サービスが JWT `sub` 一本となる。
 
 ## Out of scope
 
