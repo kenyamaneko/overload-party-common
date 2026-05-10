@@ -1,5 +1,3 @@
-<!-- このファイルは overload-party-common/rules/lang/csharp/CLAUDE.md から同期されています。編集はそちらで行ってください。 -->
-
 ## [lang/csharp] 設計思想
 
 - 下流で例外を catch せず、handle できる層まで自動伝搬させる

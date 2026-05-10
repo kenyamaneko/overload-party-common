@@ -1,6 +1,6 @@
 ---
-name: implementing-from-issue
-description: GitHub Issue を起点に feature ブランチを切って実装・PR 作成まで行う手順 (GitHub Flow 版)。ユーザーが「Issue xx をやって」「この Issue を対応」と依頼したときに使う。
+name: implementing-from-issue-githubflow
+description: GitHub Issue を起点に feature ブランチを main から切って実装・PR 作成まで行う手順 (GitHub Flow 版)。githubflow リポ (shop 以外の大半のリポ) で使う。「Issue xx をやって」「この Issue を対応」と依頼されたとき、対象が githubflow リポなら本 skill。
 ---
 
 # Issue を元に実装する (GitHub Flow)
@@ -19,7 +19,7 @@ GitHub Issue を起点に、`main` から feature ブランチを切り、テス
    - 仕様変更: `docs/FEATURE_SPEC.md` / `docs/API_REFERENCE.md` 等
    - 設計レベルの意図: `docs/ARCHITECTURE.md`
    - インフラ変更で環境への反映順序が変わる場合: `docs/CI_AND_RELEASE.md`
-   - データモデル・型定義の SSoT を変更した場合は、各リポの CLAUDE.md / README に従って生成スクリプトを再実行する
+   - データモデル・型定義の SSoT を変更した場合は、各リポの規約に従って生成スクリプトを再実行する
 4. テストファーストで実装する
    - 受け入れ基準を Given/When/Then に落としてテストを書いてから実装する
    - インフラ系リポ (Terraform / k8s 等) でユニットテストが書けない場合は、plan / dry-run / kubeconform 等の検証コマンドを必ず通す

@@ -2,8 +2,6 @@
 
 Git flow を採用するリポ共通のブランチ戦略。
 
-> **Note**: このファイルは `overload-party-common/rules/flow/gitflow/BRANCHING.md` から各消費リポへ同期される。各リポ固有の CI/CD・タグ自動生成の実装は、各リポ内の `docs/CI_AND_RELEASE.md` (または同等のファイル) を参照。
-
 ## 概要
 
 GitFlow をベースに、環境とブランチを対応付けた運用を採用する。本番品質を担保するため、stg 環境での実機検証を挟む昇格モデルを必須とする。

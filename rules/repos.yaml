@@ -6,9 +6,9 @@
 #   name: リポジトリ名
 #   path: common からの相対パス
 #   lang: go | python | csharp | typescript | iac | none
-#         rules/lang/<lang>/CLAUDE.md と 1:1 対応 (none はスキップ)
+#         rules/lang/<lang>.md と 1:1 対応 (none はスキップ)
 #   flow: gitflow | githubflow | none
-#         rules/flow/<flow>/CLAUDE.md と 1:1 対応 (none はスキップ)
+#         rules/flow/<flow>.md と 1:1 対応 (none はスキップ)
 #         none は main 直 push を許容するリポ
 
 repos:

@@ -1,5 +1,3 @@
-<!-- このファイルは overload-party-common/rules/lang/iac/CLAUDE.md から同期されています。編集はそちらで行ってください。 -->
-
 ## [lang/iac] Terraform 方針
 
 - `variable` ブロックで `default` を使わない。環境ごとの値は呼び出し側 (`environments/<env>/` 等) で必ず明示指定する

@@ -19,7 +19,7 @@ description: ユーザーの自然言語の修正・機能追加依頼を GitHub
 4. Issue を作成する
    - `gh issue create --title "..." --body-file {path} --label {type}`
 5. Issue 番号をユーザーに伝え、対応ブランチを切るか確認する
-   - 切る場合は `implementing-from-issue` skill に従う
+   - 切る場合は repo の flow に応じて `implementing-from-issue-gitflow` または `implementing-from-issue-githubflow` skill に従う
 
 ## テンプレート
 

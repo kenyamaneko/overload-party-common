@@ -77,7 +77,7 @@ repos:
 
 ブランチ運用に関わる派生情報 (target branch 等) はこの `flow` から導出する。
 
-`lang` の値は `rules/lang/` 配下のディレクトリ名 (`go` / `python` / `csharp` / `iac` / `typescript`) と 1:1 対応させる。
+`lang` の値は `rules/lang/` 配下のファイル名 (`go.md` / `python.md` / `csharp.md` / `iac.md` / `typescript.md`) と 1:1 対応させる。
 
 ### common の CLAUDE.md の構造
 
@@ -85,16 +85,16 @@ CLAUDE.md は**索引と分岐ロジックのみ**を保持する。詳細ルー
 
 **必須セクション**:
 
-1. common 自身に適用するルール (`@rules/base/CLAUDE.md` 等の現行 import)
+1. common 自身に適用するルール (`@rules/principles.md` の @import)
 2. **クロスリポ作業時の解決手順**: 「編集対象ファイルパスからリポを判別 → レジストリで属性を引く → 該当 preset を適用」を明示
 3. レジストリへのポインタ (`rules/repos.yaml`)
-4. preset の場所一覧 (`rules/{base, flow/{gitflow,githubflow}, lang/{go,python,csharp,iac,typescript}}`)
+4. ルールの場所一覧 (`rules/principles.md` / `rules/lang/{go,python,csharp,iac,typescript}.md` / `rules/flow/{gitflow,githubflow}.md`)
 5. リポ固有ルールへのフォールバック手順 (各リポの `docs/` 配下を読む)
 
 **詳細ルールを CLAUDE.md に書くか `.claude/` 配下に書くかの方針**:
 
 - CLAUDE.md は毎セッション全文ロードされる (コンテキスト消費が大きい) ため、**索引と分岐ロジック以外は書かない**
-- 詳細ルールは既存の `rules/{base,flow,lang}/CLAUDE.md` を継続使用する
+- 詳細ルールは `rules/principles.md` / `rules/lang/<lang>.md` / `rules/flow/<flow>.md` を継続使用する
 - common 自身用の詳細補助ドキュメントが必要な場合のみ、既存の `.claude/docs/` を活用する (新規ディレクトリは作らない)
 
 ### 各リポの CLAUDE.md

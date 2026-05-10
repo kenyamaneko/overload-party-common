@@ -1,10 +1,9 @@
 # AI assistant configs
-.claude/
+.claude/*
+!.claude/skills/
+!.claude/skills/**
 .gemini/
 .aider*
-CLAUDE.md
-# presets/claude/ 配下の CLAUDE.md は配布物 SSoT として追跡する
-!presets/claude/**/CLAUDE.md
 
 # OS
 .DS_Store

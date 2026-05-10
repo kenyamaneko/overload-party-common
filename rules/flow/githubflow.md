@@ -2,8 +2,6 @@
 
 GitHub Flow を採用するリポ共通のブランチ戦略。ops / infra / k8s 系リポなど、環境別の永続ブランチを持たず main 一本で運用するリポで採用する。
 
-> **Note**: このファイルは `overload-party-common/rules/flow/githubflow/BRANCHING.md` から各消費リポへ同期される。各リポ固有の CI/CD・タグ自動生成の実装は、各リポ内の `docs/CI_AND_RELEASE.md` (または同等のファイル) を参照。
-
 ## 概要
 
 `main` を唯一の永続ブランチとし、短命の `feature/*` ブランチを切って PR で `main` へマージする運用。`develop` / `release` ブランチは持たない。

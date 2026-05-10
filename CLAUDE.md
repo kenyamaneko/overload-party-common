@@ -3,7 +3,7 @@
 このリポは overload-party 配下の全リポを横断する開発拠点である。primary 作業ディレクトリは
 本リポ、編集対象の他リポは additional working directory として参照する。
 
-@rules/base/CLAUDE.md
+@rules/principles.md
 
 ## ファイル編集前のルール適用手順
 
@@ -14,11 +14,11 @@
    - `../overload-party-<name>/` パターン → 該当リポ
 2. [rules/repos.yaml](rules/repos.yaml) で対象リポの `lang` / `flow` を引く
 3. 以下のルールを Read して以降の判断に適用する:
-   - lang: `rules/lang/<lang>/CLAUDE.md` (`lang: none` ならスキップ)
-   - flow: `rules/flow/<flow>/CLAUDE.md` (`flow: none` ならスキップ)
+   - lang: `rules/lang/<lang>.md` (`lang: none` ならスキップ)
+   - flow: `rules/flow/<flow>.md` (`flow: none` ならスキップ)
 4. リポ固有のルールが必要な場合は対象リポの `docs/` 配下を Read する
 
-base ルールは本ファイルから @import 済みなので全リポに共通適用される。
+`rules/principles.md` は本ファイルから @import 済みなので全リポに共通適用される。
 
 ## [common] SSoT と生成コード
 
