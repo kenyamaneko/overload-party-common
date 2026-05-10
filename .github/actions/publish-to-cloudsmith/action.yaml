@@ -36,9 +36,7 @@ runs:
           --source "https://nuget.cloudsmith.io/keyandnotes/overload-party-nuget/v3/index.json" \
           --api-key "${CLOUDSMITH_TOKEN}"
 
-    # npm publish に path 引数を渡すと npm 7+ が path を scoped package shorthand と
-    # 解釈し ssh://git@github.com/<path>.git を ls-remote して失敗する (npm/cli#3010)。
-    # Cloudsmith 公式手順に従って package directory に cd してから引数なしで publish する。
+    # path 引数を渡すと npm が scoped package shorthand と誤解釈するため、package directory に cd して引数なしで publish する。
     - name: Publish npm package to Cloudsmith
       if: inputs.format == 'npm'
       shell: bash
