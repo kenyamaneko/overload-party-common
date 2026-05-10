@@ -1,6 +1,6 @@
 # ADR-037: 内部サービス間認証を HMAC 署名 JWT (HS256) に切り替える
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-05-10
 - Deciders: kenyamaneko
 - Related: ADR-036 (本 ADR の前提)、[overload-party-common#39](https://github.com/kenyamaneko/overload-party-common/issues/39) (ADR-034 全体トラッカー)
