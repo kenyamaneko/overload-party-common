@@ -3,22 +3,22 @@
 このリポは overload-party 配下の全リポを横断する開発拠点である。primary 作業ディレクトリは
 本リポ、編集対象の他リポは additional working directory として参照する。
 
-@presets/claude/base/CLAUDE.md
+@rules/base/CLAUDE.md
 
-## ファイル編集前の preset 適用手順
+## ファイル編集前のルール適用手順
 
 ファイル編集 (Edit / Write) の前に必ず以下を実行する:
 
 1. 編集対象ファイルのパスから対象リポを判定する
-   - パスが `./` 起点または `presets/`, `data/`, `db/`, `packages/`, `scripts/`, `docs/` 配下 → `overload-party-common`
+   - パスが `./` 起点または `rules/`, `data/`, `db/`, `packages/`, `scripts/`, `docs/` 配下 → `overload-party-common`
    - `../overload-party-<name>/` パターン → 該当リポ
-2. [presets/claude/repos.yaml](presets/claude/repos.yaml) で対象リポの `lang` / `flow` を引く
-3. 以下の preset を Read して以降の判断に適用する:
-   - lang: `presets/claude/lang/<lang>/CLAUDE.md` (`lang: none` ならスキップ)
-   - flow: `presets/claude/flow/<flow>/CLAUDE.md` (`flow: none` ならスキップ)
+2. [rules/repos.yaml](rules/repos.yaml) で対象リポの `lang` / `flow` を引く
+3. 以下のルールを Read して以降の判断に適用する:
+   - lang: `rules/lang/<lang>/CLAUDE.md` (`lang: none` ならスキップ)
+   - flow: `rules/flow/<flow>/CLAUDE.md` (`flow: none` ならスキップ)
 4. リポ固有のルールが必要な場合は対象リポの `docs/` 配下を Read する
 
-base preset は本ファイルから @import 済みなので全リポに共通適用される。
+base ルールは本ファイルから @import 済みなので全リポに共通適用される。
 
 ## [common] SSoT と生成コード
 

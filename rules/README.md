@@ -26,7 +26,7 @@
 
 #### 1. common 側に登録
 
-[`presets/claude/.consumers.yaml`](.consumers.yaml) に追記する。
+[`rules/.consumers.yaml`](.consumers.yaml) に追記する。
 
 ```yaml
 consumers:

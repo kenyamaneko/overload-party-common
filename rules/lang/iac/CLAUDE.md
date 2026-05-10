@@ -1,4 +1,4 @@
-<!-- このファイルは overload-party-common/presets/claude/lang/iac/CLAUDE.md から同期されています。編集はそちらで行ってください。 -->
+<!-- このファイルは overload-party-common/rules/lang/iac/CLAUDE.md から同期されています。編集はそちらで行ってください。 -->
 
 ## [lang/iac] Terraform 方針
 

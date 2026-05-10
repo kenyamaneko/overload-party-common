@@ -7,16 +7,16 @@
 
 ## Context
 
-overload-party 配下のリポ群 (約 15 リポ) は現状、ユーザが各リポを直接開いて Claude Code を起動する運用となっている。各リポの開発ルールは `overload-party-common/presets/claude/` を SSoT とし、`claude-presets-sync` workflow が `base / flow/{gitflow,githubflow} / lang/{go,python,csharp,iac,typescript}` の 3 軸でレイヤ別にコピーを各リポへ同期する仕組みで成立している (ADR は不在だが [presets/claude/README.md](../../presets/claude/README.md) に詳細記載)。
+overload-party 配下のリポ群 (約 15 リポ) は現状、ユーザが各リポを直接開いて Claude Code を起動する運用となっている。各リポの開発ルールは `overload-party-common/rules/` を SSoT とし、`claude-presets-sync` workflow が `base / flow/{gitflow,githubflow} / lang/{go,python,csharp,iac,typescript}` の 3 軸でレイヤ別にコピーを各リポへ同期する仕組みで成立している (ADR は不在だが [rules/README.md](../../rules/README.md) に詳細記載)。
 
 ### 現状の運用構造
 
 | 要素 | 現状 |
 |---|---|
 | 開発拠点 | リポごとに Claude Code セッションを開く |
-| ルール SSoT | `overload-party-common/presets/claude/` |
+| ルール SSoT | `overload-party-common/rules/` |
 | ルール配布 | `claude-presets-sync` workflow が consumer リポへ PR で同期 |
-| consumer 宣言 | `presets/claude/.consumers.yaml` (現状 shop のみ) |
+| consumer 宣言 | `rules/.consumers.yaml` (現状 shop のみ) |
 | consumer 側のルール参照 | 各リポの `CLAUDE.md` から `@.claude/docs/{base,flow,lang}/CLAUDE.md` を `@import` |
 
 ### 構造的問題
@@ -24,7 +24,7 @@ overload-party 配下のリポ群 (約 15 リポ) は現状、ユーザが各リ
 1. **リポ切替コスト**: 横断的な作業 (例: 「全 Go リポの構造を確認したい」「shop のイベント仕様を見ながら gateway の subscriber を修正したい」) で都度リポを開き直す必要がある。Claude Code セッションも都度立ち上げ直しになり、コンテキスト構築 (リポ理解・関連ファイルの読み込み) を繰り返す。
 2. **複数リポの同時編集が困難**: 1 セッション 1 リポ前提では、common の SSoT 変更と consumer 側の追従を同一セッションで行えない。常に複数ターミナルとセッションを跨ぐ必要がある。
 3. **既存 sync 機構は配布のみで横断作業を解決していない**: `claude-presets-sync` はルールの**分散配布**を解決しているが、開発者が**横断的に複数リポを触る作業形態**には寄与していない。
-4. **同期遅延**: common の `presets/claude/` を更新しても、consumer 側に PR が届きマージされるまではルールが反映されない。
+4. **同期遅延**: common の `rules/` を更新しても、consumer 側に PR が届きマージされるまではルールが反映されない。
 
 ### Claude Code の機能的前提
 
@@ -47,7 +47,7 @@ Claude Code は primary 作業ディレクトリ + additional working directorie
 
 各リポの属性 (path / lang / flow) を機械可読に列挙したレジストリを common 配下に新設する。
 
-**配置**: `presets/claude/repos.yaml` (旧 `.consumers.yaml` は本 ADR の sync 撤廃と同時に削除する)。
+**配置**: `rules/repos.yaml` (旧 `.consumers.yaml` は本 ADR の sync 撤廃と同時に削除する)。
 
 **スキーマ (案)**:
 
@@ -77,24 +77,24 @@ repos:
 
 ブランチ運用に関わる派生情報 (target branch 等) はこの `flow` から導出する。
 
-`lang` の値は `presets/claude/lang/` 配下のディレクトリ名 (`go` / `python` / `csharp` / `iac` / `typescript`) と 1:1 対応させる。
+`lang` の値は `rules/lang/` 配下のディレクトリ名 (`go` / `python` / `csharp` / `iac` / `typescript`) と 1:1 対応させる。
 
 ### common の CLAUDE.md の構造
 
-CLAUDE.md は**索引と分岐ロジックのみ**を保持する。詳細ルールは `presets/claude/` 配下を維持し、CLAUDE.md からは参照のみ行う。
+CLAUDE.md は**索引と分岐ロジックのみ**を保持する。詳細ルールは `rules/` 配下を維持し、CLAUDE.md からは参照のみ行う。
 
 **必須セクション**:
 
-1. common 自身に適用するルール (`@presets/claude/base/CLAUDE.md` 等の現行 import)
+1. common 自身に適用するルール (`@rules/base/CLAUDE.md` 等の現行 import)
 2. **クロスリポ作業時の解決手順**: 「編集対象ファイルパスからリポを判別 → レジストリで属性を引く → 該当 preset を適用」を明示
-3. レジストリへのポインタ (`presets/claude/repos.yaml`)
-4. preset の場所一覧 (`presets/claude/{base, flow/{gitflow,githubflow}, lang/{go,python,csharp,iac,typescript}}`)
+3. レジストリへのポインタ (`rules/repos.yaml`)
+4. preset の場所一覧 (`rules/{base, flow/{gitflow,githubflow}, lang/{go,python,csharp,iac,typescript}}`)
 5. リポ固有ルールへのフォールバック手順 (各リポの `docs/` 配下を読む)
 
 **詳細ルールを CLAUDE.md に書くか `.claude/` 配下に書くかの方針**:
 
 - CLAUDE.md は毎セッション全文ロードされる (コンテキスト消費が大きい) ため、**索引と分岐ロジック以外は書かない**
-- 詳細ルールは既存の `presets/claude/{base,flow,lang}/CLAUDE.md` を継続使用する
+- 詳細ルールは既存の `rules/{base,flow,lang}/CLAUDE.md` を継続使用する
 - common 自身用の詳細補助ドキュメントが必要な場合のみ、既存の `.claude/docs/` を活用する (新規ディレクトリは作らない)
 
 ### 各リポの CLAUDE.md
@@ -130,11 +130,11 @@ common の CLAUDE.md には「リポ固有ルールが必要な場合は `<repo>
 撤廃対象:
 
 - `claude-presets-sync` workflow 本体 (`.github/workflows/` 配下)
-- `presets/claude/.consumers.yaml`
+- `rules/.consumers.yaml`
 - `CLAUDE_SYNC_TOKEN` GitHub Secret (他用途がなければ削除)
 - 各 consumer リポの `.claude/docs.yaml`、同期されていた `.claude/docs/` および `.claude/skills/` (前項「各リポの CLAUDE.md」の置換と一括で実施)
 
-`presets/claude/{base, flow, lang}/` の preset 本体は引き続き SSoT として存続する (sync で配布されなくなるだけで、common 経由運用で参照される)。
+`rules/{base, flow, lang}/` の preset 本体は引き続き SSoT として存続する (sync で配布されなくなるだけで、common 経由運用で参照される)。
 
 ### 限界事項 / scope 外
 
@@ -146,10 +146,10 @@ common の CLAUDE.md には「リポ固有ルールが必要な場合は `<repo>
 ### Positive
 
 - **リポ切替コスト削減**: 横断的な作業 (common の SSoT 変更 + consumer 追従、複数リポを跨ぐ調査) が単一セッションで完結する
-- **ルール変更のリードタイム短縮**: common の `presets/claude/` を更新した時点で、sync PR を待たずに即座に反映される
+- **ルール変更のリードタイム短縮**: common の `rules/` を更新した時点で、sync PR を待たずに即座に反映される
 - **複数リポ横断の調査効率向上**: 「全 Go リポで X を確認」「shop の event 仕様を gateway 側で参照」等の作業が 1 セッションで可能になる
 - **配布機構の撤廃**: `claude-presets-sync` workflow / `CLAUDE_SYNC_TOKEN` PAT / consumer 側の `.claude/docs/` コピー / 同期 PR のレビュー負担が一掃される
-- **SSoT への一本化**: ルールが common の `presets/claude/` 一箇所のみに存在する状態になり、コピーが各リポに残ることによる drift 余地がなくなる
+- **SSoT への一本化**: ルールが common の `rules/` 一箇所のみに存在する状態になり、コピーが各リポに残ることによる drift 余地がなくなる
 - **レジストリの副次効用**: リポ属性 (lang / flow) が機械可読に列挙されることで、将来 CI / 運用スクリプトからも参照可能になる (例: 「全 Go リポで lint を実行」「全 gitflow リポで release ブランチを作成」等)
 - **メモリ依存の解消**: ユーザのメモリに残していた「shop は Git flow、他は main 直 push」のようなリポ属性情報がコード化され、メモリから移管できる
 
@@ -163,14 +163,14 @@ common の CLAUDE.md には「リポ固有ルールが必要な場合は `<repo>
 
 ### Neutral
 
-- `presets/claude/` のレイヤ構造 (base / flow / lang) は据え置き
+- `rules/` のレイヤ構造 (base / flow / lang) は据え置き
 - リポ固有ルール (`<repo>/docs/`) の所在も据え置き
 
 ## Migration
 
 ### Phase 1: 現状調査 (read-only)
 
-- `presets/claude/` 配下の preset 内容棚卸し
+- `rules/` 配下の preset 内容棚卸し
 - 各リポ (~15) の `CLAUDE.md` および `.claude/` 配下棚卸し (sync 由来か、リポ独自の skill / 設定が混在しているか)
 - 各リポの `docs/` 配下のリポ固有ドキュメント所在確認
 
@@ -182,7 +182,7 @@ common の CLAUDE.md には「リポ固有ルールが必要な場合は `<repo>
 
 ### Phase 3: common の索引整備
 
-- `presets/claude/repos.yaml` 作成 (全 ~15 リポを列挙)
+- `rules/repos.yaml` 作成 (全 ~15 リポを列挙)
 - common の `CLAUDE.md` を索引型に書き換え
 
 ### Phase 4: lang preset の充実
@@ -213,9 +213,9 @@ common の CLAUDE.md には「リポ固有ルールが必要な場合は `<repo>
 ### Phase 6: sync 機構の撤廃
 
 - `.github/workflows/claude-presets-sync.yaml` (および関連 action / script) を削除
-- `presets/claude/.consumers.yaml` を削除
+- `rules/.consumers.yaml` を削除
 - `CLAUDE_SYNC_TOKEN` GitHub Secret を削除 (他用途がなければ)
-- `presets/claude/README.md` を新運用に合わせて書き換え (sync 手順の記述を削除し、common 経由運用の手順を記載)
+- `rules/README.md` を新運用に合わせて書き換え (sync 手順の記述を削除し、common 経由運用の手順を記載)
 
 ### Phase 7: メモリ整理
 

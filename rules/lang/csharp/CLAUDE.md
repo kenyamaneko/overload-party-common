@@ -1,4 +1,4 @@
-<!-- このファイルは overload-party-common/presets/claude/lang/csharp/CLAUDE.md から同期されています。編集はそちらで行ってください。 -->
+<!-- このファイルは overload-party-common/rules/lang/csharp/CLAUDE.md から同期されています。編集はそちらで行ってください。 -->
 
 ## [lang/csharp] 設計思想
 
