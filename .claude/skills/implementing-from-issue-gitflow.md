@@ -1,11 +1,11 @@
 ---
-name: implementing-from-issue
-description: GitHub Issue を起点に feature ブランチを切って実装・PR 作成まで行う手順。ユーザーが「Issue xx をやって」「この Issue を対応」と依頼したときに使う。
+name: implementing-from-issue-gitflow
+description: GitHub Issue を起点に feature ブランチを develop から切って実装・PR 作成まで行う手順 (gitflow 版)。gitflow リポ (overload-party-shop) で使う。「Issue xx をやって」「この Issue を対応」と依頼されたとき、対象が gitflow リポなら本 skill。
 ---
 
-# Issue を元に実装する
+# Issue を元に実装する (gitflow)
 
-GitHub Issue を起点に、feature ブランチを切り、テストファーストで実装し、develop への PR を作成するまでの手順。
+GitHub Issue を起点に、`develop` から feature ブランチを切り、テストファーストで実装し、`develop` への PR を作成するまでの手順。
 
 ## 手順
 
@@ -18,7 +18,7 @@ GitHub Issue を起点に、feature ブランチを切り、テストファー�
 3. 必要に応じてドキュメントを更新する
    - 仕様変更: `docs/FEATURE_SPEC.md` / `docs/API_REFERENCE.md` 等
    - 設計レベルの意図: `docs/ARCHITECTURE.md`
-   - データモデル・型定義の SSoT を変更した場合は、各リポの CLAUDE.md / README に従って生成スクリプトを再実行する
+   - データモデル・型定義の SSoT を変更した場合は、各リポの規約に従って生成スクリプトを再実行する
 4. テストファーストで実装する
    - 受け入れ基準を Given/When/Then に落としてテストを書いてから実装する
    - テスト方針・設計思想・コーディング方針は [CLAUDE.md](../../CLAUDE.md) に従う

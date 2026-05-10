@@ -1,5 +1,3 @@
-<!-- このファイルは overload-party-common/presets/claude/lang/go/CLAUDE.md から同期されています。編集はそちらで行ってください。 -->
-
 ## [lang/go] 設計思想
 
 - 保守性と拡張性を最大限に高めるため、クリーンアーキテクチャを遵守する
@@ -11,3 +9,7 @@
 ## [lang/go] テスト方針
 
 - テストコードはテーブル駆動 (`t.Run` でケース分岐) で書く
+
+## [lang/go] コード生成
+
+- 型コードは `data/models.yaml` を SSoT とし、`python3 scripts/generate_types.py` で再生成する
