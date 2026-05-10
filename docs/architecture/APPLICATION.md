@@ -136,6 +136,22 @@ battle 側のインメモリキャッシュの更新戦略は以下のとおり�
 | 検証タイミング | WebSocket接続アップグレード前 |
 | 失敗時の動作 | HTTP 401 を返してアップグレード拒否 |
 
+### 3.3 内部サービス間認証
+
+gateway は Firebase ID Token を検証して player_id を解決した後、下流サービスへの REST 呼び出しに HMAC 署名 JWT (HS256) を `X-Internal-Auth` header で付与する。各サービスは middleware で署名・有効期限・`iss` を検証し、`sub` クレームから player_id を context に書き込む。handler は context 経由で player_id を取得し、認証 header を直読しない (偽造耐性を失うため)。
+
+| 項目 | 内容 |
+|------|------|
+| Header | `X-Internal-Auth` |
+| 署名アルゴリズム | HS256 (対称鍵) |
+| 共有秘密鍵 | 環境変数 `INTERNAL_AUTH_SECRET` (k8s Secret) |
+| 鍵 ID | JWT header の `kid` (将来のローテーション余地) |
+| TTL | 5 分 (`exp` クレーム) |
+| Subject | `sub` = player_id |
+| Issuer | `iss` = `overload-party-gateway` |
+
+設計の詳細・移行段階・検討経緯は [ADR-037](../adr/037-internal-auth-hmac-signed-jwt.md) を参照。
+
 ---
 
 ## 4. 課金システム
