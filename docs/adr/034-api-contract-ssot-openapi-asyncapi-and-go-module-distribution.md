@@ -237,9 +237,9 @@ battle は現状 fake を持っていないため、本移行を機に追加す�
 - **AsyncAPI codegen は spike を先行**: Phase 1 着手前に shop 1 イベント分で生成物を確認し、`packages/api-shop` で許容できる出力スタイルかを判定。許容できない場合は自前 emitter (現 codegen-tools の Go emitter 流用) を一時併用する選択肢を残す
 - **Pub/Sub の domain 型はリポ内手書きで残置**: shop の `internal/domain/shop_event_*_gen.go` は本 ADR で生成方式が変わる (codegen-tools → 手書き Go) が、ファイル位置と型名は据え置き、mapper 層導入の安全策とする
 
-## Amendment 2026-05-10: client 向け API 契約は gateway に集約する (BFF)
+## Amendment 2026-05-10: 廃止 npm の特定とゲーム定数分類の訂正
 
-Phase 3b 着手時に、初版で「ゲーム定数」と分類していた 3 npm パッケージ (`shop-constants` / `card-types` / `newsfeed-constants`) の中身が **すべて API レスポンス型 / enum** であることが判明した。これらは API 契約由来であり、ゲームルール定数 (`game-design-constants` / `game-logic-constants`) とは性質が異なる。
+Phase 3b 着手時に各 npm パッケージの中身を実調査した結果、初版で「ゲーム定数」(本 ADR scope 外) として扱っていた 3 つのパッケージが **API レスポンス型 / enum** であり、Layer A (API 契約由来) として廃止対象であることが判明した。
 
 | パッケージ | 中身 | 真の性質 |
 |---|---|---|
@@ -247,33 +247,21 @@ Phase 3b 着手時に、初版で「ゲーム定数」と分類していた 3 np
 | `card-types` | `CardDefinition` / `CardStats` (`ComputeStats \| DataStats`) / `NpcModel` / Effect 系 | card / battle API レスポンス型 |
 | `newsfeed-constants` | `CloudNewsSource` (5 値の enum) | newsfeed API レスポンス型 |
 
-これに伴い本 amendment で以下を確定する。
+### client 依存の分類 (確定)
 
-### BFF gateway 集約原則
+| 分類 | 性質 | 依存先 |
+|---|---|---|
+| **A. API 契約由来型** | サービス公開型 (REST レスポンス / 一般 WS event) | 廃止対象。置換先は別 ADR で確定する |
+| **B. battle 特殊例外** | バトル描画ドメイン型 (`BattleStartEventData` / `ClientGameState` 等) | `@kenyamaneko/overload-party-game-state` (battle 由来) を直接消費維持 |
+| **C. ゲームルール定数** | 不変ルール定数 (`Faction` / `Phase` / `WinReason` 等) | `@kenyamaneko/overload-party-game-design-constants` (common) / `@kenyamaneko/overload-party-game-logic-constants` (battle) を直接消費維持 |
 
-client は HTTP / WS のリクエスト先として gateway 1 つしか持たない (`VITE_API_BASE_URL` が単一 host)。client 向け API 契約の SSoT は gateway が一元的に保持する (Backend for Frontend)。各サービス (shop / card / scenario 等) の公開型は gateway openapi.yaml に **再定義** する。
+### 廃止対象 (Layer A 再分類)
 
-- **gateway runtime はパススルーを維持**: gateway server は受信した JSON をバイト列のまま転送し、ペイロード変換は加えない
-- **gateway API 契約は厚く**: gateway openapi.yaml に enum / `oneOf` / nested schema を厳密定義し、client 向け型を網羅する
-- **runtime と契約の乖離は CI で検知**: oasdiff / contract test で spec 進化を機械検証
+以下 3 つは Layer A (API 契約由来) に再分類し、廃止する:
 
-これにより gateway server 自体は薄いまま、client は単一 npm パッケージ (`api-gateway-npm`) に依存できる。
-
-### client 依存の 3 層原則
-
-| 層 | 性質 | 依存先 npm | 理由 |
-|---|---|---|---|
-| **A. API 契約由来型** | サービス公開型 (REST レスポンス / 一般的な WS event) | `@kenyamaneko/overload-party-api-gateway` のみ | client は gateway 経由で全サービスに到達するため、契約は gateway 集約 (BFF) |
-| **B. battle 特殊例外** | バトル描画ドメイン型 (`BattleStartEventData` / `TurnStartEventData` / `ClientGameState` 等) | `@kenyamaneko/overload-party-game-state` を直接消費 | battle WS は gateway を完全パススルー、client が API 契約を直接使う関係。単純な wire ではなく描画ドメインを共有 |
-| **C. ゲームルール定数** | 不変ルール定数 (`Faction` / `Phase` / `WinReason` 等)。サーバ通信を介さない計算で client が直接利用 | `@kenyamaneko/overload-party-game-design-constants` (common) / `@kenyamaneko/overload-party-game-logic-constants` (battle) を直接消費 | API 契約ではない。client の描画とゲームロジックの整合確保に必要 |
-
-### 廃止される npm パッケージ
-
-初版で scope 外 (Layer C 相当) と扱っていた以下 3 つは Layer A に再分類し、**廃止して gateway openapi に集約**する:
-
-- `@kenyamaneko/overload-party-shop-constants` → gateway openapi の `ProductType` enum に置換
-- `@kenyamaneko/overload-party-card-types` → gateway openapi の `ComputeStats` / `DataStats` / `CardDefinition` / `NpcModel` / Effect 系 schema に置換
-- `@kenyamaneko/overload-party-newsfeed-constants` → gateway openapi の `CloudNewsSource` enum に置換
+- `@kenyamaneko/overload-party-shop-constants`
+- `@kenyamaneko/overload-party-card-types`
+- `@kenyamaneko/overload-party-newsfeed-constants`
 
 ### 初版 line 82-84 の更新
 
@@ -281,19 +269,16 @@ client は HTTP / WS のリクエスト先として gateway 1 つしか持たな
 
 > client が現在依存している 6 つの `@kenyamaneko/*` npm パッケージのうち、API 契約由来のものは本移行で OpenAPI 由来生成に置換する。ゲーム定数由来 (`game-design-constants`, `game-logic-constants`) は据え置き
 
-→ 置換先を明確化:
+→ Layer A / B / C への分類は上記表の通り。**Layer A の置換先 (gateway 集約 vs 各サービス TS 直接) と gateway の責務範囲は別 ADR で確定する** (本 ADR の scope ではない)。
 
-- **Layer A (API 契約由来)**: gateway openapi に集約し `api-gateway-npm` 経由で配布
-- **Layer B (battle 特殊例外)**: 各サービス (battle) から直接消費維持
-- **Layer C (ゲームルール定数)**: 各リポ (common / battle) から直接消費維持
+### 本 ADR の scope 外として別 ADR に持ち越す事項
 
-### 影響範囲
+- gateway の責務再定義 (完全パススルー化、加工ロジックの逃し先、認証・WS hub・gateway 内部状態保持機能 [auth_handler / spectate_handler / static_handler] の維持範囲)
+- 各サービスの「client 公開 API」整備方針 (現在の openapi が gateway 内部用に最適化されているため、client 公開には型変換 / フィールドリネーム / 検証等が gateway で発生している)
+- Layer A の置換先確定 (gateway openapi 集約 / 各サービス TS パッケージ直接 / ハイブリッド)
+- 各サービスの TS パッケージ (`packages/api-{service}-npm`) 整備の有無
 
-- **gateway**: `data/openapi.yaml` に Layer A 型を集約追加 + `api-gateway-npm` の TS 生成と Cloudsmith publish 整備 (Phase 3b の [overload-party-gateway#26](https://github.com/kenyamaneko/overload-party-gateway/pull/26) で実施)
-- **client**: 廃止 3 npm への依存を削除し、import 元を `api-gateway` に置換 ([overload-party-client#19](https://github.com/kenyamaneko/overload-party-client/issues/19) で実施)
-- **shop / card / newsfeed**: 自リポの openapi.yaml は内部 (gateway ↔ サービス) 用として SSoT 維持。client 向け再公開は gateway が担う
-- **battle**: 影響なし (Layer B として直接消費を維持)
-- **common**: `game-design-constants` は Layer C として維持。`shop-constants` / `card-types` / `newsfeed-constants` の 3 つは Layer A 廃止に伴い、common 配布物の整理対象
+これらは互いに影響するため一つの別 ADR でまとめて扱う。
 
 ## 関連 issue
 
