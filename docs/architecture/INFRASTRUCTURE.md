@@ -56,7 +56,7 @@ overload-party 全リポジトリの CI/CD に関する横断的な設計情報�
 | リポ | Lint | テスト | Docker ビルド | パッケージ publish |
 |------|------|--------|--------------|-------------------|
 | gateway | golangci-lint | go test -race | gateway イメージ | ws-constants, api-gateway (Go + npm) |
-| battle | dotnet format | dotnet test | battle イメージ | game-state, game-logic-constants, api-battle-rpc (Go + C# + npm) |
+| battle | dotnet format | dotnet test | battle イメージ | game-state, game-logic-constants, api-battle-rpc (Go + npm) |
 | card | golangci-lint | go test -race | card イメージ | api-card (Go) |
 | account | golangci-lint | go test -race | account イメージ | api-account (Go) |
 | shop | golangci-lint | go test -race | shop イメージ | api-shop (Go) |
@@ -65,7 +65,7 @@ overload-party 全リポジトリの CI/CD に関する横断的な設計情報�
 | newsfeed | ruff | pytest | newsfeed イメージ | newsfeed-constants (Go + npm) |
 | news | — | — | — | — （CI 未整備） |
 | support | — | — | — | — （CI 未整備） |
-| common | — | — | — | game-design-constants (Go + C# + npm) |
+| common | — | — | — | game-design-constants (Go + npm) |
 | client | eslint | vitest | — | — |
 | infra | — | — | — | — (terraform plan/apply のみ) |
 | k8s | — | — | — | — (kustomize + kubectl のみ) |
@@ -82,7 +82,9 @@ overload-party 全リポジトリの CI/CD に関する横断的な設計情報�
 
 ### 2.3 認証
 
-全リポ共通で **Workload Identity Federation (WIF)** を使用。
+#### Google Cloud (Workload Identity Federation)
+
+GitHub Actions から Google Cloud リソースへアクセスする認証は、全リポ共通で **Workload Identity Federation (WIF)** を使用する。
 
 ```
 GitHub Actions (OIDC token)
@@ -106,6 +108,19 @@ Service Account (用途別)
 | `github-deploy` (Deploy) | infra | 同上 |
 | WIF プール・プロバイダ | infra | 同上 |
 
+#### Cross-repo / 自動化 (GitHub App)
+
+リポ間連携・自動化の認証から **個人 PAT を排除する**。PAT は (a) 期限切れに気付くのが事故時、(b) 一人の権限と密結合するため離脱・権限見直しのコストが高い、(c) scope が粗く 1 トークンあたりの権限が肥大化しがち、という構造的問題を抱える。これを **用途別の GitHub App** に置き換え、permission を最小化しつつ漏洩時の blast radius を分割する（[ADR-033](../adr/033-cross-repo-auth-github-app-migration.md)）。
+
+設計上の選択:
+
+- **読み取りと書き込みを別 App に分ける**: 広くインストールされる Read 系と、影響範囲を絞りたい Write 系を一緒にしない
+- **organization 配信で設定漏れを排除**: App ID は organization variable、private key は organization secret に置き、新リポ作成時の貼り直し運用を不要にする
+- **rotation を運用から切り離す**: GitHub App private key は無期限のため定期 rotate を廃止し、漏洩疑い・key 保有者離脱時のみ revoke + 差し替える（複数 key の同時発行が可能なためダウンタイムなし）
+- **fetch 系セットアップは composite action に集約**: 全サービスリポが共通の Go private module fetch ロジックを抱えないよう、`overload-party-common/.github/actions/setup-go-private-modules` を経由して使う
+
+App 構成・permissions の詳細・既知の制約は ADR-033 を参照。
+
 ### 2.4 GitHub Actions Variables
 
 | 変数 | 用途 |
@@ -123,14 +138,14 @@ Service Account (用途別)
 
 ### 2.5 GitHub Secrets
 
+GitHub 内のリソースへアクセスする認証情報は §2.3 Cross-repo の GitHub App private key（organization secret）に集約する。本表は Google Cloud / 外部 SaaS 向けのシークレットのみを対象とする。
+
 | シークレット | 保持リポ | 用途 |
 |-------------|---------|------|
-| `OPS_DISPATCH_TOKEN` | common, 各サービスリポ | ops への repository_dispatch |
-| `DB_MIGRATE_TOKEN` | ops | service repo の sparse-checkout |
 | `CLOUDFLARE_CDN_API_TOKEN` | infra | Cloudflare CDN 管理 |
 | `CLOUDFLARE_DNS_API_TOKEN` | k8s, ops | Cloudflare DNS 更新 |
-| `SLACK_WEBHOOK_URL` | k8s | Slack 通知 |
 | `CLOUDFLARE_WORKERS_API_TOKEN` | ops | Cloudflare Workers デプロイ |
+| `SLACK_WEBHOOK_URL` | k8s | Slack 通知 |
 
 ### 2.6 Artifact Registry
 
@@ -179,6 +194,12 @@ Service Account (用途別)
 | develop | dev |
 
 現状: main がまだ安定していないので、まずは main を直接育てる。安定したら上記構成に移行。
+
+### 2.9 CI 標準設定
+
+CI のコスト管理は **runner の選定よりも構造的な無駄削減** で行う方針を採る。サードパーティ runner への移行は organization 移管 / WIF 書き換え等の純粋な乗り換えコストが大きく、課金事故 (ハング job による 360 分連続実行) の根本要因にも触れない。代わりに GitHub-hosted `ubuntu-latest` を維持したまま、不要トリガーの抑制 (`paths-ignore`) / ハング上限の固定 (`timeout-minutes`) / 古い workflow の自動キャンセル (`concurrency`) を全リポ標準として強制し、新リポ立ち上げ時に初期不備が混入しない構造にする（[ADR-038](../adr/038-ci-execution-time-reduction.md)）。
+
+具体値・適用対象・job 種別ごとの timeout 上限は ADR-038、運用ルールは [`rules/principles.md`](../../rules/principles.md) `[base] CI方針` を参照。
 
 ---
 

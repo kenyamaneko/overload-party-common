@@ -43,14 +43,16 @@ Overload Partyは、クラウドインフラをテーマにした対戦型デジ
 
 Overload Party は複数の独立した Git リポジトリで構成される。`overload-party-common` がゲームデザイン・カードデータ・ドキュメントの Single Source of Truth（SSoT）となり、コード生成パイプラインで各リポに成果物を配布する。
 
-バックエンドは 9 つのサービス（gateway / account / matchmaking / shop / scenario / card / battle / news / support）で構成され、Battle のみ C# / .NET 10、それ以外はすべて Go 1.25 である。Gateway は WS 通信ハンドリング・認証検証・ルーティングに専念し、ドメインロジックは各サービスに閉じる。ドメインごとに独立したリポジトリ・デプロイ単位を持たせることで、変更リスクと責務を局所化する。
+バックエンドは 9 つのサービス（gateway / account / matchmaking / shop / scenario / card / battle / news / support）で構成され、Battle のみ C# / .NET 10、それ以外はすべて Go 1.25 である。ドメインごとに独立したリポジトリ・デプロイ単位を持たせ、変更リスクと責務を局所化する。
+
+gateway は **型契約と transport を分離する原則** に従う。client が消費する型 (REST レスポンス / WS event) は各ドメインサービスが直接公開する。一方 client の通信先は常に gateway 1 つで、認証・WS hub・各サービスへのパススルーを担う。型を所有サービスに集約することで gateway 側の二重実装を排除し、入口を gateway に絞ることで認証と接続管理を中央化する。詳細は [ADR-036](../adr/036-gateway-passthrough-and-service-public-api.md)。
 
 ### 2.1 リポジトリ一覧
 
 | リポジトリ | 役割 | 技術 | CI |
 |-----------|------|------|-----|
 | **common** | ゲーム設計・カードデータ・ドキュメント（SSoT） | YAML, Python, Markdown | DB マイグレーション自動適用 |
-| **gateway** | WS 通信ハンドリング・認証検証・ルーティング（クライアント単一入口） | Go 1.25, Gin, gorilla/websocket | lint → test → Docker push |
+| **gateway** | 認証（Firebase ID Token 検証・player_id 解決）・WS hub・各サービスへのパススルー・集約 API（クライアント単一入口） | Go 1.25, Gin, gorilla/websocket | lint → test → Docker push |
 | **account** | ユーザー登録・設定・パスワードリセット | Go 1.25 | lint → test → Docker push |
 | **matchmaking** | マッチキュー管理・マッチロジック・バトル引き渡し | Go 1.25 | lint → test → Docker push |
 | **shop** | 課金連携 (Apple/Google)・購入管理・フラグ付与・Webhook 受信 | Go 1.25 | lint → test → Docker push |
@@ -76,7 +78,9 @@ Overload Party は複数の独立した Git リポジトリで構成される。
 
 ### 2.2 コード生成パイプライン
 
-各リポが `data/models.yaml` を SSoT として型定義を持ち、`scripts/generate_types.py` で Go / C# / TS パッケージを生成する。ドキュメント生成（DATA_DESIGN.md, API_REFERENCE.md）は common の `packages/doc-tools` パッケージが提供する。main への push 時に CI が自動で publish する。詳細は各リポの README を参照。
+外部公開 API 契約の SSoT を **OpenAPI / AsyncAPI** に統一する。自前定義の YAML から OpenAPI / AsyncAPI に揃えることで、spec viewer / mock server / breaking change の差分検査 (`oasdiff` / `asyncapi-diff`) といった既成ツールをそのまま CI / 開発フローに組み込めるようになり、契約進化のリスクを機械的に検知できる。詳細な配布物・ツール選定は [ADR-034](../adr/034-api-contract-ssot-openapi-asyncapi-and-go-module-distribution.md) を参照。
+
+ゲーム定数（`game-design-constants` / `game-logic-constants` 等）は OpenAPI スキーマで素直に表現できないため独自 YAML SSoT を維持する。ドキュメント生成は common の `packages/doc-tools` パッケージが提供する。
 
 ### 2.3 リポジトリ間の依存グラフ
 
@@ -87,8 +91,8 @@ graph TD
     common["common<br/>SSoT: 定数 / ドキュメント"]
 
     common -->|"Go pkg"| gosvcs["Go サービス群<br/>gateway / account / matchmaking<br/>shop / scenario / card / news / support"]
-    common -->|"NuGet"| battle["battle (C#)"]
     common -->|"npm"| client["client (React)"]
+    battle["battle (C#)"]
 
     gosvcs -->|Docker| k8s["k8s (Kustomize deploy)"]
     battle -->|Docker| k8s
@@ -145,7 +149,7 @@ Battle Server (C# / .NET 10)
 ```
 
 **責務分離:**
-- **gateway** (Go): WS 通信ハンドリング、認証検証、内部サービスへのルーティング
+- **gateway** (Go): 認証（Firebase ID Token 検証・player_id 解決）、WS hub、各ドメインサービスへの REST パススルー、集約 API
 - **account** (Go): ユーザー登録・設定・パスワードリセット
 - **matchmaking** (Go): マッチキュー管理、マッチロジック、バトルへの引き渡し
 - **shop** (Go): 課金連携 (Apple/Google)、購入管理、フラグ付与、Webhook 受信
@@ -254,7 +258,8 @@ graph TD
     subgraph Pub/Sub Topics
         match_events["matchmaking-events"]
         onboarded_events["player-onboarded"]
-        faction_purchased_events["faction-purchased"]
+        card_pack_purchased_events["card-pack-purchased"]
+        faction_acquired_events["faction-acquired"]
         premium_events["premium-updated"]
         news_events["news-article-collected"]
     end
@@ -303,14 +308,16 @@ graph TD
     %% Pub/Sub: publish
     matchmaking -->|publish| match_events
     scenario -->|publish| onboarded_events
-    shop -->|publish| faction_purchased_events
+    shop -->|publish| card_pack_purchased_events
+    shop -->|publish| faction_acquired_events
     shop -->|publish| premium_events
     newsfeed_job -->|publish| news_events
 
     %% Pub/Sub: subscribe
     match_events -->|subscribe| gw
     onboarded_events -->|subscribe| account & card & gw
-    faction_purchased_events -->|subscribe| account & card & gw
+    card_pack_purchased_events -->|subscribe| card & gw
+    faction_acquired_events -->|subscribe| account & gw
     premium_events -->|subscribe| account & gw
     news_events -->|subscribe| news
 
@@ -320,7 +327,7 @@ graph TD
 ```
 
 **サーバー間通信:**
-- サービス間は内部 REST API（クラスタ内ネットワーク）。battle を含むドメインサービスは認証を行わず、gateway を信頼
+- サービス間は内部 REST API（クラスタ内ネットワーク）。Firebase ID Token 検証と player_id 解決は gateway が一元化し、各ドメインサービスは gateway が発行する HMAC 署名 JWT (`X-Internal-Auth`) を検証して player_id を取得する（[ADR-037](../adr/037-internal-auth-hmac-signed-jwt.md)、詳細は [APPLICATION.md §3.3](APPLICATION.md#33-内部サービス間認証)）
 - ドメインサービス間の連携は Pub/Sub に集約し、HTTP 直叩きは原則禁止。例外は scenario → account の onboarding 内 name 確定と再開判定のみ（[ADR-025](../adr/025-onboarding-name-via-rest-and-cross-service-http.md)）
 - 外部公開は gateway（クライアント向け WS/REST）を主とし、例外は以下:
   - **shop** の Webhook 受信（Apple / Google の課金サーバー通知）
@@ -329,7 +336,8 @@ graph TD
 - マッチ成立通知: matchmaking → Cloud Pub/Sub `matchmaking-events` → gateway
 - オンボーディング表示名確定: scenario → account 内部 REST `PUT /internal/v1/players/:playerId/name`（onboarding 内 name 入力ステップ。[ADR-025](../adr/025-onboarding-name-via-rest-and-cross-service-http.md)）
 - オンボーディング完了 / 初期ファクション付与 / 初期パック配布: scenario → Cloud Pub/Sub `player-onboarded` → account / card / gateway ([ADR-022](../adr/022-faction-selected-decomposition.md))
-- ファクション購入: shop → Cloud Pub/Sub `faction-purchased` → account / card / gateway ([ADR-022](../adr/022-faction-selected-decomposition.md))
+- カードパック購入: shop → Cloud Pub/Sub `card-pack-purchased` → card（GrantPack で配布）/ gateway（WS 副次通知）（[ADR-031](../adr/031-shop-products-normalization-and-faction-purchased-decomposition.md), [ADR-032](../adr/032-card-pack-introduction-and-grant-unification.md)）
+- ファクションアンロック: shop → Cloud Pub/Sub `faction-acquired` → account（player_factions INSERT）/ gateway（WS 一次通知）（[ADR-031](../adr/031-shop-products-normalization-and-faction-purchased-decomposition.md)）
 - プレミアム状態更新: shop → Cloud Pub/Sub `premium-updated` → account / gateway
 - ニュース記事収集: newsfeed (Cloud Run Job) → Cloud Pub/Sub `news-article-collected` → news
 - DB 所有権はサービス単位に分離（DATA_DESIGN.md 参照）
