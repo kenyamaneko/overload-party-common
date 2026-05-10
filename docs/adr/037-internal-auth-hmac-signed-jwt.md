@@ -17,7 +17,7 @@ shop の Phase 3c (overload-party-shop#70) で確立した方式は以下:
 - gateway は下流サービスへの HTTP 呼び出しに `X-Player-Id: <player_id>` という**平文 header** を付与
 - 各サービスは `r.Header.Get("X-Player-Id")` で受け取り、空なら 401 を返す
 
-card / newsfeed / account / scenario / news の Phase 3c でも同方式を踏襲する想定だった。
+card / account / scenario / news の Phase 3c でも同方式を踏襲する想定だった。
 
 ### 構造的問題
 
@@ -79,15 +79,15 @@ JWT header に `kid` (key ID) フィールドを最初から含める。複数�
 - 検証成功時、`sub` を context に `player_id` として書き込む
 - handler は `c.GetString("player_id")` 等で context から取得 (header から直接読まない)
 
-shop / card / newsfeed / account / scenario / news / matchmaking で同パターン。
+shop / card / account / scenario / news / matchmaking で同パターン。
 
 ### 5. 段階移行 (X-Player-Id との並走)
 
 shop は既に `X-Player-Id` を採用済。card 以降の Phase 3c でいきなり JWT 化すると整合が崩れるため、以下の段階で進める:
 
 - **Phase 1**: gateway + shop で HMAC JWT 化 (参照実装)。並走期は `X-Internal-Auth` を優先しつつ `X-Player-Id` も受け入れる
-- **Phase 2**: card / newsfeed Phase 3c はこの方式で着手
-- **Phase 3**: account / scenario / news / matchmaking 順次移行
+- **Phase 2**: card / news Phase 3c はこの方式で着手
+- **Phase 3**: account / scenario / matchmaking 順次移行
 - **Phase 4**: 全サービス移行完了後、`X-Player-Id` 受付を撤廃
 
 ## Consequences
@@ -181,13 +181,13 @@ env:
 - gateway: Firebase 検証後の middleware で JWT を発行し、各 client (shopclient / cardclient 等) が `X-Internal-Auth` を付けて送る
 - shop: 既存の `X-Player-Id` 経由を JWT middleware 経由に置換 (並走期は両方受け入れ)
 
-### Phase 2: card / newsfeed Phase 3c
+### Phase 2: card / news Phase 3c
 
-card / newsfeed は新規に公開 API を整備するタイミングで HMAC JWT 化を同時に実施する。`X-Player-Id` は実装しない。
+card / news は新規に公開 API を整備するタイミングで HMAC JWT 化を同時に実施する。`X-Player-Id` は実装しない。
 
 ### Phase 3: 残りサービス順次移行
 
-account / scenario / news / matchmaking で同パターン。
+account / scenario / matchmaking で同パターン。
 
 ### Phase 4: X-Player-Id 撤廃
 
