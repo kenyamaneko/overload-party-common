@@ -72,6 +72,3 @@ main への push で [.github/workflows/publish.yaml](.github/workflows/publish.
    - battle: `dotnet add package OverloadParty.GameDesignConstants`
    - client: `npm install @kenyamaneko/overload-party-game-design-constants@latest`
 
-## Claude プリセットの配信
-
-main への push で [.github/workflows/claude-presets-sync.yaml](.github/workflows/claude-presets-sync.yaml) が走り、[rules/](rules/) 配下を `.consumers.yaml` で宣言された各 consumer リポに同期 PR を作成する。レイヤ構成・onboarding 手順・規約は [rules/README.md](rules/README.md) を参照。
