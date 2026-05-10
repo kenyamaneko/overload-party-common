@@ -1,6 +1,6 @@
 # ADR-037: 内部サービス間認証を HMAC 署名 JWT (HS256) に切り替える
 
-- Status: Accepted
+- Status: Accepted (amended 2026-05-10)
 - Date: 2026-05-10
 - Deciders: kenyamaneko
 - Related: ADR-036 (本 ADR の前提)、[overload-party-common#39](https://github.com/kenyamaneko/overload-party-common/issues/39) (ADR-034 全体トラッカー)
@@ -81,14 +81,13 @@ JWT header に `kid` (key ID) フィールドを最初から含める。複数�
 
 shop / card / account / scenario / news / matchmaking で同パターン。
 
-### 5. 段階移行 (X-Player-Id との並走)
+### 5. 段階移行
 
-shop は既に `X-Player-Id` を採用済。card 以降の Phase 3c でいきなり JWT 化すると整合が崩れるため、以下の段階で進める:
+shop は既に `X-Player-Id` を採用済だが、shop が gateway より先行して稼働する運用は予定されていないため、shop でも並走期間は導入せず JWT 一本で着手する。各 Phase は以下の段階で進める:
 
-- **Phase 1**: gateway + shop で HMAC JWT 化 (参照実装)。並走期は `X-Internal-Auth` を優先しつつ `X-Player-Id` も受け入れる
+- **Phase 1**: gateway + shop で HMAC JWT 化 (参照実装)。shop は既存の `X-Player-Id` 受付を撤廃して JWT 一本に置換
 - **Phase 2**: card / news Phase 3c はこの方式で着手
 - **Phase 3**: account / scenario / matchmaking 順次移行
-- **Phase 4**: 全サービス移行完了後、`X-Player-Id` 受付を撤廃
 
 #### player_id 引き渡し経路の現状とゴール
 
@@ -100,12 +99,11 @@ shop は既に `X-Player-Id` を採用済。card 以降の Phase 3c でいきな
 | card / account / scenario | URL path (`/internal/v1/players/{playerID}/...`) |
 | matchmaking | JSON body フィールド |
 
-いずれも偽造耐性を持たない (path / body も header 同様にネットワーク境界依存)。本 ADR の最終形は **JWT `sub` クレームのみを唯一の信頼源** とする。各 Phase で path / body 経由の player_id も併せて撤廃する:
+いずれも偽造耐性を持たない (path / body も header 同様にネットワーク境界依存)。本 ADR の最終形は **JWT `sub` クレームのみを唯一の信頼源** とする。各 Phase で path / body / `X-Player-Id` 経由の player_id を一斉に撤廃する:
 
-- **shop (Phase 1)**: 既存の `X-Player-Id` を中間形として並走 → Phase 4 で撤廃
+- **shop (Phase 1)**: 既存の `X-Player-Id` 受付を撤廃して JWT `sub` に直接置換 (並走期間は導入しない)
 - **card / news (Phase 2)**: 新規 Phase 3c のため最初から JWT `sub` 一本で実装 (path / body の player_id は実装しない)
 - **account / scenario / matchmaking (Phase 3)**: 既存の path / body 引き渡しを **X-Player-Id を経由せず JWT `sub` に直接置換**。中間形を導入しない (二度手間を避ける)
-- **Phase 4**: shop の `X-Player-Id` 受付撤廃で全サービスが JWT `sub` 一本になる
 
 ## Consequences
 
@@ -128,7 +126,7 @@ shop は既に `X-Player-Id` を採用済。card 以降の Phase 3c でいきな
 
 - **CI で固定 dev 鍵**: prod 鍵を CI に置かなくて良いため漏洩面は増えない
 - **docker-compose**: 全サービスに同一 env を配るだけで済むため、ローカル環境構築は現状とほぼ同等
-- **段階移行**: Phase 1〜4 の段階で並走期間を設けるため、一括変更を避けられる
+- **段階移行**: 各サービスの Phase 3c タイミングと合わせて段階的に移行できるため、一括変更を避けられる
 
 ## ローカル / CI / E2E への影響
 
@@ -196,7 +194,7 @@ env:
 - `internal/auth/internalauth/` パッケージを共有形で実装 (gateway 側で発行関数、shop 側で検証 middleware)
   - 配置先: gateway リポ内 (発行) と shop リポ内 (検証)。共通化は ADR-034 の wire 共有原則に従い、各リポがそれぞれ実装。重複は許容
 - gateway: Firebase 検証後の middleware で JWT を発行し、各 client (shopclient / cardclient 等) が `X-Internal-Auth` を付けて送る
-- shop: 既存の `X-Player-Id` 経由を JWT middleware 経由に置換 (並走期は両方受け入れ)
+- shop: 既存の `X-Player-Id` 受付を撤廃し、JWT 検証 middleware 経由に一本化
 
 ### Phase 2: card / news Phase 3c
 
@@ -204,11 +202,7 @@ card / news は新規に公開 API を整備するタイミングで HMAC JWT �
 
 ### Phase 3: 残りサービス順次移行
 
-account / scenario / matchmaking で同パターン。path / body 経由の player_id 引き渡しを JWT `sub` への直接置換で撤廃する (X-Player-Id 中間形は導入しない)。
-
-### Phase 4: X-Player-Id 撤廃
-
-全サービスが JWT 方式に移行した後、`X-Player-Id` 受付ロジックを各サービスから削除する。この時点で全サービスが JWT `sub` 一本となる。
+account / scenario / matchmaking で同パターン。path / body 経由の player_id 引き渡しを JWT `sub` への直接置換で撤廃する (X-Player-Id 中間形は導入しない)。Phase 3 完了時点で全サービスが JWT `sub` 一本となる。
 
 ## Out of scope
 
@@ -223,4 +217,20 @@ account / scenario / matchmaking で同パターン。path / body 経由の play
 
 - ADR-036 (本 ADR の前提)
 - [overload-party-common#39](https://github.com/kenyamaneko/overload-party-common/issues/39) — ADR-034 全体トラッカー
-- Phase 1〜4 の各リポ issue は本 ADR マージ後に起票
+- Phase 1〜3 の各リポ issue は本 ADR マージ後に起票
+
+## Amendments
+
+### 2026-05-10: shop Phase 1 の X-Player-Id 並走廃止 + Phase 4 削除
+
+初版では shop が `X-Player-Id` を実装済の前提で「Phase 1 は `X-Internal-Auth` と `X-Player-Id` の両方を受け入れる並走期間」を設け、後続の Phase 4 で `X-Player-Id` 受付を撤廃する設計だった。
+
+shop は gateway より先行して稼働する運用が予定されておらず、並走期間を保つコスト (検証経路の二重化 / fallback テストの維持) が利得に見合わないため、Phase 1 から JWT 一本化する形に変更する。これにより全サービスで `X-Player-Id` 受付を持つフェーズが消えるため、Phase 4 (X-Player-Id 撤廃) は不要となり削除する。
+
+影響範囲:
+
+- §5 段階移行: タイトルの `(X-Player-Id との並走)` を削除、Phase 1 の並走期記述を撤廃、Phase 4 行を削除
+- §5 「player_id 引き渡し経路の現状とゴール」: shop (Phase 1) を「並走を経由せず JWT `sub` に直接置換」に更新、Phase 4 行を削除
+- §緩和策 段階移行: 「並走期間を設けるため」記述を「Phase 3c タイミングと合わせて段階的に移行」に変更
+- §実装計画 Phase 1: shop の並走期記述を撤廃
+- §実装計画 Phase 4 セクション: 削除
