@@ -1,0 +1,111 @@
+# overload-party 配下リポのレジストリ。common を primary 作業ディレクトリとして
+# 開発する際、編集対象ファイルのリポを判別し、当該リポに適用すべき lang / flow
+# preset を解決するために使用する。
+#
+# 詳細は overload-party-common/docs/adr/035-claude-code-workspace-centralization-and-rule-index.md
+# を参照。
+#
+# フィールド:
+#   name: リポジトリ名
+#   path: common からの相対パス
+#   lang: go | python | csharp | typescript | iac | none
+#         presets/claude/lang/<lang>/CLAUDE.md と 1:1 対応 (none はスキップ)
+#   flow: gitflow | githubflow | none
+#         presets/claude/flow/<flow>/CLAUDE.md と 1:1 対応 (none はスキップ)
+#         none は main 直 push を許容するリポ
+
+repos:
+  - name: overload-party-common
+    path: .
+    lang: python
+    flow: githubflow
+
+  - name: overload-party-shop
+    path: ../overload-party-shop
+    lang: go
+    flow: gitflow
+
+  - name: overload-party-gateway
+    path: ../overload-party-gateway
+    lang: go
+    flow: githubflow
+
+  - name: overload-party-account
+    path: ../overload-party-account
+    lang: go
+    flow: githubflow
+
+  - name: overload-party-card
+    path: ../overload-party-card
+    lang: go
+    flow: githubflow
+
+  - name: overload-party-matchmaking
+    path: ../overload-party-matchmaking
+    lang: go
+    flow: githubflow
+
+  - name: overload-party-scenario
+    path: ../overload-party-scenario
+    lang: go
+    flow: githubflow
+
+  - name: overload-party-news
+    path: ../overload-party-news
+    lang: go
+    flow: githubflow
+
+  - name: overload-party-support
+    path: ../overload-party-support
+    lang: go
+    flow: githubflow
+
+  - name: overload-party-battle
+    path: ../overload-party-battle
+    lang: csharp
+    flow: githubflow
+
+  - name: overload-party-client
+    path: ../overload-party-client
+    lang: typescript
+    flow: githubflow
+
+  - name: overload-party-ops
+    path: ../overload-party-ops
+    lang: python
+    flow: githubflow
+
+  - name: overload-party-infra
+    path: ../overload-party-infra
+    lang: iac
+    flow: githubflow
+
+  - name: overload-party-k8s
+    path: ../overload-party-k8s
+    lang: iac
+    flow: githubflow
+
+  - name: overload-party-newsfeed
+    path: ../overload-party-newsfeed
+    lang: python
+    flow: none
+
+  - name: overload-party-analytics
+    path: ../overload-party-analytics
+    lang: python
+    flow: none
+
+  - name: overload-party-assets
+    path: ../overload-party-assets
+    lang: none
+    flow: none
+
+  - name: overload-party-e2e
+    path: ../overload-party-e2e
+    lang: typescript
+    flow: none
+
+  - name: overload-party-web
+    path: ../overload-party-web
+    lang: none
+    flow: none
