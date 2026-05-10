@@ -1,3 +1,5 @@
+> NOTE: このファイルは原則として人間が運用する。例外的に許可があった場合のみClaude Codeが修正しても良い。
+
 ## [lang/iac] Terraform 方針
 
 - `variable` ブロックで `default` を使わない。環境ごとの値は呼び出し側 (`environments/<env>/` 等) で必ず明示指定する
