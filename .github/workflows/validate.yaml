@@ -44,8 +44,13 @@ jobs:
         run: pip install -e packages/doc-tools
       - name: Install codegen-tools
         run: pip install -e packages/codegen-tools
-      - name: Run tests
-        run: python3 -m pytest scripts/ packages/doc-tools/tests/ packages/codegen-tools/tests/ -v
+      # 同一起動でまとめて実行すると別パッケージの tests モジュールが衝突するため、パッケージ単位に分割する。
+      - name: Run tests (scripts)
+        run: python3 -m pytest scripts/ -v
+      - name: Run tests (doc-tools)
+        run: python3 -m pytest packages/doc-tools/tests/ -v
+      - name: Run tests (codegen-tools)
+        run: python3 -m pytest packages/codegen-tools/tests/ -v
 
   codegen-sync:
     name: Codegen sync check
