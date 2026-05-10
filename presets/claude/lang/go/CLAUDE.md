@@ -11,3 +11,7 @@
 ## [lang/go] テスト方針
 
 - テストコードはテーブル駆動 (`t.Run` でケース分岐) で書く
+
+## [lang/go] コード生成
+
+- 型コードは `data/models.yaml` を SSoT とし、`python3 scripts/generate_types.py` で再生成する
