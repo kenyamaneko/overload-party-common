@@ -146,14 +146,15 @@ Docker daemon / service container 互換性を埋めるリファクタコスト�
 
 ### 緩和策
 
-- 共通テンプレ (paths-ignore のリスト・timeout 表) を `presets/claude/` 配下にドキュメント化し、新規 workflow / 新規リポでも初期から適用できるようにする
+- 適用ルールを `rules/principles.md` に 1 行追記し、値の根拠は本 ADR を参照させる。新規 workflow / 新規リポでも初期から適用される
 - timeout が頻繁に当たる job は個別に上限引き上げ。3 回以上当たるなら根本対処 (テスト分割 / cache / 並列化)
 
 ## 移行計画
 
-### Phase 1: 共通テンプレ整備
+### Phase 1: 適用ルールの追記
 
-- `presets/claude/` 配下に「CI workflow 標準項目」のドキュメントを追加 (paths-ignore リスト・timeout 表・concurrency 雛形)
+- `rules/principles.md` に `[base] CI方針` セクションを新設し、本 ADR の Decision で定めた施策 (paths-ignore / timeout-minutes / concurrency) を運用ルールとして箇条書きで追記する
+- 値の根拠は本 ADR の Decision セクションを SSoT として参照する (短命なテンプレファイルは作らない)
 - 適用方針: PR トリガーの CI workflow と、push (main / develop / release) トリガーの deploy workflow が対象
 
 ### Phase 2: 重い workflow から先行適用

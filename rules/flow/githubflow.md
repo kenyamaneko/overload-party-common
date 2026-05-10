@@ -1,3 +1,5 @@
+> NOTE: このファイルは原則として人間が運用する。例外的に許可があった場合のみClaude Codeが修正しても良い。
+
 # Branching Strategy (GitHub Flow)
 
 GitHub Flow を採用するリポ共通のブランチ戦略。ops / infra / k8s 系リポなど、環境別の永続ブランチを持たず main 一本で運用するリポで採用する。
