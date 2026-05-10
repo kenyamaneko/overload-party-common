@@ -157,26 +157,23 @@ Docker daemon / service container 互換性を埋めるリファクタコスト�
 - 値の根拠は本 ADR の Decision セクションを SSoT として参照する (短命なテンプレファイルは作らない)
 - 適用方針: PR トリガーの CI workflow と、push (main / develop / release) トリガーの deploy workflow が対象
 
-### Phase 2: 重い workflow から先行適用
+### Phase 2: 全 workflow を一括改修
 
-各サービスリポの `ci.yaml` (10 本) を優先。1 リポずつ PR 起票:
+全リポの全 workflow を対象に施策を一括適用する。リポ単位で 1 issue を起票し、PR は workflow ごとまたは一括のいずれかリポ側で判断する。
 
-- `scenario`, `shop`, `card`, `gateway`, `account` (Go + Firestore emulator + image-scan)
-- `battle` (.NET + emulator), `matchmaking` (Go + Redis), `newsfeed` (Python + Valkey)
-- `client` (npm only), `analytics` (Go + Cloud Functions deploy)
+workflow 種別ごとの適用方針:
 
-### Phase 3: 残り workflow 適用
+- **PR トリガー (ci / validate)**: paths-ignore + timeout-minutes + concurrency `cancel-in-progress: true` + 各ステップに `name`
+- **push トリガー (deploy)**: timeout-minutes + concurrency `cancel-in-progress: false` (中断不可) + 各ステップに `name`
+- **publish / release-tag / workflow_dispatch のみ**: timeout-minutes + 各ステップに `name` (concurrency は既設のものは維持)
+- **schedule (ops の定期実行)**: timeout-minutes + concurrency (重複実行防止) + 各ステップに `name`
 
-- 各リポの deploy / publish / release-tag / validate workflow に timeout と concurrency を追加 (paths は元々狭いものが多いため必要に応じて)
-
-### Phase 4: 効果測定
-
-適用 1 ヶ月後に GitHub Actions の billing API で月間 minutes を測定し、目標 (20〜30% 削減) との乖離を評価。乖離が大きい場合は追加施策 (Phase 5: キャッシュ・並列化の本格適用) を別 ADR で検討。
+paths-ignore は PR トリガーのみ意味があるため、push paths trigger / schedule では適用しない。
 
 ## Out of scope
 
 - サードパーティ runner (Blacksmith / Ubicloud / Cloud Run Jobs 自作) の採用 — 本 ADR で却下
-- 個別 workflow の構造リファクタ (Firestore emulator 起動の高速化、Testcontainers 戦略変更など) — 効果測定で必要と判断されたら別 ADR
+- 個別 workflow の構造リファクタ (Firestore emulator 起動の高速化、Testcontainers 戦略変更など) — 必要と判断されたら別 ADR
 - GitHub プラン引き上げ — 本 ADR の最適化後に必要なら検討
 - 個人アカウント → organization 移管 — 本 ADR とは独立した検討事項
 
