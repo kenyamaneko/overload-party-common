@@ -84,6 +84,20 @@ battle 側のインメモリキャッシュの更新戦略は以下のとおり�
 - **WebSocket API**（クライアント ↔ gateway）: PvP マッチメイキング、リアルタイム対戦、スタンプ送信など
 - **内部 REST API**（サービス間通信、クラスタ内部のみ）: gateway ↔ account / card / shop / scenario / matchmaking / battle / news / support、および battle ↔ card など。ドメインサービス間の HTTP 直叩きは原則禁止し、連携は Pub/Sub に集約する。例外として scenario の onboarding 内 name 確定と再開判定に限り scenario → account の直叩きを許容する（[ADR-025](../adr/025-onboarding-name-via-rest-and-cross-service-http.md)）
 
+### 2.1 契約と実装の分離
+
+外部公開 API 契約と内部実装は **SSoT を分離して独立に進化させる**（[ADR-034](../adr/034-api-contract-ssot-openapi-asyncapi-and-go-module-distribution.md)）。
+
+- **wire は後方互換、domain は内部進化が必要**: subscriber が消費する wire 型は一度公開したフィールドを保持し続けたい一方で、domain 型は Go の型システム (custom enum / 値オブジェクト) を活かして strict に進化させたい。両者は構造的に対立するため、形状一致を強制せず `presenter` 層で境界変換する設計を採る
+- **契約 SSoT を OpenAPI / AsyncAPI に揃える**: spec viewer / mock / 差分検査 (`oasdiff` / `asyncapi-diff`) といった既成ツールを CI / 開発フローに組み込めるようにし、契約進化のリスクを機械的に検知する
+- **物理識別子は infra が SSoT**: Pub/Sub topic 名のような環境依存の物理識別子は Terraform を SSoT とし、app コードに焼き込まない。一方、payload に乗る discriminator (`event_type`) や schema は契約 SSoT 側に置く
+
+client が消費する型契約は **各サービスが直接公開** する（[ADR-036](../adr/036-gateway-passthrough-and-service-public-api.md)）。gateway openapi に残るのは auth / spectate / static / 集約 API のみで、それ以外は型契約を持たず transport だけパススルーする。client UX を考慮した API 設計の主体を所有サービスに置くことで、gateway 側の二重実装と再定義を排除する。
+
+ゲーム定数（`game-design-constants` / `game-logic-constants` 等）は不変ルールであって API 契約ではないため、独自 YAML SSoT を維持する。
+
+具体的な配布物・ファイル配置・ツール・移行 Phase は ADR-034 / ADR-036 と各リポの README を参照。
+
 各エンドポイントの詳細は以下を参照する。
 
 | 種別 | ドキュメント |
@@ -365,7 +379,7 @@ webhook 受信・購入 API 受信のいずれの経路でも、shop は同一�
 | 接続登録 | `playerID → WebSocket接続` のマップを gateway Pod 内インメモリ管理 |
 | ゲーム参加 | `gameID → []playerID` のマップを gateway Pod 内で管理 |
 | ブロードキャスト | gateway がゲーム内の全プレイヤーに状態更新を送信 |
-| ドメイン処理の委譲 | gateway は認証・WS ルーティング・ブロードキャストに専念し、ドメイン処理（ゲームロジック・マッチメイキング・カード・シナリオ等）は対応する内部サービス (battle / matchmaking / card / scenario / account / shop) に内部 REST で委譲する |
+| ドメイン処理の委譲 | gateway は認証・WS hub・集約 API・各サービスへのパススルーに専念し、ドメイン処理（ゲームロジック・マッチメイキング・カード・シナリオ等）は対応する内部サービス (battle / matchmaking / card / scenario / account / shop) に委譲する。client 公開 API の型契約は各サービスが直接公開する（[ADR-036](../adr/036-gateway-passthrough-and-service-public-api.md)） |
 | スレッドセーフティ | `sync.RWMutex` で同時アクセスを制御 |
 
 内部サービスとの通信方式は 4.1 の全体構成、および各サービスの内部 REST 契約（[internal/](internal/)）を参照。
