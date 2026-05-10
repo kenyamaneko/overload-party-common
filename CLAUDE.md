@@ -3,8 +3,6 @@
 このリポは overload-party 配下の全リポを横断する開発拠点である。primary 作業ディレクトリは
 本リポ、編集対象の他リポは additional working directory として参照する。
 
-設計の経緯と全体像は [docs/adr/035-claude-code-workspace-centralization-and-rule-index.md](docs/adr/035-claude-code-workspace-centralization-and-rule-index.md) を参照。
-
 @presets/claude/base/CLAUDE.md
 
 ## ファイル編集前の preset 適用手順
