@@ -44,10 +44,7 @@ jobs:
         run: pip install -e packages/doc-tools
       - name: Install codegen-tools
         run: pip install -e packages/codegen-tools
-      # 各 tests/ ディレクトリは __init__.py を持つため、複数を同一 pytest 起動で
-      # 渡すと最初に見つかった pyproject.toml が rootdir に固定され、別パッケージの
-      # `tests` モジュールが衝突して `ModuleNotFoundError: No module named 'tests.x'`
-      # を起こす。パッケージごとに独立起動して回避する。
+      # 同一起動でまとめて実行すると別パッケージの tests モジュールが衝突するため、パッケージ単位に分割する。
       - name: Run tests (scripts)
         run: python3 -m pytest scripts/ -v
       - name: Run tests (doc-tools)
