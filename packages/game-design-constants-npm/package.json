@@ -15,7 +15,11 @@
   "publishConfig": {
     "registry": "https://npm.cloudsmith.io/keyandnotes/overload-party-npm/"
   },
-  "repository": "https://github.com/kenyamaneko/overload-party-common",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kenyamaneko/overload-party-common.git",
+    "directory": "packages/game-design-constants-npm"
+  },
   "devDependencies": {
     "typescript": "^5.8.0"
   }
