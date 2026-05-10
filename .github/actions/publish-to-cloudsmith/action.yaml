@@ -36,6 +36,7 @@ runs:
           --source "https://nuget.cloudsmith.io/keyandnotes/overload-party-nuget/v3/index.json" \
           --api-key "${CLOUDSMITH_TOKEN}"
 
+    # path 引数を渡すと npm が scoped package shorthand と誤解釈するため、package directory に cd して引数なしで publish する。
     - name: Publish npm package to Cloudsmith
       if: inputs.format == 'npm'
       shell: bash
@@ -47,5 +48,5 @@ runs:
           echo "//npm.cloudsmith.io/keyandnotes/overload-party-npm/:_authToken=${CLOUDSMITH_TOKEN}"
           echo "//npm.cloudsmith.io/keyandnotes/overload-party-npm/:always-auth=true"
         } >> "${HOME}/.npmrc"
-        npm publish "${PACKAGE_PATH}" \
-          --registry "https://npm.cloudsmith.io/keyandnotes/overload-party-npm/"
+        cd "${PACKAGE_PATH}"
+        npm publish --registry "https://npm.cloudsmith.io/keyandnotes/overload-party-npm/"
