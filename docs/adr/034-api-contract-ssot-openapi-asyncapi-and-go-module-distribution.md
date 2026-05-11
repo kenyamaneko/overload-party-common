@@ -1,6 +1,6 @@
 # ADR-034: 外部 API 契約 SSoT を OpenAPI / AsyncAPI に統一し、配布物を Go / npm モジュールに集約する
 
-- Status: Accepted
+- Status: Accepted (Amended 2026-05-09: Cloudsmith 配布、WS-AsyncAPI、client scope を追加)
 - Date: 2026-05-09
 - Deciders: kenyamaneko
 - Related: [overload-party-common#39](https://github.com/kenyamaneko/overload-party-common/issues/39) (全体トラッカー), [overload-party-shop#66](https://github.com/kenyamaneko/overload-party-shop/issues/66) (Phase 1: shop 移行)
@@ -31,16 +31,18 @@
 
 ## Decision
 
-**外部公開 API 契約の SSoT を業界標準仕様 (OpenAPI 3.x / AsyncAPI 3.0) に統一し、配布物を Go モジュール (および必要に応じ npm モジュール) に集約する。NuGet 配布チャンネルは廃止する。**
+**外部公開 API 契約の SSoT を業界標準仕様 (OpenAPI 3.x / AsyncAPI 3.0) に統一し、配布物を Go モジュール (および必要に応じ npm モジュール) に集約する。NuGet と npm の cross-repo 配布チャンネルは GitHub Packages から Cloudsmith に切替え、battle 内の intra-repo self-NuGet は ProjectReference 化で廃止する。**
 
 ### 適用範囲
 
 本 ADR の **OpenAPI / AsyncAPI 移行**は overload-party 配下の全サービスリポの **外部公開 API 契約**を対象とする。具体的には:
 
-- REST エンドポイント (path / method / request / response / errors)
-- wire 型 (request body / response body / webhook payload)
-- Pub/Sub イベント (channel / message / payload schema / `event_type` discriminator)
+- REST エンドポイント (path / method / request / response / errors) — OpenAPI 3.x
+- wire 型 (request body / response body / webhook payload) — OpenAPI 3.x の `components/schemas`
+- Pub/Sub イベント (channel / message / payload schema / `event_type` discriminator) — AsyncAPI 3.0
+- **WebSocket プロトコル** (gateway ↔ client、battle 由来のゲーム状態フレーム等) — **AsyncAPI 3.0 の WebSocket binding** で表現する。OpenAPI は WS を表現できないため AsyncAPI 側に寄せる。`gateway/data/ws_constants.yaml` のメッセージ型集合や `battle/packages/game-state-*/` のフレーム payload はこの一環として AsyncAPI に移行
 - 上記に登場する **外部に流出する enum** (例: `Platform = "ios" | "android"`, `ProductType = "faction_set" | ...`)
+- **client (overload-party-client) の npm 依存全般** も本 ADR の scope。`@kenyamaneko/*` 名前空間の npm パッケージは GitHub Packages から Cloudsmith に切替え、生成元 spec が OpenAPI/AsyncAPI に変わる場合は併せて追従
 
 **対象外** (本 ADR では現行構造を据え置く):
 
@@ -82,13 +84,30 @@
 - 既存 `packages/game-state-npm` の役割は `data/openapi.yaml` から `openapi-typescript` で生成する `packages/api-{service}-ts` 等に置き換える
 - client が現在依存している 6 つの `@kenyamaneko/*` npm パッケージのうち、API 契約由来のものは本移行で OpenAPI 由来生成に置換する。ゲーム定数由来 (`game-design-constants`, `game-logic-constants`) は据え置き
 
-#### NuGet モジュール (廃止して ProjectReference 化)
+#### NuGet / npm 配布 (intra-repo は ProjectReference 化、cross-repo は Cloudsmith に移行)
 
-`packages/*-dotnet` の NuGet 配布チャンネルを **完全廃止**する。対象は API 契約用 (`api-battle-rpc-dotnet`, `game-state-dotnet`) およびゲーム定数用 (`game-logic-constants-dotnet`, `game-design-constants-dotnet`) を含む全 dotnet パッケージ。
+dotnet と npm の cross-repo 配布チャンネルを **GitHub Packages から Cloudsmith に全面移行**する。あわせて intra-repo の self-NuGet (battle が自リポを自リポに NuGet で配るパターン) は ProjectReference 化で廃止する。
 
-廃止する理由は、`PackageReference` の消費先が battle 自身の csproj に限られており、**他リポからの NuGet 参照が一件も存在しない**ため (Go services は Go module 経由、TS client は npm 経由で別途消費しているため、NuGet パッケージ化する必要がない)。
+レジストリ選定の経緯 (NuGet 完全廃止案 → AR 一本化案 → Cloudsmith) は末尾の「Update 2026-05-09」を参照。
 
-代替として、battle リポ内では sln 内ローカル参照 (`<ProjectReference>`) で csproj 同士の依存を解決する。例:
+##### 動機
+
+GitHub Packages を利用する上で構造的な認証問題がある:
+
+- kenyamaneko は **User account** であり、user-owned packages は **GitHub App token で読めない** (ADR-033 限界事項として記載済み)
+- 結果として NuGet feed の認証は PAT 必須で、ADR-033 で全廃した PAT 運用パターンに逆戻りしていた
+- `dotnet add package` には User-owned NuGet feed の限界が無いため、レジストリ側を切り替えれば PAT を全廃できる
+
+Cloudsmith の特徴:
+
+- SaaS package registry で 28 format に対応 (NuGet / npm / Docker / Maven / Python / Go 等)
+- 認証は OIDC native で、**GitHub Actions から PAT 不要で short-lived token を取得**できる
+- public repository として運用すれば Cloudsmith Free (Core) tier の範囲 (storage 500MB / delivery 1GB/月) で賄える見込み
+- ストレージ region は `sg-singapore` (日本から最寄り)
+
+##### intra-repo: ProjectReference 化 (battle 内 self-NuGet を廃止)
+
+battle が自リポ内の `packages/*-dotnet/` を NuGet 経由で自分自身に参照しているのは無意味。sln 内ローカル参照に置換する:
 
 ```xml
 <!-- 旧: src/OverloadParty.Battle.Server/OverloadParty.Battle.Server.csproj -->
@@ -108,13 +127,40 @@
 
 `OverloadParty.Battle.slnx` 内で `packages/*-dotnet/*.csproj` を solution-level に追加する形になる。
 
-廃止に伴い以下も撤去する:
+##### cross-repo: Cloudsmith に切替 (NuGet と npm 双方)
 
-- `battle/.github/workflows/publish.yaml` の `dotnet pack` / `dotnet nuget push` ステップ
-- `nuget.config` ファイルおよび GitHub Packages の dotnet feed 認証関連
-- battle CI で dotnet feed 認証用に使用していた PAT (例: `COMMON_PKG_FETCH`)
+cross-repo の dotnet / npm 依存 (例: battle が common の `OverloadParty.GameDesignConstants` を消費、client が common / battle / shop 等の `@kenyamaneko/*` npm パッケージを消費) は Cloudsmith を経由する:
 
-C# 側 csproj およびソース (`packages/*-dotnet/`) 自体は **ファイルとして残す**。発行先が NuGet feed から sln 内 ProjectReference に変わるだけで、C# 内部消費の必要性自体は維持される (battle の minimal API は controller ハンドラ引数に DTO 型をバインドするため、何らかの C# 型が server 内に必要)。
+```
+[Publisher リポ]
+  └─ CI: Cloudsmith OIDC で token 取得 → dotnet nuget push / npm publish to Cloudsmith
+
+[Consumer リポ]
+  └─ CI: Cloudsmith OIDC で token 取得 → nuget.config / .npmrc を Cloudsmith endpoint に向け restore/install
+```
+
+実装上の方針:
+
+- Cloudsmith リソースを `overload-party-infra` の Terraform module (`providers/cloudsmith/`) でプロビジョン (NuGet repo / npm repo / 必要に応じ Go repo)。Google Cloud リソース専用の `providers/google-cloud/` とは別ディレクトリで分離管理する
+- Cloudsmith service account と OIDC trust を整備し、publisher 用 (write) と consumer 用 (read) を分離 (`overload-party-publisher` / `overload-party-reader`)。OIDC trust scope は per-repo の明示リストで限定する
+- `overload-party-common` に `setup-cloudsmith-auth` および `publish-to-cloudsmith` の **共通 composite action** を追加 (ADR-033 の `setup-go-private-modules` と同パターン)。各リポはこの composite を import するだけで Cloudsmith 認証が完了する
+- `nuget.config` は **Cloudsmith endpoint (`https://nuget.cloudsmith.io/keyandnotes/overload-party-nuget/v3/index.json`) を指す形に書き換え** (撤去ではない)。`.npmrc` も同様に `https://npm.cloudsmith.io/keyandnotes/overload-party-npm/` を指す
+- 認証 PAT (`COMMON_PKG_FETCH` 等) は **全廃**。OIDC が代替
+
+##### 廃止される認証経路 / 撤去されるもの
+
+- 各リポの `nuget.config` における `https://nuget.pkg.github.com/kenyamaneko/...` フィード設定
+- `.github/workflows/*.yaml` における GitHub Packages の dotnet/npm 認証ステップ (`actions/setup-dotnet` の `nuget-auth-token` パラメタ等)
+- 各リポの `.github/scripts/` 配下にある GitHub Packages 向け auth wrapper
+- `COMMON_PKG_FETCH` などパッケージ取得用 PAT (organization secret / vars)
+
+##### Go module の扱い
+
+Go module は ADR-033 で `setup-go-private-modules` composite action 経由の App token 認証が確立済みで、現状で破綻していない。本 ADR 改訂の **Cloudsmith 移行は Go については任意 (将来的選択肢として残す)**。Go module だけ GitHub の git protocol で引き続き ADR-033 経路を使ってよい。
+
+##### C# 側 csproj とソースの所在は不変
+
+`packages/*-dotnet/` のディレクトリ・csproj 構成は維持。発行先が GitHub Packages から Cloudsmith に変わるだけで、C# 側からの consumption 体験 (`<PackageReference>` で書く) は変わらない。
 
 API 契約用の `packages/api-{service}-dotnet/` のソース生成は OpenAPI (NSwag) に切替、ゲーム定数用の `packages/game-*-constants-dotnet/` は現行 codegen を維持する。
 
@@ -212,7 +258,7 @@ battle は現状 fake を持っていないため、本移行を機に追加す�
 
 - **業界標準スキーマでの相互運用性**: OpenAPI / AsyncAPI に乗ることで、spec viewer (Swagger UI / Redoc / AsyncAPI Studio)、mock server (Prism)、contract test (Pact) 等の OSS エコシステムを活用できる
 - **自前 codegen 保守からの撤退**: `overload-party-codegen-tools` および `battle/scripts/generate_types.py` の API 契約用途部分を廃止できる。oapi-codegen / NSwag / openapi-typescript / asyncapi-codegen はそれぞれデファクトであり、コミュニティ保守に委ねられる
-- **NuGet 配布チャンネルの撤廃**: GitHub Packages の dotnet feed、`nuget.config`、`publish.yaml` の dotnet pack/push ステップ、CI 認証 (PAT 経由の NuGet feed 認証) が一斉に不要になる
+- **GitHub Packages 経由の dotnet/npm 配布から離脱**: User-owned packages 制約による PAT 依存 (ADR-033 で全廃したパターンへの逆戻り) を解消。Cloudsmith の OIDC 認証で short-lived token に統一され、`COMMON_PKG_FETCH` 等の package 取得用 PAT を全廃できる
 - **domain と wire の独立進化**: 形状一致縛りが消えるため、wire に schema 進化フィールドを追加したり、domain で型を強くしたりが片方ずつ実施可能になる
 - **Topic 名の三重管理解消**: infra → ConfigMap → env var の一系統に集約。app から定数が消える
 - **client (TS) の契約源一元化**: web client が依存する型のうち API 契約由来のものは OpenAPI 派生に揃う
@@ -231,7 +277,7 @@ battle は現状 fake を持っていないため、本移行を機に追加す�
 
 - **Phase 分けで進める** (リポ単位で独立に実施可能):
   - **Phase 1 (shop)**: `data/openapi.yaml` 作成 / wire 型を OpenAPI codegen 由来に切替 / domain → wire mapper 層導入 / `data/asyncapi.yaml` 作成 / Pub/Sub 型を AsyncAPI codegen 由来に切替 / Topic 名定数を env var 取得に変更 / oasdiff・asyncapi-diff CI 追加 / import 元 (card / account / gateway) の追従 PR
-  - **Phase 2 (battle)**: `data/openapi.yaml` 作成 / wire 型を OpenAPI codegen 由来に切替 (Go + C# + TS) / NuGet 廃止 → 内部 csproj を `<ProjectReference>` 化 / `publish.yaml` から dotnet pack/push 削除 / `nuget.config` 撤去 / fake 新規追加 / import 元 (gateway / client) の追従 PR
+  - **Phase 2 (battle)**: `data/openapi.yaml` 作成 / wire 型を OpenAPI codegen 由来に切替 (Go + C# + TS) / intra-repo NuGet を `<ProjectReference>` 化 / cross-repo NuGet と npm の publish 先を Cloudsmith に切替 (`publish.yaml` 改修 + `nuget.config` / `.npmrc` を Cloudsmith endpoint に書き換え) / fake 新規追加 / import 元 (gateway / client) の追従 PR
   - **Phase 3 (その他サービス)**: account / card / scenario / gateway 等を順次同パターンで移行
 - **各 Phase 内で旧生成物と新生成物の並走期間は設けない**: 本番稼働前であり互換性配慮不要のため、リポ単位で一気に切替える
 - **AsyncAPI codegen は spike を先行**: Phase 1 着手前に shop 1 イベント分で生成物を確認し、`packages/api-shop` で許容できる出力スタイルかを判定。許容できない場合は自前 emitter (現 codegen-tools の Go emitter 流用) を一時併用する選択肢を残す
@@ -282,6 +328,56 @@ Phase 3b 着手時に各 npm パッケージの中身を実調査した結果、
 
 ## 関連 issue
 
-- [overload-party-common#39](https://github.com/kenyamaneko/overload-party-common/issues/39) — ADR-034 全体トラッカー
-- [overload-party-shop#66](https://github.com/kenyamaneko/overload-party-shop/issues/66) — Phase 1: shop の OpenAPI/AsyncAPI 化
-- Phase 2 (battle) / Phase 3 (その他サービス) の issue は Phase 1 完了後に起票し、本 ADR と全体トラッカーに追記する
+- [overload-party-common#39](https://github.com/kenyamaneko/overload-party-common/issues/39) — ADR-034 全体トラッカー (Phase 別 issue リンクは tracker 側で集約)
+
+## Update 2026-05-09 — Cloudsmith 配布 / WS-AsyncAPI / client scope
+
+本 amendment では以下の 3 点を追加する:
+
+1. **NuGet / npm の cross-repo 配布チャンネルを Cloudsmith に切替** (本文「NuGet / npm 配布」セクションで詳細)。GitHub Packages 経由の dotnet/npm 配布を全廃する
+2. **WebSocket プロトコルは AsyncAPI 3.0 で記述** (本文「適用範囲」セクションで明記)。OpenAPI は WS を扱えない。`gateway/data/ws_constants.yaml` および `battle/packages/game-state-*/` の WS payload schemas は Phase 2/3b で AsyncAPI に移行する
+3. **client (overload-party-client) を本 ADR scope に正式に組み込む** (本文「適用範囲」セクションで明記)。`@kenyamaneko/*` の 6 npm パッケージを GitHub Packages から Cloudsmith に切替、AsyncAPI/OpenAPI 由来の生成物に追従させる
+
+### 経緯 (NuGet 完全廃止案 → AR 一本化案 → Cloudsmith)
+
+初版 ADR-034 (NuGet 完全廃止) → 中間案 (Artifact Registry に一本化) → 最終案 (Cloudsmith) へと判断が変遷した。両中間判断とも稼働には至っていないが、再検討時の参照のため経緯を残す。
+
+#### 中間判断 1: cross-repo dotnet 依存の発覚で「NuGet 完全廃止」を撤回
+
+shop Phase 1 完了後、battle Phase 2 で **cross-repo dotnet 依存** (battle の C# csproj が `overload-party-common/packages/game-design-constants-dotnet/` を NuGet 経由で消費) という、shop では遭遇しなかったケースが顕在化した。初版の「NuGet 完全廃止 + ProjectReference 化」方針は intra-repo の self-NuGet を念頭に置いた論拠で、cross-repo dotnet には適用できないことが判明。配布チャンネル自体を再検討する必要が生じた。
+
+#### 中間判断 2: Artifact Registry 一本化案 (採用に至らず)
+
+GitHub Packages の User-owned packages 制約 (App token で読めない / PAT 必須) を回避し、かつ Google Cloud を既に本番インフラとして利用している点から、Google Cloud Artifact Registry (AR) を NuGet / npm の cross-repo 配布チャンネルに一本化する案を一度採用した。WIF (Workload Identity Federation) で short-lived token を取得して PAT を全廃する構想だった。
+
+#### 最終判断: AR が NuGet 未対応のため Cloudsmith に変更
+
+`overload-party-infra` で AR プロビジョン作業 ([overload-party-infra#22](https://github.com/kenyamaneko/overload-party-infra/issues/22)) を開始したところ、**Google Cloud Artifact Registry が NuGet を native format としてサポートしていない**ことが判明した:
+
+- AR がサポートする format は `DOCKER / MAVEN / NPM / PYTHON / APT / YUM / GENERIC / GO / KFP` の 9 種類のみ
+- NuGet は 2021 年から open feature request 状態 ([Google Issue Tracker #180810242](https://issuetracker.google.com/issues/180810242))。2026-05 時点で未実装
+- GENERIC format に .nupkg を置くワークアラウンドは、NuGet client (`dotnet add package` / `dotnet restore`) が V2/V3 protocol を喋れず読めないため成立しない (CLAUDE.md「ワークアラウンド禁止」にも抵触)
+
+つまり「言語横断で同一機構」という AR 一本化の前提は npm では成立するが NuGet では成立せず、技術的に不可能。代わりに 28 format 対応かつ OIDC native の SaaS である **Cloudsmith** を採用した (AR は本 ADR scope の NuGet/npm 配布用途では採用しない。Docker container image など他用途は別話)。
+
+### 影響を受ける既存決定 / 撤回
+
+- (初版の) 「NuGet 完全廃止」 → 「intra-repo self-NuGet は ProjectReference 化、cross-repo は Cloudsmith 経由」に絞り直し
+- (初版の) 「nuget.config 撤去」 → 「Cloudsmith endpoint を指す形に書き換え」に変更
+- (初版の) 「NuGet 認証 PAT (`COMMON_PKG_FETCH`) revoke」 → 引き続き revoke (代替が Cloudsmith OIDC になっただけで方針は維持)
+
+### 必要な前提作業
+
+Phase 2 / Phase 3b 着手前に以下が完了している必要がある:
+
+- `overload-party-infra` で Cloudsmith リソースを Terraform プロビジョン (NuGet repo + npm repo + service account + OIDC trust)。管理ディレクトリは `providers/cloudsmith/`
+- `overload-party-common` に `setup-cloudsmith-auth` / `publish-to-cloudsmith` 共通 composite action を追加
+- 各 publisher リポ (common / battle / shop / 各サービス) の publish workflow を Cloudsmith 向けに書き換え
+
+### コスト・運用上の留意点
+
+- Cloudsmith Free (Core) tier: storage 500MB / delivery 1GB/月 (overage なし、超過で停止)
+- Pro plan: $89/月 (overage $1.50/GB)
+- 本プロジェクトでは **public repository** として運用する (overload-party の source code が GitHub 公開のため、package を private にする必然性が薄く、Free tier で運用可能)
+- storage region は `sg-singapore` (日本から最寄り)
+
