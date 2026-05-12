@@ -81,31 +81,20 @@ battle 側のインメモリキャッシュの更新戦略は以下のとおり�
 
 ## 2. ネットワーク
 
-サービス間 / client 間の通信トポロジ。client がどう gateway 経由でサービスに到達するか、その例外を明示する。
+通信パスとオーナーシップの原則。client / 各サービス / 外部システム間の繋がりと、その例外を明示する。
 
 ### 2.1 通信原則
 
-- **client → gateway 単一エンドポイント**: client は `VITE_API_BASE_URL` (= gateway) にのみ到達する。各サービスへの直接アクセスは行わない
-- **transport は gateway、型契約は各サービス**: gateway は path-based forwarder としてリクエストを各サービスに transparent に転送する。型契約は各サービスが自リポの `data/openapi.yaml` で公開し、client は `@kenyamaneko/overload-party-api-<service>` を直接消費する ([ADR-036](../adr/036-gateway-passthrough-and-service-public-api.md))
-- **サービス間通信は internal API**: クラスタ内サービス間呼び出しは各サービスの `/internal/v1/*` 経由 + HMAC 署名 JWT (`X-Internal-Auth`) 認証 ([ADR-037](../adr/037-internal-auth-hmac-signed-jwt.md))
-- **gateway 自身のドメイン責務**: 認証 (Firebase 検証 → player_id 解決) / WS hub / 観戦 / 静的データ。これらは gateway の path (`/api/v1/auth/*`、`/api/v1/spectate/*`、`/api/v1/version` 等) で gateway 自身が応答する
+- **URL は gateway、契約は各サービス**: client は `VITE_API_BASE_URL` (= gateway) にのみ到達するが、REST 公開仕様 (型契約) は各サービスが自リポの `data/openapi.yaml` で持つ。gateway は path-prefix forwarder としてリクエストを所属サービスに転送する役割で、固有のドメインロジックや型加工は持たない ([ADR-036](../adr/036-gateway-passthrough-and-service-public-api.md))。Ingress / Cloud LB の path-routing 等インフラ機能には依存せず、gateway server 内で振り分ける
+- **サービス間通信は internal API**: クラスタ内のサービス間呼び出しは各サービスの `/internal/v1/*` 経由。認証フロー詳細は §4.3 を参照
 
 ### 2.2 例外: matchmaking
 
-matchmaking は client が直接消費する REST 公開 API を持たないため、上記原則の例外として扱う。
+matchmaking は REST 公開 API を持たず、上記「URL は gateway、契約は各サービス」原則の例外として扱う。
 
-**理由**:
+**理由**: client が matchmaking 結果を直接取得する必要がなく、battle 前にマッチング相手を探す処理は gateway が client に意識させず裏で駆動する責務だから。
 
-- matchmaking の openapi.yaml は `/internal/v1/{enqueue,cancel,queue-size,health}` のみ。いずれも gateway → matchmaking 内部 API または infra probe
-- client が呼ぶマッチング操作はすべて gateway WS hub 経由で完結する:
-  - `matchmaking_start` / `matchmaking_cancel`: client → gateway WS。gateway が `/internal/v1/enqueue` / `/cancel` を呼ぶ
-  - `match_found`: matchmaking が Pub/Sub に publish した `MatchMadeEvent` を gateway が subscribe し、client に WS message として配信
-- matchmaking は battle の前提 (対戦相手探索) として gateway が裏で駆動するサービスで、client は透過的に意識しない
-
-**帰結**:
-
-- matchmaking は ADR-036 Phase 3c (各サービスが `api-{service}-npm` を新設して client が直接消費) の対象外 ([ADR-036 Amendment](../adr/036-gateway-passthrough-and-service-public-api.md#amendment-matchmaking-exception-2026-05-12))
-- matchmaking 関連の WS message 型は引き続き gateway 側 (`api-gateway-npm` の WS section / `ws-constants-npm` / asyncapi-gateway) で集約
+**帰結**: matchmaking は ADR-036 Phase 3c (`api-{service}-npm` 新設) の対象外。WS 経路の `matchmaking_start` / `match_found` 等は gateway 側に集約 (`api-gateway-npm` の WS section / `ws-constants-npm` / asyncapi-gateway)。詳細は [ADR-036 Amendment](../adr/036-gateway-passthrough-and-service-public-api.md#amendment-matchmaking-exception-2026-05-12)。
 
 ---
 
