@@ -22,7 +22,7 @@ repos:
   - name: overload-party-shop
     path: ../overload-party-shop
     lang: go
-    flow: gitflow
+    flow: githubflow
 
   - name: overload-party-gateway
     path: ../overload-party-gateway
