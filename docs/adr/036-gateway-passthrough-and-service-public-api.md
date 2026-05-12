@@ -134,3 +134,23 @@ client から見たエンドポイントは引き続き gateway 1 つ (`VITE_API
 
 - [overload-party-common#39](https://github.com/kenyamaneko/overload-party-common/issues/39) — ADR-034 全体トラッカー (本 ADR の進捗もここに集約)
 - Phase 3c の各リポ issue は本 ADR マージ後に起票
+
+## Amendment: matchmaking exception (2026-05-12)
+
+[overload-party-matchmaking#14](https://github.com/kenyamaneko/overload-party-matchmaking/issues/14) の調査結果に基づき、Phase 3c の対象列挙から matchmaking を除外する。
+
+### 経緯
+
+「実装計画 > Phase 3c (新規)」では Phase 3c 対象として `shop / card / account / scenario / news / support / matchmaking` の 7 リポを列挙した。実装着手段階で matchmaking の調査を行ったところ、他 6 リポと事情が異なることが判明:
+
+- matchmaking は **client が直接消費する REST 公開 API を持たない**。openapi.yaml は `/internal/v1/{enqueue,cancel,queue-size,health}` のみで、いずれも gateway → matchmaking 内部 API または infra probe
+- client が呼ぶマッチング操作は gateway WS hub 経由 (`matchmaking_start` / `match_found` 等の WS message) で完結する
+- WS message 型は gateway 側に集約済み (`api-gateway-npm` の WS section / `ws-constants-npm` / asyncapi-gateway)。matchmaking 独自の TS 型を client が必要とする経路がない
+
+Decision §2「各サービスが client 公開仕様を直接表現する」の前提を満たさない (=公開対象がない) ため、Phase 3c rollout の本旨である「`api-{service}-npm` 新設 + client が直接消費」を matchmaking に適用する必然性がない。
+
+### Decision
+
+- Phase 3c の対象を **6 リポに改訂**: `shop / card / account / scenario / news / support`
+- matchmaking は Phase 3c 対象外。`api-matchmaking-npm` は新設しない
+- matchmaking の通信形態 (client は gateway WS hub 経由、直接 REST 呼び出しなし) は本 ADR 全体の例外として [APPLICATION.md §2.2](../architecture/APPLICATION.md#22-例外-matchmaking) で明示する
