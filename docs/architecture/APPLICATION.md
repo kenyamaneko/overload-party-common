@@ -7,12 +7,13 @@
 ## 目次
 
 1. [データ設計](#1-データ設計)
-2. [API 設計](#2-api-設計)
-3. [認証・認可](#3-認証認可)
-4. [課金システム](#4-課金システム)
-5. [リアルタイム通信](#5-リアルタイム通信)
-6. [セキュリティ](#6-セキュリティ)
-7. [多言語対応](#7-多言語対応-i18n)
+2. [ネットワーク](#2-ネットワーク)
+3. [API 設計](#3-api-設計)
+4. [認証・認可](#4-認証認可)
+5. [課金システム](#5-課金システム)
+6. [リアルタイム通信](#6-リアルタイム通信)
+7. [セキュリティ](#7-セキュリティ)
+8. [多言語対応](#8-多言語対応-i18n)
 
 ---
 
@@ -78,13 +79,32 @@ battle 側のインメモリキャッシュの更新戦略は以下のとおり�
 
 ---
 
-## 2. API 設計
+## 2. ネットワーク
+
+通信パスとオーナーシップの原則。client / 各サービス / 外部システム間の繋がりと、その例外を明示する。
+
+### 2.1 通信原則
+
+- **URL は gateway、契約は各サービス**: client は `VITE_API_BASE_URL` (= gateway) にのみ到達するが、REST 公開仕様 (型契約) は各サービスが自リポの `data/openapi.yaml` で持つ。gateway は path-prefix forwarder としてリクエストを所属サービスに転送する役割で、固有のドメインロジックや型加工は持たない ([ADR-036](../adr/036-gateway-passthrough-and-service-public-api.md))。Ingress / Cloud LB の path-routing 等インフラ機能には依存せず、gateway server 内で振り分ける
+- **サービス間通信は internal API**: クラスタ内のサービス間呼び出しは各サービスの `/internal/v1/*` 経由。認証フロー詳細は §4.3 を参照
+
+### 2.2 例外: matchmaking
+
+matchmaking は REST 公開 API を持たず、上記「URL は gateway、契約は各サービス」原則の例外として扱う。
+
+**理由**: client が matchmaking 結果を直接取得する必要がなく、battle 前にマッチング相手を探す処理は gateway が client に意識させず裏で駆動する責務だから。
+
+**帰結**: matchmaking は ADR-036 Phase 3c (`api-{service}-npm` 新設) の対象外。WS 経路の `matchmaking_start` / `match_found` 等は gateway 側に集約 (`api-gateway-npm` の WS section / `ws-constants-npm` / asyncapi-gateway)。詳細は [ADR-036 Amendment](../adr/036-gateway-passthrough-and-service-public-api.md#amendment-matchmaking-exception-2026-05-12)。
+
+---
+
+## 3. API 設計
 
 - **REST API**（クライアント向け公開 API、入口は gateway）: プレイヤー管理、デッキ管理、NPC 対戦、ショップなど
 - **WebSocket API**（クライアント ↔ gateway）: PvP マッチメイキング、リアルタイム対戦、スタンプ送信など
 - **内部 REST API**（サービス間通信、クラスタ内部のみ）: gateway ↔ account / card / shop / scenario / matchmaking / battle / news / support、および battle ↔ card など。ドメインサービス間の HTTP 直叩きは原則禁止し、連携は Pub/Sub に集約する。例外として scenario の onboarding 内 name 確定と再開判定に限り scenario → account の直叩きを許容する（[ADR-025](../adr/025-onboarding-name-via-rest-and-cross-service-http.md)）
 
-### 2.1 契約と実装の分離
+### 3.1 契約と実装の分離
 
 外部公開 API 契約と内部実装は **SSoT を分離して独立に進化させる**（[ADR-034](../adr/034-api-contract-ssot-openapi-asyncapi-and-go-module-distribution.md)）。
 
@@ -108,9 +128,9 @@ client が消費する型契約は **各サービスが直接公開** する（[
 
 ---
 
-## 3. 認証・認可
+## 4. 認証・認可
 
-### 3.1 Firebase Authentication
+### 4.1 Firebase Authentication
 
 | 項目 | 内容 |
 |------|------|
@@ -142,7 +162,7 @@ client が消費する型契約は **各サービスが直接公開** する（[
      │                              │  └──────────────┘
 ```
 
-### 3.2 WebSocket認証
+### 4.2 WebSocket認証
 
 | 項目 | 内容 |
 |------|------|
@@ -150,7 +170,7 @@ client が消費する型契約は **各サービスが直接公開** する（[
 | 検証タイミング | WebSocket接続アップグレード前 |
 | 失敗時の動作 | HTTP 401 を返してアップグレード拒否 |
 
-### 3.3 内部サービス間認証
+### 4.3 内部サービス間認証
 
 gateway は Firebase ID Token を検証して player_id を解決した後、下流サービスへの REST 呼び出しに HMAC 署名 JWT (HS256) を `X-Internal-Auth` header で付与する。各サービスは middleware で署名・有効期限・`iss` を検証し、`sub` クレームから player_id を context に書き込む。handler は context 経由で player_id を取得し、認証 header を直読しない (偽造耐性を失うため)。
 
@@ -168,12 +188,12 @@ gateway は Firebase ID Token を検証して player_id を解決した後、下
 
 ---
 
-## 4. 課金システム
+## 5. 課金システム
 
 > 課金プラン・スタミナ仕様・カード入手モデル等のビジネスルールは [MONETIZATION.md](../business/MONETIZATION.md) を参照。
 > 本セクションではアーキテクチャとしての技術的実装方針を記載する。
 
-### 4.1 決済基盤
+### 5.1 決済基盤
 
 | プラットフォーム | 決済手段 | SDK |
 |----------------|---------|-----|
@@ -182,7 +202,7 @@ gateway は Firebase ID Token を検証して player_id を解決した後、下
 
 > プレミアムプラン: Auto-renewable Subscription（月額サブスク）。カードセット・コレクション: Non-consumable（買い切り）。
 
-### 4.2 サーバーサイド検証
+### 5.2 サーバーサイド検証
 
 購入レシートは**必ずサーバーサイドで検証**する。クライアント側の検証結果は信頼しない。検証処理は shop サービスが担当し、gateway は認証済みのリクエストを shop サービスに中継するのみ。所有スキーマが複数サービスに分かれているため、買い切り商品とサブスクリプションでフローが大きく異なる点に注意する（詳細は [internal/shop.md](internal/shop.md) / [internal/account.md](internal/account.md) 参照）。
 
@@ -249,7 +269,7 @@ shop の DB 書き込みはアトミックで outbox 経由の eventually consis
 
 shop → account の同期呼び出しは存在しない。eventually consistent。
 
-### 4.3 検証API・サーバー通知
+### 5.3 検証API・サーバー通知
 
 **買い切り商品の検証:**
 
@@ -267,7 +287,7 @@ shop → account の同期呼び出しは存在しない。eventually consistent
 
 > サブスクの状態変更（自動更新・解約・猶予期間・返金等）は shop サービスがサーバー通知 (webhook) で受信し、`shop.subscriptions` と `shop.subscription_outbox` を同一トランザクションで更新する。その後、`players.is_premium` / `players.premium_expires_at` は Outbox + Cloud Pub/Sub 経由で account サービスが非同期に更新する。クライアント起点のポーリングは行わない。責務分担の詳細は §8.6 / §8.8 / §9.6 を参照。
 
-### 4.4 Webhook 受信（shop サービス）
+### 5.4 Webhook 受信（shop サービス）
 
 Apple / Google からのサーバー通知は、**shop サービスが公開エンドポイントで直接受信する**。ユーザートラフィックの入口は gateway 一本に保ちつつ、課金プラットフォーム側の制約上 gateway 経由でルーティングできないため、shop にのみ例外的に公開エンドポイントを許可する。webhook 用の受信パスは他のクライアント API と明示的に区別し、レート制限も別建てで設定する。
 
@@ -286,7 +306,7 @@ Google RTDN (Pub/Sub push)     ──>  shop (GKE Ingress)  ──>  Cloud SQL (
 
 > account サービスの `players.is_premium` / `premium_expires_at` への伝搬は、shop が書き込んだ `subscription_outbox` を publisher goroutine が Cloud Pub/Sub (`subscription-events`) に publish し、account の subscriber goroutine が pull して反映する非同期経路で行われる。詳細は §9.6 を参照。
 
-### 4.5 冪等性と不正対策
+### 5.5 冪等性と不正対策
 
 | 対策 | 実装方法 |
 |------|---------|
@@ -296,7 +316,7 @@ Google RTDN (Pub/Sub push)     ──>  shop (GKE Ingress)  ──>  Cloud SQL (
 
 テーブル所有権の詳細は [DATA_DESIGN.md](DATA_DESIGN.md) を参照。
 
-### 4.6 購入処理のトランザクション
+### 5.6 購入処理のトランザクション
 
 **買い切り商品（`cosmetic`）:**
 
@@ -370,9 +390,9 @@ webhook 受信・購入 API 受信のいずれの経路でも、shop は同一�
 
 ---
 
-## 5. リアルタイム通信
+## 6. リアルタイム通信
 
-### 5.1 WebSocket接続管理
+### 6.1 WebSocket接続管理
 
 | 機能 | 内容 |
 |------|------|
@@ -384,7 +404,7 @@ webhook 受信・購入 API 受信のいずれの経路でも、shop は同一�
 
 内部サービスとの通信方式は 4.1 の全体構成、および各サービスの内部 REST 契約（[internal/](internal/)）を参照。
 
-### 5.2 再接続処理
+### 6.2 再接続処理
 
 ```
 再接続リクエスト
@@ -400,7 +420,7 @@ gateway Pod 内の WS セッションマップに接続を再登録
 最新状態をクライアントに送信
 ```
 
-### 5.3 切断検知とタイムアウト
+### 6.3 切断検知とタイムアウト
 
 | パラメータ | 値 |
 |-----------|-----|
@@ -446,7 +466,7 @@ Pong 応答なし（5秒）
 
 > **切断ペナルティ:** 初期段階では導入しない。悪質な切断が増加した場合に、常習者への追加ペナルティを検討する。
 
-### 5.4 WebSocket ヘルスチェック
+### 6.4 WebSocket ヘルスチェック
 
 | 項目 | 内容 |
 |------|------|
@@ -454,7 +474,7 @@ Pong 応答なし（5秒）
 | クライアント → サーバー | Pong 応答（WebSocket プロトコル標準） |
 | タイムアウト | 5秒以内に Pong がなければ切断と判定 |
 
-### 5.5 マッチメイキング
+### 6.5 マッチメイキング
 
 FIFO キュー方式のランダムマッチメイキング。待機時間順にペアリングする。詳細は matchmaking リポの `docs/ARCHITECTURE.md` を参照。
 
@@ -463,15 +483,15 @@ client → gateway → matchmaking (enqueue) → Redis キュー → マッチ�
 → Cloud Pub/Sub (matchmaking-events) → gateway → WS push (match_found)
 ```
 
-### 5.6 WS メッセージ一覧
+### 6.6 WS メッセージ一覧
 
 gateway リポの `docs/API_REFERENCE.md` を参照。
 
 ---
 
-## 6. セキュリティ
+## 7. セキュリティ
 
-### 6.1 レート制限
+### 7.1 レート制限
 
 | 項目 | 値 |
 |------|-----|
@@ -479,7 +499,7 @@ gateway リポの `docs/API_REFERENCE.md` を参照。
 | バースト上限 | 20 req |
 | 超過時のレスポンス | HTTP 429 Too Many Requests |
 
-### 6.2 CORS設定
+### 7.2 CORS設定
 
 環境変数 `ALLOWED_ORIGINS` で許可するオリジンを制御する。
 
@@ -500,7 +520,7 @@ gateway リポの `docs/API_REFERENCE.md` を参照。
 | `AllowHeaders` | Authorization, Content-Type |
 | `MaxAge` | 12時間 |
 
-### 6.3 ドメイン / DNS / TLS
+### 7.3 ドメイン / DNS / TLS
 
 | 項目 | 値 |
 |------|-----|
@@ -525,7 +545,7 @@ gateway リポの `docs/API_REFERENCE.md` を参照。
 
 ---
 
-## 7. 多言語対応 (i18n)
+## 8. 多言語対応 (i18n)
 
 ---|------|------------------|------|
 | UI テキスト (ボタン, ラベル等) | react-i18next (JSON) | 即時（再読み込み不要） | 実装済み |
@@ -534,7 +554,7 @@ gateway リポの `docs/API_REFERENCE.md` を参照。
 | カード名・効果テキスト | サーバー側翻訳テーブル | — | 未実装（設計のみ） |
 | バトルログ | — | — | 未実装（日本語固定） |
 
-### 7.1 アーキテクチャ
+### 8.1 アーキテクチャ
 
 ```
 src/i18n/
@@ -555,7 +575,7 @@ src/i18n/
     en/                 # 英語 (同構造)
 ```
 
-### 7.2 仕組み
+### 8.2 仕組み
 
 ### 初期化フロー
 
@@ -590,7 +610,7 @@ t('dailyBattle.battlesRemaining', { remaining: 5 })
 // → "残り5回" (ja) / "5 battles remaining" (en)
 ```
 
-### 7.3 翻訳キーの追加手順
+### 8.3 翻訳キーの追加手順
 
 1. `src/i18n/locales/ja/<namespace>.json` に日本語キーを追加
 2. `src/i18n/locales/en/<namespace>.json` に英語キーを追加
@@ -602,7 +622,7 @@ t('dailyBattle.battlesRemaining', { remaining: 5 })
 - ネスト可: `deck.pageTitle`, `stats.throughput`
 - 補間変数: `{{count}}`, `{{name}}`
 
-### 7.4 Namespace 一覧
+### 8.4 Namespace 一覧
 
 | Namespace | 対象 | ファイル例 |
 |---|---|---|
@@ -618,7 +638,7 @@ t('dailyBattle.battlesRemaining', { remaining: 5 })
 | `settings` | 設定・ルールブック | SettingsPage, RulebookPage |
 | `scenario` | シナリオ・ストーリー | ScenarioListPage, StoryPage |
 
-### 7.5 カードデータの多言語化 (未実装)
+### 8.5 カードデータの多言語化 (未実装)
 
 カード名・効果テキストはサーバーが `Accept-Language` ヘッダーに応じて返す方針。
 現状は DB・API ともに日本語のみで、翻訳テーブルもクライアントの `Accept-Language` 送信も未実装。
@@ -656,7 +676,7 @@ CREATE TABLE effect_text_translations (
 - API クライアントに `Accept-Language` ヘッダーを自動付与する仕組みを追加予定
 - `settingsStore.language` を参照して動的にヘッダーを設定
 
-### 7.6 バトルログの多言語化 (未実装)
+### 8.6 バトルログの多言語化 (未実装)
 
 バトルログ内のカード名は Battle サーバーのインメモリキャッシュから取得しており、日本語固定。
 カードデータの多言語化と合わせて対応が必要。

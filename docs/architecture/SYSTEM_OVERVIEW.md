@@ -327,7 +327,7 @@ graph TD
 ```
 
 **サーバー間通信:**
-- サービス間は内部 REST API（クラスタ内ネットワーク）。Firebase ID Token 検証と player_id 解決は gateway が一元化し、各ドメインサービスは gateway が発行する HMAC 署名 JWT (`X-Internal-Auth`) を検証して player_id を取得する（[ADR-037](../adr/037-internal-auth-hmac-signed-jwt.md)、詳細は [APPLICATION.md §3.3](APPLICATION.md#33-内部サービス間認証)）
+- サービス間は内部 REST API（クラスタ内ネットワーク）。Firebase ID Token 検証と player_id 解決は gateway が一元化し、各ドメインサービスは gateway が発行する HMAC 署名 JWT (`X-Internal-Auth`) を検証して player_id を取得する（[ADR-037](../adr/037-internal-auth-hmac-signed-jwt.md)、詳細は [APPLICATION.md §4.3](APPLICATION.md#43-内部サービス間認証)）
 - ドメインサービス間の連携は Pub/Sub に集約し、HTTP 直叩きは原則禁止。例外は scenario → account の onboarding 内 name 確定と再開判定のみ（[ADR-025](../adr/025-onboarding-name-via-rest-and-cross-service-http.md)）
 - 外部公開は gateway（クライアント向け WS/REST）を主とし、例外は以下:
   - **shop** の Webhook 受信（Apple / Google の課金サーバー通知）
