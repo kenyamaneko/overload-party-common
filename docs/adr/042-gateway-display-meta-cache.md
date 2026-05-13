@@ -25,7 +25,8 @@ gateway は WebSocket 経由で **対戦相手 / 観戦対象** の display name
 1. **gateway が match_made イベント受信時に** `accountclient.GetPlayer` を呼び、対戦者 2 名分の `{name, level}` snapshot を取得する。
 2. snapshot は新規導入する **gateway 所有の Upstash Redis インスタンス** に書き込む。
 3. game state relay 時は **pod-local in-memory cache** を 1 段目、Upstash Redis を 2 段目として参照する (2 段キャッシュ)。in-memory cache は **コスト対策** として導入する (詳細は「なぜ 2 段キャッシュか (コスト対策)」節)。
-4. 自分自身の display meta はこれまで通り `/api/v1/account/me` (JWT sub) で解決する (対戦相手 lookup と経路を分離)。
+4. self / opponent / spectator の display meta は **全て同一経路** (Upstash Redis cache + `/internal/v1/players/{playerID}`) で解決する。self を `/me` 経由とする経路分離は採用しない。
+5. account 障害時のフォールバック表示値 (`Player {prefix}`) は **通常 snapshot とは別の短 TTL** で cache に書き込み、account 復旧後の自動回復を許容する。
 
 ### なぜこの設計か
 
@@ -33,7 +34,8 @@ gateway は WebSocket 経由で **対戦相手 / 観戦対象** の display name
 |------|------|
 | battle 純粋性 | battle service は account 非依存のまま維持される |
 | サービス境界 | matchmaking → account の新規依存を発生させない (matchmaking は player_id / deck_id 以外を扱わない設計を維持) |
-| ADR-037 §5 との整合 | 自身の解決は JWT sub 経由を維持。対戦相手 lookup は match 成立時の 1 回呼び出しに限定 |
+| ADR-037 §5 との整合 | 自身を含む player lookup は `/internal/v1/players/{playerID}` 経由。WS 認証段階で Firebase JWT により identity 検証済のため、JWT sub による self-only 強制は本ユースケースでは過剰 |
+| self/opponent/spectator の対称性 | 全経路を cache + `/internal` に統一。WS 接続は Firebase 認証で identity 確認済のため self を `/me` 経由にする identity-defense 価値は限定的、resolver の対称性を優先 |
 | 揮発 state の置き場所 | 試合中の揮発 state を OLTP (PostgreSQL) に置かない方針と整合 ([ADR-010](010-matchmaking-queue-upstash-redis.md) / [ADR-020](020-newsfeed-redis-dedup-reconverge.md) と同パターン) |
 | pod 分散耐性 | 対戦者 / 観戦者が別 pod に分散しても Redis 経由で参照可能 |
 | pod restart 耐性 | in-memory のみではキャッシュ消失で再 lookup が必要。Redis 永続でこれを回避 |
@@ -51,8 +53,8 @@ ADR-036 Decision 1 の「gateway に残すもの」のリストはこの追記�
 
 ADR-037 の既存記述は変更しない。本 ADR で次を宣言する:
 
-- ADR-037 task A の close 条件を「**`/internal/v1/players/{id}` endpoint を削除**」から「**match 成立時の 1 回呼び出しに限定**」に更新する。
-- `/internal/v1/players/{id}` endpoint は account 側に維持する。呼び出し元は gateway の match_made handler のみ (および障害時のフォールバック lookup)。
+- ADR-037 task A の close 条件を「**`/internal/v1/players/{id}` endpoint を削除**」から「**match 成立時の snapshot 書き込み + cache miss / 障害時のフォールバック lookup に限定**」に更新する。
+- `/internal/v1/players/{id}` endpoint は account 側に維持する。呼び出し元は gateway の match_made handler と DisplayMetaResolver のフォールバック経路。
 - これにより gateway #47 の本旨 (silent 404 fallback の解消、game state relay 都度の lookup 廃止) は満たされる。
 
 ### 検討した代替案
@@ -109,8 +111,15 @@ in-memory cache の導入は pod-local state を増やす点で運用上の好�
 game:{game_id}:player:{player_num}   — Hash ({name: <string>, level: <int>})
 ```
 
-- TTL: 1 時間 (試合最長時間 + buffer)
+書き込み経路は 2 種類:
+
+- **通常 snapshot 書き込み** (match_made handler): TTL 1 時間 (試合最長時間 + buffer)
+- **フォールバック書き込み** (resolver の最終フォールバック経路): account 復旧後の自動回復を許容する短 TTL (具体値は実装側で定数化)
+
+操作:
+
 - `HSET game:{game_id}:player:{player_num} name <name> level <level>` で書き込み
+- `EXPIRE game:{game_id}:player:{player_num} <ttl>` で TTL を設定
 - `HGETALL game:{game_id}:player:{player_num}` で読み出し
 
 #### 書き込み経路 (match_made handler)
@@ -151,7 +160,7 @@ failure を観測可能にすることで silent ではない fallback を実現
 | Redis 書き込み失敗 | Error ログ。試合は継続 (relay 時に再 lookup が走る) |
 | game state relay 時の Redis 読み出し失敗 | account 直接 lookup にフォールバック + Error ログ |
 | Redis cache miss | account 再 lookup + Warn ログ (本来 TTL 1 時間内に起きないため検知対象) |
-| account 再 lookup も失敗 | フォールバック表示値 (`"Player {playerID 短縮}"`) を Redis に書き込み + Error ログ |
+| account 再 lookup も失敗 | フォールバック表示値 (`"Player {playerID 短縮}"`) を **短 TTL** で Redis に書き込み + Error ログ。account 復旧後の次回 cache miss で本来の値に再 lookup される |
 
 これにより `accountclient.GetPlayer` の呼び出し回数は「正常時 1 試合 1 回、障害時は接続 client 数に応じて増加」となる。`/internal/v1/players/{id}` endpoint を account 側に維持する判断はこの障害時フォールバックも前提にしている。
 
@@ -170,6 +179,7 @@ failure を観測可能にすることで silent ではない fallback を実現
 - matchmaking → account の依存を新規導入せずに済む。
 - game state relay 都度の `accountclient.GetPlayer` 呼び出しがなくなり、account への負荷が試合数比例 (relay 数比例ではない) に低減する。
 - 試合途中の観戦者接続も同じ snapshot を共有できる。
+- account 障害時のフォールバック表示値は短 TTL で書き込まれるため、account 復旧後は自動的に正しい表示値へ戻る (cache pollution を回避)。
 
 ### Negative
 
