@@ -145,11 +145,9 @@ UPSTASH_REDIS_URL_GATEWAY=rediss://default:xxx@xxx.upstash.io:6379
 
 failure を観測可能にすることで silent ではない fallback を実現する。表示は **空文字ではなく明示的なフォールバック表示値** とし、UI 上「データ取得失敗が起きている」と認識可能にする。
 
-本節は Redis (display meta cache) レイヤの挙動のみを定める。Pub/Sub subscription レイヤの再配信回数上限・dead-letter 設定・監視通知などは本 ADR のスコープ外で、gateway match_made subscription 全体の設定として別途決定する。
-
 | 失敗位置 | 挙動 |
 |----------|------|
-| match_made handler で `accountclient.GetPlayer` 失敗 | snapshot 書き込みをスキップし handler から error を返す (Pub/Sub レイヤがどう再配信するかは本 ADR の範囲外)。失敗が永続化した場合のフォールバック表示値書き込みは relay 経路の最終行に集約する |
+| match_made handler で `accountclient.GetPlayer` 失敗 | snapshot 書き込みをスキップし handler から error を返す。失敗が永続化した場合のフォールバック表示値書き込みは relay 経路の最終行に集約する |
 | Redis 書き込み失敗 | Error ログ。試合は継続 (relay 時に再 lookup が走る) |
 | game state relay 時の Redis 読み出し失敗 | account 直接 lookup にフォールバック + Error ログ |
 | Redis cache miss | account 再 lookup + Warn ログ (本来 TTL 1 時間内に起きないため検知対象) |
