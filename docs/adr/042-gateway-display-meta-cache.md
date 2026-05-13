@@ -125,7 +125,7 @@ game:{game_id}:player:{player_num}   — Hash ({name: <string>, level: <int>})
 1. 1 段目: 自 pod の in-memory cache を参照
 2. miss 時: Upstash Redis を参照 → hit したら in-memory cache に乗せる
 3. miss 時: `accountclient.GetPlayer` で再 lookup (障害時のフォールバック)
-4. それも失敗: placeholder (`"Player {playerID 短縮}"`) + Error ログ
+4. それも失敗: フォールバック表示値 (`"Player {playerID 短縮}"`) を Redis に書き込み + Error ログ
 
 #### Upstash インスタンス分離
 
@@ -143,15 +143,17 @@ UPSTASH_REDIS_URL_GATEWAY=rediss://default:xxx@xxx.upstash.io:6379
 
 ### 失敗時挙動 (silent fallback 禁止 + ゲーム継続)
 
-failure を観測可能にすることで silent ではない fallback を実現する。表示は **空文字ではなく明示的 placeholder** とし、UI 上「データ取得失敗が起きている」と認識可能にする。
+failure を観測可能にすることで silent ではない fallback を実現する。表示は **空文字ではなく明示的なフォールバック表示値** とし、UI 上「データ取得失敗が起きている」と認識可能にする。
+
+本節は Redis (display meta cache) レイヤの挙動のみを定める。Pub/Sub subscription レイヤの再配信回数上限・dead-letter 設定・監視通知などは本 ADR のスコープ外で、gateway match_made subscription 全体の設定として別途決定する。
 
 | 失敗位置 | 挙動 |
 |----------|------|
-| match_made handler で `accountclient.GetPlayer` 失敗 | Pub/Sub を ack せず再配信 (at-least-once)。3 回連続失敗で DLQ + Error ログ + 監視通知 + placeholder を Redis に書き込み |
+| match_made handler で `accountclient.GetPlayer` 失敗 | snapshot 書き込みをスキップし handler から error を返す (Pub/Sub レイヤがどう再配信するかは本 ADR の範囲外)。失敗が永続化した場合のフォールバック表示値書き込みは relay 経路の最終行に集約する |
 | Redis 書き込み失敗 | Error ログ。試合は継続 (relay 時に再 lookup が走る) |
 | game state relay 時の Redis 読み出し失敗 | account 直接 lookup にフォールバック + Error ログ |
 | Redis cache miss | account 再 lookup + Warn ログ (本来 TTL 1 時間内に起きないため検知対象) |
-| account 再 lookup も失敗 | placeholder (`"Player {playerID 短縮}"`) + Error ログ |
+| account 再 lookup も失敗 | フォールバック表示値 (`"Player {playerID 短縮}"`) を Redis に書き込み + Error ログ |
 
 これにより `accountclient.GetPlayer` の呼び出し回数は「正常時 1 試合 1 回、障害時は接続 client 数に応じて増加」となる。`/internal/v1/players/{id}` endpoint を account 側に維持する判断はこの障害時フォールバックも前提にしている。
 
