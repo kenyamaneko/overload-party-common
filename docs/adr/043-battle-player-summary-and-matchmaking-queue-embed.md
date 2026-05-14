@@ -2,7 +2,7 @@
 
 ## ステータス
 
-Proposed (2026-05-13)
+Accepted (2026-05-15)
 
 Supersedes: [ADR-042](042-gateway-display-meta-cache.md) (gateway 配下に揮発キャッシュ用 Upstash Redis を導入する)
 
