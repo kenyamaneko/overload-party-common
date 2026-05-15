@@ -1,6 +1,6 @@
 # ADR-034: 外部 API 契約 SSoT を OpenAPI / AsyncAPI に統一し、配布物を Go / npm モジュールに集約する
 
-- Status: Accepted (Amended 2026-05-09: Cloudsmith 配布、WS-AsyncAPI、client scope を追加)
+- Status: Accepted (Amended 2026-05-09: Cloudsmith 配布、WS-AsyncAPI、client scope を追加; Amended 2026-05-10: 廃止 npm の特定とゲーム定数分類; Amended 2026-05-13: REST endpoint path を生成 client 由来に切替、operationId を consumer API 表面の識別子として扱う、schema 命名で oapi-codegen 予約名を避ける)
 - Date: 2026-05-09
 - Deciders: kenyamaneko
 - Related: [overload-party-common#39](https://github.com/kenyamaneko/overload-party-common/issues/39) (全体トラッカー), [overload-party-shop#66](https://github.com/kenyamaneko/overload-party-shop/issues/66) (Phase 1: shop 移行)
@@ -325,6 +325,109 @@ Phase 3b 着手時に各 npm パッケージの中身を実調査した結果、
 - 各サービスの TS パッケージ (`packages/api-{service}-npm`) 整備の有無
 
 これらは互いに影響するため一つの別 ADR でまとめて扱う。
+
+## Amendment 2026-05-13: REST endpoint path を生成 client 由来に切替、operationId を consumer API 表面の識別子として扱う
+
+`rules/principles.md` の「アプリ間の契約 (エンドポイント・イベント名・ヘッダ名) はリテラルで書かず、所有サービスが発行する API 契約パッケージを参照する」は wire 型 (schemas) には適用されているが、**REST endpoint path** には未適用であることが棚卸しで判明した ([overload-party-common#91](https://github.com/kenyamaneko/overload-party-common/issues/91))。全 api-* の `openapi-codegen.yaml` が `generate.models: true` のみで、path 定数も typed client も生成されていなかった結果、consumer (gateway/* clients、scenario/internal/adapter/http/* 等) が path をリテラルで直書きする状態になっていた。
+
+### Decision
+
+各サービスの `packages/api-{service}/openapi-codegen.yaml` に **`generate.client: true` を追加**し、oapi-codegen が生成する **typed client (`*ClientWithResponses`)** を export する。consumer 側は API 契約パッケージの生成 client を経由してエンドポイントにアクセスし、path をリテラル文字列で書かない。
+
+### 配置 — サービス側に SDK サブパッケージ、consumer 側は port impl 委譲のみ
+
+oapi-codegen が生成する `*Response` 型は、OpenAPI spec で schema が付いている response にだけ `JSON{200,201,...}` フィールドを生やす。本プロジェクトの 4xx response は説明文 (`description`) のみで schema を持たないため、生成 client の戻り値からは status code と raw body しか読めない (例: [overload-party-account/data/openapi.yaml:189-199](https://github.com/kenyamaneko/overload-party-account/blob/main/data/openapi.yaml#L189-L199))。
+
+この status code 解釈ロジック (例: `404 → ErrNotFound`, `400 → ErrDeckInvalid`) を consumer 側 adapter で書くと、各 consumer (gateway / scenario / future consumers) で同等のロジックが重複する。加えて gateway を薄く保つ ADR-036 の方針とも反する。
+
+これを避けるため、**ラッパの責務を分解してサービス側と consumer 側に再配置**する:
+
+| 責務 | 配置 | 理由 |
+|---|---|---|
+| status code → sentinel error 変換 | サービス側 (`packages/api-{service}/api{service}client/`) | wire 契約由来 (404 = not found は OpenAPI spec が定義する意味)。サービス側で 1 回書けば全 consumer が再利用 |
+| port インタフェース実装 | consumer 側 (`internal/adapter/http/<service>client.go`) | port は consumer 内部の clean architecture 概念 (consumer ごとに port 形状が異なる) |
+
+#### サービス側: SDK サブパッケージ (`api{service}client/`)
+
+各 API 契約パッケージは既存の `api{service}serverfake/` と並べて `api{service}client/` サブパッケージを同梱する。これは AWS SDK / Stripe SDK 等で一般的な「公式 client SDK」pattern と同型。
+
+- 内部で生成 `*ClientWithResponses` をラップする
+- 各 endpoint method を operationId 由来 method 名で公開し、戻り値は wire 型 (`*apicard.Deck` 等)
+- status code を sentinel error に変換 (例: `apicardclient.ErrNotFound`, `ErrUnauthorized`, `ErrForbidden`, `ErrDeckInvalid`) し、sentinel は SDK サブパッケージ自身で export
+- `WithHTTPClient` / `WithRequestEditorFn` の Option pattern を提供 (InternalAuth 注入は `WithRequestEditorFn(internalauth.SignRequest)` で 1 行)
+
+#### consumer 側: port impl は委譲のみ (`internal/adapter/http/<service>client.go`)
+
+consumer adapter は port インタフェースを実装し、SDK method に **委譲するだけ** に痩せる:
+
+```go
+type CardClient struct{ api *apicardclient.Client }
+
+func (c *CardClient) GetDeck(ctx context.Context, deckID int64) (*apicard.Deck, []apicard.DeckCard, error) {
+    return c.api.GetDeck(ctx, deckID)
+}
+```
+
+- 生成 client / status code 解釈に触れるのは SDK 内部のみ。consumer adapter は wire 型と sentinel error をそのまま port 層に通す
+- service 層 (`internal/usecase/`) は port インタフェースのみを参照し、生成 client 型 / SDK 型を一切 import しない (clean architecture の依存方向を維持)
+- gateway adapter から HTTP 組み立てロジックが消え、ADR-036 の「gateway 薄く保つ」方針と整合する
+
+### operationId を consumer API 表面の識別子として扱う
+
+OpenAPI 3.x の `operationId` は operation を一意識別する optional フィールドで、HTTP プロトコル上には登場しない。OpenAPI 仕様自身が `operationId` の用途として「Tools and libraries MAY use the operationId to uniquely identify an operation」と明示しており、oapi-codegen / openapi-generator / NSwag 等の主要 codegen は揃って **生成 client のメソッド名** のソースとして使う (`operationId: getDeck` → `(c *Client) GetDeck(ctx, ...)`)。本プロジェクトでは全 api-* の全 endpoint で operationId が既に定義されており、本 amendment 採用にあたり追加整備は不要。
+
+α 採用前は path 文字列が consumer のコードに直接書かれていたため、operationId は server 内部の識別子に過ぎなかった。**α 採用後は path が生成 client の関数本体に隠蔽される代わりに、operationId が consumer のコードに焼き付く** (consumer は `client.GetDeck(ctx, deckId)` のようにメソッド名で呼び出す)。このため operationId の rename / 削除は consumer 全リポのビルドを壊す変更となる:
+
+- operationId の追加: 後方互換 (consumer は新メソッドを使い始められるだけ)
+- operationId の削除: breaking (consumer のメソッド呼び出しが解決しなくなる)
+- operationId の rename: breaking (同上)
+
+なお、これは HTTP wire 契約 (path / method / payload schema / status code) とは別軸の **consumer API 表面 (compile-time contract)** の話である。runtime の HTTP 契約自体の SSoT は OpenAPI の `paths` フィールドであり、operationId とは独立に管理する。
+
+破壊判定は `oasdiff` の standard rule では検出されないため、PR レビューで運用判断する。
+
+### 適用順序
+
+- **pilot: card** ([overload-party-common#91](https://github.com/kenyamaneko/overload-party-common/issues/91) 内で進捗管理)
+  - caller が gateway/cardclient のみで完結し、ADR-037 phase 2/3 と独立
+  - endpoint 11 件で pilot として効果検証に十分な量
+- **横展開**: pilot 完了後に shop / account / scenario / matchmaking / news / battle / support / gateway を順次同パターンで適用。横展開フェーズで並走規模が大きくなる場合は別途トラッカー issue を切る
+
+### OpenAPI schema 命名の制約 — oapi-codegen 生成型との衝突回避
+
+`generate.client: true` を有効にすると oapi-codegen は operationId を起点に以下の予約名を Go の同パッケージ内に生成する:
+
+- `<OperationIdPascal>Response` — typed wrapper (ClientWithResponses の戻り値)
+- `<OperationIdPascal>JSONRequestBody` — request body の型エイリアス
+- `<OperationIdPascal>Params` — query / header / path params の構造体
+
+`components/schemas/` の名前がこれら予約名のいずれかと **完全一致** すると Go パッケージ内で型名衝突しビルドが失敗する (実例: support の `components/schemas/SubmitInquiryResponse` ↔ wrapper `SubmitInquiryResponse` で `operationId: submitInquiry`)。
+
+#### ルール (本 amendment 以降の新規 schema に適用)
+
+1. schema 名は **resource を表す名詞** (`Deck`, `Inquiry`, `Player` 等) を中心とする
+2. 以下 4 つの suffix は schema 名に使わない (oapi-codegen wrapper 専用予約):
+   - `<X>Response`
+   - `<X>RequestBody`
+   - `<X>JSONRequestBody`
+   - `<X>Params`
+3. request / response 型に動詞ニュアンスを残したい場合は `<Resource>Detail` / `<Resource>Result` / `<Resource>Submission` など `Response` / `Request` / `Params` を含まない suffix で表現する
+4. 既存 schema は本 amendment 適用日 (2026-05-13) 以降の改名・新設のみに適用し、衝突していない既存 schema は据え置く
+5. 既存で実際に衝突している schema は本 amendment 適用時に rename する (support の `SubmitInquiryResponse` 等)
+
+衝突回避手段として `x-go-name` で Go 型名だけを別名にする方法もあるが、spec と Go 表現が乖離して可読性を損ねるため spec 側の rename を優先する。
+
+### イベント名 / ヘッダ名 (principle 17 の他 2 項) の扱い
+
+本 amendment は **REST endpoint path のみ**を対象とする。残る 2 項は以下のとおり別経路で扱う:
+
+- **イベント名 (Pub/Sub `event_type` discriminator)**: 既に AsyncAPI codegen 由来で定数化済み (本 ADR 「Topic 名と event_type の取り扱い」セクション参照)。本 amendment 範囲外
+- **ヘッダ名 (`X-OP-Internal-Auth` 等)**: ADR-039 の `internalauth-go` で定数化済み。各リポの実装が当該定数を参照しているかは pilot 横展開時に併せて棚卸しする
+
+### 関連
+
+- [overload-party-common#91](https://github.com/kenyamaneko/overload-party-common/issues/91) — 本 amendment のトラッカー (pilot = card / 横展開も同 issue で管理)
+- ADR-039 — internal auth shared package (`internalauth-go`) との接続点 (RequestEditorFn 経由で header 注入)
 
 ## 関連 issue
 
