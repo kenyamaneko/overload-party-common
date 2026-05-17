@@ -6,32 +6,42 @@ Overload Party の **横断的な共有リソース** を管理するリポジ�
 
 - **ゲームデザイン定数** (faction / card_type / restriction / zone 等。全リポ共通)
 - **アーキテクチャ / ゲームデザイン / ビジネスドキュメント**
-- **共通設定プリセット** (Claude 用ルール集、各リポへ配布)
+- **Claude Code 開発ルール** (coding / branch / 言語別ルール。全リポ共通)
 
 ## 構成
 
 ```
 data/
-  game_design_constants.yaml  # ゲームデザイン定数 SSoT
-  factions.yaml               # ファクションマスター SSoT
+  game_design_constants.yaml      # ゲームデザイン定数 SSoT
+  factions.yaml                   # ファクションマスター SSoT
+  game_config_defaults.yaml       # game_config の初期値 (Firestore 投入元)
 packages/
   game-design-constants/          # Go module
   game-design-constants-dotnet/   # NuGet csproj
   game-design-constants-npm/      # npm package
-presets/
-  claude/                         # Claude Code 用ルール集 (各リポに自動配布)
-    base/, flow/, lang/, skills/
-    .consumers.yaml               # 配布先リスト
+  codegen-tools/                  # codegen 共通ライブラリ (Python)
+  asyncapi-codegen-tools/         # AsyncAPI 用 codegen ツール (Python)
+  doc-tools/                      # ドキュメント生成ツール (Python)
+rules/
+  principles.md                   # 全リポ共通の base ルール (CLAUDE.md から @import)
+  lang/                            # 言語別ルール
+  flow/                            # ブランチ運用別ルール
+  repos.yaml                       # リポ・レジストリ (path / lang / flow)
 scripts/
-  generate_constants.py           # game-design constants 生成 (Go + C# + npm)
+  generate_constants.py            # game-design constants 生成 (Go + C# + npm)
+  test_generate_constants.py       # 上記のテスト
+.claude/
+  skills/                          # Claude Code 用 skill
 .github/
-  scripts/publish/                # CI publish 用スクリプト
-  scripts/claude-presets/         # Claude presets 同期用スクリプト
+  workflows/                       # validate / publish
+  actions/                         # publish / Cloudsmith 認証用 composite action
+  scripts/                         # 上記 action / workflow のスクリプト
 docs/
-  architecture/                   # システム設計 (ARCHITECTURE, CI_CD, DATA_DESIGN, I18N)
-  game_design/                    # ゲームデザイン (ルール, カード, UI 等)
-  business/                       # ビジネス・法務
-  adr/                            # ADR (gitignore、手元専用)
+  architecture/                    # システム設計ドキュメント
+  game_design/                     # ゲームデザイン (ルール, カード, UI 等)
+  business/                        # ビジネス・法務
+  notes/                           # 補助メモ
+  adr/                             # ADR (gitignore、手元専用)
 ```
 
 ## パッケージ
