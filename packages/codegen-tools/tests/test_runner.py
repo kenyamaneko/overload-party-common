@@ -231,3 +231,120 @@ def test_runner_constants_block(tmp_path: Path) -> None:
     assert runner.run() == 0
     text = (tmp_path / "out" / "enum_gen.go").read_text()
     assert 'A = "alpha"' in text
+
+
+def test_runner_missing_section_name_is_error(tmp_path: Path) -> None:
+    yaml_path = tmp_path / "models.yaml"
+    _write_yaml(yaml_path, {"files": [{"target": "wire", "types": []}]})
+    runner = CodegenRunner(
+        models_yaml=yaml_path,
+        repo_root=tmp_path,
+        targets={"wire": GoTarget(tmp_path / "out", "p")},
+    )
+    with pytest.raises(ValueError, match="has no `name`"):
+        runner.run()
+
+
+def test_runner_type_aliases_block(tmp_path: Path) -> None:
+    yaml_path = tmp_path / "models.yaml"
+    _write_yaml(
+        yaml_path,
+        {
+            "files": [
+                {
+                    "name": "ids",
+                    "target": "wire",
+                    "type_aliases": [{"name": "ID", "base": "string"}],
+                    "types": [],
+                }
+            ]
+        },
+    )
+    runner = CodegenRunner(
+        models_yaml=yaml_path,
+        repo_root=tmp_path,
+        targets={"wire": GoTarget(tmp_path / "out", "p")},
+    )
+    assert runner.run() == 0
+    text = (tmp_path / "out" / "ids_gen.go").read_text()
+    assert "type ID = string" in text
+
+
+def test_runner_pre_render_hook_called_for_each_section(tmp_path: Path) -> None:
+    yaml_path = tmp_path / "models.yaml"
+    _write_yaml(
+        yaml_path,
+        {
+            "files": [
+                {"name": "a", "target": "wire", "types": []},
+                {"name": "b", "target": "wire", "types": []},
+            ]
+        },
+    )
+    seen: list[str] = []
+
+    def hook(section: dict, target_key: str) -> dict:
+        seen.append(section["name"])
+        return section
+
+    runner = CodegenRunner(
+        models_yaml=yaml_path,
+        repo_root=tmp_path,
+        targets={"wire": GoTarget(tmp_path / "out", "p")},
+        pre_render_hook=hook,
+    )
+    assert runner.run() == 0
+    assert seen == ["a", "b"]
+
+
+def test_runner_pre_render_hook_return_value_is_rendered(tmp_path: Path) -> None:
+    """フックの返り値 (元セクションではなく) が render パイプラインに渡る."""
+    yaml_path = tmp_path / "models.yaml"
+    _write_yaml(yaml_path, {"files": [{"name": "x", "target": "wire", "types": []}]})
+
+    def hook(section: dict, target_key: str) -> dict:
+        return {**section, "type_aliases": [{"name": "Injected", "base": "int64"}]}
+
+    runner = CodegenRunner(
+        models_yaml=yaml_path,
+        repo_root=tmp_path,
+        targets={"wire": GoTarget(tmp_path / "out", "p")},
+        pre_render_hook=hook,
+    )
+    assert runner.run() == 0
+    text = (tmp_path / "out" / "x_gen.go").read_text()
+    assert "type Injected = int64" in text
+
+
+def test_runner_pre_render_hook_exception_propagates(tmp_path: Path) -> None:
+    yaml_path = tmp_path / "models.yaml"
+    _write_yaml(yaml_path, {"files": [{"name": "x", "target": "wire", "types": []}]})
+
+    def hook(section: dict, target_key: str) -> dict:
+        raise RuntimeError("hook boom")
+
+    runner = CodegenRunner(
+        models_yaml=yaml_path,
+        repo_root=tmp_path,
+        targets={"wire": GoTarget(tmp_path / "out", "p")},
+        pre_render_hook=hook,
+    )
+    with pytest.raises(RuntimeError, match="hook boom"):
+        runner.run()
+
+
+def test_runner_pre_render_hook_non_dict_return_is_error(tmp_path: Path) -> None:
+    yaml_path = tmp_path / "models.yaml"
+    _write_yaml(yaml_path, {"files": [{"name": "x", "target": "wire", "types": []}]})
+
+    def hook(section: dict, target_key: str):
+        return None
+
+    runner = CodegenRunner(
+        models_yaml=yaml_path,
+        repo_root=tmp_path,
+        targets={"wire": GoTarget(tmp_path / "out", "p")},
+        pre_render_hook=hook,
+    )
+    with pytest.raises(ValueError, match="must return a dict"):
+        runner.run()

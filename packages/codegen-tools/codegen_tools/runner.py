@@ -109,6 +109,11 @@ class CodegenRunner:
 
         if self.pre_render_hook is not None:
             section = self.pre_render_hook(section, target_key)
+            if not isinstance(section, dict):
+                raise ValueError(
+                    f"pre_render_hook must return a dict, "
+                    f"got {type(section).__name__} for target {target_key!r}"
+                )
 
         extra_imports = set(section.get("imports", []))
         constants = section.get("constants") or []
@@ -141,7 +146,12 @@ class CodegenRunner:
             )
             return 1
 
-        for section in sections:
+        for index, section in enumerate(sections):
+            if self.section_name_field not in section:
+                raise ValueError(
+                    f"section #{index} has no `{self.section_name_field}` field "
+                    f"(keys: {sorted(section)})"
+                )
             for tk in self._resolve_targets(section):
                 out = self._generate_one(section, tk)
                 try:
