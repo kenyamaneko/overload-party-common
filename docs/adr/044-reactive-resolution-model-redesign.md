@@ -32,10 +32,13 @@ battle の reactive 効果の解決モデルに複数の未完成・不整合が
 |---|---|
 | 廃止 | `reactive` |
 | 統合 | `deploy` ＋ `on_enemy_deploy` → `on_deploy` |
+| リネーム | `activate` → `ignition` |
 | 新設 | `on_attack_declared` / `on_incident` / `on_damaged` |
-| 据置 | `activate` / `passive` / `on_end_phase` / `on_field_change` / `on_scale_up` / `on_attack` / `on_hit` / `on_destroy` |
+| 据置 | `passive` / `on_end_phase` / `on_field_change` / `on_scale_up` / `on_attack` / `on_hit` / `on_destroy` |
 
 `on_deploy` の発火 event は「リソースが表向き・稼働状態でフィールドに入った瞬間」とする。デプロイターンのカウントダウン完了、および deploy_turns=0 の即時デプロイがこれに当たる。サポートゾーンへの裏向きセットおよびカウントダウン中の裏向き状態は `on_deploy` event ではない。
+
+`activate` は `ignition` に改名する。これはプレイヤーが手動で発動する起動効果のトリガーであり、イベントに自動反応する `on_*` 群とは別カテゴリであることを名前で示す（遊戯王の Ignition Effect に倣う）。
 
 各トリガーの発火モデルは次のとおり:
 
@@ -103,6 +106,7 @@ battle の reactive 効果の解決モデルに複数の未完成・不整合が
 
 - リアクティブの effect_text の「発動できる」は「発動する」に書き換える（リアクティブは全自動発動でプレイヤー宣言を伴わないため）。
 - SH-0021 は effect_text が回復のみを記述しているため、ops の `cancel_action` を削除する（effect_text を SSoT とする）。
+- `trigger: activate` を持つ全カードの trigger 値を `ignition` にリネームする（機械的変更）。
 
 ### チェーン機構の削除
 
