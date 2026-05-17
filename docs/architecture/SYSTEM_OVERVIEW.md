@@ -303,7 +303,7 @@ graph TD
     newsfeed_job --> redis
 
     %% Firestore (game_config) — game_config を参照するサービスから読み取り
-    account -->|game_config 読み取り| firestore
+    account & shop & battle & scenario & gw -->|game_config 読み取り| firestore
 
     %% Pub/Sub: publish
     matchmaking -->|publish| match_events

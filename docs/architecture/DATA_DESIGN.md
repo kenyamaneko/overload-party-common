@@ -27,7 +27,7 @@ Overload Party の RDB は **1 つの PostgreSQL インスタンスの上で、�
 | ストア | 用途 | 利用サービス |
 |---|---|---|
 | PostgreSQL (Cloud SQL) | サービス別スキーマによる永続化 | 各サービス |
-| Cloud Firestore (Native, asia-northeast1) | サービス横断の動的設定値 `game_config` コレクション ([ADR-017](../adr/017-game-config-firestore.md)) | account, shop, battle, card, scenario, gateway |
+| Cloud Firestore (Native, asia-northeast1) | サービス横断の動的設定値 `game_config` コレクション ([ADR-017](../adr/017-game-config-firestore.md)) | account, shop, battle, scenario, gateway |
 | Upstash Redis (Sorted Set) | マッチメイキングキュー | matchmaking |
 | Cloud Pub/Sub (Exactly-Once) | マッチ成立イベント `matchmaking-events` | matchmaking → gateway |
 | Cloud Pub/Sub (At-Least-Once) | オンボーディング完了イベント `player-onboarded` ([ADR-022](../adr/022-faction-selected-decomposition.md)) | scenario → account, card, gateway |
