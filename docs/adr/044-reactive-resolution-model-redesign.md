@@ -4,6 +4,8 @@
 
 Accepted (2026-05-17)
 
+Amendment (2026-05-17): 「連動する変更」を実装結果に合わせ修正 — カード SSoT リポ overload-party-card を追加（当初表は battle にカードデータ変更を記載していたが、トリガー・guard・effect_text の SSoT は overload-party-card の `data/cards/*.yaml`）。あわせて `docs/notes/EFFECT_YAML_SCHEMA.md` の記載を削除（同ファイルは `.gitignore` 対象のローカル専用ドキュメントで、連動する変更の追跡対象外）。
+
 ## コンテキスト
 
 battle の reactive 効果の解決モデルに複数の未完成・不整合があり、[battle#56](https://github.com/kenyamaneko/overload-party-battle/issues/56) で表面化した。本 ADR はその解決モデルを定める。
@@ -136,10 +138,9 @@ battle の reactive 効果の解決モデルに複数の未完成・不整合が
 
 | リポ | 変更 |
 |---|---|
-| common | 本 ADR-044 起草、RULEBOOK §5（リアクティブの発火タイミングと 1 枚制限）・§12（チェーン記述の差し替え）の amendment、`docs/notes/EFFECT_YAML_SCHEMA.md` のトリガー表更新 |
-| battle | `data/game_logic_constants.yaml` の `trigger_types` 再編＋再生成、`TriggerType` / `EffectYamlLoader`、発火点（`AttackProcessor` / `PlayCardProcessor` / `FireOnDestroy` / `on_damaged`）、カードデータの trigger 付け替え＋guard 追加＋effect_text 修正、チェーン機構削除＋DB マイグレーション |
-
-EFFECT_YAML_SCHEMA.md のトリガー表更新は battle の実装と挙動が一致する時点で行う。
+| common | 本 ADR-044 起草、RULEBOOK §5（リアクティブの発火タイミングと 1 枚制限）・§12（チェーン記述の差し替え）の amendment |
+| overload-party-card | カード SSoT (`data/cards/*.yaml`) の trigger 付け替え＋guard 追加＋effect_text 修正、`generate_cards.py` 再生成 |
+| battle | `data/game_logic_constants.yaml` の `trigger_types` 再編＋再生成、`TriggerType` / `EffectYamlLoader`（guard スキーマ実装含む）、発火点（`AttackProcessor` / `PlayCardProcessor` / `DrawPhaseProcessor` / `on_damaged`）、チェーン機構削除＋`chain_stack` カラム参照除去（コード先行・既存カラムは放置）、`cards_gen.json` 同期コピーの更新 |
 
 ## 関連
 
