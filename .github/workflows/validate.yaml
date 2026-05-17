@@ -27,6 +27,10 @@ on:
       - "packages/doc-tools/**"
       - "packages/codegen-tools/**"
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   unit-tests:
     name: Unit tests (Python)
