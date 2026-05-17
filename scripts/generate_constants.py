@@ -55,8 +55,6 @@ def _to_pascal(value):
 def _screaming_snake(value):
     """YAML 値を SCREAMING_SNAKE_CASE 識別子に変換します（TS 定数名用）。"""
     value = value.replace("/", "").replace("-", "_")
-    if "_" in value:
-        return value.upper()
     return value.upper()
 
 

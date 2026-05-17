@@ -330,3 +330,19 @@ class TestGoldenTs:
 
             ''')
         assert got == expected
+
+
+class TestToPascal:
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [
+            ("AI/ML", "AIML"),
+            ("", ""),
+            ("frontend", "Frontend"),
+            ("Compute", "Compute"),
+            ("instance_family", "InstanceFamily"),
+            ("semi-limited", "SemiLimited"),
+        ],
+    )
+    def test_to_pascal(self, value, expected):
+        assert gen._to_pascal(value) == expected
