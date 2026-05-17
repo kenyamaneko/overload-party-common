@@ -70,7 +70,7 @@ main への push で [.github/workflows/publish.yaml](.github/workflows/publish.
 - **変更検知**: [.github/scripts/publish/detect-changes.sh](.github/scripts/publish/detect-changes.sh) が前回タグとの diff を見てどのパッケージを bump するか決める。デフォルトは patch。
 - **バージョン bump**: 手動で minor/major にしたい場合は Actions から `workflow_dispatch` で `bump` と `target` を指定して実行。
 - **タグ規約**: `packages/<name>/v<semver>` (例: `packages/game-design-constants/v1.2.3`)
-- **レジストリ**: Go は git tag のみ (`go get` が解決)、NuGet / npm は GitHub Packages (`nuget.pkg.github.com` / `npm.pkg.github.com`)
+- **レジストリ**: Go は git tag のみ (`go get` が解決)、NuGet / npm は Cloudsmith (`nuget.cloudsmith.io/keyandnotes/overload-party-nuget` / `npm.cloudsmith.io/keyandnotes/overload-party-npm`)
 
 ## 定数を変更するとき
 
