@@ -130,20 +130,6 @@ def _snake_to_pascal(name: str) -> str:
     return "".join(w.capitalize() for w in name.split("_"))
 
 
-def _find_schema_table_name(
-    lines: list[str], table_header_idx: int, name_set: set[str]
-) -> str | None:
-    """テーブルヘッダー行の上方向にボールドヘッダーを探してテーブル名を返す。"""
-    bold_re = re.compile(r"\*\*(\w+)\*\*\s*\(")
-    for j in range(table_header_idx - 1, max(table_header_idx - 15, -1), -1):
-        bm = bold_re.search(lines[j])
-        if bm:
-            display_name = bm.group(1)
-            if display_name in name_set:
-                return display_name
-    return None
-
-
 def add_markers(doc_path: Path, tables: dict[str, Table]) -> None:
     """DATA_DESIGN.md 内の既存 Markdown テーブルを検出しマーカーで囲む。"""
     display_map: dict[str, str] = {}
