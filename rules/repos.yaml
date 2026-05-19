@@ -12,6 +12,9 @@
 #   flow: gitflow | githubflow | none
 #         rules/flow/<flow>.md と 1:1 対応 (none はスキップ)
 #         none は main 直 push を許容するリポ
+#   prereq_docs: (optional) list[str]
+#         編集前に必ず Read するドキュメント (common からの相対パス)。
+#         repo 固有の前提知識 (ゲームルール等) を強制適用するために使用
 
 repos:
   - name: overload-party-common
@@ -63,6 +66,8 @@ repos:
     path: ../overload-party-battle
     lang: csharp
     flow: githubflow
+    prereq_docs:
+      - docs/game_design/RULEBOOK.md
 
   - name: overload-party-client
     path: ../overload-party-client
