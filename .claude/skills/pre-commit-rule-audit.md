@@ -7,6 +7,16 @@ description: コミット直前に変更を rules/principles.md と該当リポ�
 
 `git diff` (staged + unstaged) を common の rules に照らして違反を列挙する skill。違反があれば commit を保留し、修正してから再 audit に進む。
 
+## mental shortcut の禁止 (最重要)
+
+この skill の各 step を「頭の中で済ませた」ことにしてはならない。step 1〜7 はすべて tool 呼び出し (Read / Bash) の実体を伴って実行する。次の行為は audit の**未実施**とみなす:
+
+- commit メッセージや `echo` に「audit 済み」「違反 0」とだけ書く宣言
+- step 3 のルールファイルを Read tool で読み直さず、記憶・会話文脈で代用すること (過去に読んでいても必ず再 Read する)
+- step 5 の逐次照合を、diff を grep / 目視せずに「問題なし」と結論すること
+
+「違反は無い」と仮定して始めない。違反を 1 つ以上見つける前提で探し、各ルール項目について diff の該当箇所を確認した結果としてのみ「違反 0」と報告する。
+
 ## 手順
 
 1. **変更ファイル取得**: `git status --short` と `git diff --stat` で変更ファイル一覧を出す
