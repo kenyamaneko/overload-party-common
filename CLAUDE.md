@@ -12,10 +12,11 @@
 1. 編集対象ファイルのパスから対象リポを判定する
    - パスが `./` 起点または `rules/`, `data/`, `db/`, `packages/`, `scripts/`, `docs/` 配下 → `overload-party-common`
    - `../overload-party-<name>/` パターン → 該当リポ
-2. [rules/repos.yaml](rules/repos.yaml) で対象リポの `lang` / `flow` を引く
+2. [rules/repos.yaml](rules/repos.yaml) で対象リポの `lang` / `flow` / `prereq_docs` を引く
 3. 以下のルールを Read して以降の判断に適用する:
    - lang: `rules/lang/<lang>.md` (`lang: none` ならスキップ)
    - flow: `rules/flow/<flow>.md` (`flow: none` ならスキップ)
+   - prereq_docs: 列挙された各ファイル (未定義ならスキップ)
 4. リポ固有のルールが必要な場合は対象リポの `docs/` 配下を Read する
 
 `rules/principles.md` は本ファイルから @import 済みなので全リポに共通適用される。
