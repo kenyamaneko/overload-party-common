@@ -15,3 +15,15 @@
 ## [lang/go] コード生成
 
 - 型コードは `data/models.yaml` を SSoT とし、`python3 scripts/generate_types.py` で再生成する
+
+## [lang/go] docs コメント
+
+- 型・関数・メソッドには godoc コメントを書く (識別子名で始める)
+
+## [lang/go] 命名
+
+- 一般的ではない略語を使わない
+
+## [lang/go] 分岐
+
+- `switch` には必ず `default` 節を書く
