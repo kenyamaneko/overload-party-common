@@ -52,14 +52,14 @@ brand 側 Terraform で「app に開ける window」を明示する。
 
 「処理 (executor) は対象リソースを所有する repo に置く」 原則を継続採用する。本境界変更に伴い、nodepool resize の executor は brand リポから app 側 (= overload-party-infra) に移管する。
 
-### dispatch chain の新形
+### dispatch chain の変更
+
+末尾の executor (`node-pool-scale.yaml`) の所在のみが移管対象で、cron trigger と env orchestrator は据置:
 
 ```
-ops/nightly-shutdown.yaml         (cron trigger)
-  ↓ workflow_dispatch
-k8s/env-lifecycle.yaml            (env orchestrator)
-  ↓ workflow_dispatch
-infra/node-pool-scale.yaml        (executor、新所在)
+変更前:  ops/nightly-shutdown → k8s/env-lifecycle → platform/node-pool-scale
+変更後:  ops/nightly-shutdown → k8s/env-lifecycle → infra/node-pool-scale
+                                                    ↑ ここのみ移管
 ```
 
 `platform/node-pool-scale.yaml` は削除する。
