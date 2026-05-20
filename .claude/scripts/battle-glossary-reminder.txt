@@ -1,0 +1,9 @@
+battle リポ (overload-party-battle/ または overload-party-battle.wt/ 配下) を編集する前に必読:
+
+1. GLOSSARY: /Users/kenyamamoto/workspace/key_and_notes/overload-party/overload-party-common/docs/game_design/GLOSSARY.md (未読なら Read)
+2. RULEBOOK: /Users/kenyamamoto/workspace/key_and_notes/overload-party/overload-party-common/docs/game_design/RULEBOOK.md (該当節を Read)
+
+ルール:
+- GLOSSARY の表にあるドメイン概念 (左列) とコード識別子 (右列) のみ使用可。コメント・識別子・doc いずれも対象。
+- 表にない語でドメインを表現しない。
+- 新規ドメイン概念が必要なら命名せず、まず GLOSSARY 追記を先に提案する。
