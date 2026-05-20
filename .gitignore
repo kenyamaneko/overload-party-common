@@ -1,7 +1,6 @@
 # AI assistant configs
-.claude/*
-!.claude/skills/
-!.claude/skills/**
+.claude/settings.json
+.claude/settings.local.json
 .gemini/
 .aider*
 
@@ -28,6 +27,7 @@ docs/notes/
 docs/postmortem/
 docs/handoff/
 docs/STORY/
+docs/review/
 
 # Generated packages (build artifacts)
 packages/*-dotnet/obj/

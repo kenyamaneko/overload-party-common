@@ -76,3 +76,16 @@
 - Artifact Registry の `nightly-review` イメージを `gcloud artifacts docker images delete` で全削除
 - GitHub Secret `ANTHROPIC_API_KEY` を削除 (他用途なし)
 - 旧 `GH_PAT_NIGHTLY_REVIEW` Secret は drift-monitor が現役で利用していたため `INFRA_DRIFT_MONITOR_TOKEN` に改名し用途と一致させた
+
+## Postscript (2026-05-20)
+
+スラッシュコマンドと機能ディレクトリの配置を `overload-party-ops` から `overload-party-common` に移行した。理由は「全リポの開発起点を common に集約する」運用方針 (`overload-party-common` を primary working directory として扱う)。同時にコマンド名を「差分 / 全体」の対称軸で揃え、全体スキャン用コマンドを新設した。
+
+| 要素 | 旧配置 | 新配置 |
+|---|---|---|
+| 差分レビュー (旧 `/review-yesterday`) | `overload-party-ops/.claude/commands/review-yesterday.md` | `overload-party-common/.claude/commands/review-diff.md` |
+| 全体スキャン (新設) | — | `overload-party-common/.claude/commands/review-all.md` |
+| 機能ディレクトリ | `overload-party-ops/auto-review/` | `overload-party-common/auto-review/` |
+| 結果出力先 | `~/workspace/key_and_notes/overload-party/review/...` | `overload-party-common/docs/review/{diff,all}/...` (gitignored) |
+
+YAML / SSoT スキーマ・観点・Issue 起票挙動 (`/review-diff`) はすべて旧方式と同一。`/review-all` は Issue 起票せずファイル出力のみ。
