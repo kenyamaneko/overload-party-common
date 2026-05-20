@@ -1,5 +1,5 @@
 ---
-description: 指定リポジトリの現在のブランチ HEAD 全体を Subagent で並列レビューし、docs/review/all/{実行日時}/ に書き出す。複数リポを引数指定可能
+description: 指定リポジトリの現在のブランチ HEAD 全体を Subagent で並列レビューし、docs/review/all/{repo}/{実行日時}.md に書き出す。複数リポを引数指定可能
 allowed-tools: Bash, Agent, Read, Write
 argument-hint: "<repo> [repo ...]"
 ---
@@ -28,9 +28,9 @@ argument-hint: "<repo> [repo ...]"
 - 対象リポと観点は @auto-review/repos.yaml と @auto-review/review_criteria.yaml を SSoT とする
 - 引数で指定されたリポ数ぶんの `general-purpose` Subagent を **すべて並列で** 投げる (1 メッセージ内で複数 Agent 呼び出し)
 - Subagent は各自で `gh repo clone` してリポ全体を Read/Grep/Glob で参照し、観点に沿ってレビューする
-- 結果は `docs/review/all/{実行日時}/{repo}.md` (common リポ配下、gitignored) に書き出す
+- 結果は `docs/review/all/{repo}/{実行日時}.md` (common リポ配下、gitignored) に書き出す
 - Issue 起票はしない (全体スキャンは指摘量が多くなり Issue を埋もれさせるため、ファイル出力とチャットサマリのみ)
-- 全 Subagent 完了後、親が `index.md` を集約生成してチャットに返す
+- 全 Subagent 完了後、親が結果を集計しチャットにサマリを返す (集約 index ファイルは生成しない)
 
 ## 重要度の定義
 
@@ -80,11 +80,13 @@ JST で「実行日時」を計算する。同じ日に複数回走らせても�
 
 ```bash
 RUN_AT=$(TZ=Asia/Tokyo date +%Y-%m-%d-%H%M)
-OUTPUT_DIR="$REPO_ROOT/docs/review/all/$RUN_AT"
-mkdir -p "$OUTPUT_DIR"
+REVIEW_ROOT="$REPO_ROOT/docs/review/all"
+for repo in <対象リポ群>; do
+  mkdir -p "$REVIEW_ROOT/$repo"
+done
 ```
 
-以降のテンプレート中の `{OUTPUT_DIR}` は上記 `$REPO_ROOT/docs/review/all/{RUN_AT}` を指す (common リポ配下、`.gitignore` で除外済)。
+以降のテンプレート中の `{OUTPUT_PATH}` は `$REVIEW_ROOT/{repo}/{RUN_AT}.md` を指す (common リポ配下、`.gitignore` で除外済)。リポごとに 1 ディレクトリ・1 ファイルを持つ構造で、cross-repo の集約ファイルは生成しない。
 
 ### 3. Subagent への指示テンプレート
 
@@ -97,7 +99,7 @@ mkdir -p "$OUTPUT_DIR"
 ブランチ HEAD のリポ全体をレビューしてください (差分ではなく現時点の全コード)。
 
 ## 出力ファイル
-{OUTPUT_DIR}/{repo}.md
+{OUTPUT_PATH}  (= docs/review/all/{repo}/{RUN_AT}.md)
 
 ## 手順
 
@@ -131,7 +133,7 @@ git -C "$WORKDIR" rev-parse HEAD > "$WORKDIR/.review-head.txt"
 
 ### Step 4: 結果ファイルの書き出し
 
-`{OUTPUT_DIR}/{repo}.md` に Markdown で書く。各指摘には重要度 `critical` / `high` / `medium` / `low` のいずれかを必ず付ける (定義は親プロンプトの「重要度の定義」セクションに従う)。判断に迷う場合は高い方を選ぶ。
+`{OUTPUT_PATH}` に Markdown で書く。各指摘には重要度 `critical` / `high` / `medium` / `low` のいずれかを必ず付ける (定義は親プロンプトの「重要度の定義」セクションに従う)。判断に迷う場合は高い方を選ぶ。
 
 フォーマット:
 
@@ -164,7 +166,7 @@ git -C "$WORKDIR" rev-parse HEAD > "$WORKDIR/.review-head.txt"
 次の JSON 形式で 1 行返す。それ以外の冗長な文章は不要。`severity_counts` は Step 4 で集計した重要度別件数を入れる。
 
 - LGTM: `{"repo": "{repo}", "status": "lgtm"}`
-- 指摘あり: `{"repo": "{repo}", "status": "issues", "severity_counts": {"critical": N, "high": N, "medium": N, "low": N}, "review_path": "{OUTPUT_DIR}/{repo}.md"}`
+- 指摘あり: `{"repo": "{repo}", "status": "issues", "severity_counts": {"critical": N, "high": N, "medium": N, "low": N}, "review_path": "{OUTPUT_PATH}"}`
 - 失敗: `{"repo": "{repo}", "status": "error", "error": "<短い説明>"}`
 
 エラーは silent に握りつぶさず、必ず "error" ステータスで親に返すこと。
@@ -178,31 +180,9 @@ Step 1 で確定した対象リポすべての Subagent を **1 メッセージ�
 
 ### 5. 集約
 
-全 Subagent の返答 (JSON 1 行) を集計し、`{OUTPUT_DIR}/index.md` を生成する。指摘ありリポは **重要度の高い順** (critical → high → medium → low) でソートする (リポ内の最高重要度をソートキーにする)。
+全 Subagent の返答 (JSON 1 行) を集計し、Step 6 のチャット返答用にデータを準備する。指摘ありリポは **重要度の高い順** (critical → high → medium → low) でソートする (リポ内の最高重要度をソートキーにする)。
 
-フォーマット:
-
-```markdown
-# 全体レビュー {RUN_AT}
-
-## 全体サマリ
-- critical: N 件 (X リポ)
-- high: N 件 (X リポ)
-- medium: N 件 (X リポ)
-- low: N 件 (X リポ)
-
-## 指摘あり ({件数})
-- [{repo}](./{repo}.md) — critical:N high:N medium:N low:N
-- ...
-
-## LGTM ({件数})
-- {repo}
-- ...
-
-## 失敗 ({件数})
-- {repo} — {エラー詳細}
-- ...
-```
+cross-repo の集約ファイル (index.md 等) は生成しない。サマリはチャット返答のみで完結させる。
 
 ### 6. ユーザーへの返答
 
@@ -210,14 +190,13 @@ Step 1 で確定した対象リポすべての Subagent を **1 メッセージ�
 
 1. 1 行サマリ: `指摘あり: N / LGTM: N / 失敗: N`
 2. 重要度別の合計件数: `critical: N / high: N / medium: N / low: N`
-3. 指摘ありリポと結果ファイルパスの箇条書き (重要度の高い順)
+3. 指摘ありリポと結果ファイルパス (`docs/review/all/{repo}/{RUN_AT}.md`) の箇条書き (重要度の高い順)
 4. 失敗リポとエラー概要 (あれば)
-5. index.md の絶対パス (`{OUTPUT_DIR}/index.md`)
 
 冗長な進捗ログや内部状態は出力しない。
 
 ## 失敗時の方針
 
 - 個別 Subagent が失敗しても他の Subagent は継続させる (1 リポの失敗で全体停止しない)
-- 失敗リポは index.md と返答に明示する。silent に欠落させない
+- 失敗リポはチャット返答に明示する。silent に欠落させない
 - 親自身が失敗した場合 (引数解析・設定読み込み・日付計算・ディレクトリ作成等) は即座にユーザーへ報告する
