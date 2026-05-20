@@ -3,3 +3,19 @@
 ## [lang/typescript] wire format
 
 - C# server (battle) からの JSON ペイロードは CamelCase 形式なので、TS 側の型定義もそれに合わせる (snake_case ではない)。例: `gameID`, `myView`, `oppView`, `faceUp` 等
+
+## [lang/typescript] docs コメント
+
+- 関数・メソッド・クラスには TSDoc (`/** ... */`) を書く。引数があれば各 `@param`、戻り値があれば `@returns` を必須とする
+
+## [lang/typescript] 命名
+
+- 一般的ではない略語を使わない
+
+## [lang/typescript] 分岐
+
+- `switch` には必ず `default` 節を書く
+
+## [lang/typescript] 変数宣言
+
+- `var` を使わない (`const` を基本とし、再代入が必要な場合のみ `let` を使う)
