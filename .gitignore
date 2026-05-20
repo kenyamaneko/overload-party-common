@@ -27,6 +27,7 @@ docs/notes/
 docs/postmortem/
 docs/handoff/
 docs/STORY/
+docs/review/
 
 # Generated packages (build artifacts)
 packages/*-dotnet/obj/

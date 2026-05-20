@@ -1,12 +1,12 @@
 ---
-description: 指定リポジトリの現在のブランチ HEAD 全体を Subagent で並列レビューし、~/workspace/key_and_notes/overload-party/review-repo/{実行日時}/ に書き出す。複数リポを引数指定可能
+description: 指定リポジトリの現在のブランチ HEAD 全体を Subagent で並列レビューし、docs/review/all/{実行日時}/ に書き出す。複数リポを引数指定可能
 allowed-tools: Bash, Agent, Read, Write
 argument-hint: "<repo> [repo ...]"
 ---
 
-# /review-repo
+# /review-all
 
-指定リポジトリの現在のブランチ HEAD 全体を `auto-review/review_criteria.yaml` の観点でレビューする。`/review-yesterday` が差分レビューなのに対し、`/review-repo` は**リポ全体スキャン**を担う。
+指定リポジトリの現在のブランチ HEAD 全体を `auto-review/review_criteria.yaml` の観点でレビューする。`/review-diff` が差分レビューなのに対し、`/review-all` は**リポ全体スキャン**を担う。
 
 ## 引数
 
@@ -15,12 +15,12 @@ argument-hint: "<repo> [repo ...]"
 例:
 
 ```
-/review-repo gateway                       # overload-party-gateway 全体
-/review-repo gateway battle                # 2 リポ並列
-/review-repo overload-party-gateway        # フルネームでも可
+/review-all gateway                       # overload-party-gateway 全体
+/review-all gateway battle                # 2 リポ並列
+/review-all overload-party-gateway        # フルネームでも可
 ```
 
-引数が空なら、フォールバックせずユーザーに使い方を返して終了する (`/review-yesterday` と異なり全リポ対象モードは持たない。リポ全体スキャンを 17 リポで並列走らせるとコスト・時間が過大になるため)。
+引数が空なら、フォールバックせずユーザーに使い方を返して終了する (`/review-diff` と異なり全リポ対象モードは持たない。リポ全体スキャンを 17 リポで並列走らせるとコスト・時間が過大になるため)。
 
 ## 全体方針
 
@@ -28,7 +28,7 @@ argument-hint: "<repo> [repo ...]"
 - 対象リポと観点は @auto-review/repos.yaml と @auto-review/review_criteria.yaml を SSoT とする
 - 引数で指定されたリポ数ぶんの `general-purpose` Subagent を **すべて並列で** 投げる (1 メッセージ内で複数 Agent 呼び出し)
 - Subagent は各自で `gh repo clone` してリポ全体を Read/Grep/Glob で参照し、観点に沿ってレビューする
-- 結果は `~/workspace/key_and_notes/overload-party/review-repo/{実行日時}/{repo}.md` に書き出す
+- 結果は `docs/review/all/{実行日時}/{repo}.md` (common リポ配下、gitignored) に書き出す
 - Issue 起票はしない (全体スキャンは指摘量が多くなり Issue を埋もれさせるため、ファイル出力とチャットサマリのみ)
 - 全 Subagent 完了後、親が `index.md` を集約生成してチャットに返す
 
@@ -54,7 +54,7 @@ argument-hint: "<repo> [repo ...]"
 ```bash
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
 if [ -z "$REPO_ROOT" ] || [ ! -f "$REPO_ROOT/auto-review/repos.yaml" ] || [ ! -f "$REPO_ROOT/auto-review/review_criteria.yaml" ]; then
-  echo "ERROR: /review-repo は overload-party-common リポジトリ配下でのみ実行可能です (auto-review/ 配下の設定ファイルが見つかりません)。" >&2
+  echo "ERROR: /review-all は overload-party-common リポジトリ配下でのみ実行可能です (auto-review/ 配下の設定ファイルが見つかりません)。" >&2
   exit 1
 fi
 ```
@@ -80,11 +80,11 @@ JST で「実行日時」を計算する。同じ日に複数回走らせても�
 
 ```bash
 RUN_AT=$(TZ=Asia/Tokyo date +%Y-%m-%d-%H%M)
-OUTPUT_DIR=~/workspace/key_and_notes/overload-party/review-repo/$RUN_AT
+OUTPUT_DIR="$REPO_ROOT/docs/review/all/$RUN_AT"
 mkdir -p "$OUTPUT_DIR"
 ```
 
-以降のテンプレート中の `{OUTPUT_DIR}` は上記 `~/workspace/key_and_notes/overload-party/review-repo/{RUN_AT}` を指す。
+以降のテンプレート中の `{OUTPUT_DIR}` は上記 `$REPO_ROOT/docs/review/all/{RUN_AT}` を指す (common リポ配下、`.gitignore` で除外済)。
 
 ### 3. Subagent への指示テンプレート
 
@@ -104,7 +104,7 @@ mkdir -p "$OUTPUT_DIR"
 ### Step 1: リポの取得
 
 ```bash
-WORKDIR=/tmp/review-repo-{repo}-{RUN_AT}
+WORKDIR=/tmp/review-all-{repo}-{RUN_AT}
 if [ -d "$WORKDIR" ]; then
   git -C "$WORKDIR" fetch --quiet origin {branch}
   git -C "$WORKDIR" reset --hard --quiet "origin/{branch}"

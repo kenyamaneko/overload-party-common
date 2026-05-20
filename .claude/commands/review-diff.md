@@ -1,10 +1,10 @@
 ---
-description: 前日 03:00 JST 以降の差分を Subagent で並列レビューし、~/workspace/key_and_notes/overload-party/review/{前日日付}/ に書き出して指摘があれば各リポに Issue 起票する。引数でリポを絞り込み可能
+description: 前日 03:00 JST 以降の差分を Subagent で並列レビューし、docs/review/diff/{前日日付}/ に書き出して指摘があれば各リポに Issue 起票する。引数でリポを絞り込み可能
 allowed-tools: Bash, Agent, Read, Write
 argument-hint: "[repo ...]"
 ---
 
-# /review-yesterday
+# /review-diff
 
 前日 03:00 JST 以降の各リポジトリの差分を、リポ全体を読みながら並列でレビューする。
 日付跨ぎの作業 (深夜 1〜2 時台) を取り逃さないため、起点は厳密な「前日 00:00」ではなく「前日 03:00 JST」に固定している。
@@ -20,10 +20,10 @@ argument-hint: "[repo ...]"
 例:
 
 ```
-/review-yesterday                          # 全リポ
-/review-yesterday gateway                  # overload-party-gateway のみ
-/review-yesterday gateway battle           # 2 リポ並列
-/review-yesterday overload-party-gateway   # フルネームでも可
+/review-diff                          # 全リポ
+/review-diff gateway                  # overload-party-gateway のみ
+/review-diff gateway battle           # 2 リポ並列
+/review-diff overload-party-gateway   # フルネームでも可
 ```
 
 ## 全体方針
@@ -32,7 +32,7 @@ argument-hint: "[repo ...]"
 - 対象リポと観点は @auto-review/repos.yaml と @auto-review/review_criteria.yaml を SSoT とする
 - これらを Read してから、対象リポ数ぶんの `general-purpose` Subagent を **すべて並列で** 投げる (1 メッセージ内で複数 Agent 呼び出し)
 - Subagent は各自で `gh repo clone` してリポ全体を Read/Grep/Glob で参照し、観点に沿ってレビューする
-- 結果は `~/workspace/key_and_notes/overload-party/review/{前日日付}/{repo}.md` に書き出す。指摘ありなら GitHub Issue も起票する
+- 結果は `docs/review/diff/{前日日付}/{repo}.md` (common リポ配下、gitignored) に書き出す。指摘ありなら GitHub Issue も起票する
 - 全 Subagent 完了後、親が `index.md` を集約生成してチャットに返す
 
 ## 重要度の定義
@@ -57,7 +57,7 @@ argument-hint: "[repo ...]"
 ```bash
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
 if [ -z "$REPO_ROOT" ] || [ ! -f "$REPO_ROOT/auto-review/repos.yaml" ] || [ ! -f "$REPO_ROOT/auto-review/review_criteria.yaml" ]; then
-  echo "ERROR: /review-yesterday は overload-party-common リポジトリ配下でのみ実行可能です (auto-review/ 配下の設定ファイルが見つかりません)。" >&2
+  echo "ERROR: /review-diff は overload-party-common リポジトリ配下でのみ実行可能です (auto-review/ 配下の設定ファイルが見つかりません)。" >&2
   exit 1
 fi
 ```
@@ -84,11 +84,11 @@ JST で「前日」と「実行日」を計算する。前日日付がレビュ�
 ```bash
 TODAY=$(TZ=Asia/Tokyo date +%Y-%m-%d)
 YESTERDAY=$(TZ=Asia/Tokyo date -v-1d +%Y-%m-%d)  # macOS BSD date
-OUTPUT_DIR=~/workspace/key_and_notes/overload-party/review/$YESTERDAY
+OUTPUT_DIR="$REPO_ROOT/docs/review/diff/$YESTERDAY"
 mkdir -p "$OUTPUT_DIR"
 ```
 
-以降のテンプレート中の `{OUTPUT_DIR}` は上記 `~/workspace/key_and_notes/overload-party/review/{YESTERDAY}` を指す。
+以降のテンプレート中の `{OUTPUT_DIR}` は上記 `$REPO_ROOT/docs/review/diff/{YESTERDAY}` を指す (common リポ配下、`.gitignore` で除外済)。
 
 ### 3. Subagent への指示テンプレート
 
