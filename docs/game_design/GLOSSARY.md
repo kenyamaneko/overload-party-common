@@ -64,11 +64,11 @@
 | ドメイン概念 | コード識別子 | コメント表記 | 備考 |
 |---|---|---|---|
 | Compute系リソース | `Compute` | Compute系リソース | VM / Container / Orchestrator / Serverless / AI/ML の総称 (card_type) |
-| VM | `VM` | VM | デプロイターン 1。基本ユニット |
-| Container | `Container` | コンテナ | デプロイターン 0 |
-| Orchestrator | `Orchestrator` | オーケストレーター | デプロイターン 2 |
-| Serverless | `Serverless` | サーバーレス | デプロイターン 0 |
-| AI/ML | `AI/ML` | AI/ML | デプロイターン 2 |
+| VM | `VM` | VM | 基本ユニット |
+| Container | `Container` | コンテナ |  |
+| Orchestrator | `Orchestrator` | オーケストレーター |  |
+| Serverless | `Serverless` | サーバーレス |  |
+| AI/ML | `AI/ML` | AI/ML |  |
 | Data系リソース | `DataResource` | Data系リソース | Database / ObjectStorage / CacheDB の総称 (card_type) |
 | Database | `Database` | データベース | DataResource の subtype。主な Insight 源。NoSQL も Database に含む |
 | CacheDB | `CacheDB` | キャッシュ DB | DataResource の subtype。デプロイ時ボーナス効果を持つ補助 DB |
