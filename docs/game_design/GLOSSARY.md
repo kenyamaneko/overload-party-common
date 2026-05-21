@@ -63,17 +63,17 @@
 
 | ドメイン概念 | コード識別子 | コメント表記 | 備考 |
 |---|---|---|---|
-| コンピュート系リソース | `ComputeResource` | コンピュート系リソース | Serverless / Container / Compute / Orchestrator の総称 |
-| Serverless | `Serverless` | サーバーレス | デプロイターン 0 |
+| Compute系リソース | `Compute` | Compute系リソース | VM / Container / Orchestrator / Serverless / AI/ML の総称 (card_type) |
+| VM | `VM` | VM | デプロイターン 1。基本ユニット |
 | Container | `Container` | コンテナ | デプロイターン 0 |
-| Compute | `Compute` | コンピュート | デプロイターン 1。基本ユニット |
 | Orchestrator | `Orchestrator` | オーケストレーター | デプロイターン 2 |
-| AI/ML系リソース | `AiMlResource` | AI/ML系リソース | デプロイターン 2 |
-| Data系リソース | `DataResource` | Data系リソース | Database / ObjectStorage / CacheDB の総称 |
+| Serverless | `Serverless` | サーバーレス | デプロイターン 0 |
+| AI/ML | `AI/ML` | AI/ML | デプロイターン 2 |
+| Data系リソース | `DataResource` | Data系リソース | Database / ObjectStorage / CacheDB の総称 (card_type) |
 | Database | `Database` | データベース | DataResource の subtype。主な Insight 源。NoSQL も Database に含む |
-| Cache DB | `CacheDb` | キャッシュ DB | デプロイ時ボーナス効果を持つ補助 DB |
-| Object Storage | `ObjectStorage` | オブジェクトストレージ | フロントエンド配置時は Insight 生成不可 |
-| リソースラベル | `ResourceLabel` | リソースラベル | 表示用の技術名（VM / RDB 等）。ゲームロジックには影響しない |
+| CacheDB | `CacheDB` | キャッシュ DB | DataResource の subtype。デプロイ時ボーナス効果を持つ補助 DB |
+| ObjectStorage | `ObjectStorage` | オブジェクトストレージ | DataResource の subtype。フロントエンド配置時は Insight 生成不可 |
+| リソースラベル | `ResourceLabel` | リソースラベル | 表示用の技術名（RDB / NoSQL 等）。ゲームロジックには影響しない |
 | Resizable | `Resizable` | リサイザブル | 手動ランクアップ可能な属性。区分 (R) |
 | Elastic | `Elastic` | エラスティック | 自動スケーリングする属性。区分 (E) |
 
