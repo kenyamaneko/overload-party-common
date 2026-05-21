@@ -46,7 +46,6 @@
 
 - 開発は GitHub Issue を起点に行う
 - 実装を変更したら、単体テストと統合テストが通過することを確認する
-- commit する前に `pre-commit-rule-audit` skill でレビューし、ルール違反 0 を確認する
 
 ## [base] CI方針
 
