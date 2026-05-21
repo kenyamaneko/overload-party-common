@@ -25,12 +25,12 @@ instance_families:
 - R
 
 # Zone / CardType / Subtype の 3 階層分類。
-# Subtype を持つのは Compute と Data のみ。
+# Subtype を持つのは Compute と DataResource のみ。
 # 旧 CardTypes では個別 "Compute" と category "Compute" が同名衝突していたため
-# 個別側は VM にリネーム済み。参考: memory/project_card_taxonomy.md
+# 個別側は VM にリネーム済み。
 card_types:
 - Compute
-- Data
+- DataResource
 - Platform
 - Attachment
 - Strategy
@@ -44,7 +44,7 @@ subtypes:
   - Orchestrator
   - Serverless
   - AI/ML
-  Data:
+  DataResource:
   - Database
   - ObjectStorage
   - CacheDB

@@ -18,14 +18,14 @@ export type MatchType = (typeof MATCH_TYPES)[number];
 export const STAT_TYPES = ["tp", "yield", "av"] as const;
 export type StatType = (typeof STAT_TYPES)[number];
 
-export const CARD_TYPES = ["Compute", "Data", "Platform", "Attachment", "Strategy", "Reactive", "Incident"] as const;
+export const CARD_TYPES = ["Compute", "DataResource", "Platform", "Attachment", "Strategy", "Reactive", "Incident"] as const;
 export type CardType = (typeof CARD_TYPES)[number];
 
 export const COMPUTE_SUBTYPES = ["VM", "Container", "Orchestrator", "Serverless", "AI/ML"] as const;
 export type ComputeSubtype = (typeof COMPUTE_SUBTYPES)[number];
 
-export const DATA_SUBTYPES = ["Database", "ObjectStorage", "CacheDB"] as const;
-export type DataSubtype = (typeof DATA_SUBTYPES)[number];
+export const DATARESOURCE_SUBTYPES = ["Database", "ObjectStorage", "CacheDB"] as const;
+export type DataResourceSubtype = (typeof DATARESOURCE_SUBTYPES)[number];
 
 export const FACTIONS = ["Neutral", "SHE", "Tenki", "Sugar", "Tuners"] as const;
 export const SELECTABLE_FACTIONS = ["SHE", "Tenki", "Sugar", "Tuners"] as const;
