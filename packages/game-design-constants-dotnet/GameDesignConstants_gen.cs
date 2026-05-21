@@ -95,7 +95,7 @@ public static class StatTypes
 public static class CardTypes
 {
     public const string Compute = "Compute";
-    public const string Data = "Data";
+    public const string DataResource = "DataResource";
     public const string Platform = "Platform";
     public const string Attachment = "Attachment";
     public const string Strategy = "Strategy";
@@ -114,7 +114,7 @@ public static class Subtypes
         public const string AIML = "AI/ML";
     }
 
-    public static class Data
+    public static class DataResource
     {
         public const string Database = "Database";
         public const string ObjectStorage = "ObjectStorage";

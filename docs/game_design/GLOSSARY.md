@@ -69,7 +69,8 @@
 | Compute | `Compute` | コンピュート | デプロイターン 1。基本ユニット |
 | Orchestrator | `Orchestrator` | オーケストレーター | デプロイターン 2 |
 | AI/ML系リソース | `AiMlResource` | AI/ML系リソース | デプロイターン 2 |
-| DB系リソース / Database | `Database` | データベース | 主な Insight 源。NoSQL も Database に含む |
+| Data系リソース | `DataResource` | Data系リソース | Database / ObjectStorage / CacheDB の総称 |
+| Database | `Database` | データベース | DataResource の subtype。主な Insight 源。NoSQL も Database に含む |
 | Cache DB | `CacheDb` | キャッシュ DB | デプロイ時ボーナス効果を持つ補助 DB |
 | Object Storage | `ObjectStorage` | オブジェクトストレージ | フロントエンド配置時は Insight 生成不可 |
 | リソースラベル | `ResourceLabel` | リソースラベル | 表示用の技術名（VM / RDB 等）。ゲームロジックには影響しない |

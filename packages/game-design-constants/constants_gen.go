@@ -138,7 +138,7 @@ const (
 // Card types.
 const (
 	CardTypeCompute = "Compute"
-	CardTypeData = "Data"
+	CardTypeDataResource = "DataResource"
 	CardTypePlatform = "Platform"
 	CardTypeAttachment = "Attachment"
 	CardTypeStrategy = "Strategy"
@@ -155,10 +155,10 @@ const (
 	SubtypeComputeAIML = "AI/ML"
 )
 
-// Card subtypes (Data).
+// Card subtypes (DataResource).
 const (
-	SubtypeDataDatabase = "Database"
-	SubtypeDataObjectStorage = "ObjectStorage"
-	SubtypeDataCacheDB = "CacheDB"
+	SubtypeDataResourceDatabase = "Database"
+	SubtypeDataResourceObjectStorage = "ObjectStorage"
+	SubtypeDataResourceCacheDB = "CacheDB"
 )
 
