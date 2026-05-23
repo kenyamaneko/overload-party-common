@@ -141,6 +141,17 @@ class CodegenRunner:
             )
             return 1
 
+        # 全 section をループ前にバリデーションして fail-fast。section_name_field
+        # 欠落だと _generate_one() の出力パス組み立てで KeyError になり、どの section
+        # が原因か追えないため事前に明示エラーで止める。
+        for i, section in enumerate(sections):
+            if self.section_name_field not in section:
+                sys.stderr.write(
+                    f"error: {self.models_yaml.name} section #{i + 1} missing "
+                    f"required `{self.section_name_field}` field\n"
+                )
+                return 1
+
         for section in sections:
             for tk in self._resolve_targets(section):
                 out = self._generate_one(section, tk)

@@ -231,3 +231,33 @@ def test_runner_constants_block(tmp_path: Path) -> None:
     assert runner.run() == 0
     text = (tmp_path / "out" / "enum_gen.go").read_text()
     assert 'A = "alpha"' in text
+
+
+def test_runner_missing_section_name_field_returns_error(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """section_name_field 欠落時は _generate_one() の KeyError ではなく run() 入口で
+    明示メッセージ + return 1 を返す (どの section が壊れているかユーザに伝える)."""
+    yaml_path = tmp_path / "models.yaml"
+    _write_yaml(
+        yaml_path,
+        {
+            "files": [
+                {"name": "ok", "target": "wire", "types": []},
+                {"target": "wire", "types": []},  # name 欠落
+            ]
+        },
+    )
+    runner = CodegenRunner(
+        models_yaml=yaml_path,
+        repo_root=tmp_path,
+        targets={"wire": GoTarget(tmp_path / "out", "p")},
+    )
+    rc = runner.run()
+    assert rc == 1
+    err = capsys.readouterr().err
+    assert "models.yaml" in err
+    assert "section #2" in err
+    assert "`name`" in err
+    # fail-fast: 出力ファイルは 1 件も書かれない
+    assert not (tmp_path / "out").exists()
