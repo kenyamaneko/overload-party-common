@@ -283,3 +283,9 @@ card 側 subscriber が `ev.Faction` を `"faction_set_<faction>"` に内部マ�
 - **[ADR-014](014-db-schema-split-per-service.md)**: schema 分離原則。card.card_pack はクロス schema 参照されるが FK は張らない
 - **[overload-party-shop#54](https://github.com/kenyamaneko/overload-party-shop/issues/54)**: 元の設計レビュー
 - card 側実装 issue (本 ADR 採用後に起票予定)
+
+## Amendment 2026-05-24: seed 整合性検証責務を overload-party-ops に移譲
+
+本 ADR §5 / §7 Step 9 で「shop seed の `card_pack_id` ⊂ card seed の `pack_id` 整合検証 CI を overload-party-common に追加する」と決定したが、移譲先を **overload-party-ops** に変更する。詳細な理由は [ADR-031 Amendment 2026-05-24](031-shop-products-normalization-and-faction-purchased-decomposition.md#amendment-2026-05-24-整合性検証責務を-overload-party-ops-に移譲) を参照。
+
+実装: overload-party-ops/cross-repo-seeds/ (kenyamaneko/overload-party-ops#36 / kenyamaneko/overload-party-ops#37)
