@@ -261,3 +261,38 @@ def test_runner_missing_section_name_field_returns_error(
     assert "`name`" in err
     # fail-fast: 出力ファイルは 1 件も書かれない
     assert not (tmp_path / "out").exists()
+
+
+def test_runner_emits_type_aliases_to_output_file(tmp_path: Path) -> None:
+    """section の type_aliases が生成 Go ファイルに `type X = Y` として書かれることを固定する.
+
+    emitter 単体テスト (test_go_emitter.test_render_type_aliases) は関数レベルでカバー
+    済みだが、models.yaml → runner → 実ファイル の統合パスは未カバーだった。
+    """
+    yaml_path = tmp_path / "models.yaml"
+    _write_yaml(
+        yaml_path,
+        {
+            "files": [
+                {
+                    "name": "ids",
+                    "target": "wire",
+                    "type_aliases": [
+                        {"name": "PlayerID", "base": "string"},
+                        {"name": "DeckID", "base": "int64"},
+                    ],
+                    "types": [],
+                }
+            ]
+        },
+    )
+    out_dir = tmp_path / "out"
+    runner = CodegenRunner(
+        models_yaml=yaml_path,
+        repo_root=tmp_path,
+        targets={"wire": GoTarget(out_dir, "apifoo")},
+    )
+    assert runner.run() == 0
+    content = (out_dir / "ids_gen.go").read_text()
+    assert "type PlayerID = string" in content
+    assert "type DeckID = int64" in content
