@@ -9,7 +9,16 @@
 set -uo pipefail
 
 input=$(cat)
-cmd=$(printf '%s' "$input" | jq -r '.tool_input.command // ""')
+if [ -z "$input" ]; then
+  printf '⚠️  pre-commit-claude-audit: 空入力で起動。audit 不能のため fail-safe で commit ブロック。\n' >&2
+  exit 2
+fi
+cmd=$(printf '%s' "$input" | jq -r '.tool_input.command // ""' 2>/dev/null)
+jq_rc=$?
+if [ "$jq_rc" -ne 0 ]; then
+  printf '⚠️  pre-commit-claude-audit: JSON parse 失敗 (jq exit %d)。audit 不能のため fail-safe で commit ブロック。\n' "$jq_rc" >&2
+  exit 2
+fi
 
 # 文字列リテラル / HEREDOC 内の偶発マッチを避けるため実行可能部分のみ抽出 (machine-audit と同手法)
 exec_cmd=$(printf '%s' "$cmd" | sed -E '/<</q' | sed -E 's/"[^"]*"//g; s/'\''[^'\'']*'\''//g')
