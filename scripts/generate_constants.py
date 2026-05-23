@@ -196,6 +196,14 @@ def generate_go_game_design(data, factions):
             prefix = f"Subtype{_to_pascal(category)}"
             lines.extend(_go_const_block(f"Card subtypes ({category})", prefix, subs))
 
+    copy_count = data["restriction_copy_count"]
+    lines.append("// RestrictionCopyCount returns the deck investment cap per restriction value.")
+    lines.append("var RestrictionCopyCount = map[string]int{")
+    for v in data["restriction_values"]:
+        lines.append(f"\tRestriction{_to_pascal(v)}: {copy_count[v]},")
+    lines.append("}")
+    lines.append("")
+
     _write_file(GO_GAME_DESIGN_DIR / "constants_gen.go", lines)
 
 
@@ -399,6 +407,13 @@ def generate_ts_game_design(data, factions):
     lines.append("};")
     lines.append("")
 
+    copy_count = data["restriction_copy_count"]
+    lines.append("export const RESTRICTION_COPY_COUNT: Record<Restriction, number> = {")
+    for v in data["restriction_values"]:
+        lines.append(f'  {v}: {copy_count[v]},')
+    lines.append("};")
+    lines.append("")
+
     iv = data["initial_values"]
     lines.append("export const INITIAL_VALUES = {")
     for key, val in iv.items():
@@ -416,11 +431,31 @@ def _load_yaml(path):
         return yaml.safe_load(f)
 
 
+def _validate(data):
+    """YAML の整合性を検証します。"""
+    declared = set(data["restriction_values"])
+    mapped = set(data["restriction_copy_count"].keys())
+    if declared != mapped:
+        missing = declared - mapped
+        extra = mapped - declared
+        details = []
+        if missing:
+            details.append(f"missing in restriction_copy_count: {sorted(missing)}")
+        if extra:
+            details.append(f"extra in restriction_copy_count: {sorted(extra)}")
+        raise ValueError(
+            "restriction_copy_count keys must match restriction_values exactly. "
+            + "; ".join(details)
+        )
+
+
 def main():
     """全言語の定数ファイルを生成します。"""
     game_design = _load_yaml(GAME_DESIGN_YAML)
     factions_doc = _load_yaml(FACTIONS_YAML)
     factions = factions_doc["factions"]
+
+    _validate(game_design)
 
     generate_go_game_design(game_design, factions)
     print("Generated → packages/game-design-constants/constants_gen.go", file=sys.stderr)
