@@ -162,3 +162,11 @@ const (
 	SubtypeDataResourceCacheDB = "CacheDB"
 )
 
+// RestrictionCopyCount returns the deck investment cap per restriction value.
+var RestrictionCopyCount = map[string]int{
+	RestrictionUnlimited: 3,
+	RestrictionLimited: 1,
+	RestrictionSemiLimited: 2,
+	RestrictionForbidden: 0,
+}
+

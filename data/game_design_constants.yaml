@@ -55,6 +55,13 @@ restriction_values:
 - semi_limited
 - forbidden
 
+# 制限区分ごとのデッキ投入上限枚数。restriction_values の全値を網羅すること。
+restriction_copy_count:
+  unlimited: 3
+  limited: 1
+  semi_limited: 2
+  forbidden: 0
+
 match_types:
 - pvp
 - npc

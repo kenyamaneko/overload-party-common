@@ -19,6 +19,7 @@ def fixture_data():
         "ranks": ["small", "medium"],
         "instance_families": ["M", "C"],
         "restriction_values": ["forbidden", "limited"],
+        "restriction_copy_count": {"forbidden": 0, "limited": 1},
         "match_types": ["pvp"],
         "stat_types": ["tp"],
         "card_types": ["Compute", "Platform"],
@@ -162,6 +163,12 @@ class TestGoldenGo:
             const (
             \tSubtypeComputeVM = "VM"
             )
+
+            // RestrictionCopyCount returns the deck investment cap per restriction value.
+            var RestrictionCopyCount = map[string]int{
+            \tRestrictionForbidden: 0,
+            \tRestrictionLimited: 1,
+            }
 
             ''')
         assert got == expected
@@ -324,12 +331,50 @@ class TestGoldenTs:
               "SHE": FACTIONS_METADATA[1],
             };
 
+            export const RESTRICTION_COPY_COUNT: Record<Restriction, number> = {
+              forbidden: 0,
+              limited: 1,
+            };
+
             export const INITIAL_VALUES = {
               deckSize: 30,
             } as const;
 
             ''')
         assert got == expected
+
+
+class TestValidate:
+    """restriction_copy_count と restriction_values の整合性検証。"""
+
+    def test_matches_ok(self):
+        """観点: 全 restriction 値が copy_count にマップされていれば例外なし。"""
+        gen._validate({
+            "restriction_values": ["forbidden", "limited", "unlimited"],
+            "restriction_copy_count": {"forbidden": 0, "limited": 1, "unlimited": 3},
+        })
+
+    def test_missing_key_raises(self):
+        """観点: copy_count に未マップの restriction 値があれば ValueError。
+
+        silent に 0 や undefined を返さず、SSoT 違反として早期検出する。
+        """
+        with pytest.raises(ValueError, match="missing.*unlimited"):
+            gen._validate({
+                "restriction_values": ["forbidden", "limited", "unlimited"],
+                "restriction_copy_count": {"forbidden": 0, "limited": 1},
+            })
+
+    def test_extra_key_raises(self):
+        """観点: copy_count に restriction_values 外のキーがあれば ValueError。
+
+        typo や削除漏れによる SSoT 不整合を防ぐ。
+        """
+        with pytest.raises(ValueError, match="extra.*ghost"):
+            gen._validate({
+                "restriction_values": ["forbidden", "limited"],
+                "restriction_copy_count": {"forbidden": 0, "limited": 1, "ghost": 9},
+            })
 
 
 class TestToPascal:

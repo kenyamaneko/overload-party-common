@@ -57,6 +57,13 @@ export const FACTION_BY_ID: Record<string, FactionMetadata> = {
   "Tuners": FACTIONS_METADATA[4],
 };
 
+export const RESTRICTION_COPY_COUNT: Record<Restriction, number> = {
+  unlimited: 3,
+  limited: 1,
+  semi_limited: 2,
+  forbidden: 0,
+};
+
 export const INITIAL_VALUES = {
   deckSize: 30,
 } as const;
