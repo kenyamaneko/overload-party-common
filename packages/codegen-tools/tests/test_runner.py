@@ -296,3 +296,111 @@ def test_runner_emits_type_aliases_to_output_file(tmp_path: Path) -> None:
     content = (out_dir / "ids_gen.go").read_text()
     assert "type PlayerID = string" in content
     assert "type DeckID = int64" in content
+
+
+# ─── pre_render_hook ──────────────────────────────────────
+
+
+def _two_section_yaml(yaml_path: Path) -> None:
+    """pre_render_hook テスト用の 2 section fixture を書き出す."""
+    _write_yaml(
+        yaml_path,
+        {
+            "files": [
+                {"name": "a", "target": "wire", "types": []},
+                {"name": "b", "target": "wire", "types": []},
+            ]
+        },
+    )
+
+
+def test_pre_render_hook_called_once_per_section_target_pair(tmp_path: Path) -> None:
+    """hook は (section, target) ごとに 1 回ずつ呼ばれる. multi-target なら同 section に対し複数回."""
+    yaml_path = tmp_path / "models.yaml"
+    _write_yaml(
+        yaml_path,
+        {
+            "files": [
+                {"name": "x", "targets": ["wire", "domain"], "types": []},
+            ]
+        },
+    )
+    calls: list[tuple[str, str]] = []
+
+    def hook(section: dict, target_key: str) -> dict:
+        calls.append((section["name"], target_key))
+        return section
+
+    runner = CodegenRunner(
+        models_yaml=yaml_path,
+        repo_root=tmp_path,
+        targets={
+            "wire": GoTarget(tmp_path / "out/wire", "w"),
+            "domain": GoTarget(tmp_path / "out/domain", "d"),
+        },
+        pre_render_hook=hook,
+    )
+    assert runner.run() == 0
+    assert calls == [("x", "wire"), ("x", "domain")]
+
+
+def test_pre_render_hook_mutation_reflected_in_output(tmp_path: Path) -> None:
+    """hook 返り値が render パイプラインに反映される: types を注入したら生成 Go に出る."""
+    yaml_path = tmp_path / "models.yaml"
+    _two_section_yaml(yaml_path)
+
+    def inject_types(section: dict, _target_key: str) -> dict:
+        section = dict(section)
+        section["types"] = [
+            {"name": f"Injected{section['name'].upper()}", "fields": [
+                {"name": "ID", "type": "string", "json": "id"},
+            ]},
+        ]
+        return section
+
+    out_dir = tmp_path / "out"
+    runner = CodegenRunner(
+        models_yaml=yaml_path,
+        repo_root=tmp_path,
+        targets={"wire": GoTarget(out_dir, "p")},
+        pre_render_hook=inject_types,
+    )
+    assert runner.run() == 0
+    assert "type InjectedA struct" in (out_dir / "a_gen.go").read_text()
+    assert "type InjectedB struct" in (out_dir / "b_gen.go").read_text()
+
+
+def test_pre_render_hook_returning_none_raises_typed_error(tmp_path: Path) -> None:
+    """hook が None を返したら不透明な AttributeError ではなく TypeError + どの section の hook が
+    壊れているかを示すメッセージで止める."""
+    yaml_path = tmp_path / "models.yaml"
+    _two_section_yaml(yaml_path)
+    runner = CodegenRunner(
+        models_yaml=yaml_path,
+        repo_root=tmp_path,
+        targets={"wire": GoTarget(tmp_path / "out", "p")},
+        pre_render_hook=lambda _section, _target: None,  # type: ignore[return-value, arg-type]
+    )
+    with pytest.raises(TypeError, match=r"pre_render_hook for section 'a'.*returned NoneType"):
+        runner.run()
+
+
+def test_pre_render_hook_exception_propagates(tmp_path: Path) -> None:
+    """hook 内例外は呼び出し側に伝搬する (silent skip しない)."""
+    yaml_path = tmp_path / "models.yaml"
+    _two_section_yaml(yaml_path)
+
+    class HookError(Exception):
+        pass
+
+    def hook(_section: dict, _target_key: str) -> dict:
+        raise HookError("boom")
+
+    runner = CodegenRunner(
+        models_yaml=yaml_path,
+        repo_root=tmp_path,
+        targets={"wire": GoTarget(tmp_path / "out", "p")},
+        pre_render_hook=hook,
+    )
+    with pytest.raises(HookError, match="boom"):
+        runner.run()

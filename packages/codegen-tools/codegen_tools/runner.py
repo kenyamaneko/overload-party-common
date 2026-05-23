@@ -108,7 +108,16 @@ class CodegenRunner:
         target = self.targets[target_key]
 
         if self.pre_render_hook is not None:
+            section_name = section.get(self.section_name_field, "<unnamed>")
             section = self.pre_render_hook(section, target_key)
+            # None / 非 dict 返却は呼び出し側の bug。section.get() で AttributeError に
+            # して読み手を混乱させず、原因が hook であることを明示する。
+            if not isinstance(section, dict):
+                raise TypeError(
+                    f"pre_render_hook for section {section_name!r} "
+                    f"(target {target_key!r}) returned {type(section).__name__}, "
+                    "expected dict"
+                )
 
         extra_imports = set(section.get("imports", []))
         constants = section.get("constants") or []
