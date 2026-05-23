@@ -1,7 +1,7 @@
 name: Validate Cross-Repo Seeds
 
 # shop / card 両 repo の seed YAML 間の参照整合性を CI で検証する。
-# ADR-031 §5 / ADR-032 §5 により本検証の責務は overload-party-common 側。
+# shop / card 両 seed が見えるのは共通基盤のみのため本責務を common に置く。
 #
 # trigger:
 #   - cron daily (shop / card の main 変更を common 側で受け取れないため)
@@ -14,15 +14,21 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths:
-      - "scripts/validate_card_pack_refs.py"
-      - "scripts/test_validate_card_pack_refs.py"
-      - ".github/workflows/validate-cross-repo-seeds.yaml"
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - '.vscode/**'
+      - '.gitignore'
+      - 'LICENSE'
+      - 'rules/**'
   pull_request:
-    paths:
-      - "scripts/validate_card_pack_refs.py"
-      - "scripts/test_validate_card_pack_refs.py"
-      - ".github/workflows/validate-cross-repo-seeds.yaml"
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - '.vscode/**'
+      - '.gitignore'
+      - 'LICENSE'
+      - 'rules/**'
 
 concurrency:
   group: validate-cross-repo-seeds-${{ github.ref }}

@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 """Validate that every shop product card_pack_id refers to an existing card pack_id.
 
-ADR-031 §5 / ADR-032 §5 で「shop seed の card_pack_id ⊂ card seed の pack_id」を
-CI で検証する責務を overload-party-common に置くと決定したのを実装する。
-shop / card 両方の seed が見えるのは共通基盤のみ。
+shop / card 両方の seed が見えるのは共通基盤のみのため本検証を common に置く。
 
 Usage:
     python3 scripts/validate_card_pack_refs.py \
