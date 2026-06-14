@@ -96,7 +96,7 @@ repos:
 
   - name: overload-party-analytics
     path: ../overload-party-analytics
-    lang: python
+    lang: go
     flow: none
 
   - name: overload-party-assets
