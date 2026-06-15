@@ -281,3 +281,31 @@ shop / card 側は ADR 確定後に各 repo で実装 issue を再定義する�
 - **[overload-party-shop#54](https://github.com/kenyamaneko/overload-party-shop/issues/54)**: 設計レビュー
 - **[overload-party-shop#55](https://github.com/kenyamaneko/overload-party-shop/issues/55)**: products.faction_id 列削除 (本 ADR の前段)
 - card 側 ADR (番号確定後にリンク)
+
+## Amendment 2026-06-16: card のデッキ検証で faction 所持を account に同期照会する
+
+### 背景
+
+本 ADR / ADR-022 で faction 所有権の SSoT は account に集約し、card は faction イベントを購読せず所有権を持たない方針とした。一方、デッキ機能のレビューで「プレイヤーが**所持していない**ファクションを宣言したデッキを作れてしまう」検証漏れが判明した。検証すべきタイミングはデッキ作成/編集時、データの権威は account にある。
+
+### 決定
+
+card はデッキ作成/編集時に account の内部エンドポイント `GET /internal/v1/players/{playerID}/factions` を**同期照会**し、宣言ファクション ∈ 所持ファクション を検証する。
+
+- faction 所有権の SSoT は引き続き account。card は faction イベントを購読せず、所有権を永続化しない (本 ADR §3 の購読方針は不変)。card は検証時にオンデマンドで読むだけ。
+- 照会は低頻度なデッキ構築操作に限る。デッキ READ 時の `is_valid` 再算出には含めない (READ 増幅を避ける)。
+
+### 同期 RPC 方針との整合
+
+案 4 で却下した同期 RPC は「**試合フロー**で他サービスへ同期リクエストを発生させない」(ADR-012) という方針に基づく。デッキ作成/編集は試合フローではなくデッキ構築操作であり、本決定はこの方針に抵触しない。faction 所有権は read-time に権威確認が必要 (取得直後のファクションを即使え、剥奪を即弾く) で、結果整合 (イベント購読) では要件を満たせないため同期照会が適切。
+
+### 検討した代替
+
+- **card が faction イベントを購読し read-model 構築**: 本 ADR の「card は faction を購読しない」方針に反する。結果整合のため取得直後のファクションが即使えない恐れ。却下。
+- **gateway で検証**: デッキ検証ロジックが card と gateway に分散する。却下。
+
+### スコープ
+
+- account: 内部エンドポイント新設 (overload-party-account#36)
+- card: `port.FactionClient` + accountClient + デッキ検証 (overload-party-card#49)
+- k8s: card deployment に `ACCOUNT_SERVICE_URL` 注入 (overload-party-k8s#39)
