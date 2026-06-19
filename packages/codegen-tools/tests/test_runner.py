@@ -227,7 +227,7 @@ def test_runner_constants_block(tmp_path: Path) -> None:
         repo_root=tmp_path,
         targets={"wire": GoTarget(tmp_path / "out", "p")},
     )
-    runner.style.const_style.quote_string_only = True  # shop-style
+    runner.style.const_style.should_quote_string_only = True  # shop-style
     assert runner.run() == 0
     text = (tmp_path / "out" / "enum_gen.go").read_text()
     assert 'A = "alpha"' in text
