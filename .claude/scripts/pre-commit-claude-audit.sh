@@ -4,8 +4,13 @@
 # 照らしてレビューさせる。worker 自身の authorship bias を構造的に排除するため別 session で実行。
 #
 # 設計根拠: docs/postmortem/2026-05-21_claude-soft-rule-audit-skip.md 案 E
+#
+# 各違反を 2 軸で分類し、principles「ルール違反への対応」に従って自律修正と user 委譲を仕分ける:
+#   - clarity    : 違反の明白度 (obvious = 解釈の余地なし / interpretive = 解釈次第)
+#   - fix_safety : 是正の安全性 (safe = 修正しても設計上の実害なし / harmful = 是正に実害ありうる)
 # 出力契約:
-#   - violations >=1 → permissionDecision=ask で user 委ね
+#   - obvious かつ safe の違反あり → permissionDecision=deny で worker に差し戻し自律修正させる
+#   - それ以外の違反のみ (interpretive / harmful を含む) → permissionDecision=ask で user に判断委譲
 #   - violations 0 件 → exit 0
 #   - audit 不能 (入力欠落 / auditor 起動失敗 / API エラー / 出力欠落 / 単一ファイル超過) → exit 2 で fail-closed block
 #   - staged diff が auditor の context に収まらない場合はファイル単位でチャンク分割し全グループを監査
@@ -53,7 +58,6 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COMMON_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
-# target repo の lang / prereq_docs を repos.yaml から解決
 resolved=$(python3 - "$COMMON_DIR" "$target_cwd" <<'PY'
 import sys, os, json, yaml
 common_dir, target_cwd = sys.argv[1], sys.argv[2]
@@ -79,8 +83,7 @@ fi
 repo_name=$(printf '%s' "$resolved" | jq -r '.name')
 lang=$(printf '%s' "$resolved" | jq -r '.lang')
 
-# auditor prompt 組み立て。引数 $1 に監査対象の diff を取る (rules / GLOSSARY / prereq_docs を毎回
-# inline 注入 = fresh Read を強制)。大きな staged diff はファイル単位グループに分けて複数回呼ぶ。
+# auditor prompt を組み立てる。ルール群を毎回 inline 注入し auditor に fresh Read を強制する。
 build_prompt() {
   cat <<HEADER
 あなたは overload-party リポフリートの SOFT (意味解釈型) ルール auditor です。
@@ -88,8 +91,17 @@ build_prompt() {
 
 レビュー方針:
 - 明確なルール違反のみ列挙する。主観的な改善提案・スタイル好みは含めない
-- 各違反は file / line (任意) / rule / evidence / why を埋める
+- 各違反は file / line / rule / evidence / why / clarity / fix_safety を埋める。line は違反箇所の行番号 (diff の追加行) を必ず入れる
 - 違反 0 件なら "violations": [] を返す
+
+各違反を 2 軸で分類してください (hook が「worker が自律修正してよいか」を判定するのに使う):
+- clarity (明白度):
+  - "obvious"      = ルール文面に照らして違反が明白で、解釈の余地がない
+  - "interpretive" = ルールの解釈次第で違反とみなされ、判断が分かれうる
+- fix_safety (是正の安全性):
+  - "safe"    = 違反を修正しても設計上の実害がない (例: docstring 追加, What コメント削除)
+  - "harmful" = 是正することで設計上の実害が生じうる (例: 公開 API のリネーム, 責務分割による境界変更)
+- diff だけでは確信が持てないときは "interpretive" / "harmful" (= 安全側) に倒す。自律修正は明白かつ安全な違反に限定するため
 
 # 適用ルール (target repo: ${repo_name}, lang: ${lang})
 
@@ -127,14 +139,16 @@ schema='{
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["file", "rule", "evidence", "why"],
+        "required": ["file", "line", "rule", "evidence", "why", "clarity", "fix_safety"],
         "additionalProperties": false,
         "properties": {
           "file": {"type": "string"},
-          "line": {"type": ["integer", "null"]},
+          "line": {"type": "integer"},
           "rule": {"type": "string"},
           "evidence": {"type": "string"},
-          "why": {"type": "string"}
+          "why": {"type": "string"},
+          "clarity": {"type": "string", "enum": ["obvious", "interpretive"]},
+          "fix_safety": {"type": "string", "enum": ["safe", "harmful"]}
         }
       }
     }
@@ -142,14 +156,13 @@ schema='{
 }'
 
 # auditor の context window (200k tokens) に収めるためのプロンプト上限 (bytes)。headless claude の
-# 基盤プロンプト分を差し引いた安全側の値。これを超える diff はファイル単位でチャンク分割する。
-# 監査の実行有無には影響せず chunk 粒度のみ制御するため、環境変数で上書き可能 (運用調整・テスト用)。
+# 基盤プロンプト分を差し引いた安全側の値。chunk 粒度のみ制御し監査の実行有無には影響しないため、
+# 環境変数で上書き可能 (運用調整・テスト用)。
 MAX_PROMPT_BYTES="${OP_AUDIT_MAX_PROMPT_BYTES:-350000}"
 
 # diff に割ける最小予算。これを下回るとチャンク分割しても監査が成立しないため fail-closed する。
 MIN_DIFF_BUDGET_BYTES=20000
 
-# 違反の蓄積先 (全グループ分を集約)
 all_violations='[]'
 
 # 1 グループ分の diff を auditor にかけ、違反を all_violations に集約する。
@@ -193,7 +206,6 @@ audit_diff() {
   all_violations=$(jq -cn --argjson a "$all_violations" --argjson b "$group_viol" '$a + $b')
 }
 
-# rules だけのプロンプト overhead を測り、diff に割り当てられる予算を決める
 rules_bytes=$(build_prompt "" | wc -c | tr -d ' ')
 diff_budget=$(( MAX_PROMPT_BYTES - rules_bytes ))
 if [ "$diff_budget" -lt "$MIN_DIFF_BUDGET_BYTES" ]; then
@@ -205,10 +217,8 @@ fi
 staged_bytes=$(printf '%s' "$staged_diff" | wc -c | tr -d ' ')
 
 if [ "$staged_bytes" -le "$diff_budget" ]; then
-  # fast path: 1 回で監査
   audit_diff "$staged_diff"
 else
-  # 大きい diff: staged ファイルを diff サイズで貪欲にグループ化し、グループ毎に監査する
   staged_files=()
   while IFS= read -r f; do
     [ -n "$f" ] && staged_files+=("$f")
@@ -250,10 +260,30 @@ if [ "$violations_count" -eq 0 ]; then
   exit 0
 fi
 
+autofix=$(printf '%s' "$all_violations" | jq -c '[.[] | select(.clarity == "obvious" and .fix_safety == "safe")]')
+escalate=$(printf '%s' "$all_violations" | jq -c '[.[] | select(.clarity != "obvious" or .fix_safety != "safe")]')
+autofix_count=$(printf '%s' "$autofix" | jq 'length')
+escalate_count=$(printf '%s' "$escalate" | jq 'length')
+
+# 混在時は明白な違反を先に deny で解消させ、解釈次第 / 是正に実害ありうる違反は再 commit 時に
+# 別途 ask に載せる (auditor は 1 diff を一括判定するため、両者を同一 commit で同時には出せない)。
+if [ "$autofix_count" -gt 0 ]; then
+  reason=$(
+    printf '明白かつ修正に実害のないルール違反 %d 件を検出 (target: %s)。principles「ルール違反への対応」に従い、自律修正してから再 commit してください:\n\n' "$autofix_count" "$repo_name"
+    printf '%s' "$autofix" | jq -r '.[] | "- \(.file):\(.line)\n    rule: \(.rule)\n    evidence: \(.evidence)\n    why: \(.why)"'
+    if [ "$escalate_count" -gt 0 ]; then
+      printf '\n\n(解釈次第 / 是正に実害ありうる違反 %d 件は、上記修正後の再 commit で別途確認します。今は触れないでください。)' "$escalate_count"
+    fi
+    printf '\n\n検出が false positive だと判断する場合のみ、その理由を添えてユーザに確認してください。'
+  )
+  jq -nc --arg r "$reason" '{hookSpecificOutput: {hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: $r}}'
+  exit 0
+fi
+
 reason=$(
-  printf 'Claude auditor が SOFT 違反 %d 件を検出 (target: %s):\n\n' "$violations_count" "$repo_name"
-  printf '%s' "$all_violations" | jq -r '.[] | "- \(.file)\(if .line then ":\(.line)" else "" end)\n    rule: \(.rule)\n    evidence: \(.evidence)\n    why: \(.why)"'
-  printf '\n\n意図的に commit するなら許可、修正するなら拒否してください。'
+  printf 'Claude auditor が判断を要するルール違反 %d 件を検出 (target: %s)。明白でない、または是正に設計上の実害がありうるため、修正可否を判断してください:\n\n' "$escalate_count" "$repo_name"
+  printf '%s' "$escalate" | jq -r '.[] | "- \(.file):\(.line)  [明白度: \(if .clarity == "obvious" then "明白" else "解釈次第" end) / 是正の安全性: \(if .fix_safety == "safe" then "実害なし" else "実害ありうる" end)]\n    rule: \(.rule)\n    evidence: \(.evidence)\n    why: \(.why)"'
+  printf '\n\n修正するなら拒否、意図的に commit するなら許可してください。'
 )
 jq -nc --arg r "$reason" '{hookSpecificOutput: {hookEventName: "PreToolUse", permissionDecision: "ask", permissionDecisionReason: $r}}'
 exit 0
