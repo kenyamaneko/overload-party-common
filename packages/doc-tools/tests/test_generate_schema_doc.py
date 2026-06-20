@@ -47,7 +47,7 @@ def test_parse_schema_basic():
     key_col = tables["game_config"].columns[0]
     assert key_col.name == "key"
     assert key_col.col_type == "TEXT"
-    assert key_col.nullable is False
+    assert key_col.is_nullable is False
     assert key_col.doc == "設定キー"
 
 
@@ -66,7 +66,7 @@ def test_parse_schema_identity():
     tables = parse_schema(SAMPLE_SQL_IF_NOT_EXISTS)
     id_col = tables["news_articles"].columns[0]
     assert id_col.col_type == "BIGINT (IDENTITY)"
-    assert id_col.nullable is False
+    assert id_col.is_nullable is False
 
 
 def test_generate_table_md():

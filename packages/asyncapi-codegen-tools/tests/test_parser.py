@@ -7,8 +7,8 @@ import pytest
 from asyncapi_codegen_tools.parser import (
     parse_spec,
     strip_event_suffix,
-    to_go_name,
-    to_go_type,
+    convert_to_go_name,
+    convert_to_go_type,
 )
 
 
@@ -16,18 +16,18 @@ class TestToGoName:
     """snake_case → CamelCase 変換は既知 acronym のみ大文字化し、それ以外は通常 capitalize."""
 
     def test_simple_word_capitalizes_first(self):
-        assert to_go_name("timestamp") == "Timestamp"
+        assert convert_to_go_name("timestamp") == "Timestamp"
 
     def test_multi_word_camel_cases_each_token(self):
-        assert to_go_name("event_type") == "EventType"
+        assert convert_to_go_name("event_type") == "EventType"
 
     def test_acronym_token_uppercases_fully(self):
-        assert to_go_name("event_id") == "EventID"
-        assert to_go_name("card_pack_id") == "CardPackID"
-        assert to_go_name("image_url") == "ImageURL"
+        assert convert_to_go_name("event_id") == "EventID"
+        assert convert_to_go_name("card_pack_id") == "CardPackID"
+        assert convert_to_go_name("image_url") == "ImageURL"
 
     def test_empty_string_returns_empty(self):
-        assert to_go_name("") == ""
+        assert convert_to_go_name("") == ""
 
 
 class TestStripEventSuffix:
@@ -42,41 +42,41 @@ class TestToGoType:
     """JSON Schema → Go 型. required は値型, optional は pointer."""
 
     def test_required_string_is_value_type(self):
-        assert to_go_type({"type": "string"}, required=True) == "string"
+        assert convert_to_go_type({"type": "string"}, required=True) == "string"
 
     def test_optional_string_is_pointer(self):
-        assert to_go_type({"type": "string"}, required=False) == "*string"
+        assert convert_to_go_type({"type": "string"}, required=False) == "*string"
 
     def test_date_time_format_maps_to_time_time(self):
-        assert to_go_type({"type": "string", "format": "date-time"}, required=True) == "time.Time"
+        assert convert_to_go_type({"type": "string", "format": "date-time"}, required=True) == "time.Time"
 
     def test_optional_date_time_is_pointer_time(self):
-        assert to_go_type({"type": "string", "format": "date-time"}, required=False) == "*time.Time"
+        assert convert_to_go_type({"type": "string", "format": "date-time"}, required=False) == "*time.Time"
 
     def test_integer_int64_default(self):
-        assert to_go_type({"type": "integer"}, required=True) == "int64"
+        assert convert_to_go_type({"type": "integer"}, required=True) == "int64"
 
     def test_integer_int32_explicit(self):
-        assert to_go_type({"type": "integer", "format": "int32"}, required=True) == "int"
+        assert convert_to_go_type({"type": "integer", "format": "int32"}, required=True) == "int"
 
     def test_boolean(self):
-        assert to_go_type({"type": "boolean"}, required=True) == "bool"
+        assert convert_to_go_type({"type": "boolean"}, required=True) == "bool"
 
     def test_array_of_string(self):
-        assert to_go_type({"type": "array", "items": {"type": "string"}}, required=True) == "[]string"
+        assert convert_to_go_type({"type": "array", "items": {"type": "string"}}, required=True) == "[]string"
 
     def test_object_falls_back_to_map(self):
-        assert to_go_type({"type": "object"}, required=True) == "map[string]interface{}"
+        assert convert_to_go_type({"type": "object"}, required=True) == "map[string]interface{}"
 
     def test_required_local_ref_resolves_to_schema_name(self):
         assert (
-            to_go_type({"$ref": "#/components/schemas/EventTranslation"}, required=True)
+            convert_to_go_type({"$ref": "#/components/schemas/EventTranslation"}, required=True)
             == "EventTranslation"
         )
 
     def test_optional_local_ref_is_pointer(self):
         assert (
-            to_go_type({"$ref": "#/components/schemas/EventTranslation"}, required=False)
+            convert_to_go_type({"$ref": "#/components/schemas/EventTranslation"}, required=False)
             == "*EventTranslation"
         )
 
@@ -85,15 +85,15 @@ class TestToGoType:
             "type": "array",
             "items": {"$ref": "#/components/schemas/EventTranslation"},
         }
-        assert to_go_type(prop, required=True) == "[]EventTranslation"
+        assert convert_to_go_type(prop, required=True) == "[]EventTranslation"
 
     def test_external_ref_raises_value_error(self):
         with pytest.raises(ValueError):
-            to_go_type({"$ref": "external.yaml#/Foo"}, required=True)
+            convert_to_go_type({"$ref": "external.yaml#/Foo"}, required=True)
 
     def test_empty_local_ref_raises_value_error(self):
         with pytest.raises(ValueError):
-            to_go_type({"$ref": "#/components/schemas/"}, required=True)
+            convert_to_go_type({"$ref": "#/components/schemas/"}, required=True)
 
 
 class TestParseSpec:

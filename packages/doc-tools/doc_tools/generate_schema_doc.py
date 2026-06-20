@@ -26,7 +26,7 @@ class Column:
 
     name: str
     col_type: str
-    nullable: bool
+    is_nullable: bool
     doc: str
 
 
@@ -89,9 +89,9 @@ def parse_schema(sql_text: str) -> dict[str, Table]:
             ):
                 continue
 
-            nullable = "NOT NULL" not in line.upper()
+            is_nullable = "NOT NULL" not in line.upper()
             if "PRIMARY KEY" in line.upper():
-                nullable = False
+                is_nullable = False
 
             is_identity = "GENERATED ALWAYS AS IDENTITY" in line.upper()
 
@@ -105,7 +105,7 @@ def parse_schema(sql_text: str) -> dict[str, Table]:
             if is_identity:
                 col_type += " (IDENTITY)"
 
-            columns.append(Column(col_name, col_type, nullable, doc))
+            columns.append(Column(col_name, col_type, is_nullable, doc))
 
         if columns:
             tables[table_name] = Table(table_name, columns)
@@ -120,13 +120,21 @@ def generate_table_md(table: Table) -> str:
         "|---|---|---|---|",
     ]
     for c in table.columns:
-        nb = "Yes" if c.nullable else "No"
+        nb = "Yes" if c.is_nullable else "No"
         doc = c.doc.replace("|", "\\|")
         rows.append(f"| `{c.name}` | {c.col_type} | {nb} | {doc} |")
     return "\n".join(rows)
 
 
-def _snake_to_pascal(name: str) -> str:
+def convert_snake_to_pascal(name: str) -> str:
+    """snake_case を PascalCase に変換する。
+
+    Args:
+        name: 変換元の snake_case 文字列。
+
+    Returns:
+        各語頭を大文字化して連結した PascalCase 文字列。
+    """
     return "".join(w.capitalize() for w in name.split("_"))
 
 
@@ -134,7 +142,7 @@ def add_markers(doc_path: Path, tables: dict[str, Table]) -> None:
     """DATA_DESIGN.md 内の既存 Markdown テーブルを検出しマーカーで囲む。"""
     display_map: dict[str, str] = {}
     for sql_name in tables:
-        pascal = _snake_to_pascal(sql_name)
+        pascal = convert_snake_to_pascal(sql_name)
         display_map[pascal] = sql_name
         display_map[sql_name] = sql_name
 
