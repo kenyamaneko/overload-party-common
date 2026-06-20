@@ -29,10 +29,17 @@ from typing import Any
 DEFAULT_ACRONYMS: frozenset[str] = frozenset({"id", "url", "uri", "api", "http", "json", "ws"})
 
 
-def to_go_name(snake: str, acronyms: frozenset[str] = DEFAULT_ACRONYMS) -> str:
+def convert_to_go_name(snake: str, acronyms: frozenset[str] = DEFAULT_ACRONYMS) -> str:
     """snake_case を CamelCase に変換し、acronyms に含まれるトークンは大文字化する.
 
     例: "card_pack_id" -> "CardPackID", "event_type" -> "EventType"
+
+    Args:
+        snake: 変換元の snake_case 文字列。
+        acronyms: 全大文字化するトークンの集合。
+
+    Returns:
+        変換後の CamelCase 文字列。
     """
     if not snake:
         return ""
@@ -71,11 +78,18 @@ def _resolve_local_ref(ref: str) -> str:
     return name
 
 
-def to_go_type(prop: dict[str, Any], required: bool) -> str:
+def convert_to_go_type(prop: dict[str, Any], required: bool) -> str:
     """JSON Schema の型情報から Go 型文字列に変換する.
 
     `$ref` はローカル component schema 名にのみ解決し、required に応じて値型 /
     ポインタ型 / 配列要素型を切り替える。外部 ref や形式不正は例外で fail-fast。
+
+    Args:
+        prop: JSON Schema のプロパティ定義。
+        required: 必須フィールドなら True (ポインタ化しない)。
+
+    Returns:
+        対応する Go 型を表す文字列。
     """
     if "$ref" in prop:
         base = _resolve_local_ref(prop["$ref"])
@@ -96,7 +110,7 @@ def to_go_type(prop: dict[str, Any], required: bool) -> str:
     elif json_type == "boolean":
         base = "bool"
     elif json_type == "array":
-        item_type = to_go_type(prop.get("items", {}), required=True)
+        item_type = convert_to_go_type(prop.get("items", {}), required=True)
         return f"[]{item_type}"
     elif json_type == "object":
         base = "map[string]interface{}"
@@ -146,9 +160,9 @@ def parse_spec(spec: dict[str, Any]) -> dict[str, Any]:
             if not isinstance(prop, dict):
                 continue
 
-            go_name = prop.get("x-go-name") or to_go_name(prop_name)
+            go_name = prop.get("x-go-name") or convert_to_go_name(prop_name)
             is_required = prop_name in required
-            go_type = to_go_type(prop, required=is_required)
+            go_type = convert_to_go_type(prop, required=is_required)
             json_tag = prop_name if is_required else f"{prop_name},omitempty"
 
             fields.append({
@@ -167,7 +181,7 @@ def parse_spec(spec: dict[str, Any]) -> dict[str, Any]:
                 })
             elif "enum" in prop and isinstance(prop["enum"], list) and len(prop["enum"]) == 1:
                 value = prop["enum"][0]
-                const_name = f"{schema_short}{go_name}{to_go_name(str(value))}"
+                const_name = f"{schema_short}{go_name}{convert_to_go_name(str(value))}"
                 enum_values.append({
                     "name": const_name,
                     "value": str(value),

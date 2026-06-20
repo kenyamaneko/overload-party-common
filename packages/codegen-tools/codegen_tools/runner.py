@@ -53,7 +53,7 @@ class CodegenRunner:
     file_suffix: str = "_gen.go"
 
     # ── ファイル末尾 ──
-    trailing_blank_line: bool = False
+    has_trailing_blank_line: bool = False
     """末尾に空行を残すか. 既存スクリプトに合わせて互換用."""
 
     # ── プラグイン ──
@@ -132,7 +132,7 @@ class CodegenRunner:
             type_aliases=type_aliases,
             extra_imports=extra_imports,
             emit_tags=target.emit_tags,
-            trailing_blank_line=self.trailing_blank_line,
+            has_trailing_blank_line=self.has_trailing_blank_line,
         )
 
         out_path = target.out_dir / f"{section[self.section_name_field]}{self.file_suffix}"

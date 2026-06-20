@@ -24,10 +24,10 @@ DEFAULT_IMPORT_PATTERNS: dict[str, str] = {
 class GoConstStyle:
     """`const ( ... )` ブロックの出力スタイル."""
 
-    type_annotation: bool = False
+    has_type_annotation: bool = False
     """`Name Type = "x"` の形で型注釈を付けるか. card: True, shop/support: False."""
 
-    quote_string_only: bool = False
+    should_quote_string_only: bool = False
     """True の場合、`type: string` のみクォートし他は素の値で出す. shop/support: True."""
 
     default_type: str = "string"
@@ -44,13 +44,13 @@ class GoStyle:
     import_patterns: dict[str, str] = field(
         default_factory=lambda: dict(DEFAULT_IMPORT_PATTERNS)
     )
-    use_inline_single_import: bool = False
+    should_inline_single_import: bool = False
     """import が 1 件のとき `import "x"` の単行形にする. matchmaking: True."""
 
     # ── 型コメント ──
     type_comment_key: str = "comment"
     """型レベルのコメントを取り出す YAML キー. matchmaking: "doc"."""
-    type_comment_multiline: bool = False
+    is_type_comment_multiline: bool = False
     """型コメントを改行で割って複数行 `//` で出すか. matchmaking/shop/support: True."""
 
     # ── フィールド ──
@@ -58,7 +58,7 @@ class GoStyle:
     """フィールドコメントを取り出す YAML キー. matchmaking: "doc"."""
     field_comment_position: str = "inline"
     """`inline` (型の後ろに ` // x`) or `above` (フィールド上に別行で) ."""
-    field_align: bool = True
+    should_align_field: bool = True
     """フィールドの name/type をパディング揃えするか. matchmaking: False."""
     field_extra_tag_key: str | None = None
     """追加の生タグ文字列を取り出すフィールドキー. matchmaking: "tag"."""
@@ -95,12 +95,12 @@ def resolve_auto_imports(
 def render_import_block(imports: set[str], style: GoStyle) -> list[str]:
     """import 集合を Go の import ブロック行に整形する.
 
-    `style.use_inline_single_import` が True かつ要素 1 件のときは
+    `style.should_inline_single_import` が True かつ要素 1 件のときは
     `import "x"` 1 行で返す (matchmaking 互換)。
     """
     if not imports:
         return []
-    if style.use_inline_single_import and len(imports) == 1:
+    if style.should_inline_single_import and len(imports) == 1:
         only = next(iter(imports))
         return [f'import "{only}"', ""]
 
@@ -128,10 +128,10 @@ def render_const_block(const_def: dict[str, Any], style: GoConstStyle) -> list[s
     for v in values:
         name = v["name"]
         value = v["value"]
-        if style.type_annotation:
+        if style.has_type_annotation:
             lines.append(f'\t{name} {type_name} = "{value}"')
         else:
-            if not style.quote_string_only or type_name == "string":
+            if not style.should_quote_string_only or type_name == "string":
                 lines.append(f'\t{name} = "{value}"')
             else:
                 lines.append(f"\t{name} = {value}")
@@ -154,7 +154,7 @@ def _render_type_comment(td: dict[str, Any], style: GoStyle) -> list[str]:
     if not text:
         return []
     text_str = str(text).rstrip("\n")
-    if style.type_comment_multiline:
+    if style.is_type_comment_multiline:
         out: list[str] = []
         for line in text_str.splitlines():
             out.append(f"// {line}" if line else "//")
@@ -192,7 +192,7 @@ def render_struct(
     lines.append(f"type {type_def['name']} struct {{")
 
     fields = type_def.get("fields", [])
-    if style.field_align and fields:
+    if style.should_align_field and fields:
         max_name_len = max(len(f["name"]) for f in fields)
         max_type_len = max(len(str(f["type"])) for f in fields)
     else:
@@ -209,7 +209,7 @@ def render_struct(
             for cl in str(comment).rstrip("\n").splitlines():
                 lines.append(f"\t// {cl}" if cl else "\t//")
 
-        if style.field_align:
+        if style.should_align_field:
             name_pad = " " * (max_name_len - len(fname) + 1)
             type_pad = " " * (max_type_len - len(ftype) + 1)
             if tag_body:
@@ -244,13 +244,13 @@ def render_go_file(
     type_aliases: list[dict[str, Any]] | None = None,
     extra_imports: set[str] | None = None,
     emit_tags: tuple[str, ...] | None = None,
-    trailing_blank_line: bool = False,
+    has_trailing_blank_line: bool = False,
 ) -> str:
     """1 Go ファイル分の最終出力文字列を組み立てる.
 
     - `extra_imports`: YAML の `imports:` セクションなど、自動検出に加えて常に出すもの。
     - `emit_tags`: 個々の struct field でどの YAML キーをタグ化するか (target 別に切替)。
-    - `trailing_blank_line`: 末尾に余計な空行を残すか。多くのリポは "rstrip + \\n" で末尾整形するが、
+    - `has_trailing_blank_line`: 末尾に余計な空行を残すか。多くのリポは "rstrip + \\n" で末尾整形するが、
        一部 (shop/support/account/scenario/card) は末尾空行ありの実装になっているので互換用。
     """
     lines: list[str] = [style.header, "", f"package {package}", ""]
@@ -270,6 +270,6 @@ def render_go_file(
         lines.extend(render_struct(td, style, emit_tags=emit_tags))
 
     body = "\n".join(lines)
-    if trailing_blank_line:
+    if has_trailing_blank_line:
         return body + "\n"
     return body.rstrip() + "\n"

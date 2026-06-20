@@ -45,10 +45,10 @@ def update_markers(
             f"{doc_path.name} must exist before running this generator."
         )
     text = doc_path.read_text(encoding="utf-8")
-    changed = False
+    has_changed = False
 
     def _replacer(match: re.Match) -> str:
-        nonlocal changed
+        nonlocal has_changed
         begin_tag = match.group(1)
         key = match.group(2)
         end_tag = match.group(4)
@@ -64,7 +64,7 @@ def update_markers(
 
         new_block = f"{begin_tag}\n{md}\n{end_tag}"
         if new_block != match.group(0):
-            changed = True
+            has_changed = True
         return new_block
 
     new_text = MARKER_RE.sub(_replacer, text)
@@ -74,7 +74,7 @@ def update_markers(
         print(f"Updated {doc_path.name}")
     else:
         print(f"No changes in {doc_path.name}")
-    return changed
+    return has_changed
 
 
 def add_markers_generic(

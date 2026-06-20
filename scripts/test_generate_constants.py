@@ -390,4 +390,4 @@ class TestToPascal:
         ],
     )
     def test_to_pascal(self, value, expected):
-        assert gen._to_pascal(value) == expected
+        assert gen.convert_to_pascal(value) == expected

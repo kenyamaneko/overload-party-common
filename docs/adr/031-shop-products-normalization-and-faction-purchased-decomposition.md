@@ -282,6 +282,22 @@ shop / card 側は ADR 確定後に各 repo で実装 issue を再定義する�
 - **[overload-party-shop#55](https://github.com/kenyamaneko/overload-party-shop/issues/55)**: products.faction_id 列削除 (本 ADR の前段)
 - card 側 ADR (番号確定後にリンク)
 
+## Amendment 2026-05-24: 整合性検証責務を overload-party-ops に移譲
+
+本 ADR §5 で「整合性検証 (shop seed の `card_pack_id` ⊂ card seed の `pack_id`) を overload-party-common に置く」と決定したが、移譲先を **overload-party-ops** に変更する。
+
+### 移譲の理由
+
+- ops には cost-monitor / drift-monitor / nightly-shutdown / db-migrate と cron daily の cross-repo 監視 workflow が既に整っており、本検証も同 pattern (Slack 通知込みの定期実行) で実装できる
+- ops は Cross-Repo Deps App token (`vars.CROSS_REPO_DEPS_APP_ID` / `secrets.CROSS_REPO_DEPS_APP_PRIVATE_KEY`) と `secrets.SLACK_WEBHOOK_URL` を既に保持しており、common には未設定
+- 当初 common に置く根拠は「shop / card 両方の seed が見えるのは共通基盤のみ」だったが、ops からも同じ App token で両 repo を fetch 可能であり、根拠は成立しない
+- common は設計 / データ SSoT を保持する役割であり、運用監視 cron は ops に集中させる方が repo 境界として明瞭
+
+### 影響
+
+- 本 ADR §5 / §7 Step 10 の「overload-party-common (CI)」記述を **overload-party-ops** に読み替える
+- 実装は overload-party-ops/cross-repo-seeds/check.py + .github/workflows/validate-cross-repo-seeds.yaml に配置済 (kenyamaneko/overload-party-ops#36 / kenyamaneko/overload-party-ops#37)
+
 ## Amendment 2026-06-16: card のデッキ検証で faction 所持を account に同期照会する
 
 ### 背景

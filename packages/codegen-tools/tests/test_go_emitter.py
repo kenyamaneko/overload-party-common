@@ -79,12 +79,12 @@ def test_render_import_block_separates_std_and_external() -> None:
 
 
 def test_render_import_block_inline_single_for_matchmaking() -> None:
-    style = GoStyle(use_inline_single_import=True)
+    style = GoStyle(should_inline_single_import=True)
     assert render_import_block({"time"}, style) == ['import "time"', ""]
 
 
 def test_render_import_block_inline_falls_back_to_block_when_multiple() -> None:
-    style = GoStyle(use_inline_single_import=True)
+    style = GoStyle(should_inline_single_import=True)
     out = render_import_block({"time", "encoding/json"}, style)
     assert out[0] == "import ("
     assert out[-1] == ""
@@ -95,7 +95,7 @@ def test_render_import_block_inline_falls_back_to_block_when_multiple() -> None:
 
 def test_render_const_block_shop_style() -> None:
     """shop/support: 型注釈なし, 文字列のみクォート."""
-    style = GoConstStyle(type_annotation=False, quote_string_only=True)
+    style = GoConstStyle(has_type_annotation=False, should_quote_string_only=True)
     out = render_const_block(
         {"type": "string", "values": [{"name": "A", "value": "alpha"}]},
         style,
@@ -105,7 +105,7 @@ def test_render_const_block_shop_style() -> None:
 
 def test_render_const_block_card_style() -> None:
     """card: 型注釈あり, 常にクォート."""
-    style = GoConstStyle(type_annotation=True)
+    style = GoConstStyle(has_type_annotation=True)
     out = render_const_block(
         {"type": "PassiveEffectType", "values": [{"name": "X", "value": "v"}]},
         style,
@@ -118,7 +118,7 @@ def test_render_const_block_empty_values_skipped() -> None:
 
 
 def test_render_const_block_non_string_unquoted_when_quote_string_only() -> None:
-    style = GoConstStyle(type_annotation=False, quote_string_only=True)
+    style = GoConstStyle(has_type_annotation=False, should_quote_string_only=True)
     out = render_const_block(
         {"type": "int64", "values": [{"name": "MaxN", "value": 42}]},
         style,
@@ -142,7 +142,7 @@ def test_render_type_aliases_empty_returns_no_lines() -> None:
 
 
 def test_render_struct_aligned_with_json_and_db_tags() -> None:
-    style = GoStyle(field_align=True, tag_keys=("json", "db"))
+    style = GoStyle(should_align_field=True, tag_keys=("json", "db"))
     td = {
         "name": "Foo",
         "fields": [
@@ -162,7 +162,7 @@ def test_render_struct_aligned_with_json_and_db_tags() -> None:
 
 def test_render_struct_unaligned_for_matchmaking() -> None:
     style = GoStyle(
-        field_align=False,
+        should_align_field=False,
         field_extra_tag_key="tag",
         field_comment_key="doc",
         field_comment_position="above",
@@ -191,7 +191,7 @@ def test_render_struct_unaligned_for_matchmaking() -> None:
 
 def test_render_struct_no_tag_no_padding_after_type() -> None:
     """タグ無しのときは type の後ろに空白を残さない (shop の挙動)."""
-    style = GoStyle(field_align=True)
+    style = GoStyle(should_align_field=True)
     td = {
         "name": "X",
         "fields": [
@@ -211,7 +211,7 @@ def test_render_struct_no_tag_no_padding_after_type() -> None:
 
 
 def test_render_struct_inline_comment() -> None:
-    style = GoStyle(field_align=True, field_comment_position="inline")
+    style = GoStyle(should_align_field=True, field_comment_position="inline")
     td = {
         "name": "X",
         "fields": [{"name": "F", "type": "string", "json": "f", "comment": "note"}],
@@ -226,7 +226,7 @@ def test_render_struct_inline_comment() -> None:
 
 
 def test_render_struct_multiline_type_comment() -> None:
-    style = GoStyle(type_comment_multiline=True)
+    style = GoStyle(is_type_comment_multiline=True)
     td = {
         "name": "X",
         "comment": "line1\n\nline3",
@@ -238,7 +238,7 @@ def test_render_struct_multiline_type_comment() -> None:
 
 def test_render_struct_emit_tags_override() -> None:
     """target 別 emit_tags で同じ field 定義から異なるタグ集合を出せる."""
-    style = GoStyle(field_align=True, tag_keys=("json",))
+    style = GoStyle(should_align_field=True, tag_keys=("json",))
     td = {
         "name": "X",
         "fields": [{"name": "F", "type": "string", "json": "f", "db": "f_col"}],
@@ -282,7 +282,7 @@ def test_render_go_file_trailing_blank_line_compat() -> None:
         package="foo",
         types=[{"name": "X", "fields": [{"name": "S", "type": "string"}]}],
         style=GoStyle(),
-        trailing_blank_line=True,
+        has_trailing_blank_line=True,
     )
     assert out.endswith("}\n\n")
 
