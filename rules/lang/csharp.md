@@ -17,6 +17,12 @@
 
 - YAML / JSON 等の構造化データパーサで unknown 値を silent drop しない。typo 検知のため全パーサで unknown → throw を徹底する
 
+## [lang/csharp] テスト方針
+
+- テストのグルーピングは xUnit のネストクラスで構造化する
+- 入力と期待値だけが異なる同一の振る舞いは `[Theory]` + `[InlineData]` でケースを表化する
+  - テストの準備が複雑で同じ構造にできない場合は `[Fact]` のまま個別に残す
+
 ## [lang/csharp] docs コメント
 
 - 型・メソッドには XML doc コメントを書く。`<summary>` を必須とし、戻り値があれば `<returns>`、引数があれば各 `<param>` を必須とする
