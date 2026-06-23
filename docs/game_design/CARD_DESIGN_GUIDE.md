@@ -69,7 +69,7 @@ Resource カードのタイプ欄は `サブタイプ (区分)` の形式で記�
 
 | 書式 | 意味 | 例 |
 |------|------|-----|
-| `Compute (R)` | Resizable のみ | えくぼ |
+| `VM (R)` | Resizable のみ | えくぼ |
 | `Container (E)` | Elastic のみ | Egao Container |
 | `Orchestrator (R+E)` | 両方 | 天気使い Kubernetes |
 | `Object Storage` | 区分なし | えりり |
@@ -77,7 +77,7 @@ Resource カードのタイプ欄は `サブタイプ (区分)` の形式で記�
 
 ### サブタイプ一覧
 
-**フロントエンド:** Compute, Container, Orchestrator, AI/ML, Serverless
+**フロントエンド:** VM, Container, Orchestrator, AI/ML, Serverless
 **バックエンド:** Database, Object Storage, Cache DB
 
 > **注意:** 旧 NoSQL サブタイプは Database に統合された。表示用の `resource_label` として "NoSQL" は残るが、カードタイプとしては Database として扱う。
@@ -297,7 +297,7 @@ Budget を -200 する
 #### ドロー
 
 ```
-リポジトリから x 枚ドローできる
+デッキから x 枚ドローできる
 ```
 
 #### デプロイ
@@ -307,7 +307,7 @@ Budget を -200 する
 [デプロイ元] から [対象] をデプロイターン 0 でデプロイできる
 ```
 
-デプロイ元: 手札、リポジトリ、トラッシュ 等。復活もデプロイの一種。
+デプロイ元: 手札、デッキ、トラッシュ 等。復活もデプロイの一種。
 
 #### 無効化
 
@@ -332,7 +332,7 @@ Budget を -200 する
 #### サーチ
 
 ```
-リポジトリから [対象] を x 枚手札に加える
+デッキから [対象] を x 枚手札に加える
 ```
 
 #### 手札に戻す
@@ -363,8 +363,8 @@ Budget を -200 する
 
 Attachment カードの効果は装備先の Resource に適用される。
 
-- `コンピュート系リソース` = フロントエンドのコンピュート要素（Compute, Container, Orchestrator, Serverless）
-- `AI/ML系リソース` = フロントエンドの機械学習・深層学習要素（AI/ML）
+- `コンピュート系リソース` = フロントエンドのコンピュート要素（VM, Container, Orchestrator, Serverless, AI/ML）
+- `AI/ML系リソース` = フロントエンドの機械学習・深層学習要素（AI/ML）。コンピュート系リソースのうち AI/ML のみを指す狭い指定
 - `DB系リソース` = Database（NoSQL 含む）+ Cache DB
 - `オブジェクトストレージ` = Object Storage
 - `バックエンドリソース` = バックエンドの要素全般（DB系リソース + オブジェクトストレージ）
