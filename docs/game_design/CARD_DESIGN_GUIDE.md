@@ -363,8 +363,8 @@ Budget を -200 する
 
 Attachment カードの効果は装備先の Resource に適用される。
 
-- `コンピュート系リソース` = フロントエンドのコンピュート要素（VM, Container, Orchestrator, Serverless）
-- `AI/ML系リソース` = フロントエンドの機械学習・深層学習要素（AI/ML）
+- `コンピュート系リソース` = フロントエンドのコンピュート要素（VM, Container, Orchestrator, Serverless, AI/ML）
+- `AI/ML系リソース` = フロントエンドの機械学習・深層学習要素（AI/ML）。コンピュート系リソースのうち AI/ML のみを指す狭い指定
 - `DB系リソース` = Database（NoSQL 含む）+ Cache DB
 - `オブジェクトストレージ` = Object Storage
 - `バックエンドリソース` = バックエンドの要素全般（DB系リソース + オブジェクトストレージ）
