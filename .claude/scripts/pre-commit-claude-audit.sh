@@ -39,7 +39,15 @@ if printf '%s' "$exec_cmd" | grep -qE 'git[[:space:]]+commit[[:space:]]+(--help|
   exit 0
 fi
 
-target_cwd=$(printf '%s' "$cmd" | sed -nE 's|^cd[[:space:]]+"?([^"&[:space:]]+)"?[[:space:]]*&&.*|\1|p')
+# commit コマンドの書き方で監査がスキップされないようにするため
+target_cwd=$(printf '%s' "$cmd" | grep -oE 'git[[:space:]]+-C[[:space:]]+"?[^"&|;[:space:]]+' | head -1 | sed -E 's|^git[[:space:]]+-C[[:space:]]+"?||')
+if [ -z "$target_cwd" ]; then
+  before_commit=$(printf '%s' "$cmd" | sed -E 's/git[[:space:]]+commit.*//')
+  target_cwd=$(printf '%s' "$before_commit" | grep -oE '(^|[&|;[:space:]])cd[[:space:]]+"?[^"&|;[:space:]]+' | tail -1 | sed -E 's|.*cd[[:space:]]+"?||')
+fi
+if [ -z "$target_cwd" ]; then
+  target_cwd=$(printf '%s' "$input" | jq -r '.cwd // ""' 2>/dev/null)
+fi
 if [ -z "$target_cwd" ]; then
   target_cwd=$(pwd)
 fi
