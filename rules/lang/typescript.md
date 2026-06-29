@@ -4,6 +4,10 @@
 
 - C# server (battle) からの JSON ペイロードは CamelCase 形式なので、TS 側の型定義もそれに合わせる (snake_case ではない)。例: `gameID`, `myView`, `oppView`, `faceUp` 等
 
+## [lang/typescript] テスト方針
+
+- データ駆動は `it.each` でケース化する
+
 ## [lang/typescript] docs コメント
 
 - 関数・メソッド・クラスには TSDoc (`/** ... */`) を書く。引数があれば各 `@param`、戻り値があれば `@returns` を必須とする

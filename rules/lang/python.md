@@ -6,6 +6,10 @@
 
 - 関数・メソッド・クラスには Google スタイルの docstring を書く。引数があれば `Args:` セクション、戻り値があれば `Returns:` セクションを必須とする
 
+## [lang/python] テスト方針
+
+- データ駆動は `@pytest.mark.parametrize` でケース化する
+
 ## [lang/python] 命名
 
 - @property は動詞を付けず対象名 (名詞) にする
