@@ -2,7 +2,7 @@
 
 ## ステータス
 
-Proposed (2026-07-04)
+Accepted (2026-07-04)
 
 ## コンテキスト
 
@@ -51,7 +51,7 @@ compose を持つ各サービスリポの `docker-compose.yml` を次の形に�
 
 形態 1 は「アプリをホストで `go run`、インフラだけコンテナ」だったため、ホストのアプリがコンテナ内インフラへ届くにはホスト publish が必須だった。本決定はこの前提を変え、**ローカルの既定はアプリも compose 内で起動する** (e2e と同じ)。
 
-ホスト直起動による高速な編集→再起動ループを残したい場合に限り、インフラをホストへ出す必要が生じる。この用途は既定から外し、**loopback (`127.0.0.1`) かつ非既定ポートへ束ねる opt-in の override ファイル** (`docker-compose.override.yml`、git 管理外) で開発者個人が開く。tracked な既定設定にはホスト公開を一切残さない。既定を conflict-free に保ったまま、高速ループを失わないための逃げ道として位置づける。
+高速な編集→再起動ループは、アプリコンテナにソースを bind-mount し、コンテナ内で `go run` することで維持する。ソースを書き換えてアプリコンテナを再起動すれば、Docker イメージを作り直さずに最新コードが反映される。ホスト直起動を残さないため、インフラをホストへ publish する動機自体が生じず、tracked な既定設定でホスト公開はサービス自身の API ポート (90xx) のみに保たれる。
 
 ## 検討した代替案
 
@@ -69,7 +69,7 @@ infra の host publish を残したまま `5432→55432` のように衝突し�
 
 - メリット: tracked ファイルを編集せず個人環境で回避できる。
 - デメリット: 既定値が `5432` のままだと、何も設定しない状態では衝突が既定で残る。回避を各開発者の手作業に依存させることになる。
-- 不採用理由: 既定を conflict-free にしたい。ただしこの env パラメータ化 + loopback bind の機構自体は、本決定でも高速ループ用の opt-in override として流用する。異なるのは「既定では publish しない」点である。
+- 不採用理由: 既定を conflict-free にしたい。高速ループはインフラをホストへ出さず、アプリの compose 内 `go run` + ソース bind-mount で確保するため、host port をパラメータ化して publish を残す必要がない。
 
 ### 案 C: 現状維持
 
@@ -100,13 +100,12 @@ infra の host publish を残したまま `5432→55432` のように衝突し�
 ## 移行計画
 
 1. 本 ADR を Accepted に進める。
-2. パイロットとして 1 リポ (account) を新形態へ移行し、`make run` 相当の起動・接続・動作確認を通す。高速ループ用 override の具体形もここで確定する。
+2. パイロットとして 1 リポ (account) を新形態へ移行し、`make run` 相当の起動・接続・動作確認を通す。高速ループはアプリの compose 内 `go run` + ソース bind-mount で確保する。
 3. 残る Postgres 系リポ + matchmaking / newsfeed へ横展開する。
 4. Firestore emulator を compose サービス化する。
 5. (任意) e2e の不要な infra host publish を削減する。
 
 ## 残課題
 
-- 高速な編集→再起動ループを残す具体手段 (compose 内で `go run` + ソース bind-mount にするか、loopback override でホスト直起動を残すか) の開発者体験検証。パイロット (移行計画 2) で確定する。
 - 各リポ compose にアプリを同梱する現行の分散形を標準とするか、e2e のような単一 consolidated compose に寄せるかは、本 ADR の「インフラを publish しない・内部 DNS で参照する」原則とは独立の運用判断として別途決める。
 - Firestore emulator を compose サービス化する際の起動・seed 手順の統一。
