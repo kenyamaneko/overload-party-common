@@ -65,6 +65,8 @@ fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COMMON_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+# 共通ルールは keyandnotes-rules に集約 (兄弟リポとして配置)。repos.yaml / GLOSSARY / prereq_docs は common に残る。
+RULES_DIR="${COMMON_DIR}/../../keyandnotes-rules/rules"
 
 resolved=$(python3 - "$COMMON_DIR" "$target_cwd" <<'PY'
 import sys, os, json, yaml
@@ -91,6 +93,12 @@ fi
 repo_name=$(printf '%s' "$resolved" | jq -r '.name')
 lang=$(printf '%s' "$resolved" | jq -r '.lang')
 
+# 共有ルールが解決できなければ audit プロンプトを組めない。fail-closed で commit をブロックする。
+if [ ! -f "${RULES_DIR}/principles.md" ]; then
+  printf '⚠️  pre-commit-claude-audit: 共有ルール %s が見つからない。keyandnotes-rules を兄弟リポとして配置してください。audit 不能のため fail-safe で commit ブロック。\n' "${RULES_DIR}/principles.md" >&2
+  exit 2
+fi
+
 # auditor prompt を組み立てる。ルール群を毎回 inline 注入し auditor に fresh Read を強制する。
 build_prompt() {
   cat <<HEADER
@@ -115,11 +123,11 @@ build_prompt() {
 
 ## rules/principles.md
 HEADER
-  cat "${COMMON_DIR}/rules/principles.md"
+  cat "${RULES_DIR}/principles.md"
 
-  if [ "$lang" != "none" ] && [ -f "${COMMON_DIR}/rules/lang/${lang}.md" ]; then
+  if [ "$lang" != "none" ] && [ -f "${RULES_DIR}/lang/${lang}.md" ]; then
     printf '\n\n## rules/lang/%s.md\n' "$lang"
-    cat "${COMMON_DIR}/rules/lang/${lang}.md"
+    cat "${RULES_DIR}/lang/${lang}.md"
   fi
 
   if [ -f "${COMMON_DIR}/docs/game_design/GLOSSARY.md" ]; then

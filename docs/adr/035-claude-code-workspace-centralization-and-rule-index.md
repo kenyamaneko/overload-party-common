@@ -5,6 +5,8 @@
 - Deciders: kenyamaneko
 - Related: なし (Issue 起票後に追記)
 
+> 追記 (2026-07-04): ルール SSoT を `overload-party-common/rules/` から `keyandnotes-rules` リポに移設し、common は `@import` で参照する構成に変更した。
+
 ## Context
 
 overload-party 配下のリポ群 (約 15 リポ) は現状、ユーザが各リポを直接開いて Claude Code を起動する運用となっている。各リポの開発ルールは `overload-party-common/rules/` を SSoT とし、`claude-presets-sync` workflow が `base / flow/{gitflow,githubflow} / lang/{go,python,csharp,iac,typescript}` の 3 軸でレイヤ別にコピーを各リポへ同期する仕組みで成立している (ADR は不在だが [rules/README.md](../../rules/README.md) に詳細記載)。

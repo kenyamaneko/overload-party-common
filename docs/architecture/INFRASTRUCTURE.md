@@ -199,7 +199,7 @@ GitHub 内のリソースへアクセスする認証情報は §2.3 Cross-repo �
 
 CI のコスト管理は **runner の選定よりも構造的な無駄削減** で行う方針を採る。サードパーティ runner への移行は organization 移管 / WIF 書き換え等の純粋な乗り換えコストが大きく、課金事故 (ハング job による 360 分連続実行) の根本要因にも触れない。代わりに GitHub-hosted `ubuntu-latest` を維持したまま、不要トリガーの抑制 (`paths-ignore`) / ハング上限の固定 (`timeout-minutes`) / 古い workflow の自動キャンセル (`concurrency`) を全リポ標準として強制し、新リポ立ち上げ時に初期不備が混入しない構造にする（[ADR-038](../adr/038-ci-execution-time-reduction.md)）。
 
-具体値・適用対象・job 種別ごとの timeout 上限は ADR-038、運用ルールは [`rules/principles.md`](../../rules/principles.md) `[base] CI方針` を参照。
+具体値・適用対象・job 種別ごとの timeout 上限は ADR-038、運用ルールは keyandnotes-rules の `rules/principles.md` `[base] CI方針` を参照。
 
 ---
 
