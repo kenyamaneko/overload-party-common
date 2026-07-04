@@ -99,6 +99,23 @@ if [ ! -f "${RULES_DIR}/principles.md" ]; then
   exit 2
 fi
 
+# 共通ベース (keyandnotes-rules) と overload-party overlay (common) を対で注入する。
+# base を注入したら同じ相対パスの overlay も必ず注入する不変条件をこの関数に閉じ込め、
+# base だけ足して overlay が監査から漏れる事故を構造的に防ぐ。
+emit_rule() {
+  local rel="$1"
+  local base="${RULES_DIR}/${rel}"
+  local overlay="${COMMON_DIR}/rules/${rel}"
+  if [ -f "$base" ]; then
+    printf '\n\n## rules/%s\n' "$rel"
+    cat "$base"
+  fi
+  if [ -f "$overlay" ]; then
+    printf '\n\n## rules/%s (overload-party overlay)\n' "$rel"
+    cat "$overlay"
+  fi
+}
+
 # auditor prompt を組み立てる。ルール群を毎回 inline 注入し auditor に fresh Read を強制する。
 build_prompt() {
   cat <<HEADER
@@ -120,14 +137,12 @@ build_prompt() {
 - diff だけでは確信が持てないときは "interpretive" / "harmful" (= 安全側) に倒す。自律修正は明白かつ安全な違反に限定するため
 
 # 適用ルール (target repo: ${repo_name}, lang: ${lang})
-
-## rules/principles.md
 HEADER
-  cat "${RULES_DIR}/principles.md"
 
-  if [ "$lang" != "none" ] && [ -f "${RULES_DIR}/lang/${lang}.md" ]; then
-    printf '\n\n## rules/lang/%s.md\n' "$lang"
-    cat "${RULES_DIR}/lang/${lang}.md"
+  emit_rule "principles.md"
+  emit_rule "testing.md"
+  if [ "$lang" != "none" ]; then
+    emit_rule "lang/${lang}.md"
   fi
 
   if [ -f "${COMMON_DIR}/docs/game_design/GLOSSARY.md" ]; then
