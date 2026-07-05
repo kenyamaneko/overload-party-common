@@ -1,4 +1,4 @@
-# Overload Party — ドメイン用語集（GLOSSARY）
+# Overload Party ドメイン用語集（GLOSSARY）
 
 ゲームのドメイン概念を指す語と、コード上の表記を対応づける変換表。
 

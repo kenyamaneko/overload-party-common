@@ -1,4 +1,4 @@
-# Overload Party — 特定商取引法に基づく表記
+# Overload Party 特定商取引法に基づく表記
 
 **最終更新日:** 2026-XX-XX
 

@@ -1,4 +1,4 @@
-# Overload Party — SNS運用ガイド
+# Overload Party SNS運用ガイド
 
 SNSが苦手な人向けに、「何を・いつ・どう書くか」を具体的に示す。
 
