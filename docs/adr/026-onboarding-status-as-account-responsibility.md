@@ -4,7 +4,7 @@
 
 Accepted (2026-04-26)
 
-本 ADR は [ADR-025](025-onboarding-name-via-rest-and-cross-service-http.md) §1 (表示名を REST 同期書込で確定する設計) と §3 (オンボーディング進行を account の業務カラム `Name` / `SelectedFaction` の nullable から導出する設計) を上書きする。account に専用カラム `onboarding_status` を追加し、scenario が業務事実ごとに 3 トピック (`onboarding-name-set` / `onboarding-faction-set` / `player-onboarded`) を publish して account が subscribe する形に切り替える。account の REST はバリデーション目的のみに縮退し、業務データの書き込みはすべて Pub/Sub subscriber 経由に統一する。これに伴い [ADR-022](022-faction-selected-decomposition.md) §1 の `PlayerOnboardedEvent` subscriber 副作用 (account の `players.selected_faction` UPDATE + `player_factions` INSERT) を `onboarding-faction-set` 側へ移管し、`player-onboarded` は完了 status 遷移のみに縮退する。`PlayerOnboardedEvent` payload の `initial_faction_id` は維持する (card subscriber の `GrantInitialPack` で必要なため)。
+本 ADR は [ADR-025](025-onboarding-name-via-rest-and-cross-service-http.md) の「表示名確定経路を REST 同期書込に切替」(以下、REST 同期書込設計) と「オンボーディング進行の業務真実は account に集約」(業務カラム `Name` / `SelectedFaction` の nullable から進行を導出する設計) を上書きする。account に専用カラム `onboarding_status` を追加し、scenario が業務事実ごとに 3 トピック (`onboarding-name-set` / `onboarding-faction-set` / `player-onboarded`) を publish して account が subscribe する形に切り替える。account の REST はバリデーション目的のみに縮退し、業務データの書き込みはすべて Pub/Sub subscriber 経由に統一する。これに伴い [ADR-022](022-faction-selected-decomposition.md) の「オンボーディング起因」節の `PlayerOnboardedEvent` subscriber 副作用 (account の `players.selected_faction` UPDATE + `player_factions` INSERT) を `onboarding-faction-set` 側へ移管し、`player-onboarded` は完了 status 遷移のみに縮退する。`PlayerOnboardedEvent` payload の `initial_faction_id` は維持する (card subscriber の `GrantInitialPack` で必要なため)。
 
 ## 結論
 
@@ -12,9 +12,9 @@ Accepted (2026-04-26)
 
 ## 背景・課題
 
-### 1. 業務カラム NULL 兼用の構造的欠陥
+### 業務カラム NULL 兼用の構造的欠陥
 
-[ADR-025](025-onboarding-name-via-rest-and-cross-service-http.md) §3 では、オンボーディング再開判定を account の業務カラム (`players.name` / `players.selected_faction`) の nullable 状態から導出する設計を採用した。これは「業務真実から導出する」点で SSoT 原則に沿うが、**`name IS NULL` が「未入力 (オンボード未完了)」と「データ消失 (運用事故・移行ミス・障害)」のどちらを意味するか区別できない**という構造的欠陥を抱えている。
+[ADR-025](025-onboarding-name-via-rest-and-cross-service-http.md) の「オンボーディング進行の業務真実は account に集約」では、オンボーディング再開判定を account の業務カラム (`players.name` / `players.selected_faction`) の nullable 状態から導出する設計を採用した。これは「業務真実から導出する」点で SSoT 原則に沿うが、**`name IS NULL` が「未入力 (オンボード未完了)」と「データ消失 (運用事故・移行ミス・障害)」のどちらを意味するか区別できない**という構造的欠陥を抱えている。
 
 具体的な実害:
 
@@ -22,15 +22,15 @@ Accepted (2026-04-26)
 - 「完了マークがあるのに業務データが欠けている」という矛盾を派生値方式では構造的に表現できず、データ消失の能動検知ができない
 - `players.name` のスキーマが「オンボーディング進行の合図」と「表示名カラム」という独立した 2 つの責務を兼任している
 
-### 2. ADR-025 の REST 直書込で発生する責務混合
+### ADR-025 の REST 直書込で発生する責務混合
 
-[ADR-025](025-onboarding-name-via-rest-and-cross-service-http.md) §1 では scenario が account の `PUT /internal/v1/players/:playerId/name` を REST 同期書込で呼ぶ設計を採用した。これにより account 側の書き込み経路は **REST 直書込 + Pub/Sub subscriber 駆動** の 2 系統に分かれ、進行状態 (本 ADR で導入する `onboarding_status`) と name の永続化が別 tx となる。
+[ADR-025](025-onboarding-name-via-rest-and-cross-service-http.md) の REST 同期書込設計では scenario が account の `PUT /internal/v1/players/:playerId/name` を REST 同期書込で呼ぶ。これにより account 側の書き込み経路は **REST 直書込 + Pub/Sub subscriber 駆動** の 2 系統に分かれ、進行状態 (本 ADR で導入する `onboarding_status`) と name の永続化が別 tx となる。
 
 REST 直書込の動機を分解すると、scenario が REST に依存する理由は **「account の `internal/model/name.go` (`MaxNameRunes=20`、空 / 全空白 / 制御文字 NG) のバリデーション結果を即時にユーザーへ返す」** という UX 要件のみであり、「name を account に永続化する」こと自体は Pub/Sub event でも成立する。バリデーションと書き込みを 1 つの REST でまとめていることが責務混合の起点である。
 
 faction 側 (本 ADR で扱う `POST /onboarding/faction` 新設) については、バリデーション SSoT が `gamedesign.SelectableFactions` (共有定数 `overload-party-common/packages/game-design-constants`) であり、scenario 側で同等の検証が可能なので REST すら不要である。
 
-### 3. ADR-022 の業務事実分解原則との整合
+### ADR-022 の業務事実分解原則との整合
 
 [ADR-022](022-faction-selected-decomposition.md) では旧 `FactionSelectedEvent` を業務事実 (`PlayerOnboardedEvent` / `FactionPurchasedEvent`) に分解した。この「**1 event = 1 業務事実**」原則を本 ADR にも適用すると、オンボード進行は次の 3 つの独立した業務事実に分解できる:
 
@@ -51,7 +51,7 @@ faction 側 (本 ADR で扱う `POST /onboarding/faction` 新設) について�
 
 ## 詳細
 
-### 1. account に専用カラム `onboarding_status` を追加
+### account に専用カラム `onboarding_status` を追加
 
 `account.players` テーブルに以下のカラムを追加する。
 
@@ -61,15 +61,15 @@ ALTER TABLE account.players
     CHECK (onboarding_status IN ('not_started', 'name_set', 'faction_set', 'completed'));
 ```
 
-state machine は一方向遷移のみ (`not_started` → `name_set` → `faction_set` → `completed`)。逆方向遷移は仕様上発生しない。subscriber 側の冪等な UPDATE は state machine 順序で表現する (詳細 §4.4)。
+state machine は一方向遷移のみ (`not_started` → `name_set` → `faction_set` → `completed`)。逆方向遷移は仕様上発生しない。subscriber 側の冪等な UPDATE は state machine 順序で表現する (詳細は「account 側 subscriber 処理」)。
 
 本 ADR 採用時点で本番稼働前のため、既存データの移行は不要。`onboarding_status` カラムは DEFAULT `'not_started'` で追加すれば既存テストデータも整合する。
 
-### 2. account の `GetPlayer` レスポンスに `onboarding_status` を同梱
+### account の `GetPlayer` レスポンスに `onboarding_status` を同梱
 
 `GET /internal/v1/players/:playerId` のレスポンスに `onboarding_status` フィールドを追加する。クライアントはログイン時にこのレスポンスを 1 度取るだけでオンボードフロー再開判定が可能となる。
 
-### 3. scenario からの状態取得系エンドポイントを撤去
+### scenario からの状態取得系エンドポイントを撤去
 
 scenario の以下エンドポイントを撤去する (オンボード進行状態の取得経路を account の `GetPlayer` 1 本に集約)。
 
@@ -78,9 +78,9 @@ scenario の以下エンドポイントを撤去する (オンボード進行状
 
 scenario はオンボードフローの実行のみを担い、状態の問い合わせを持たない。
 
-### 4. Pub/Sub トピックを業務事実ごとに 3 本に分離
+### Pub/Sub トピックを業務事実ごとに 3 本に分離
 
-#### 4.1 トピック構成
+#### トピック構成
 
 | topic 名 | publisher | subscriber | event type | 発火タイミング |
 |---|---|---|---|---|
@@ -90,11 +90,11 @@ scenario はオンボードフローの実行のみを担い、状態の問い�
 
 publish はすべて scenario の outbox 経由で atomic に enqueue する (scenario 側のビジネス DB 書き込みと outbox 行 INSERT を同一 tx で実行)。
 
-#### 4.2 event 型の所有
+#### event 型の所有
 
 [ADR-022](022-faction-selected-decomposition.md) の所有原則 (events with a single publisher should live in that publisher's api-<svc> package) に従い、`OnboardingNameSetEvent` / `OnboardingFactionSetEvent` / 既存 `PlayerOnboardedEvent` はすべて `scenario/packages/api-scenario` に置く。topic 定数 (`TopicOnboardingNameSet` / `TopicOnboardingFactionSet`) と event type 定数も同パッケージで定義する。
 
-#### 4.3 payload 定義
+#### payload 定義
 
 `OnboardingNameSetEvent` (新規):
 
@@ -132,9 +132,9 @@ type PlayerOnboardedEvent struct {
 }
 ```
 
-`PlayerOnboardedEvent.InitialFactionID` を残す根拠は card subscriber の `GrantInitialPack(playerID, faction)` (初期パック配布: 選択 faction のカード + Neutral カード) が faction を業務処理の引数として必須とするため。card に account `GetPlayer` への REST 直叩きを新設するのは [ADR-025](025-onboarding-name-via-rest-and-cross-service-http.md) §2.1 の例外条項を subscriber コンテキストに無理筋で拡張することになり、責務的には「すでに account に書かれた事実を payload で snapshot として伝搬する」ほうが自然 (faction の書き込み権限は account のみで、SSoT 集約は維持される)。
+`PlayerOnboardedEvent.InitialFactionID` を残す根拠は card subscriber の `GrantInitialPack(playerID, faction)` (初期パック配布: 選択 faction のカード + Neutral カード) が faction を業務処理の引数として必須とするため。card に account `GetPlayer` への REST 直叩きを新設するのは [ADR-025](025-onboarding-name-via-rest-and-cross-service-http.md) の「例外を許容する条件」を subscriber コンテキストに無理筋で拡張することになり、責務的には「すでに account に書かれた事実を payload で snapshot として伝搬する」ほうが自然 (faction の書き込み権限は account のみで、SSoT 集約は維持される)。
 
-#### 4.4 account 側 subscriber 処理
+#### account 側 subscriber 処理
 
 各 subscriber は同一 tx 内で「業務データの永続化 + `onboarding_status` 遷移」を実行する。
 
@@ -148,9 +148,9 @@ type PlayerOnboardedEvent struct {
 
 card 側 `PlayerOnboardedSubscriber` は変更しない (引き続き payload の `InitialFactionID` を `GrantInitialPack` の引数に使う)。gateway は [ADR-027](027-gateway-pubsub-fanout-removal.md) で `PlayerOnboardedSubscriber` ごと撤去済みのため本 ADR の対象外。
 
-### 5. account の REST はバリデーション目的のみに縮退
+### account の REST はバリデーション目的のみに縮退
 
-#### 5.1 新エンドポイント `POST /internal/v1/players/:playerId/onboarding/name/validate`
+#### 新エンドポイント `POST /internal/v1/players/:playerId/onboarding/name/validate`
 
 ```
 POST /internal/v1/players/:playerId/onboarding/name/validate
@@ -162,9 +162,9 @@ account 側はバリデーション (`internal/model/name.go` の `ValidateName`
 
 scenario 側は本 endpoint の 4xx をユーザーへそのまま中継し、200 を受け取った場合のみ outbox に `onboarding-name-set` を enqueue する (validate 失敗時は publish しない)。
 
-#### 5.2 既存 `PUT /internal/v1/players/:playerId/name` は維持
+#### 既存 `PUT /internal/v1/players/:playerId/name` は維持
 
-[ADR-025](025-onboarding-name-via-rest-and-cross-service-http.md) §1 で導入された REST 直書込エンドポイントは **撤去しない**。本エンドポイントは scenario のオンボードフロー専用ではなく、gateway 経由のクライアント発名前変更 (オンボード完了後の設定画面等からの通常名前変更) でも利用されているため。
+[ADR-025](025-onboarding-name-via-rest-and-cross-service-http.md) で導入された REST 直書込エンドポイントは **撤去しない**。本エンドポイントは scenario のオンボードフロー専用ではなく、gateway 経由のクライアント発名前変更 (オンボード完了後の設定画面等からの通常名前変更) でも利用されているため。
 
 本 ADR で変えるのは「scenario のオンボードフロー」のみ:
 
@@ -175,11 +175,11 @@ scenario 側は本 endpoint の 4xx をユーザーへそのまま中継し、20
 
 これは「業務ユースケースが 2 つ存在する」ことへの対応であり、責務違反ではない。subscriber と REST ハンドラはどちらも同じ `players.name` カラムを update するが、起動契機 (オンボード完了通知 / クライアント発名前変更) と冪等性担保方法 (event_id dedup / リクエスト単発) が異なる業務経路として独立する。
 
-#### 5.3 faction は REST 不要
+#### faction は REST 不要
 
 faction のバリデーション SSoT は `gamedesign.SelectableFactions` (共有定数) であり、scenario 側で `slices.Contains(gamedesign.SelectableFactions, factionID)` 相当の検証が可能。scenario は自分で validate し、成功時のみ outbox に `onboarding-faction-set` を enqueue する。account 側に faction 用 REST endpoint は新設しない。
 
-### 6. scenario の API 構成
+### scenario の API 構成
 
 | エンドポイント | 処理 |
 |---|---|
@@ -190,9 +190,9 @@ faction のバリデーション SSoT は `gamedesign.SelectableFactions` (共�
 | `GET /internal/v1/players/:playerId/onboarding/status` | 撤去 |
 | `GET /internal/v1/players/:playerId/onboarding/resume` | 撤去 |
 
-`POST /onboarding/complete` の `OnboardingCompleteRequest` から `InitialFactionID` を撤去する (faction は `POST /onboarding/faction` 経由で account に永続化済み)。`PlayerOnboardedEvent.InitialFactionID` の値は scenario が `account.GetPlayer` で取得して payload に詰める (publish 前に必ず存在する)。この `GetPlayer` 呼び出しは [ADR-025](025-onboarding-name-via-rest-and-cross-service-http.md) §2.3 で許容済みの経路の利用に該当し、新規例外条項の追加にはあたらない。`POST /onboarding/faction` で account に書き込み済みのため、`GetPlayer` 呼び出し時点で `selected_faction` は必ず non-nil。nil なら scenario 側でフロー違反とみなして 409 等で弾く (faction 選択ステップを経ずに完了 API を叩いた異常状態)。
+`POST /onboarding/complete` の `OnboardingCompleteRequest` から `InitialFactionID` を撤去する (faction は `POST /onboarding/faction` 経由で account に永続化済み)。`PlayerOnboardedEvent.InitialFactionID` の値は scenario が `account.GetPlayer` で取得して payload に詰める (publish 前に必ず存在する)。この `GetPlayer` 呼び出しは [ADR-025](025-onboarding-name-via-rest-and-cross-service-http.md) の「許容する具体的な直叩き」で許容済みの経路の利用に該当し、新規例外条項の追加にはあたらない。`POST /onboarding/faction` で account に書き込み済みのため、`GetPlayer` 呼び出し時点で `selected_faction` は必ず non-nil。nil なら scenario 側でフロー違反とみなして 409 等で弾く (faction 選択ステップを経ずに完了 API を叩いた異常状態)。
 
-### 7. 状態遷移タイムライン
+### 状態遷移タイムライン
 
 ```
 [register]
@@ -219,22 +219,22 @@ faction のバリデーション SSoT は `gamedesign.SelectableFactions` (共�
   → (eventual) card subscriber: GrantInitialPack(player_id, initial_faction_id)
 ```
 
-### 8. ADR-022 / ADR-025 の supersede
+### ADR-022 / ADR-025 の supersede
 
 ADR-025 / ADR-022 の本文は触らず、本 ADR で supersede 範囲を明記する。
 
-#### 8.1 ADR-025 の supersede
+#### ADR-025 の supersede
 
-- §1 「表示名確定経路を REST 同期書込に切替」→ 本 ADR §5 で **REST はバリデーション目的のみに縮退**。scenario のオンボード経路は `PUT /name` を呼ばなくなり `POST /name/validate` に置き換える。書き込みは `onboarding-name-set` event subscriber が行う
-- §2.3 許容経路リスト「`PUT /internal/v1/players/:playerId/name`」→ scenario のオンボード経路からは呼ばなくなるが、エンドポイント自体は維持 (gateway 経由のクライアント名前変更で使用)。代わりに「`POST /internal/v1/players/:playerId/onboarding/name/validate`」を ADR-025 §2.1 の 3 条件 (即時 UX フィードバック / 業務真実 SSoT が呼び出し先 / gateway 経由不可) を満たす許容経路として追加する。「`GET /internal/v1/players/:playerId`」は本 ADR でも維持
-- §3 「進行 checkpoint を account の業務カラム nullable から導出」→ 本 ADR §1 で撤回。専用カラム `onboarding_status` の参照に変更
-- ADR-025 で導入した `GET /onboarding/resume` / `GET /onboarding/status` は本 ADR §3 で撤去
+- 「表示名確定経路を REST 同期書込に切替」→ 本 ADR の「account の REST はバリデーション目的のみに縮退」で置き換え。scenario のオンボード経路は `PUT /name` を呼ばなくなり `POST /name/validate` に置き換える。書き込みは `onboarding-name-set` event subscriber が行う
+- 「許容する具体的な直叩き」の経路リスト「`PUT /internal/v1/players/:playerId/name`」→ scenario のオンボード経路からは呼ばなくなるが、エンドポイント自体は維持 (gateway 経由のクライアント名前変更で使用)。代わりに「`POST /internal/v1/players/:playerId/onboarding/name/validate`」を ADR-025 の「例外を許容する条件」の 3 条件 (即時 UX フィードバック / 業務真実 SSoT が呼び出し先 / gateway 経由不可) を満たす許容経路として追加する。「`GET /internal/v1/players/:playerId`」は本 ADR でも維持
+- 「オンボーディング進行の業務真実は account に集約」(進行 checkpoint を業務カラムの nullable から導出) → 本 ADR の専用カラム `onboarding_status` の参照に変更
+- ADR-025 で導入した `GET /onboarding/resume` / `GET /onboarding/status` は本 ADR の「scenario からの状態取得系エンドポイントを撤去」のとおり撤去
 
-#### 8.2 ADR-022 の supersede
+#### ADR-022 の supersede
 
-- §1 「scenario は onboarding 完了時に `PlayerOnboardedEvent` 1 本だけを publish する」→ 本 ADR §4.1 で **`onboarding-name-set` / `onboarding-faction-set` / `player-onboarded` の 3 本に拡張**。`PlayerOnboardedEvent` 自体は維持
-- §1 副作用テーブル「account: `players.selected_faction` UPDATE + `player_factions` INSERT」→ 本 ADR §4.4 で `OnboardingFactionSetSubscriber` に移管。`PlayerOnboardedSubscriber` は `onboarding_status='completed'` UPDATE のみに縮退
-- `PlayerOnboardedEvent` payload の `initial_faction_id` フィールドは維持 (本 ADR §4.3 / §5.3)
+- 「scenario は onboarding 完了時に `PlayerOnboardedEvent` 1 本だけを publish する」→ 本 ADR で **`onboarding-name-set` / `onboarding-faction-set` / `player-onboarded` の 3 本に拡張**。`PlayerOnboardedEvent` 自体は維持
+- 「オンボーディング起因」節の副作用テーブル「account: `players.selected_faction` UPDATE + `player_factions` INSERT」→ 本 ADR の「account 側 subscriber 処理」で `OnboardingFactionSetSubscriber` に移管。`PlayerOnboardedSubscriber` は `onboarding_status='completed'` UPDATE のみに縮退
+- `PlayerOnboardedEvent` payload の `initial_faction_id` フィールドは維持 (「payload 定義」「faction は REST 不要」参照)
 
 ### トレードオフ
 
@@ -245,21 +245,21 @@ ADR-025 / ADR-022 の本文は触らず、本 ADR で supersede 範囲を明記�
 
 ## 不採用案
 
-### 案 B: 専用カラム + 1 トピック (`onboarding-progress-changed`) + REST 直書込維持
+### 専用カラム + 1 トピック (`onboarding-progress-changed`) + REST 直書込維持
 
 - `onboarding_status` カラム追加までは採用案と同じ
 - scenario が account の `PUT /name` / `PUT /faction` を REST 直書込し、別途 `onboarding-progress-changed (next_status)` を Pub/Sub publish
 
 却下理由: account 側の書き込み経路が REST + Pub/Sub の 2 系統に分散したまま残り、業務データ (`name` / `selected_faction`) と進行 status の永続化が別 tx となる。「REST 成功 + outbox publish 失敗」の中間状態 (例: `players.name` は更新済みだが `onboarding_status` は `not_started` のまま) が発生し、subscriber 冪等性で吸収する必要がある。1 トピック化で payload と業務事実の対応も薄れる ([ADR-022](022-faction-selected-decomposition.md) 分解原則からの逆行)。
 
-### 案 C: scenario 側に進行ステートテーブル `scenario.player_onboarding_progress` を追加
+### scenario 側に進行ステートテーブル `scenario.player_onboarding_progress` を追加
 
 - 進行状態を scenario の責務として永続化 (`player_id`, `status`, `updated_at`)
 - account は完了通知 (`player-onboarded`) のみ受信して既存通り処理
 
 却下理由: 「ログイン時の status 取得」を scenario への RPC に依存させることになり、account の `GetPlayer` 1 RPC で済まない。クライアント観点では「player profile を取る」のに account と scenario の両方を呼ぶ非対称性が生じる。さらに状態の SSoT が account の identity (`name` / `selected_faction`) と scenario の進行ステートに二重存在し、整合性担保の仕組みが必要になる。
 
-### 案 D: account の `name` / `selected_faction` を NOT NULL + sentinel 値で「未設定」を表現
+### account の `name` / `selected_faction` を NOT NULL + sentinel 値で「未設定」を表現
 
 - `name = '__pending__'` のような sentinel で未設定を表現し、NULL を「データ欠損 (異常)」専用にする
 

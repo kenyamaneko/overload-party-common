@@ -97,7 +97,7 @@ newsfeed → news の単一 Pub/Sub トピック経由。ペイロード:
 
 ## 不採用案
 
-### 案1: newsfeed に要約を残し、`translations` 付きで publish
+### newsfeed に要約を残し、`translations` 付きで publish
 
 newsfeed が Vertex AI で ja 要約を作り、`translations: [{lang: "ja", title, summary, body}]` を含むイベントを publish する。ADR-011 の当初責務分担に最も近い。
 
@@ -107,7 +107,7 @@ newsfeed が Vertex AI で ja 要約を作り、`translations: [{lang: "ja", tit
 - news 側は en 翻訳を管理 UI で手動追加する動線を持つ。ja を newsfeed 生成・en を news 生成とすると非対称で、校閲 UI の内部実装が不揃いになる
 - 要約は「記事コンテンツの最終形を作る」仕事であり、コンテンツの SSoT である news が所有する方が責務境界と整合する
 
-### 案2: newsfeed → summarizer (新規サービス) → news の 3 段構成
+### newsfeed → summarizer (新規サービス) → news の 3 段構成
 
 `article-collected` (raw) → summarizer サービス → `article-summarized` (enriched) → news。
 
@@ -116,7 +116,7 @@ newsfeed が Vertex AI で ja 要約を作り、`translations: [{lang: "ja", tit
 - サービスが 1 つ増える。MVP は翻訳 1 言語のみで、疎結合の益が薄い
 - 将来 en の自動生成や別モデル併走が必要になった場合、news の ingest から summarizer を切り出すリファクタは本 ADR のイベント境界を一時的に 2 本に割るだけで済む。今時点で先取りするコストが見合わない
 
-### 案3: newsfeed に GCS アーカイブを残す
+### newsfeed に GCS アーカイブを残す
 
 将来の監査・再生成に備えて raw JSON を GCS に保管し続ける。
 
@@ -125,7 +125,7 @@ newsfeed が Vertex AI で ja 要約を作り、`translations: [{lang: "ja", tit
 - 現状 `raw_gcs_path` を下流で参照しているコードはない。実需のない副作用を newsfeed に残すと「fetch + publish」という責務が再び広がる
 - archival が必要になった時点で、所有サービス (news) が自スキーマに合わせて archive する設計の方が自然。newsfeed に archival を残すと news 側の障害復旧時にも newsfeed の GCS を読み書きする形になり、責務境界を再度横断する
 
-### 案4: 現状維持（newsfeed が DB 直接書き込み）
+### 現状維持（newsfeed が DB 直接書き込み）
 
 却下理由:
 

@@ -53,7 +53,7 @@ MVP フェーズではコストを最小化しつつ、将来のスケーラビ�
 
 ## 不採用案
 
-### 案1: Cloud Run のみ (WebSocket + Cloud Pub/Sub)
+### Cloud Run のみ (WebSocket + Cloud Pub/Sub)
 
 却下理由:
 
@@ -62,7 +62,7 @@ MVP フェーズではコストを最小化しつつ、将来のスケーラビ�
 - subscription のライフサイクル管理が複雑 (orphan 問題)
 - コスト面では有利だが、設計の複雑さが MVP に不釣り合い
 
-### 案2: Cloud Run + Memorystore for Valkey
+### Cloud Run + Memorystore for Valkey
 
 却下理由:
 
@@ -70,7 +70,7 @@ MVP フェーズではコストを最小化しつつ、将来のスケーラビ�
 - しかし ~$35/月の追加コストが初期段階には過剰
 - WS を単一 GCE にすれば Valkey 自体が不要
 
-### 案3: PostgreSQL LISTEN/NOTIFY
+### PostgreSQL LISTEN/NOTIFY
 
 却下理由:
 

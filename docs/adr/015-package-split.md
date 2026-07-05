@@ -188,7 +188,7 @@ overload-party-common/  (縮小後)
 現状 `packages/devdata/cache/cards_gen.json`、`packages/gamedata-dotnet/cache/cards_gen.json` に embed として埋め込まれているカードマスターデータは、**リポジトリ分割後は card サービスが REST API 経由で配布する**方式に改める。
 
 - ランタイムは card サービスが `card_definitions` テーブルから読み出して `GET /internal/v1/cards` で返却する
-- battle は起動時に card サービスから取得して in-memory キャッシュ化する（ARCHITECTURE.md §5.3 参照）
+- battle は起動時に card サービスから取得して in-memory キャッシュ化する（[docs/architecture/APPLICATION.md](../architecture/APPLICATION.md) のカード定義キャッシュの節を参照）
 - client も gateway 経由で card サービスから取得する
 - `packages/*/cache/cards_gen.json` の embed は原則廃止。ただしローカル開発用の devdata だけは、card サービスを毎回起動しなくて済む利便性のために残す余地がある
 - カード定義の**型**（`Card`, `CardStats`, `PassiveEffect` 等）は common の `card-data-*` パッケージとして配布する。型とデータを分離する

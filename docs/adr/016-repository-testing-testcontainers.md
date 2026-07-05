@@ -75,18 +75,18 @@ DB アクセスがある全てのサーバー系リポジトリ：
 
 ## 不採用案
 
-### 案A: インメモリモックの継続
+### インメモリモックの継続
 
 却下。現状の問題を解決しない。
 
-### 案B: PGlite（WebAssembly ベースの組み込み PostgreSQL）
+### PGlite（WebAssembly ベースの組み込み PostgreSQL）
 
 却下。Node.js / ブラウザ向けであり、Go / C# / Python から利用できない。
 
-### 案C: embedded-postgres 系ライブラリ
+### embedded-postgres 系ライブラリ
 
 却下。Go / C# / Python でそれぞれ別のライブラリが必要になる。C# 側の NuGet パッケージは品質がまちまちで、統一的な運用が難しい。
 
-### 案D: Docker コンテナ直接管理（docker-compose 等）
+### Docker コンテナ直接管理（docker-compose 等）
 
 却下。本物の PostgreSQL を使える点は良いが、テストコードとコンテナのライフサイクル管理が分離するため、CI 環境での扱いが煩雑になりやすい。`go test ./...` 単体ではテストが成立せず、事前に compose up が必須になる。

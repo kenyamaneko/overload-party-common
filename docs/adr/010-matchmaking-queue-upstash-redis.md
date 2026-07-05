@@ -80,7 +80,7 @@ Redis 接続障害時の挙動:
 
 ## 不採用案
 
-### 案1: PostgreSQL テーブル
+### PostgreSQL テーブル
 
 ```sql
 CREATE TABLE matchmaking_queue (...);
@@ -92,22 +92,22 @@ SELECT ... ORDER BY joined_at LIMIT 2 FOR UPDATE SKIP LOCKED;
 - 機能的には動作するが、揮発的なキューデータを RDB に持つのは設計として不適切
 - マッチング成立のたびに DELETE が走る。RDB の使い方として違和感がある
 
-### 案2: Cloudflare Queues
+### Cloudflare Queues
 
 - $0.40/100万メッセージで安い
 - 却下理由: consumer が Cloudflare Workers 限定。Gateway (Go) から直接 dequeue できず、アーキテクチャ変更が大きい
 
-### 案3: Cloudflare Durable Objects
+### Cloudflare Durable Objects
 
 - 単一アクターモデルでキュー状態を保持
 - 却下理由: Workers エコシステム前提。Go Gateway との統合コストが高い
 
-### 案4: AWS SQS FIFO
+### AWS SQS FIFO
 
 - $0.35/100万リクエスト
 - 却下理由: Google Cloud (GKE) 環境からクロスクラウドアクセスになる。レイテンシとネットワーク設定の複雑さ
 
-### 案5: インメモリ現状維持
+### インメモリ現状維持
 
 - メリット: 追加コスト $0、レイテンシ最小
 - デメリット: デバッグ困難、障害調査不可、キュー滞留計測不可（上述の課題がすべて残る）

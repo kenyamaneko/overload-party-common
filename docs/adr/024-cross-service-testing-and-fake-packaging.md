@@ -32,7 +32,7 @@ Accepted (2026-04-22)
 
 ## 詳細
 
-### 1. テストピラミッドと用語定義
+### テストピラミッドと用語定義
 
 従来「統合テスト」「結合テスト」と呼ばれていた範囲を、**検証対象が "外部インフラ境界" か "他サービスの契約" か** で明確に区別する。両者は同一テストファイル内で重なることもあるが、**"何を証明しようとしているか"** を表す語彙として分離する。
 
@@ -49,18 +49,18 @@ Go では `//go:build` タグ、C# では xUnit Trait、Python では pytest マ
 #### 名称の位置づけ
 
 - **アダプターテスト**: プロジェクト共通のクリーンアーキテクチャ用語（CLAUDE.md 参照）である "adapter" に揃えた呼称。DB 境界 (repository)、Pub/Sub 境界 (pubsub adapter)、外部 HTTP クライアント境界のいずれも adapter 層に該当する。[ADR-016](016-repository-testing-testcontainers.md) の「リポジトリ層テスト」は本名称のうち **DB 境界を扱うサブセット** として位置づけ直される（ADR-016 の方針自体は変更せず、テストコード自体にも変更は生じない）
-- **サービス間結合テスト**: 送信側 fake を使って「他サービスの契約を自サービスがどう扱うか」を検証するテスト。subscriber テスト、REST クライアント呼び出しテスト等が該当する。fake は [ADR-015](015-package-split.md) の送信側所有原則に従って送信側パッケージから配布される（§2 参照）
+- **サービス間結合テスト**: 送信側 fake を使って「他サービスの契約を自サービスがどう扱うか」を検証するテスト。subscriber テスト、REST クライアント呼び出しテスト等が該当する。fake は [ADR-015](015-package-split.md) の送信側所有原則に従って送信側パッケージから配布される（「テストダブルは送信側サービスが配布する」参照）
 - **クラウド検証テスト**: emulator / fake では検出できない、本番インフラ固有の挙動（Firestore インデックス要求、Cloud SQL 接続プール、Pub/Sub Exactly-Once 等）を検知する smoke テスト
-- **E2E**: **クライアント動線のみ** を対象とする。サービス間の契約検証は (3) で行い、E2E には含めない（§6 参照）
+- **E2E**: **クライアント動線のみ** を対象とする。サービス間の契約検証はサービス間結合テスト層で行い、E2E には含めない（「対象外と先送り」参照）
 
 #### 運用規則
 
 - 単体テストとアダプターテストは `go test ./...` / `dotnet test` / `pytest` 一発で走る（[ADR-016](016-repository-testing-testcontainers.md) 維持）
 - `integration` タグ付き (= アダプター + サービス間結合) は CI の integration job で別ジョブとして走らせ、unit ジョブは Docker に依存させない
-- `cloud_integration` は stg 環境に対する nightly ワークフローでのみ起動（§4 参照）
+- `cloud_integration` は stg 環境に対する nightly ワークフローでのみ起動（「emulator / fake と本番の乖離は nightly cloud integration で検知」参照）
 - テストピラミッドの厚みは上ほど薄く：**1 つの観点を複数層で重複検証しない**。アダプター層で検証済みの SQL を service 層で再検証しない、など
 
-### 2. テストダブルは送信側サービスが配布する
+### テストダブルは送信側サービスが配布する
 
 [ADR-015](015-package-split.md) の「送信側サービスが型を所有」原則をテストダブルに拡張する。送信側サービスの RPC / Pub/Sub パッケージに、以下を同梱する：
 
@@ -87,13 +87,13 @@ overload-party-shop/packages/api-shop/
 
 C# 側（battle）は `OverloadParty.Battle.Contracts.Testing` 相当の NuGet サブパッケージとして同じ構造で配布する。Python 側（newsfeed）は `overload-party-newsfeed` に `api_newsfeed_fake` パッケージを置く。
 
-### 3. サービス間結合テストは各サービス repo に置く
+### サービス間結合テストは各サービス repo に置く
 
 横断リポジトリ（overload-party-integration のような構成）は**作らない**。各 consumer サービスが、自サービスの `integration` タグ付きテストとして「送信側 fake を使った結合テスト」を書く。
 
 例：`faction-purchased` を consume する account サービスのテストは、`overload-party-account/internal/subscriber/faction_purchased_test.go` に配置し、`apishopfake` を import して流し込む。
 
-### 4. emulator / fake と本番の乖離は nightly cloud integration で検知
+### emulator / fake と本番の乖離は nightly cloud integration で検知
 
 `cloud_integration` タグ付きテストを nightly で stg 環境に対して実行する。対象は「emulator / fake では検出できない、本物環境固有の挙動」に限定する：
 
@@ -105,7 +105,7 @@ C# 側（battle）は `OverloadParty.Battle.Contracts.Testing` 相当の NuGet �
 
 CI 実装は `.github/workflows/nightly-cloud-integration.yaml` を各サービスリポに追加する（[ADR-016](016-repository-testing-testcontainers.md) の integration ジョブと同じ runner 方針）。
 
-### 5. パイロット選定
+### パイロット選定
 
 本戦略は全サービスへの段階展開を前提とするが、最初の 2 サービスで戦略を実証・テンプレ化する。
 
@@ -142,7 +142,7 @@ shop では検証できない範囲（REST outbound fake、consumer-side subscri
 - 既に `integration` タグ運用があり、テンプレ適用のコストが低い
 - REST outbound fake の実証は gateway で **third pilot** として後追いする（WebSocket は E2E へ分離）
 
-### 6. 対象外と先送り
+### 対象外と先送り
 
 - **Contract Testing (Pact 等)** は本 ADR では導入しない。nightly cloud_integration で乖離検知を行い、乖離が実害として複数回検出された場合に consumer-driven contract test の導入を再検討する
 - **overload-party-e2e の役割限定**: E2E 層は**クライアントからの動線確認のみ**を対象とする。サービス間の契約検証は本 ADR のサービス間結合テスト層で行い、E2E には持ち込まない。E2E リポの内部設計（どのクライアントフローを対象とするか、どの基盤で動かすか）は別 ADR に委ねる
@@ -157,14 +157,14 @@ shop では検証できない範囲（REST outbound fake、consumer-side subscri
 
 ## 不採用案
 
-### 案A: サービス間結合テスト専用のリポジトリを新設
+### サービス間結合テスト専用のリポジトリを新設
 
 却下。所有権が消える（テストが落ちたときどちらのサービスチームが直すかが自明でない）、追従コストが爆発する（送信側サービスの契約変更が別リポの PR として追いかける運用になる）、ローカル開発で全サービス起動が必須になり日常的に回らなくなる。`overload-party-e2e` が担うユーザー視点の E2E とも責務が重複する。
 
-### 案B: 各サービスが相手サービスの fake を独自に手書きし続ける
+### 各サービスが相手サービスの fake を独自に手書きし続ける
 
 却下。[ADR-015](015-package-split.md) で「送信側が契約を所有」と決めた原則に反する。契約変更のたびに consumer 側の手書き fake が古い契約を前提に動き続ける乖離が起きる（既に shop repo 内で `fakeShopServicer` 等が ad hoc に定義されている）。スケールしない。
 
-### 案C: Contract Testing (Pact 等) の全面導入
+### Contract Testing (Pact 等) の全面導入
 
 見送り。consumer-driven contract test は乖離検知の正攻法だが、Go / C# / Python の 3 言語 × 7 サービスで導入・運用するには先行投資が大きい。**乖離検知の第一手段は nightly cloud integration test（本 ADR で採用）に任せ**、Pact は fake と実装の不整合が実害として顕在化したタイミングで再検討する。

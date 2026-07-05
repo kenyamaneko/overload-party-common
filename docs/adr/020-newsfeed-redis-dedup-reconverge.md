@@ -22,7 +22,7 @@ news の責務は ADR-019 時点の「インジェスト以降」をそのまま
 
 ADR-019 では newsfeed を「fetch + publish」の thin な Cloud Run Job に縮退させ、AI 要約・タグ付け・DB 永続化・校閲 UI・配信を news サービスに集約した。実装着手後に次の問題が顕在化した。
 
-### 1. news の責務過多
+### news の責務過多
 
 ADR-019 の責務移譲により news は以下を一手に抱えることになる:
 
@@ -36,13 +36,13 @@ ADR-019 の責務移譲により news は以下を一手に抱えることにな
 
 これは「ニュース配信サービス」というより「ニュース加工プラットフォーム」であり、単一リポジトリで持つ責務としては広すぎる。
 
-### 2. ADR-019 の本当の争点は「AI」ではなく「state」
+### ADR-019 の本当の争点は「AI」ではなく「state」
 
 ADR-019 が要約を news 側に寄せた本来の理由は、「newsfeed で dedup を行うと state が必要になり、thin ジョブの位置づけから外れる」だった。AI 呼び出し自体が嫌だったのではなく、重複再要約を防ぐための state の置き場がなかったことが争点。
 
 ADR-014（クロスサービス SELECT 禁止）と「newsfeed の RDB 所有廃止」により newsfeed は自 DB を持たず、dedup を RDB に戻すと再度スキーマを作る羽目になる。この回避策として「要約を news 側に寄せ、重複再要約コストは news の `ON CONFLICT` で吸収」という構成を取っていた。
 
-### 3. 軽量 KV で state 問題を解消できる
+### 軽量 KV で state 問題を解消できる
 
 要約を newsfeed に戻す条件は「dedup state の置き場」。RDB スキーマを作るのは過剰だが、**短命・TTL 前提・単純 KV** の dedup には Upstash Redis が適合する。[ADR-010](010-matchmaking-queue-upstash-redis.md) / [ADR-012](012-matchmaking-pubsub.md) で matchmaking が既に Upstash Redis を採用済みであり、プラットフォームとして前例がある。
 
@@ -176,22 +176,22 @@ if errors > 0:
 
 ## 不採用案
 
-### 案 1: newsfeed 専用 PostgreSQL スキーマで dedup
+### newsfeed 専用 PostgreSQL スキーマで dedup
 
 却下。ADR-014 の「1 スキーマ 1 所有者」を尊重すると `source_url` UNIQUE 1 テーブルのためにマイグレーション運用・Cloud SQL ユーザー払い出し・Testcontainers まで抱える。短命 + TTL が本質の dedup に RDB は重すぎる。
 
-### 案 2: newsfeed → summarizer (新規サービス) → news の 3 段構成
+### newsfeed → summarizer (新規サービス) → news の 3 段構成
 
 却下。Cloud Run サービスが 1 つ増えて運用対象が広がる。MVP の翻訳 1 言語規模では疎結合の益が見合わない。将来 en 自動化が必要になった時点で newsfeed から summarizer を切り出すリファクタは、イベント境界を 1 本追加するだけで済む。
 
-### 案 3: news が bulk exists API を提供し、newsfeed が publish 前に問い合わせる
+### news が bulk exists API を提供し、newsfeed が publish 前に問い合わせる
 
 却下。newsfeed が news API の可用性に依存する新しい結合が発生する（2h 周期バッチ中に news がデプロイ中だと取りこぼす等）。dedup 状態は newsfeed の関心事であり news の所有データではないため、API 経由で問い合わせる設計自体が筋悪い。
 
-### 案 4: Cloud Firestore で dedup を実装
+### Cloud Firestore で dedup を実装
 
 却下。[ADR-017](017-game-config-firestore.md) は Firestore を「サービス横断 KV 共有状態」の置き場として正当化しており、newsfeed 専用・短命 KV は ADR の動機とズレる。同じ KV 用途なら既に運用前例のある Upstash Redis の方がプラットフォームとして一貫する。
 
-### 案 5: ADR-019 のまま news に要約を寄せ続ける
+### ADR-019 のまま news に要約を寄せ続ける
 
 却下。news が「配信」を超えて「加工プラットフォーム」に拡大する。ADR-019 本来の争点は「newsfeed に state を持たせたくない」であって「newsfeed に AI を持たせたくない」ではなかった。Upstash Redis により state を最小限で解消できるなら ADR-019 の前提が崩れる。

@@ -117,7 +117,7 @@ overload-party-common/
 
 ## 不採用案
 
-### 案1: Gateway 内部でのモジュール分割（現状維持＋整理）
+### Gateway 内部でのモジュール分割（現状維持＋整理）
 
 Gateway リポジトリを単一のまま、`internal/account`, `internal/shop` のようにパッケージ単位で責務を切るアプローチ。
 

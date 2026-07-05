@@ -146,7 +146,7 @@ GKE Workload Identity を用いて Pod に Google Cloud サービスアカウン
 
 ## 不採用案
 
-### 案1: Upstash Redis Pub/Sub (at-most-once)
+### Upstash Redis Pub/Sub (at-most-once)
 
 `PUBLISH` / `SUBSCRIBE` コマンドによる fire-and-forget 配信。
 
@@ -156,7 +156,7 @@ GKE Workload Identity を用いて Pod に Google Cloud サービスアカウン
 - 「マッチしたのにロビーに戻らない」というユーザー体験上最悪のケースを発生させる
 - Exactly-Once を必要とする本 ADR の要件を満たさない
 
-### 案2: Upstash Redis Streams + Consumer Groups (at-least-once + アプリ冪等性)
+### Upstash Redis Streams + Consumer Groups (at-least-once + アプリ冪等性)
 
 `XADD` / `XREADGROUP` / `XACK` による consumer group パターン。
 
@@ -166,7 +166,7 @@ GKE Workload Identity を用いて Pod に Google Cloud サービスアカウン
 - dedup のためのトラッキング状態（matchId → 処理済みフラグ）を Redis もしくは in-memory で持つ必要があり、Matchmaking 側・Gateway 側の両方で冪等性実装が重くなる
 - 同じ冪等性を実装するにしても、Cloud Pub/Sub の Exactly-Once Delivery を基盤として matchId dedup を「保険」として実装するほうが、開発コスト・可読性・運用負荷の面で有利
 
-### 案3: Cloud Pub/Sub + Memorystore (Google Cloud 一系統)
+### Cloud Pub/Sub + Memorystore (Google Cloud 一系統)
 
 通知を Cloud Pub/Sub、キュー永続化を Memorystore (Redis) に統一する案。
 
@@ -177,7 +177,7 @@ GKE Workload Identity を用いて Pod に Google Cloud サービスアカウン
 - キュー + メッセージングで結局 2 系統になる点は Upstash + Cloud Pub/Sub 案と変わらないため、「Google Cloud 一系統に揃える」という統一感の利点は限定的
 - 同じ Redis を使うなら Upstash のほうが安く、Google Cloud から外れる程度のトレードオフは受け入れられる
 
-### 案4: Cloud Pub/Sub + Cloud SQL
+### Cloud Pub/Sub + Cloud SQL
 
 キュー永続化を Cloud SQL に寄せる案。
 
@@ -186,7 +186,7 @@ GKE Workload Identity を用いて Pod に Google Cloud サービスアカウン
 - マッチメイキングキューは揮発的・一時的データであり、RDB に持つのは設計として不適切（ADR-010 の却下理由を継承）
 - 既存 Cloud SQL インスタンスがあるためコストは限定的だが、設計観点で論外
 
-### 案5: Managed Service for Apache Kafka
+### Managed Service for Apache Kafka
 
 Google Cloud マネージド Kafka。
 
@@ -196,7 +196,7 @@ Google Cloud マネージド Kafka。
 - マッチメイキング通知の流量（1 日 100 マッチ × 数百バイト程度）に対してオーバースペック
 - Gateway / Matchmaking 共に Kafka クライアントを持ち込むことになり、学習コスト・運用コストが高い
 
-### 案6: QStash (Upstash)
+### QStash (Upstash)
 
 Upstash が提供する HTTP ベースのメッセージングサービス。
 
@@ -205,7 +205,7 @@ Upstash が提供する HTTP ベースのメッセージングサービス。
 - HTTP push 型のため、リアルタイム通知に向かない（数百 ms 〜秒単位の遅延が想定される）
 - consumer group 相当の「複数 Pod で競合受信する」モデルがなく、Gateway 水平スケールとの相性が悪い
 
-### 案7: Gateway ↔ Matchmaking 直接 push back (REST / WS)
+### Gateway ↔ Matchmaking 直接 push back (REST / WS)
 
 Matchmaking が Gateway の内部 API を直接呼ぶ、あるいは常時 WebSocket で接続する案。
 
