@@ -11,7 +11,7 @@ GKE Autopilot + Cloud SQL 構成に対する、ログ・メトリクス・アラ
 
 ---
 
-## 1. 構造化ログ
+## 構造化ログ
 
 ### 採用技術: `log/slog` (Go 1.21+ 標準)
 
@@ -88,7 +88,7 @@ slog の JSONHandler をカスタマイズして `level` → `severity` に変�
 
 ---
 
-## 2. メトリクス
+## メトリクス
 
 ### 採用技術: Prometheus client (`prometheus/client_golang`) + GKE Managed Prometheus
 
@@ -150,7 +150,7 @@ spec:
 
 ---
 
-## 3. アラート
+## アラート
 
 ### Cloud Monitoring アラートポリシー
 
@@ -169,7 +169,7 @@ spec:
 
 ---
 
-## 4. Cloud SQL Insights
+## Cloud SQL Insights
 
 - Terraform で `insights_config` を有効化するだけ
 - クエリの実行計画・レイテンシ・ロック待ちを可視化
@@ -188,7 +188,7 @@ insights_config {
 
 ---
 
-## 5. 分散トレーシング
+## 分散トレーシング
 
 **現時点では不採用。**
 
@@ -204,7 +204,7 @@ insights_config {
 
 ---
 
-## 6. 導入ロードマップ
+## 導入ロードマップ
 
 ```
 Phase 1: 構造化ログ (slog 導入 + JSON 出力)          ← 最優先
@@ -240,4 +240,4 @@ Phase 4: ダッシュボード + アラート                    ← 運用整�
 | Cloud SQL Insights | ストレージのみ | 月数十円程度 |
 | Cloud Monitoring アラート | 基本無料 | 無料 |
 
-**追加コスト: ほぼゼロ**（GCP の無料枠で収まる規模）
+**追加コスト: ほぼゼロ**（Google Cloud の無料枠で収まる規模）
