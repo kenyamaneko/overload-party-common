@@ -1,15 +1,20 @@
 # ADR-021: オンボーディングシナリオを scenario サービスに独立ユースケースとして実装し、transactional outbox で完了イベントを配信する
 
-**Status:** Proposed (§5 / §6.1 は [ADR-022](022-faction-selected-decomposition.md) により部分的に supersede、§5.1 / §7.2 は [ADR-025](025-onboarding-name-via-rest-and-cross-service-http.md) により部分的に supersede)
-**Date:** 2026-04-21
+## ステータス
 
-> **本 ADR の §5 (2 イベント publish) と §6.1 (2 イベント同一トランザクション enqueue) は [ADR-022](022-faction-selected-decomposition.md) で 1 イベント (`player-onboarded` のみ) に縮退する**。ADR-022 では `FactionSelectedEvent` を廃止し業務事実ベースで分解することで、onboarding 起因の faction 取得は `PlayerOnboardedEvent` 単体で表現され、shop 起因の faction 取得は新 `FactionPurchasedEvent` (topic: `faction-purchased`) に移る。結果として scenario は onboarding 完了時に `PlayerOnboardedEvent` 1 本のみ publish し、subscriber は account だけでなく card / gateway にも拡大する。本 ADR の他の節 (§1 サービス構造、§2 データモデル、§3 API 契約、§6.2 Publish 側 poller、§7 入力バリデーション 等) は引き続き有効。
->
-> **本 ADR の §5.1 (`player-onboarded` payload に `display_name` を載せる設計) と §7.2 (display_name のバリデーションを scenario 側 service 層に置く設計) は [ADR-025](025-onboarding-name-via-rest-and-cross-service-http.md) で部分的に上書きされる**。`PlayerOnboardedEvent` payload から `display_name` を撤去し、表示名はオンボード内 name 入力ステップで scenario が account の `PUT /internal/v1/players/:playerId/name` を同期 REST で呼んで確定する。バリデーション SSoT は account の `internal/model/name.go` に集約され、scenario 側で重ね書きしない。本 ADR の他の節 (テーブル設計、outbox 設計、faction 検証など) は引き続き有効。
+Proposed (2026-04-21)
 
----
+**本 ADR の §5 (2 イベント publish) と §6.1 (2 イベント同一トランザクション enqueue) は [ADR-022](022-faction-selected-decomposition.md) で 1 イベント (`player-onboarded` のみ) に縮退する**。ADR-022 では `FactionSelectedEvent` を廃止し業務事実ベースで分解することで、onboarding 起因の faction 取得は `PlayerOnboardedEvent` 単体で表現され、shop 起因の faction 取得は新 `FactionPurchasedEvent` (topic: `faction-purchased`) に移る。結果として scenario は onboarding 完了時に `PlayerOnboardedEvent` 1 本のみ publish し、subscriber は account だけでなく card / gateway にも拡大する。本 ADR の他の節 (§1 サービス構造、§2 データモデル、§3 API 契約、§6.2 Publish 側 poller、§7 入力バリデーション 等) は引き続き有効。
 
-## 背景
+**本 ADR の §5.1 (`player-onboarded` payload に `display_name` を載せる設計) と §7.2 (display_name のバリデーションを scenario 側 service 層に置く設計) は [ADR-025](025-onboarding-name-via-rest-and-cross-service-http.md) で部分的に上書きされる**。`PlayerOnboardedEvent` payload から `display_name` を撤去し、表示名はオンボード内 name 入力ステップで scenario が account の `PUT /internal/v1/players/:playerId/name` を同期 REST で呼んで確定する。バリデーション SSoT は account の `internal/model/name.go` に集約され、scenario 側で重ね書きしない。本 ADR の他の節 (テーブル設計、outbox 設計、faction 検証など) は引き続き有効。
+
+## 結論
+
+オンボーディングを scenario サービス内の **独立ユースケース** として実装し、既存 `ScenarioEpisode` 機構とはサービス層・テーブル・API・イベントいずれも分離する。完了に伴う 2 つのイベント publish を原子的に保証するため、scenario スキーマに **transactional outbox** を新設する。既存 `ScenarioEpisode` は「unlock 済みコンテンツを読む」ユースケースに専念でき、オンボ固有の例外が入らない。`scenario.player_onboarding` の PK 制約と outbox の同一トランザクション挿入により完了記録とイベント publish が atomic に保証されて部分失敗による詰みが消え、scenario はオンボ完了フラグとスクリプトの SSoT、account は identity の SSoT という分離が保たれる。faction 検証は `factions.yaml` → codegen → `SelectableFactions` の経路に一本化される。
+
+> **既存設計文書との関係**: scenario の `docs/ARCHITECTURE.md` §「scenario が Outbox を持たない理由」および `docs/FEATURE_SPEC.md` §6.2 には「scenario は Transactional Outbox を持たない」と明記されている。これらは「DB 書き込み + publish を atomic に必要とする新規配線が出た時点で Outbox を導入し、その際は shop と同型の構造を再利用する」という将来条件を同時に記しており、本 ADR が扱うオンボーディング完了フロー（`scenario.player_onboarding` への INSERT + `player-onboarded` / `faction-selected` の 2 イベント publish）はまさにその条件に合致する。本 ADR の採用により、ARCHITECTURE.md 該当節と FEATURE_SPEC.md §6.2 は **更新される**（「Outbox を持つ」方針へ反転し、本 ADR を参照する）。更新は本 ADR 実装 PR 内で行う。
+
+## 背景・課題
 
 ### 要件
 
@@ -34,7 +39,7 @@
 - **完了後は読ませない**: 「一度だけ」セマンティクス
 - **副作用が identity に及ぶ**: display_name の書き込みと初期 faction の hand-off
 
-既存の `ScenarioEpisode` に乗せるには、unlock 判定の例外注入、`GetScript` への完了ガード、`CompleteEpisode` の副作用分岐の 3 点を横串で組み込む必要があり、「一つの関数に複数の責務を負わせない」という CLAUDE.md 方針に正面から反する。
+既存の `ScenarioEpisode` に乗せるには、unlock 判定の例外注入、`GetScript` への完了ガード、`CompleteEpisode` の副作用分岐の 3 点を横串で組み込む必要があり、「一つの関数に複数の責務を負わせない」という CLAUDE.md 方針に反する。
 
 ### 既存 `NotifyInitialFactionSelected` の位置づけ
 
@@ -56,13 +61,7 @@ scenario には `Service.NotifyInitialFactionSelected`（`internal/service/story
 
 このリスクを解消する仕組みが必要である。
 
----
-
-## 決定
-
-オンボーディングを scenario サービス内の **独立ユースケース** として実装し、既存 `ScenarioEpisode` 機構とはサービス層・テーブル・API・イベントいずれも分離する。完了に伴う 2 つのイベント publish を原子的に保証するため、scenario スキーマに **transactional outbox** を新設する。
-
-> **既存設計文書との関係**: scenario の `docs/ARCHITECTURE.md` §「scenario が Outbox を持たない理由」および `docs/FEATURE_SPEC.md` §6.2 には「scenario は Transactional Outbox を持たない」と明記されている。これらは「DB 書き込み + publish を atomic に必要とする新規配線が出た時点で Outbox を導入し、その際は shop と同型の構造を再利用する」という将来条件を同時に記しており、本 ADR が扱うオンボーディング完了フロー（`scenario.player_onboarding` への INSERT + `player-onboarded` / `faction-selected` の 2 イベント publish）はまさにその条件に合致する。本 ADR の採用により、ARCHITECTURE.md 該当節と FEATURE_SPEC.md §6.2 は **更新される**（「Outbox を持つ」方針へ反転し、本 ADR を参照する）。更新は本 ADR 実装 PR 内で行う。
+## 詳細
 
 ### 1. サービス構造
 
@@ -158,7 +157,7 @@ CREATE INDEX idx_outbox_events_unpublished
     - {name: PlayerID, type: string, json: "player_id"}
 ```
 
-生成は `python3 scripts/generate_types.py` 経由。手書き編集は禁止（CLAUDE.md）。
+生成は `python3 scripts/generate_types.py` 経由で scenario 所有の `packages/api-scenario` に出力される。手書き編集は禁止（CLAUDE.md）。
 
 ### 3. API 契約
 
@@ -315,9 +314,15 @@ shop と同じメトリクス名体系に揃える（サービス名プレフィ
 
 `NotifyInitialFactionSelected` は router に未配線のため、外部互換性を壊す影響はない。
 
----
+### トレードオフ
 
-## 検討した代替案
+- **outbox インフラの新設**: `scenario.outbox_events` テーブルと poller goroutine が追加される。scenario の運用対象が「DB + GCS + Pub/Sub + outbox」に増える。ただし shop で先行採用済みの実装パターン（`shop.outbox_events` / `OutboxStore` / `service/outbox/publisher.go`）を踏襲するため、プロジェクト全体では 2 サービス目の採用であり、テンプレートが確立されている。将来 `ScenarioComplete` など他の副作用付き完了処理にも流用できる
+- **publish 遅延**: outbox poll 間隔分（500ms〜1s 想定）の遅延が入る。onboarding は低頻度・非リアルタイムなので許容範囲
+- **scenario スキーマの所有範囲拡大**: identity 関連イベントの中継（display_name の受け渡し）を scenario が担うことで、「scenario = ストーリー配信」の直感から微妙にはみ出す。ただし identity データを **持たず通過させるだけ** なので SSoT は account のまま
+- **event_id 生成の統一漏れ**: 他サービス（matchmaking 等）では ULID を使うケースがあるが、scenario は既存 `FactionPublisher` と揃えて `uuid.NewString()` を継続する。将来的にプラットフォーム横断で統一する動きが出たら別 ADR で扱う
+- **API 定数化の負債は本 ADR では解消しない**: `internal/router/router.go` にはエンドポイントパスが直書きされている。CLAUDE.md「API 契約はリテラルで書かない」方針との乖離は既存論点であり、本 ADR では onboarding エンドポイントの追加のみを行い、定数化は別 Issue で扱う
+
+## 不採用案
 
 ### 案 1: 既存 `ScenarioEpisode` にオンボを乗せる（例: `episode_id = "onboarding"` の特殊行）
 
@@ -367,53 +372,3 @@ account が `account.players.onboarded_at` を持ち、`CompleteOnboarding` 時�
 - live publisher がまだ居ないため切り替えコスト自体は低い
 - ただし faction 変更機能（将来追加される可能性のある「転籍」等）が入った場合、`faction-selected` は onboarding と独立に再発火する必要が生じる。そのたびにトピックを新設するより、最初から「faction 選択イベント」という粒度を保つ方が将来の再設計コストが低い
 - [ADR-012](012-matchmaking-pubsub.md) の「イベントは業務上の 1 事実 1 トピック」の原則に照らし、`player-onboarded`（オンボ完了）と `faction-selected`（faction 選択）は別の事実として分離する
-
----
-
-## 結果
-
-### 期待される効果
-
-- **責務境界の明確化**: 既存 `ScenarioEpisode` は「unlock 済みコンテンツを読む」ユースケースに専念でき、`checkUnlock` / `GetScript` / `CompleteEpisode` にオンボ固有の例外が入らない
-- **一度きりセマンティクスの原子性**: `scenario.player_onboarding` の PK 制約と outbox の同一トランザクション挿入により、完了記録と 2 イベント publish が atomic に保証される。部分失敗による詰みが消える
-- **SSoT の分離**: scenario はオンボ完了フラグとスクリプトの SSoT、account は identity（display_name / 所持 faction）の SSoT。フラグが identity に漏れ出さない
-- **faction 検証の一本化**: `factions.yaml` → codegen → `SelectableFactions` の経路を scenario も使うことで、将来 faction が増減した際にサービス側コード変更が不要（codegen 再実行のみ）
-- **既存 `NotifyInitialFactionSelected` の整理**: dead コードを削除することで、`story.Service` から publisher 依存が外れ、責務がより純粋になる
-
-### トレードオフ
-
-- **outbox インフラの新設**: `scenario.outbox_events` テーブルと poller goroutine が追加される。scenario の運用対象が「DB + GCS + Pub/Sub + outbox」に増える。ただし shop で先行採用済みの実装パターン（`shop.outbox_events` / `OutboxStore` / `service/outbox/publisher.go`）を踏襲するため、プロジェクト全体では 2 サービス目の採用であり、テンプレートが確立されている。将来 `ScenarioComplete` など他の副作用付き完了処理にも流用できる
-- **publish 遅延**: outbox poll 間隔分（500ms〜1s 想定）の遅延が入る。onboarding は低頻度・非リアルタイムなので許容範囲
-- **scenario スキーマの所有範囲拡大**: identity 関連イベントの中継（display_name の受け渡し）を scenario が担うことで、「scenario = ストーリー配信」の直感から微妙にはみ出す。ただし identity データを **持たず通過させるだけ** なので SSoT は account のまま
-- **event_id 生成の統一漏れ**: 他サービス（matchmaking 等）では ULID を使うケースがあるが、scenario は既存 `FactionPublisher` と揃えて `uuid.NewString()` を継続する。将来的にプラットフォーム横断で統一する動きが出たら別 ADR で扱う
-- **API 定数化の負債は本 ADR では解消しない**: `internal/router/router.go` にはエンドポイントパスが直書きされている。CLAUDE.md「API 契約はリテラルで書かない」方針との乖離は既存論点であり、本 ADR では onboarding エンドポイントの追加のみを行い、定数化は別 Issue で扱う
-
-### 移行ステップ
-
-本 ADR 採用後、以下の順序で実装する（すべて scenario リポジトリ内で完結する）。
-
-1. **`data/models.yaml` に型追加 + `python3 scripts/generate_types.py`** で `packages/api-scenario` を再生成
-2. **`data/endpoints.yaml` にエンドポイント追加**（API_REFERENCE.md は codegen）
-3. **DDL 追加**: `db/schema.sql` に `scenario.player_onboarding` と `scenario.outbox_events` を追記
-4. **port / service / repo / adapter 実装**（配置は §1 サービス構造に従い shop と揃える）:
-   - `internal/port/onboarding_repo.go` / `internal/port/outbox.go`
-   - `internal/repository/postgres/onboarding_repo.go` / `internal/repository/postgres/outbox_repo.go`
-   - `internal/service/onboarding/` / `internal/service/outbox/publisher.go`
-   - `internal/adapter/pubsub/publisher.go` / `internal/adapter/pubsub/event_builder.go`
-   - `internal/handler/worker/outbox_ticker.go`
-5. **GCS にスクリプト配置**: `scripts/onboarding/ja.ks` / `scripts/onboarding/en.ks`（本文中の選択肢・入力フィールド表現は別 ADR 確定後に埋める。サーバ側実装・配線はスクリプト本文未確定でも進行可能）
-6. **router 配線**: `internal/router/router.go` に 3 エンドポイントを追加
-7. **`story.Service` から `NotifyInitialFactionSelected` を削除**、`FactionPublisher` 依存を `OnboardingService` 側に移す
-8. **既存 docs の更新**: `overload-party-scenario/docs/ARCHITECTURE.md` §「scenario が Outbox を持たない理由」および `docs/FEATURE_SPEC.md` §6.2 を「Outbox を採用する」方針に書き換え、本 ADR を参照させる（本 ADR §決定の supersede 宣言と整合させる）
-9. **subscriber 側の確認**: account / card / gateway の `processed_events` と `faction-selected` / `player-onboarded` の subscription 配線が整っていることを確認（account は `player-onboarded` subscription を新設）
-
-subscriber 側（account / card / gateway）の配線追加は別リポジトリの作業となるため、scenario 側 merge とリリースタイミングを合わせる。account 側で `player-onboarded` subscription が準備できるまで、scenario の outbox poller は event を publish し続け、account 側が subscription 作成後に配信を受け取る（Pub/Sub の保持期間内）。
-
----
-
-## 関連 ADR
-
-- **[ADR-012](012-matchmaking-pubsub.md)**: Pub/Sub 設計原則（送信側型所有・event_id 払出・subscriber 冪等性）。本 ADR の 2 イベント設計と outbox 導入はこの原則に則る
-- **[ADR-014](014-db-schema-split-per-service.md)**: DB スキーマのサービス単位分割。`scenario.player_onboarding` と `scenario.outbox_events` は scenario 所有として追加され、cross-schema FK は張らない
-- **[ADR-015](015-package-split.md)**: パッケージ分割と SSoT 分散。onboarding 関連型は scenario 所有の `packages/api-scenario` に追加され、faction 列挙は common の `packages/game-design-constants` を consume する
-- **[ADR-017](017-game-config-firestore.md)**: Firestore `game_config` はゲームバランス値の KV であり、faction 列挙を含まない。本 ADR は faction 検証で `game_config` を参照しない立場を明示する

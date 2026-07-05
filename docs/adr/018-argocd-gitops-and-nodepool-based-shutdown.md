@@ -1,11 +1,25 @@
 # ADR-018: ArgoCD による GitOps 化と nodepool 単位の nightly shutdown
 
-**Status:** Proposed
-**Date:** 2026-04-14
+## ステータス
 
----
+Proposed (2026-04-14)
 
-## 背景
+## 結論
+
+手動 apply 運用の drift 不可視・履歴不明・切り戻し困難を解消するため、以下を採用する。
+
+1. **ArgoCD を導入し、k8s マニフェストは GitOps で同期する**
+2. **image tag の更新は ArgoCD Image Updater が行う**（サービスリポ CI は k8s リポに一切書き込まない）
+3. **ArgoCD の sync は全環境で manual**（Image Updater が manifest を更新した後、人が UI から sync を実行）
+4. **Application 粒度は service × env = 21 Application**
+5. **ArgoCD / Image Updater は prod nodepool に同居**させる
+6. **Ingress / backendConfig / Service annotation は prod のみ ArgoCD 管理**、dev/stg は既存の `env-lifecycle` が管理し続ける
+7. **PSC forwarding rule は現状維持**（`env-lifecycle` が dev/stg の up/down で作成・削除）
+8. **nightly shutdown は Pod scale 0 方式から dev/stg 共有 nodepool を 0 ノードに resize する方式へ切り替える**
+
+Git と実クラスタの drift が ArgoCD UI で自動検知され、deploy 履歴と rollback 経路が明確になる。反映タイミングは全環境で人が制御でき、21 Application 構成によりサービス単位の独立 deploy / rollback が可能になる。サービスリポは image を push するだけという片方向依存が保たれ、nightly shutdown は VM 課金が実際に止まる方式になる。
+
+## 背景・課題
 
 Overload Party の k8s マニフェストは `overload-party-k8s` リポジトリに Kustomize 構成（base / components / overlays）で集約されており、現状は同リポの GitHub Actions `deploy.yaml` を**手動トリガー**して `kustomize build | kubectl apply` で各環境に反映している。image tag は全環境共通で `:latest` 固定、環境間の差分は overlay の replicas と Workload Identity annotation のみ。
 
@@ -20,18 +34,7 @@ Overload Party の k8s マニフェストは `overload-party-k8s` リポジト�
 
 この 2 つ（GitOps 化とノード停止方式の切り替え）は、Pod スケールと ArgoCD の desired state が衝突する問題を共通の論点として持つため、同一 ADR で決定する。
 
-## 決定
-
-以下を採用する。
-
-1. **ArgoCD を導入し、k8s マニフェストは GitOps で同期する**
-2. **image tag の更新は ArgoCD Image Updater が行う**（サービスリポ CI は k8s リポに一切書き込まない）
-3. **ArgoCD の sync は全環境で manual**（Image Updater が manifest を更新した後、人が UI から sync を実行）
-4. **Application 粒度は service × env = 21 Application**
-5. **ArgoCD / Image Updater は prod nodepool に同居**させる
-6. **Ingress / backendConfig / Service annotation は prod のみ ArgoCD 管理**、dev/stg は既存の `env-lifecycle` が管理し続ける
-7. **PSC forwarding rule は現状維持**（`env-lifecycle` が dev/stg の up/down で作成・削除）
-8. **nightly shutdown は Pod scale 0 方式から dev/stg 共有 nodepool を 0 ノードに resize する方式へ切り替える**
+## 詳細
 
 ### image tag 運用
 
@@ -87,7 +90,21 @@ ArgoCD と Image Updater は prod nodepool に同居させる。専用の system
 - resource requests: ArgoCD 本体（controller / repo-server / redis / server）と Image Updater を合わせて **0.5 vCPU / 1 GiB** 程度を見込む
 - ArgoCD 自身は ArgoCD Application として self-manage せず、初回のみ Helm / Terraform で導入する（chicken-and-egg 回避）
 
-## 検討した代替案
+### 認証情報の扱い
+
+- **git write-back**: GitHub Fine-grained PAT を使う（Contents Read & Write 権限を `overload-party-k8s` リポのみに付与、有効期限 1 年）。個人開発スコープのため GitHub App は採用しない
+- **PAT の保管**: Secret Manager にマスターを置き、GKE の Secret Manager CSI Driver 経由で k8s Secret に同期する。SecretProviderClass の定義は k8s リポ側（namespace スコープのリソースは ArgoCD 管理対象と同じ責務）
+- **Artifact Registry 読み取り**: Workload Identity（Image Updater Pod の KSA ↔ GSA）
+
+### トレードオフ
+
+- **Image Updater の debug 容易性が低い**: registry polling の filter 設定や反映遅延の原因追跡が CI push 方式より難しい。採用理由（疎結合）とのトレードオフとして許容する
+- **dev/stg の Application が夜間 Degraded**: nodepool 0 ノード時は Pod が Pending になり ArgoCD 上 Degraded 表示になる。通知除外ルールで対応する
+- **全環境 manual sync の運用負荷**: dev へのフィードバックループが「CI 完了 → Image Updater 検知 → ArgoCD UI で sync」の 3 ステップになる。短いが手動操作は増える
+- **Application 21 個の管理**: ApplicationSet で生成するため初期セットアップは軽いが、サービス追加のたびに ApplicationSet テンプレートのレビューが必要
+- **ArgoCD を prod pool に同居させるリスク**: prod pool のリソース逼迫が ArgoCD 自体に影響する可能性がある。podAntiAffinity と resource requests/limits の設定で緩和するが、将来 prod トラフィックが増えた段階で専用 pool への分離を再検討する
+
+## 不採用案
 
 ### CI push 方式（サービスリポ CI が k8s リポに commit）
 
@@ -112,37 +129,3 @@ dev/stg のフィードバックループが速くなる利点がある。ただ
 ### Pod scale 0 方式を継続する
 
 `kubectl scale --replicas=0` は実装が単純だが、Standard モードでは **Pod を 0 にしても VM 課金は止まらない**ため夜間コスト削減の目的を果たせない。また ArgoCD の desired state と衝突し、`ignoreDifferences` や Application `suspend` のような回避が必要になる。nodepool 0 ノード方式なら Deployment の spec は変化しないため ArgoCD と衝突せず（Pod は Pending のまま、Application は Degraded 扱い）、コスト削減も VM 単位で確実に効く。
-
-## 結果
-
-### 得られるもの
-
-- **Git と実クラスタの一致が自動検知される**: 手動 apply 漏れや drift が ArgoCD UI で可視化される
-- **deploy 履歴と rollback 経路の明確化**: どの Application にどの image が当たっているかが UI で確認でき、過去の commit に戻すだけで rollback が完結する
-- **全環境で人間の sync gate**: prod だけでなく dev/stg も含めて、反映タイミングを人が制御できる
-- **サービス単位の独立 deploy / rollback**: 21 Application 構成により、gateway の不具合だけを前 tag に戻すといった操作が他サービスに影響せず実行できる
-- **リポジトリ間の疎結合維持**: サービスリポは k8s リポを知らないまま image を push するだけ、k8s リポは Image Updater 経由で image を受け取るだけ、という片方向依存が保たれる
-- **nightly shutdown の VM 課金停止**: Standard モードで nodepool 0 ノード方式にすることで、夜間の VM 課金が実際に止まる
-
-### トレードオフ
-
-- **Image Updater の debug 容易性が低い**: registry polling の filter 設定や反映遅延の原因追跡が CI push 方式より難しい。採用理由（疎結合）とのトレードオフとして許容する
-- **dev/stg の Application が夜間 Degraded**: nodepool 0 ノード時は Pod が Pending になり ArgoCD 上 Degraded 表示になる。通知除外ルールで対応する
-- **全環境 manual sync の運用負荷**: dev へのフィードバックループが「CI 完了 → Image Updater 検知 → ArgoCD UI で sync」の 3 ステップになる。短いが手動操作は増える
-- **Application 21 個の管理**: ApplicationSet で生成するため初期セットアップは軽いが、サービス追加のたびに ApplicationSet テンプレートのレビューが必要
-- **ArgoCD を prod pool に同居させるリスク**: prod pool のリソース逼迫が ArgoCD 自体に影響する可能性がある。podAntiAffinity と resource requests/limits の設定で緩和するが、将来 prod トラフィックが増えた段階で専用 pool への分離を再検討する
-
-### 実装スコープ
-
-本 ADR で決まったのは設計方針のみ。具体的な実装作業は以下に分担する。引き継ぎ: [handoff/argocd-introduction-infra-ops.md](../handoff/argocd-introduction-infra-ops.md)
-
-- `keyandnotes-platform`: ArgoCD Image Updater 用の GSA / Secret Manager 枠、GKE `secret_manager_config` addon 有効化（ArgoCD はクラスタレベルのサービスのため platform が所有）
-- `overload-party-infra`: prod 環境の Cloud SQL / PSC / Reserved IP / DNS / Workload Identity 紐付け
-- `overload-party-ops`: `nightly-shutdown/shutdown.sh` の nodepool 方式への書き換え
-- `overload-party-k8s`: Kustomize manifest の sha tag 対応、ArgoCD / Image Updater のインストール、ApplicationSet 作成、SecretProviderClass 定義、`env-lifecycle.yaml` の修正
-
-### 認証情報の扱い
-
-- **git write-back**: GitHub Fine-grained PAT を使う（Contents Read & Write 権限を `overload-party-k8s` リポのみに付与、有効期限 1 年）。個人開発スコープのため GitHub App は採用しない
-- **PAT の保管**: Secret Manager にマスターを置き、GKE の Secret Manager CSI Driver 経由で k8s Secret に同期する。SecretProviderClass の定義は k8s リポ側（namespace スコープのリソースは ArgoCD 管理対象と同じ責務）
-- **Artifact Registry 読み取り**: Workload Identity（Image Updater Pod の KSA ↔ GSA）

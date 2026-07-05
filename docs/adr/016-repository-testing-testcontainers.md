@@ -1,11 +1,14 @@
-# ADR-016: リポジトリ層のテスト戦略 — Testcontainers の採用
+# ADR-016: リポジトリ層のテスト戦略に Testcontainers を採用
 
-- Status: Accepted
-- Date: 2026-04-13
-- Deciders: kenyamaneko
-- Related: ADR-011 (repository split), ADR-014 (DB schema split per service)
+## ステータス
 
-## Context
+Accepted (2026-04-13)
+
+## 結論
+
+インメモリモックでは検証できない「DB との契約」をテストで担保するため、リポジトリ層のテストに **Testcontainers** を採用する。SQL / JOIN / トランザクションが本物の PostgreSQL（Cloud SQL と同バージョンのイメージ）で検証され、`db/schema.sql` とリポジトリ実装の乖離が CI で検知される。Go / C# / Python で統一された戦略を取れ、`go test ./...` / `dotnet test` / `pytest` 一コマンドでローカル・CI 両方でテストが完結する。
+
+## 背景・課題
 
 現状、各サービスのリポジトリ層はインメモリのモック実装を使用している。これにより以下の問題が生じている：
 
@@ -20,38 +23,17 @@
 
 テスト以外のローカル動作確認（`cmd/local` からの起動など）は、別途 Docker Compose で起動した DB を使う運用に切り替える。
 
-## Decision Drivers
+## 制約
 
 - Go / C# / Python の各言語で統一的に使えること
 - Cloud SQL (PostgreSQL 16) と同じ DB エンジンでテストできること
 - テストコードが自己完結し、`go test ./...` / `dotnet test` / `pytest` 一発で CI・ローカル両方で動くこと
 - パッケージ単位で並列実行可能であること
 
-## Options Considered
+## 詳細
 
-### A. インメモリモックの継続
+Testcontainers は Go / C# / Python のいずれも公式サポートがあり（`testcontainers-go`, `Testcontainers.NET`, `testcontainers-python`）、テストコードから直接コンテナのライフサイクルを制御でき、本物の PostgreSQL イメージを使用できる。ランダムポート割り当てにより複数サービスの並列テストも安全。
 
-却下。現状の問題を解決しない。
-
-### B. PGlite（WebAssembly ベースの組み込み PostgreSQL）
-
-却下。Node.js / ブラウザ向けであり、Go / C# / Python から利用できない。
-
-### C. embedded-postgres 系ライブラリ
-
-却下。Go / C# / Python でそれぞれ別のライブラリが必要になる。C# 側の NuGet パッケージは品質がまちまちで、統一的な運用が難しい。
-
-### D. Docker コンテナ直接管理（docker-compose 等）
-
-却下。本物の PostgreSQL を使える点は良いが、テストコードとコンテナのライフサイクル管理が分離するため、CI 環境での扱いが煩雑になりやすい。`go test ./...` 単体ではテストが成立せず、事前に compose up が必須になる。
-
-### E. Testcontainers（採用）
-
-Go / C# / Python のいずれも公式サポートあり（`testcontainers-go`, `Testcontainers.NET`, `testcontainers-python`）。テストコードから直接コンテナのライフサイクルを制御でき、本物の PostgreSQL イメージ（Cloud SQL と同バージョン）を使用できる。ランダムポート割り当てにより複数サービスの並列テストも安全。
-
-## Decision
-
-- リポジトリ層のテストに **Testcontainers** を採用する
 - 使用するイメージは **`postgres:16-alpine`**（Cloud SQL の `POSTGRES_16` と同バージョン。`overload-party-infra/modules/database/main.tf` 参照）
 - 各サービスが独立した PostgreSQL コンテナを持つ
 - コンテナはパッケージ単位（`TestMain` / xUnit Fixture / pytest session fixture）で 1 回だけ起動し、テスト間のリセットは **`TRUNCATE ... RESTART IDENTITY CASCADE`** で行う
@@ -68,16 +50,16 @@ DB アクセスがある全てのサーバー系リポジトリ：
 - `overload-party-card` (Go, pgx)
 - `overload-party-shop` (Go, pgx)
 - `overload-party-scenario` (Go, pgx)
-- `overload-party-gateway` (Go, pgx) — battle スキーマも併用
+- `overload-party-gateway` (Go, pgx): battle スキーマも併用
 - `overload-party-battle` (C# / .NET 10, Dapper)
 
 将来対象（視野）：
 
-- `overload-party-newsfeed` (Python) — スキーマが未固定のため一旦対象外。固まったタイミングで `testcontainers-python` により本 ADR に追従する
+- `overload-party-newsfeed` (Python): スキーマが未固定のため一旦対象外。固まったタイミングで `testcontainers-python` により本 ADR に追従する
 
 対象外：
 
-- `overload-party-ops/db-migrate` — psqldef 自体が union 結果を適用する層であり、単体テスト対象外
+- `overload-party-ops/db-migrate`: psqldef 自体が union 結果を適用する層であり、単体テスト対象外
 
 ### CI 実行環境
 
@@ -85,25 +67,26 @@ DB アクセスがある全てのサーバー系リポジトリ：
 - Linux runner 上の Docker daemon をそのまま使用（Docker-in-Docker / Service Containers は不要。Testcontainers が runner の `/var/run/docker.sock` を参照する）
 - 初回実行時の `postgres:16-alpine` pull コストを抑えるため、image を actions cache に乗せることを検討
 
-## Consequences
-
-### Positive
-
-- SQL / JOIN / トランザクションが本物の PostgreSQL で検証され、リポジトリ層の品質が契約レベルで担保される
-- `db/schema.sql` とリポジトリ実装の乖離が CI で検知される
-- Go / C# / Python で統一された戦略を取れる
-- `go test ./...` / `dotnet test` / `pytest` 一コマンドでローカル・CI 両方でテストが完結する
-
-### Negative / Trade-offs
+### トレードオフ
 
 - **テスト実行時間の増加**: コンテナ起動オーバーヘッド（数秒〜十数秒／パッケージ）が発生する。パッケージ単位で再利用しテスト間は TRUNCATE で軽量リセットする方針で緩和
 - **CI 初回の image pull コスト**: `postgres:16-alpine` のダウンロードで初回 CI ジョブが遅くなる。image キャッシュで緩和
 - **Docker 依存**: ローカル開発で Docker Desktop（または互換ランタイム）が必須化する。CLAUDE.md / 各 README に明記する必要あり
 
-### Migration Plan
+## 不採用案
 
-1. 各サービスに Testcontainers ベースのテストユーティリティを追加（`internal/repository/testutil` 等）
-2. 既存のリポジトリ実装に対して Testcontainers テストを追加
-3. インメモリモック実装を削除（テスト用 + ローカル用の両方）
-4. `cmd/local` が Docker Compose の DB を前提に起動するよう切り替え、各リポジトリに `docker-compose.yml` を追加
-5. CI ワークフローにリポジトリ層テストジョブを追加
+### 案A: インメモリモックの継続
+
+却下。現状の問題を解決しない。
+
+### 案B: PGlite（WebAssembly ベースの組み込み PostgreSQL）
+
+却下。Node.js / ブラウザ向けであり、Go / C# / Python から利用できない。
+
+### 案C: embedded-postgres 系ライブラリ
+
+却下。Go / C# / Python でそれぞれ別のライブラリが必要になる。C# 側の NuGet パッケージは品質がまちまちで、統一的な運用が難しい。
+
+### 案D: Docker コンテナ直接管理（docker-compose 等）
+
+却下。本物の PostgreSQL を使える点は良いが、テストコードとコンテナのライフサイクル管理が分離するため、CI 環境での扱いが煩雑になりやすい。`go test ./...` 単体ではテストが成立せず、事前に compose up が必須になる。
