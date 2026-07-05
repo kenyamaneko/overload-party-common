@@ -1,11 +1,14 @@
 # ADR-037: 内部サービス間認証を HMAC 署名 JWT (HS256) に切り替える
 
-- Status: Accepted (amended 2026-05-10)
-- Date: 2026-05-10
-- Deciders: kenyamaneko
-- Related: ADR-036 (本 ADR の前提)、[overload-party-common#39](https://github.com/kenyamaneko/overload-party-common/issues/39) (ADR-034 全体トラッカー)
+## ステータス
 
-## Context
+Accepted (2026-05-10)。末尾の Amendment (2026-05-10: shop の X-Player-Id 並走廃止) を含めて現行方針とする。検証実装を各リポで重複実装する方針は [ADR-039](039-internal-auth-verifier-shared-package.md) (共有パッケージ化) で上書きされた
+
+## 結論
+
+`X-Player-Id` 平文 header による player_id 引き渡しはネットワーク境界の信頼に依存し偽造耐性がないため、gateway が発行する **HMAC 署名 JWT (HS256、header 名 `X-Internal-Auth`、TTL 5 分)** に切り替え、JWT の `sub` クレームを player_id の唯一の信頼源とする。秘密鍵を持たない経路からの playerID 偽造が不可能になってサービス侵入や境界ミスへの耐性が得られ、5 分 TTL でリプレイの攻撃窓も極小になる。ClusterIP / NetworkPolicy への依存が緩和されて defense in depth が効き、将来は claim 拡張 (premium / role / feature flag 等) も protocol 不変で可能。標準 JWT なので各言語のエコシステム (Go: `golang-jwt/jwt`、C#: `Microsoft.IdentityModel.Tokens`、TypeScript: `jose`) がそのまま使える。
+
+## 背景・課題
 
 ADR-036 で gateway を完全パススルー化し、各サービスが client 公開 API を整備する方針を定めた。これに伴い、gateway → 各サービスへ「認証済み player_id」を引き渡す経路が全サービスに広がる。
 
@@ -29,9 +32,9 @@ card / account / scenario / news の Phase 3c でも同方式を踏襲する想�
 
 `X-Player-Id` 自体は単独で偽造耐性を持たないため、「playerId 偽造 = 他人の課金や所持物の閲覧 / 改竄」というインパクトが信頼境界の管理ミスに直結する。
 
-## Decision
+## 詳細
 
-### 1. 認証 token を HMAC 署名 JWT (HS256) に変更する
+### 認証 token を HMAC 署名 JWT (HS256) に変更する
 
 gateway は Firebase 検証 + UID → player_id 解決後、以下の JWT を発行して下流サービスへ渡す:
 
@@ -52,7 +55,7 @@ gateway は Firebase 検証 + UID → player_id 解決後、以下の JWT を発
 - 共有秘密鍵は環境変数 `INTERNAL_AUTH_SECRET` で gateway + 各サービスに配布
 - 鍵は十分なエントロピー (≥ 32 bytes random) で生成
 
-### 2. 対称鍵 (HS256) を採用する
+### 対称鍵 (HS256) を採用する
 
 | 観点 | HS256 (対称) | RS256/EdDSA (非対称) |
 |---|---|---|
@@ -66,27 +69,27 @@ gateway は Firebase 検証 + UID → player_id 解決後、以下の JWT を発
 
 将来的に RS256 へ移行可能な構造にしておくため、検証 middleware は **「鍵 ID から鍵を返す関数」** を引数に取る形で実装する (HS / RS の入れ替えは関数差し替えのみで完結する)。
 
-### 3. 鍵ローテーション余地を最初から確保する
+### 鍵ローテーション余地を最初から確保する
 
 JWT header に `kid` (key ID) フィールドを最初から含める。複数鍵の同時検証許可を想定し、運用時の無停止ローテーションが可能な構造を担保する。具体的なローテーション運用手順は本 ADR の scope 外とする。
 
-### 4. middleware 実装方針
+### middleware 実装方針
 
 各サービスの middleware は以下の責務を持つ:
 
 - `X-Internal-Auth` header 取得 (空なら 401)
-- JWT 検証 (署名 / `exp` / `iss`) — 失敗時 401
+- JWT 検証 (署名 / `exp` / `iss`)。失敗時 401
 - 検証成功時、`sub` を context に `player_id` として書き込む
 - handler は `c.GetString("player_id")` 等で context から取得 (header から直接読まない)
 
-shop / card / account / scenario / news / matchmaking で同パターン。
+shop / card / account / scenario / news / matchmaking で同パターン。発行関数は gateway リポ内、検証 middleware は各サービスリポ内にそれぞれ実装する (ADR-034 の wire 共有原則に従い重複を許容。のちに ADR-039 で検証側は共有パッケージ化)。
 
-### 5. 段階移行
+### 段階移行
 
-shop は既に `X-Player-Id` を採用済だが、shop が gateway より先行して稼働する運用は予定されていないため、shop でも並走期間は導入せず JWT 一本で着手する。各 Phase は以下の段階で進める:
+shop は既に `X-Player-Id` を採用済だが、shop が gateway より先行して稼働する運用は予定されていないため、shop でも並走期間は導入せず JWT 一本で着手する。各サービスの Phase 3c タイミングと合わせて段階的に移行できるため、一括変更を避けられる:
 
 - **Phase 1**: gateway + shop で HMAC JWT 化 (参照実装)。shop は既存の `X-Player-Id` 受付を撤廃して JWT 一本に置換
-- **Phase 2**: card / news Phase 3c はこの方式で着手
+- **Phase 2**: card / news は Phase 3c で新規に公開 API を整備するタイミングで最初から JWT `sub` 一本で実装 (`X-Player-Id` も path / body の player_id も実装しない)
 - **Phase 3**: account / scenario / matchmaking 順次移行
 
 #### player_id 引き渡し経路の現状とゴール
@@ -99,38 +102,11 @@ shop は既に `X-Player-Id` を採用済だが、shop が gateway より先行�
 | card / account / scenario | URL path (`/internal/v1/players/{playerID}/...`) |
 | matchmaking | JSON body フィールド |
 
-いずれも偽造耐性を持たない (path / body も header 同様にネットワーク境界依存)。本 ADR の最終形は **JWT `sub` クレームのみを唯一の信頼源** とする。各 Phase で path / body / `X-Player-Id` 経由の player_id を一斉に撤廃する:
+いずれも偽造耐性を持たない (path / body も header 同様にネットワーク境界依存)。本 ADR の最終形は **JWT `sub` クレームのみを唯一の信頼源** とする。各 Phase で path / body / `X-Player-Id` 経由の player_id を一斉に撤廃し、既存の path / body 引き渡しは **X-Player-Id を経由せず JWT `sub` に直接置換** する (中間形を導入せず二度手間を避ける)。Phase 3 完了時点で全サービスが JWT `sub` 一本となる。
 
-- **shop (Phase 1)**: 既存の `X-Player-Id` 受付を撤廃して JWT `sub` に直接置換 (並走期間は導入しない)
-- **card / news (Phase 2)**: 新規 Phase 3c のため最初から JWT `sub` 一本で実装 (path / body の player_id は実装しない)
-- **account / scenario / matchmaking (Phase 3)**: 既存の path / body 引き渡しを **X-Player-Id を経由せず JWT `sub` に直接置換**。中間形を導入しない (二度手間を避ける)
+### ローカル / CI / E2E への影響
 
-## Consequences
-
-### Positive
-
-- **偽造防止**: 秘密鍵を持たない経路から playerID 偽造不可。サービス侵入や境界ミスへの耐性が獲得される
-- **リプレイ防止**: 5 分 TTL で攻撃窓が極小
-- **ネットワーク前提依存からの脱却**: ClusterIP / NetworkPolicy への依存を緩和し、defense in depth が効く
-- **claim 拡張余地**: premium / role / feature flag 等を claim に乗せれば protocol 不変で拡張可能
-- **構造化**: 標準 JWT なので各言語のエコシステムが揃っている (Go: `golang-jwt/jwt`、C#: `Microsoft.IdentityModel.Tokens`、TypeScript: `jose`)
-
-### Negative
-
-- **共有秘密鍵の運用**: k8s Secret 1 本だが、漏洩時の影響範囲は全サービスに及ぶ。ローテーション運用が必要になる
-- **各サービスに middleware 追加**: ~15 行 / サービス。既存の `X-Player-Id` 取得処理は middleware に集約される
-- **検証コスト**: ~50µs / req (Firebase 検証よりは桁違いに軽量)
-- **shop の遡及対応**: 既に `X-Player-Id` で実装済の shop を JWT 方式に揃える PR が必要 (Phase 1)
-
-### 緩和策
-
-- **CI で固定 dev 鍵**: prod 鍵を CI に置かなくて良いため漏洩面は増えない
-- **docker-compose**: 全サービスに同一 env を配るだけで済むため、ローカル環境構築は現状とほぼ同等
-- **段階移行**: 各サービスの Phase 3c タイミングと合わせて段階的に移行できるため、一括変更を避けられる
-
-## ローカル / CI / E2E への影響
-
-### docker-compose
+#### docker-compose
 
 ```yaml
 x-internal-auth: &internal-auth
@@ -142,9 +118,9 @@ services:
   shop:    { environment: { <<: *internal-auth } }
 ```
 
-全サービスに同一 env を配るだけ。dev 鍵は git に乗せて良い (本番鍵ではない)。本番鍵は External Secrets Operator / Sealed Secrets で別管理。
+全サービスに同一 env を配るだけで済むため、ローカル環境構築は現状とほぼ同等。dev 鍵は git に乗せて良い (本番鍵ではない)。本番鍵は External Secrets Operator / Sealed Secrets で別管理。
 
-### サービスの handler ユニットテスト
+#### サービスの handler ユニットテスト
 
 middleware を**通さず** context に直接 player_id を植えるパターンに統一:
 
@@ -159,7 +135,7 @@ handler.ListDecks(c)
 
 handler テストは JWT を一切意識しない。
 
-### middleware 自体のユニットテスト
+#### middleware 自体のユニットテスト
 
 各サービス共通の検証ケース (~30 行で網羅):
 
@@ -169,16 +145,16 @@ handler テストは JWT を一切意識しない。
 - header 欠落 → 401
 - malformed JWT → 401
 
-### gateway → service の統合テスト
+#### gateway → service の統合テスト
 
 各サービスの fake server (`apicardserverfake` 等) は middleware を通さず、JWT 検証はスキップ。代わりに gateway 側の outbound テストで「JWT が付いて出ているか」を fake で観測できる。
 
-### e2e テスト (overload-party-e2e / docker-compose)
+#### e2e テスト (overload-party-e2e / docker-compose)
 
 - **gateway 経由 (推奨)**: ランナーは Firebase emulator から ID Token を取得して gateway に投げる。JWT 発行は gateway が内部で行うため、ランナーは秘密鍵を意識しない
 - **サービス直叩き**: ランナーが共有鍵で `signInternalJWT(playerID, secret, '5m')` を呼んで `X-Internal-Auth` 付きでサービスに直送
 
-### CI (GitHub Actions)
+#### CI (GitHub Actions)
 
 ```yaml
 env:
@@ -187,50 +163,22 @@ env:
 
 固定 dev 鍵で全テストが通る。prod 鍵を Actions Secrets に置く必要は無い (= CI からの漏洩面ゼロ)。
 
-## 実装計画
-
-### Phase 1: 参照実装 (gateway + shop)
-
-- `internal/auth/internalauth/` パッケージを共有形で実装 (gateway 側で発行関数、shop 側で検証 middleware)
-  - 配置先: gateway リポ内 (発行) と shop リポ内 (検証)。共通化は ADR-034 の wire 共有原則に従い、各リポがそれぞれ実装。重複は許容
-- gateway: Firebase 検証後の middleware で JWT を発行し、各 client (shopclient / cardclient 等) が `X-Internal-Auth` を付けて送る
-- shop: 既存の `X-Player-Id` 受付を撤廃し、JWT 検証 middleware 経由に一本化
-
-### Phase 2: card / news Phase 3c
-
-card / news は新規に公開 API を整備するタイミングで HMAC JWT 化を同時に実施する。`X-Player-Id` は実装しない。path / body 経由の player_id も実装せず、JWT `sub` を唯一の信頼源とする。
-
-### Phase 3: 残りサービス順次移行
-
-account / scenario / matchmaking で同パターン。path / body 経由の player_id 引き渡しを JWT `sub` への直接置換で撤廃する (X-Player-Id 中間形は導入しない)。Phase 3 完了時点で全サービスが JWT `sub` 一本となる。
-
-## Out of scope
-
-以下は本 ADR の scope 外とする:
+### Out of scope
 
 - **RS256 / EdDSA への移行**: 将来必要になったら別 ADR で扱う。本 ADR では「移行可能な抽象化」を担保するに留める
 - **鍵ローテーション運用手順**: `kid` フィールドを担保するに留め、運用ランブックは別途
 - **Firebase custom claims に player_id を埋め込む案**: ADR-036 で gateway 中央認証を維持と決定済のため、本 ADR では再考しない
 - **mTLS / service mesh**: defense in depth のもう 1 層として有効だが、本 ADR の scope 外
 
-## 関連
+### トレードオフ
 
-- ADR-036 (本 ADR の前提)
-- [overload-party-common#39](https://github.com/kenyamaneko/overload-party-common/issues/39) — ADR-034 全体トラッカー
-- Phase 1〜3 の各リポ issue は本 ADR マージ後に起票
+- **共有秘密鍵の運用**: k8s Secret 1 本だが、漏洩時の影響範囲は全サービスに及ぶ。ローテーション運用が必要になる
+- **各サービスに middleware 追加**: ~15 行 / サービス。既存の `X-Player-Id` 取得処理は middleware に集約される
+- **検証コスト**: ~50µs / req (Firebase 検証よりは桁違いに軽量)
+- **shop の遡及対応**: 既に `X-Player-Id` で実装済の shop を JWT 方式に揃える PR が必要 (Phase 1)
 
-## Amendments
-
-### 2026-05-10: shop Phase 1 の X-Player-Id 並走廃止 + Phase 4 削除
+## Amendment: 2026-05-10 shop Phase 1 の X-Player-Id 並走廃止 + Phase 4 削除
 
 初版では shop が `X-Player-Id` を実装済の前提で「Phase 1 は `X-Internal-Auth` と `X-Player-Id` の両方を受け入れる並走期間」を設け、後続の Phase 4 で `X-Player-Id` 受付を撤廃する設計だった。
 
-shop は gateway より先行して稼働する運用が予定されておらず、並走期間を保つコスト (検証経路の二重化 / fallback テストの維持) が利得に見合わないため、Phase 1 から JWT 一本化する形に変更する。これにより全サービスで `X-Player-Id` 受付を持つフェーズが消えるため、Phase 4 (X-Player-Id 撤廃) は不要となり削除する。
-
-影響範囲:
-
-- §5 段階移行: タイトルの `(X-Player-Id との並走)` を削除、Phase 1 の並走期記述を撤廃、Phase 4 行を削除
-- §5 「player_id 引き渡し経路の現状とゴール」: shop (Phase 1) を「並走を経由せず JWT `sub` に直接置換」に更新、Phase 4 行を削除
-- §緩和策 段階移行: 「並走期間を設けるため」記述を「Phase 3c タイミングと合わせて段階的に移行」に変更
-- §実装計画 Phase 1: shop の並走期記述を撤廃
-- §実装計画 Phase 4 セクション: 削除
+shop は gateway より先行して稼働する運用が予定されておらず、並走期間を保つコスト (検証経路の二重化 / fallback テストの維持) が利得に見合わないため、Phase 1 から JWT 一本化する形に変更する。これにより全サービスで `X-Player-Id` 受付を持つフェーズが消えるため、Phase 4 (X-Player-Id 撤廃) は不要となり削除する。本文の「段階移行」「player_id 引き渡し経路の現状とゴール」は本 Amendment 反映済みの内容である。

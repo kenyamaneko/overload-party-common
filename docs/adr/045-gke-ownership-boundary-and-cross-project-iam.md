@@ -1,12 +1,16 @@
-# ADR-045: GKE 所有境界の再定義 — ノードプールをアプリ所有に移管し、ブランド側に cross-project IAM 付与を集約する
+# ADR-045: GKE 所有境界の再定義（ノードプールをアプリ所有に移管し、ブランド側に cross-project IAM 付与を集約する）
 
 ## ステータス
 
 Proposed (2026-05-20)
 
-本 ADR は keyandnotes-platform リポの「ノードプールスケーリング戦略とGKEの所有権」 (`keyandnotes-platform/docs/ARCHITECTURE.md:15` から参照) を supersede する。
+本 ADR は keyandnotes-platform リポの「ノードプールスケーリング戦略とGKEの所有権」 (`keyandnotes-platform/docs/ARCHITECTURE.md` から参照) を supersede する。
 
-## コンテキスト
+## 結論
+
+「運用上の決定者と Terraform 上の所有定義が一致しない」摩擦を根本解決するため、GKE の所有境界を再定義する。env nodepool (`keyandnotes-main-{dev,stg,prod}`) と Ingress LB の論理所有をアプリ (overload-party) に移管し、アプリ側 SA へのブランドプロジェクト権限付与はブランド側 Terraform に集約して一覧・監査可能にする。env nodepool の変更がアプリ PR で完結するようになり、cost-monitor の silent skip はブランド側の viewer 権限付与で解消され、nodepool resize の executor は「executor は対象リソースの所有 repo に置く」原則どおり overload-party-infra に移る。
+
+## 背景・課題
 
 `keyandnotes-main` GKE クラスタはブランドプロジェクト keyandnotes-platform に作られており、env nodepool (`keyandnotes-main-{dev,stg,prod}`) も同 cluster module 内で一体管理されている。一方、これらの env nodepool で稼働する Pod、生成される Ingress L7 LB、nightly shutdown / scale-up のトリガはいずれも overload-party 側 (アプリ) の責務である。
 
@@ -15,17 +19,17 @@ Proposed (2026-05-20)
 - **cost-monitor の権限不足** ([ops#15](https://github.com/kenyamaneko/overload-party-ops/issues/15)): overload-party-ops の cost-monitor SA が `keyandnotes-platform` プロジェクト上で `roles/container.viewer` を持たず、GKE 関連チェックが silent skip される。「アプリの監視ツールがブランド側クラスタを読む」という非対称な構造をどこで吸収するかが未決
 - **nodepool 変更がブランドリポを経由する**: env nodepool の machine_type / labels / taints 変更や追加削除のようなアプリに閉じた意思決定が、ブランドリポの PR を要する
 - **dispatch chain が所有境界を越えている**: ops → k8s → platform の連鎖 dispatch は「アプリの lifecycle をブランドに頼む」構造で、所有越境を「Why コメント」で許容している
-- **境界が暗黙**: 「クラスタはブランド、その上のものはアプリ」が明文化されておらず、Ingress LB の GCP 物理リソース (= ブランドプロジェクトに作られる) の所有も曖昧
+- **境界が暗黙**: 「クラスタはブランド、その上のものはアプリ」が明文化されておらず、Ingress LB の物理リソース (= ブランドプロジェクトに作られる) の所有も曖昧
 
 「ノードプールスケーリング戦略とGKEの所有権」では「GKE 所有権は keyandnotes-platform」として nodepool resize をブランド側で実行する判断を採っていたが、上記の摩擦は所有自体を見直すことで根本解決できる。
 
-## 決定
+## 詳細
 
 ### 境界の再定義
 
-論理所有 = 「変更の意思決定者・PR の所属リポ」を指す。GCP 物理所在 = 「実際に GCP リソースが作られるプロジェクト」を指す。
+論理所有 = 「変更の意思決定者・PR の所属リポ」を指す。物理所在 = 「実際に Google Cloud リソースが作られるプロジェクト」を指す。
 
-| 資源 | 論理所有 | GCP 物理所在 |
+| 資源 | 論理所有 | 物理所在 |
 |---|---|---|
 | GKE Cluster `keyandnotes-main` | ブランド | keyandnotes-platform |
 | `keyandnotes-main-platform` nodepool (ArgoCD 等のブランド共有 add-on 用) | ブランド | keyandnotes-platform |
@@ -37,7 +41,7 @@ Proposed (2026-05-20)
 | Workload Identity Pool / WIF providers | ブランド | keyandnotes-platform |
 | VPC / subnet / DNS / 共通証明書 | ブランド | keyandnotes-platform |
 
-env nodepool と Ingress LB は **k8s manifest または Terraform 宣言がアプリ側にあり、それがブランドプロジェクトに物理 GCP リソースを生やす** ハイブリッド構造。これを「ブランドクラスタの上でアプリが手を伸ばす範囲」として、ブランド側で必要な権限を明示的に付与して扱う。
+env nodepool と Ingress LB は **k8s manifest または Terraform 宣言がアプリ側にあり、それがブランドプロジェクトに物理リソースを生やす** ハイブリッド構造。これを「ブランドクラスタの上でアプリが手を伸ばす範囲」として、ブランド側で必要な権限を明示的に付与して扱う。
 
 ### cross-project IAM 付与をブランド側に集約
 
@@ -87,13 +91,7 @@ prod 用 env nodepool (`keyandnotes-main-prod`) もアプリ所有とし、overl
 | ブランドの責務範囲 | コード量は減るが、cluster / 共有 add-on / WIF / IAM 付与ポリシー / 共通ネットワーク土台と、責任の重い土台部分がブランドに残る |
 | 境界の検証可能性 | 「クラスタはブランド、nodepool はアプリ、Ingress LB は論理アプリ」を Terraform state 境界として物理的に表現できる |
 
-### 不採用案
-
-- **アプリ SA にブランドプロジェクトの IAM admin を渡す**: 「nodepool 移管せず、cost-monitor 用 viewer だけブランド側で付与」案。摩擦の根本原因 (所有と意思決定の不一致) は解消しない。
-- **cost-monitor をブランド側に移管**: ブランド配下の全アプリを横断監視するツールに昇格させる案。本 ADR 時点でブランド配下のアプリ数が 1 のため過剰投資。
-- **k8s/env-lifecycle.yaml もアプリ側に集約**: env-lifecycle は k8s クラスタリソース全般の env レベル orchestration を担うため、k8s repo に残置するのが「executor は所有 repo」原則に整合する。
-
-## 連動する変更
+### 連動する変更
 
 | repo | 変更 |
 |---|---|
@@ -102,10 +100,8 @@ prod 用 env nodepool (`keyandnotes-main-prod`) もアプリ所有とし、overl
 | overload-party-k8s | `.github/workflows/env-lifecycle.yaml` の dispatch 先を `keyandnotes-platform` → `overload-party-infra` に更新 / README の「ArgoCD 同居」記述を `platform` pool 分離の実態に追従 |
 | overload-party-ops | (変更なし) cost-monitor は本 ADR の cluster 読み取り権限付与で silent skip が解消される。コード変更は不要 |
 
-## 検証
+## 不採用案
 
-- Phase B/C 適用後、cost-monitor workflow を手動 dispatch して GKE 関連チェックが silent skip されないことを Slack ログで確認
-- nightly-shutdown → env-lifecycle → node-pool-scale の dispatch chain が新所在 (executor=infra) で動作することを dev / stg で確認
-- `kubectl get nodes -l cloud.google.com/gke-nodepool=keyandnotes-main-{env}` の応答が各 env で取得できる
-
-本番稼働前のため Phase B apply で env nodepool が一時的に destroy されることを許容、Phase C apply で再生成して復活させる。
+- **アプリ SA にブランドプロジェクトの IAM admin を渡す**: 「nodepool 移管せず、cost-monitor 用 viewer だけブランド側で付与」案。摩擦の根本原因 (所有と意思決定の不一致) は解消しない。
+- **cost-monitor をブランド側に移管**: ブランド配下の全アプリを横断監視するツールに昇格させる案。本 ADR 時点でブランド配下のアプリ数が 1 のため過剰投資。
+- **k8s/env-lifecycle.yaml もアプリ側に集約**: env-lifecycle は k8s クラスタリソース全般の env レベル orchestration を担うため、k8s repo に残置するのが「executor は所有 repo」原則に整合する。

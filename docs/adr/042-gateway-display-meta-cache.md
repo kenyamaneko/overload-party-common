@@ -2,9 +2,13 @@
 
 ## ステータス
 
-Proposed (2026-05-12)
+Superseded by [ADR-043](043-battle-player-summary-and-matchmaking-queue-embed.md)。旧ステータス: Proposed (2026-05-12)
 
-## コンテキスト
+## 結論
+
+対戦相手 / 観戦対象の display meta (name / level) が production で空文字 fallback になる問題を解消するため、gateway が match_made 受信時に account から snapshot を取得し、**gateway 所有の Upstash Redis + pod-local in-memory の 2 段キャッシュ**で保持して WS payload に埋める。battle service は pure game engine のまま維持され、matchmaking → account の依存も発生しない。game state relay 都度の account 呼び出しがなくなって負荷は試合数比例に低減し、試合途中の観戦者接続も同じ snapshot を共有できる。account 障害時のフォールバック表示値は短 TTL で書き込まれ、復旧後は自動的に正しい表示値へ戻る。
+
+## 背景・課題
 
 gateway は WebSocket 経由で **対戦相手 / 観戦対象** の display name / level をクライアントへ伝える必要がある。
 
@@ -12,19 +16,19 @@ gateway は WebSocket 経由で **対戦相手 / 観戦対象** の display name
 
 この経路は次の理由で再設計が必要になった:
 
-- [ADR-037](037-internal-auth-hmac-signed-jwt.md) Phase 3 で account の player-scoped API は `/api/v1/account/me/*` に一本化された。`/me` は JWT sub に紐づく自身しか返せないため、**対戦相手の lookup** は ADR-037 §5 の「JWT sub クレームのみを唯一の信頼源とする」方針との整合性が論点になる。
+- [ADR-037](037-internal-auth-hmac-signed-jwt.md) の移行で account の player-scoped API は `/api/v1/account/me/*` に一本化された。`/me` は JWT sub に紐づく自身しか返せないため、**対戦相手の lookup** は「JWT sub クレームのみを唯一の信頼源とする」方針との整合性が論点になる。
 - gateway issue [#47](https://github.com/kenyamaneko/overload-party-gateway/issues/47) で報告された通り、production で対戦相手の display meta が **空文字 fallback** になっていた (silent な観測不可状態)。
 - battle service は pure game engine という設計方針 ([ADR-036](036-gateway-passthrough-and-service-public-api.md)) のため、battle に account 依存を導入したくない。
 
 検討対象は「**誰が account への display meta lookup を担うか**」「**そのキャッシュをどこに置くか**」の 2 軸である。
 
-## 決定
+## 詳細
 
 ### 設計の骨子
 
 1. **gateway が match_made イベント受信時に** `accountclient.GetPlayer` を呼び、対戦者 2 名分の `{name, level}` snapshot を取得する。
 2. snapshot は新規導入する **gateway 所有の Upstash Redis インスタンス** に書き込む。
-3. game state relay 時は **pod-local in-memory cache** を 1 段目、Upstash Redis を 2 段目として参照する (2 段キャッシュ)。in-memory cache は **コスト対策** として導入する (詳細は「なぜ 2 段キャッシュか (コスト対策)」節)。
+3. game state relay 時は **pod-local in-memory cache** を 1 段目、Upstash Redis を 2 段目として参照する (2 段キャッシュ)。in-memory cache は **コスト対策** として導入する (詳細は「なぜ 2 段キャッシュか」節)。
 4. self / opponent / spectator の display meta は **全て同一経路** (Upstash Redis cache + `/internal/v1/players/{playerID}`) で解決する。self を `/me` 経由とする経路分離は採用しない。
 5. account 障害時のフォールバック表示値 (`Player {prefix}`) は **通常 snapshot とは別の短 TTL** で cache に書き込み、account 復旧後の自動回復を許容する。
 
@@ -34,7 +38,7 @@ gateway は WebSocket 経由で **対戦相手 / 観戦対象** の display name
 |------|------|
 | battle 純粋性 | battle service は account 非依存のまま維持される |
 | サービス境界 | matchmaking → account の新規依存を発生させない (matchmaking は player_id / deck_id 以外を扱わない設計を維持) |
-| ADR-037 §5 との整合 | 自身を含む player lookup は `/internal/v1/players/{playerID}` 経由。WS 認証段階で Firebase JWT により identity 検証済のため、JWT sub による self-only 強制は本ユースケースでは過剰 |
+| ADR-037 との整合 | 自身を含む player lookup は `/internal/v1/players/{playerID}` 経由。WS 認証段階で Firebase JWT により identity 検証済のため、JWT sub による self-only 強制は本ユースケースでは過剰 |
 | self/opponent/spectator の対称性 | 全経路を cache + `/internal` に統一。WS 接続は Firebase 認証で identity 確認済のため self を `/me` 経由にする identity-defense 価値は限定的、resolver の対称性を優先 |
 | 揮発 state の置き場所 | 試合中の揮発 state を OLTP (PostgreSQL) に置かない方針と整合 ([ADR-010](010-matchmaking-queue-upstash-redis.md) / [ADR-020](020-newsfeed-redis-dedup-reconverge.md) と同パターン) |
 | pod 分散耐性 | 対戦者 / 観戦者が別 pod に分散しても Redis 経由で参照可能 |
@@ -47,7 +51,7 @@ ADR-036 の既存記述は変更しない。本 ADR で次を追記として宣�
 
 > gateway の責務は「各サービスへのパススルーとしての入り口」「認証」「**バトル関連の補助**」とする。display meta の組み立て (対戦相手 / 観戦対象の name / level を WS payload に埋める) はバトル関連の補助に含まれる。
 
-ADR-036 Decision 1 の「gateway に残すもの」のリストはこの追記によって拡張される。
+ADR-036 の「gateway に残すもの」のリストはこの追記によって拡張される。将来別の集約責務を gateway に持たせる場合は別 ADR で判断する。
 
 ### ADR-037 task A の close 条件更新
 
@@ -56,38 +60,6 @@ ADR-037 の既存記述は変更しない。本 ADR で次を宣言する:
 - ADR-037 task A の close 条件を「**`/internal/v1/players/{id}` endpoint を削除**」から「**match 成立時の snapshot 書き込み + cache miss / 障害時のフォールバック lookup に限定**」に更新する。
 - `/internal/v1/players/{id}` endpoint は account 側に維持する。呼び出し元は gateway の match_made handler と DisplayMetaResolver のフォールバック経路。
 - これにより gateway #47 の本旨 (silent 404 fallback の解消、game state relay 都度の lookup 廃止) は満たされる。
-
-### 検討した代替案
-
-#### 案 α: battle service が game state response に display meta を同梱
-
-battle が account を呼んで game state response に `{name, level}` を載せる。
-
-却下理由: battle service は pure game engine という ADR-036 の方針を崩す。battle が account 依存を持つと、battle のテスト・運用に account の状態が必要になり、責務境界が曖昧になる。
-
-#### 案 β-A1: matchmaking が account を呼んで match_made event に同梱
-
-matchmaking が match 成立時に account を呼び、`match_made` event のペイロードに `{name, level}` を含める。
-
-却下理由: matchmaking は現状 `player_id` と `deck_id` のみを扱う設計 (`api-matchmaking` の AsyncAPI 契約)。matchmaking → account の依存を新規導入することになり、display meta lookup のためにキュー責務の範囲を広げる遠回り設計になる。
-
-#### 案 γ: account が player profile 更新を Pub/Sub publish
-
-account が profile 変更を Pub/Sub publish、gateway が subscribe して local cache を eventually consistent に保つ。
-
-却下理由: 整合性モデルが複雑化する (購読時点の状態管理、cache 無効化の議論)。試合中の表示というユースケースには過剰。将来 display meta を試合外でも頻繁に参照する必要が出てきた場合に再検討する。
-
-#### 案 B2: gateway pod の in-memory cache のみ
-
-Redis を使わず gateway pod の in-memory map で snapshot を保持。
-
-却下理由: pod 分散 (対戦者 / 観戦者が別 pod) と pod restart で破綻する。試合途中に観戦者が接続するシナリオを満たせない。
-
-#### 案 PG: PostgreSQL `game_players` テーブル拡張
-
-gateway の `game_players` テーブルに `name` / `level` カラムを追加。
-
-却下理由: 試合中の揮発 state を OLTP に置かない方針 (ADR-010 / ADR-020 と同じ判断)。試合終了後も残るが、戦績の永続化は本 ADR のスコープ外。
 
 ### なぜ 2 段キャッシュか (コスト対策)
 
@@ -170,45 +142,21 @@ failure を観測可能にすることで silent ではない fallback を実現
 - name 変更は試合中に発生しないユースケース。level up は試合終了後の昇格処理で発生し、試合中の表示には影響しない。
 - 観戦者は試合途中に接続しても、match 成立時点の snapshot を見ることになる。
 
-## 結果
+### コスト試算
 
-### Positive
-
-- gateway #47 で報告された silent 404 + 空文字 fallback が解消する。
-- battle service は pure game engine のまま維持される。
-- matchmaking → account の依存を新規導入せずに済む。
-- game state relay 都度の `accountclient.GetPlayer` 呼び出しがなくなり、account への負荷が試合数比例 (relay 数比例ではない) に低減する。
-- 試合途中の観戦者接続も同じ snapshot を共有できる。
-- account 障害時のフォールバック表示値は短 TTL で書き込まれるため、account 復旧後は自動的に正しい表示値へ戻る (cache pollution を回避)。
-
-### Negative
-
-- gateway の責務が「パススルー + 認証」から「パススルー + 認証 + バトル補助」に拡張される (ADR-036 の境界線が動く)。
-- 新規インフラ依存 (gateway 所有 Upstash Redis インスタンス) が増える。
-- account 側の `/internal/v1/players/{id}` endpoint が完全には消えず維持される (ADR-037 §5 の解釈に「cross-player lookup は match 成立時の 1 回呼び出しに限定」という but が付く)。
-- 試合中の name / level 変更は表示に反映されない (snapshot 固定)。
-- in-memory cache 採用により pod-local state が増え、デバッグ可視性が pod 跨ぎで分散する。本来は単一キャッシュの方が運用上シンプルだが、コスト対策のトレードオフとして許容する (「なぜ 2 段キャッシュか (コスト対策)」節)。
-
-### 緩和策
-
-- gateway 責務拡張の境界線は「display meta の組み立て」に限定し、本 ADR で射程を明示する。将来別の集約責務を gateway に持たせる場合は別 ADR で判断する。
-- `/internal/v1/players/{id}` endpoint の維持は ADR-037 task A の close 条件更新として本 ADR で明示し、追跡可能にする。
-
-## コスト試算
-
-### Upstash Redis 料金 (2026-05 時点)
+Upstash Redis 料金 (2026-05 時点):
 
 - Free tier: 500K commands/月、256 MB、帯域 10 GB
 - Pay-as-you-go: $0.20 / 100K commands、ストレージ $0.25/GB/月、帯域無制限
 - Fixed Plan: $10/月、commands 無制限、帯域 50 GB
 
-### 1 試合あたりの ops 数 (2 段キャッシュ採用後)
+1 試合あたりの ops 数 (2 段キャッシュ採用後):
 
 - write: 2 回 (player 1 + player 2 の snapshot 書き込み)
 - read: `2 + 2N` 回 (対戦者 2 名 × 各 pod 初回 read 1 回 + 観戦者 N 名 × 両 player 分 read 2 回)
 - 合計: `4 + 2N` ops/試合
 
-### シナリオ別月額
+シナリオ別月額:
 
 | 試合数/日 | 観戦者平均 | ops/試合 | ops/月 | 月額 |
 |-----------|------------|----------|--------|------|
@@ -217,18 +165,49 @@ failure を観測可能にすることで silent ではない fallback を実現
 | 10,000 | 5 | 14 | 4.2M | ~$7 (Pay-as-you-go) |
 | 100,000 | 10 | 24 | 72M | $10 (Fixed Plan に切替) |
 
-- 当面は Pay-as-you-go (Free tier 内) で運用する。
-- ストレージ・帯域は実質無視できる規模。
+当面は Pay-as-you-go (Free tier 内) で運用する。ストレージ・帯域は実質無視できる規模。
 
-## 実装スコープ
+### 実装スコープ
 
 - 本 ADR で導入する Redis は **display meta snapshot のみに使用** する。
 - 将来別の揮発 state (WS session state / ゲーム進行 phase 等) を Redis 化する場合は別 ADR で射程拡張を判断する。本 ADR では gateway 揮発 state 全般への一般化は行わない。
 
-## 関連
+### トレードオフ
 
-- [ADR-010](010-matchmaking-queue-upstash-redis.md): Upstash Redis 採用パターンの先行事例 (matchmaking queue)
-- [ADR-020](020-newsfeed-redis-dedup-reconverge.md): Upstash Redis 採用パターンの先行事例 (newsfeed dedup)
-- [ADR-036](036-gateway-passthrough-and-service-public-api.md): gateway の責務再定義 (本 ADR で「バトル補助」を追記)
-- [ADR-037](037-internal-auth-hmac-signed-jwt.md): task A の close 条件を本 ADR で更新
-- gateway issue [#47](https://github.com/kenyamaneko/overload-party-gateway/issues/47): 本 ADR の実装トリガー
+- gateway の責務が「パススルー + 認証」から「パススルー + 認証 + バトル補助」に拡張される (ADR-036 の境界線が動く)。拡張の射程は「display meta の組み立て」に限定する
+- 新規インフラ依存 (gateway 所有 Upstash Redis インスタンス) が増える
+- account 側の `/internal/v1/players/{id}` endpoint が完全には消えず維持される (「JWT sub のみを信頼源とする」解釈に「cross-player lookup は match 成立時の 1 回呼び出しに限定」という but が付く)
+- 試合中の name / level 変更は表示に反映されない (snapshot 固定)
+- in-memory cache 採用により pod-local state が増え、デバッグ可視性が pod 跨ぎで分散する
+
+## 不採用案
+
+### battle service が game state response に display meta を同梱
+
+battle が account を呼んで game state response に `{name, level}` を載せる。
+
+却下理由: battle service は pure game engine という ADR-036 の方針を崩す。battle が account 依存を持つと、battle のテスト・運用に account の状態が必要になり、責務境界が曖昧になる。
+
+### matchmaking が account を呼んで match_made event に同梱
+
+matchmaking が match 成立時に account を呼び、`match_made` event のペイロードに `{name, level}` を含める。
+
+却下理由: matchmaking は現状 `player_id` と `deck_id` のみを扱う設計 (`api-matchmaking` の AsyncAPI 契約)。matchmaking → account の依存を新規導入することになり、display meta lookup のためにキュー責務の範囲を広げる遠回り設計になる。
+
+### account が player profile 更新を Pub/Sub publish
+
+account が profile 変更を Pub/Sub publish、gateway が subscribe して local cache を eventually consistent に保つ。
+
+却下理由: 整合性モデルが複雑化する (購読時点の状態管理、cache 無効化の議論)。試合中の表示というユースケースには過剰。将来 display meta を試合外でも頻繁に参照する必要が出てきた場合に再検討する。
+
+### gateway pod の in-memory cache のみ
+
+Redis を使わず gateway pod の in-memory map で snapshot を保持。
+
+却下理由: pod 分散 (対戦者 / 観戦者が別 pod) と pod restart で破綻する。試合途中に観戦者が接続するシナリオを満たせない。
+
+### PostgreSQL `game_players` テーブル拡張
+
+gateway の `game_players` テーブルに `name` / `level` カラムを追加。
+
+却下理由: 試合中の揮発 state を OLTP に置かない方針 (ADR-010 / ADR-020 と同じ判断)。試合終了後も残るが、戦績の永続化は本 ADR のスコープ外。

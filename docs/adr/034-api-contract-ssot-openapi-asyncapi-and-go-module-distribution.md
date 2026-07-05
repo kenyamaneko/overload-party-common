@@ -365,7 +365,7 @@ Phase 3b 着手時に各 npm パッケージの中身を実調査した結果、
 
 `rules/principles.md` の「アプリ間の契約 (エンドポイント・イベント名・ヘッダ名) はリテラルで書かず、所有サービスが発行する API 契約パッケージを参照する」は wire 型 (schemas) には適用されているが、**REST endpoint path** には未適用であることが棚卸しで判明した ([overload-party-common#91](https://github.com/kenyamaneko/overload-party-common/issues/91))。全 api-* の `openapi-codegen.yaml` が `generate.models: true` のみで、path 定数も typed client も生成されていなかった結果、consumer (gateway/* clients、scenario/internal/adapter/http/* 等) が path をリテラルで直書きする状態になっていた。
 
-### 決定
+### typed client の生成と export
 
 各サービスの `packages/api-{service}/openapi-codegen.yaml` に **`generate.client: true` を追加**し、oapi-codegen が生成する **typed client (`*ClientWithResponses`)** を export する。consumer 側は API 契約パッケージの生成 client を経由してエンドポイントにアクセスし、path をリテラル文字列で書かない。
 
