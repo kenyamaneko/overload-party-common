@@ -12,94 +12,116 @@ from asyncapi_codegen_tools.parser import (
 )
 
 
-class TestToGoName:
-    """snake_case → CamelCase 変換は既知 acronym のみ大文字化し、それ以外は通常 capitalize."""
-
-    def test_simple_word_capitalizes_first(self):
+class TestGo名への変換:
+    def test_単語1つは先頭を大文字にする(self):
         assert convert_to_go_name("timestamp") == "Timestamp"
 
-    def test_multi_word_camel_cases_each_token(self):
+    def test_複数単語は各トークンをCamelCaseにする(self):
         assert convert_to_go_name("event_type") == "EventType"
 
-    def test_acronym_token_uppercases_fully(self):
+    def test_acronymトークンは全て大文字にする(self):
         assert convert_to_go_name("event_id") == "EventID"
         assert convert_to_go_name("card_pack_id") == "CardPackID"
         assert convert_to_go_name("image_url") == "ImageURL"
 
-    def test_empty_string_returns_empty(self):
+    def test_空文字は空文字を返す(self):
         assert convert_to_go_name("") == ""
 
 
-class TestStripEventSuffix:
-    def test_strips_event_when_suffix_present(self):
-        assert strip_event_suffix("CardPackPurchasedEvent") == "CardPackPurchased"
+class TestEventサフィックスの除去:
+    @pytest.mark.parametrize(
+        ("name", "expected"),
+        [
+            pytest.param(
+                "CardPackPurchasedEvent",
+                "CardPackPurchased",
+                id="末尾が Event のとき Event を除去する",
+            ),
+            pytest.param("Foo", "Foo", id="末尾が Event でないときそのまま返す"),
+        ],
+    )
+    def test_Eventサフィックスを除去する(self, name, expected):
+        assert strip_event_suffix(name) == expected
 
-    def test_returns_unchanged_when_no_event_suffix(self):
-        assert strip_event_suffix("Foo") == "Foo"
 
+class TestGo型への変換:
+    @pytest.mark.parametrize(
+        ("prop", "required", "expected"),
+        [
+            pytest.param(
+                {"type": "string"}, True, "string",
+                id="required な string は値型 string になる",
+            ),
+            pytest.param(
+                {"type": "string"}, False, "*string",
+                id="optional な string はポインタ *string になる",
+            ),
+            pytest.param(
+                {"type": "string", "format": "date-time"}, True, "time.Time",
+                id="date-time 形式は time.Time になる",
+            ),
+            pytest.param(
+                {"type": "string", "format": "date-time"}, False, "*time.Time",
+                id="optional な date-time はポインタ *time.Time になる",
+            ),
+            pytest.param(
+                {"type": "integer"}, True, "int64",
+                id="integer は既定で int64 になる",
+            ),
+            pytest.param(
+                {"type": "integer", "format": "int32"}, True, "int",
+                id="format int32 の integer は int になる",
+            ),
+            pytest.param(
+                {"type": "boolean"}, True, "bool",
+                id="boolean は bool になる",
+            ),
+            pytest.param(
+                {"type": "array", "items": {"type": "string"}}, True, "[]string",
+                id="string の array は []string になる",
+            ),
+            pytest.param(
+                {"type": "object"}, True, "map[string]interface{}",
+                id="object は map[string]interface{} にフォールバックする",
+            ),
+            pytest.param(
+                {"$ref": "#/components/schemas/EventTranslation"}, True, "EventTranslation",
+                id="required な local ref はスキーマ名に解決される",
+            ),
+            pytest.param(
+                {"$ref": "#/components/schemas/EventTranslation"}, False, "*EventTranslation",
+                id="optional な local ref はポインタになる",
+            ),
+            pytest.param(
+                {"type": "array", "items": {"$ref": "#/components/schemas/EventTranslation"}},
+                True, "[]EventTranslation",
+                id="ref の array は []EventTranslation になる",
+            ),
+        ],
+    )
+    def test_JSONスキーマをGo型に変換する(self, prop, required, expected):
+        assert convert_to_go_type(prop, required=required) == expected
 
-class TestToGoType:
-    """JSON Schema → Go 型. required は値型, optional は pointer."""
-
-    def test_required_string_is_value_type(self):
-        assert convert_to_go_type({"type": "string"}, required=True) == "string"
-
-    def test_optional_string_is_pointer(self):
-        assert convert_to_go_type({"type": "string"}, required=False) == "*string"
-
-    def test_date_time_format_maps_to_time_time(self):
-        assert convert_to_go_type({"type": "string", "format": "date-time"}, required=True) == "time.Time"
-
-    def test_optional_date_time_is_pointer_time(self):
-        assert convert_to_go_type({"type": "string", "format": "date-time"}, required=False) == "*time.Time"
-
-    def test_integer_int64_default(self):
-        assert convert_to_go_type({"type": "integer"}, required=True) == "int64"
-
-    def test_integer_int32_explicit(self):
-        assert convert_to_go_type({"type": "integer", "format": "int32"}, required=True) == "int"
-
-    def test_boolean(self):
-        assert convert_to_go_type({"type": "boolean"}, required=True) == "bool"
-
-    def test_array_of_string(self):
-        assert convert_to_go_type({"type": "array", "items": {"type": "string"}}, required=True) == "[]string"
-
-    def test_object_falls_back_to_map(self):
-        assert convert_to_go_type({"type": "object"}, required=True) == "map[string]interface{}"
-
-    def test_required_local_ref_resolves_to_schema_name(self):
-        assert (
-            convert_to_go_type({"$ref": "#/components/schemas/EventTranslation"}, required=True)
-            == "EventTranslation"
-        )
-
-    def test_optional_local_ref_is_pointer(self):
-        assert (
-            convert_to_go_type({"$ref": "#/components/schemas/EventTranslation"}, required=False)
-            == "*EventTranslation"
-        )
-
-    def test_array_of_ref_emits_slice_of_schema(self):
-        prop = {
-            "type": "array",
-            "items": {"$ref": "#/components/schemas/EventTranslation"},
-        }
-        assert convert_to_go_type(prop, required=True) == "[]EventTranslation"
-
-    def test_external_ref_raises_value_error(self):
+    @pytest.mark.parametrize(
+        "prop",
+        [
+            pytest.param(
+                {"$ref": "external.yaml#/Foo"},
+                id="外部ファイル参照の ref は ValueError になる",
+            ),
+            pytest.param(
+                {"$ref": "#/components/schemas/"},
+                id="空の local ref は ValueError になる",
+            ),
+        ],
+    )
+    def test_不正なrefはValueErrorになる(self, prop):
         with pytest.raises(ValueError):
-            convert_to_go_type({"$ref": "external.yaml#/Foo"}, required=True)
-
-    def test_empty_local_ref_raises_value_error(self):
-        with pytest.raises(ValueError):
-            convert_to_go_type({"$ref": "#/components/schemas/"}, required=True)
+            convert_to_go_type(prop, required=True)
 
 
-class TestParseSpec:
-    """AsyncAPI components/schemas を中間 dict にマップする."""
-
-    def test_object_schema_becomes_type_with_fields(self):
+class TestAsyncAPIスペックのパース:
+    def test_objectスキーマをフィールド付きの型にする(self):
         spec = {
             "components": {
                 "schemas": {
@@ -127,7 +149,7 @@ class TestParseSpec:
             {"name": "Baz", "type": "*int64", "json": "baz,omitempty"},
         ]
 
-    def test_description_already_starting_with_type_name_is_kept_as_is(self):
+    def test_型名で始まるdescriptionはそのまま使う(self):
         spec = {
             "components": {
                 "schemas": {
@@ -143,7 +165,7 @@ class TestParseSpec:
         out = parse_spec(spec)
         assert out["types"][0]["comment"] == "FooEvent は何かをする"
 
-    def test_no_description_falls_back_to_type_name_only(self):
+    def test_descriptionが無いとき型名だけをコメントにする(self):
         spec = {
             "components": {
                 "schemas": {
@@ -158,7 +180,7 @@ class TestParseSpec:
         out = parse_spec(spec)
         assert out["types"][0]["comment"] == "FooEvent"
 
-    def test_const_field_emits_struct_field_and_top_level_constant(self):
+    def test_constフィールドはstructフィールドとトップレベル定数を生成する(self):
         spec = {
             "components": {
                 "schemas": {
@@ -186,7 +208,7 @@ class TestParseSpec:
             }
         ]
 
-    def test_single_value_enum_emits_named_constant(self):
+    def test_単一値enumは名前付き定数を生成する(self):
         spec = {
             "components": {
                 "schemas": {
@@ -206,7 +228,7 @@ class TestParseSpec:
         assert names == ["PremiumUpdatedSourceShop"]
         assert out["constants"][0]["values"][0]["value"] == "shop"
 
-    def test_x_go_name_overrides_default_field_naming(self):
+    def test_x_go_nameは既定のフィールド命名を上書きする(self):
         spec = {
             "components": {
                 "schemas": {
@@ -223,7 +245,7 @@ class TestParseSpec:
         out = parse_spec(spec)
         assert out["types"][0]["fields"][0]["name"] == "CustomName"
 
-    def test_non_object_schemas_are_skipped(self):
+    def test_object以外のスキーマはスキップする(self):
         spec = {
             "components": {
                 "schemas": {
@@ -235,7 +257,7 @@ class TestParseSpec:
         out = parse_spec(spec)
         assert [t["name"] for t in out["types"]] == ["Real"]
 
-    def test_optional_date_time_is_pointer_with_omitempty(self):
+    def test_optionalなdate_timeはポインタかつomitemptyになる(self):
         spec = {
             "components": {
                 "schemas": {

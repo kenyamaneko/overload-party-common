@@ -54,8 +54,8 @@ def fixture_factions():
     ]
 
 
-class TestGoldenGo:
-    def test_go_output_matches(self, tmp_path, monkeypatch, fixture_data, fixture_factions):
+class TestGo言語のgolden出力:
+    def test_固定入力がGoの期待出力と完全一致する(self, tmp_path, monkeypatch, fixture_data, fixture_factions):
         monkeypatch.setattr(gen, "GO_GAME_DESIGN_DIR", tmp_path)
         gen.generate_go_game_design(fixture_data, fixture_factions)
         got = (tmp_path / "constants_gen.go").read_text()
@@ -174,8 +174,8 @@ class TestGoldenGo:
         assert got == expected
 
 
-class TestGoldenCSharp:
-    def test_csharp_output_matches(self, tmp_path, monkeypatch, fixture_data, fixture_factions):
+class TestCSharp言語のgolden出力:
+    def test_固定入力がCSharpの期待出力と完全一致する(self, tmp_path, monkeypatch, fixture_data, fixture_factions):
         monkeypatch.setattr(gen, "DOTNET_GAME_DESIGN_DIR", tmp_path)
         gen.generate_csharp_game_design(fixture_data, fixture_factions)
         got = (tmp_path / "GameDesignConstants_gen.cs").read_text()
@@ -275,8 +275,8 @@ class TestGoldenCSharp:
         assert got == expected
 
 
-class TestGoldenTs:
-    def test_ts_output_matches(self, tmp_path, monkeypatch, fixture_data, fixture_factions):
+class TestTypeScript言語のgolden出力:
+    def test_固定入力がTypeScriptの期待出力と完全一致する(self, tmp_path, monkeypatch, fixture_data, fixture_factions):
         monkeypatch.setattr(gen, "NPM_GAME_DESIGN_DIR", tmp_path)
         gen.generate_ts_game_design(fixture_data, fixture_factions)
         got = (tmp_path / "src" / "index.ts").read_text()
@@ -344,32 +344,23 @@ class TestGoldenTs:
         assert got == expected
 
 
-class TestValidate:
-    """restriction_copy_count と restriction_values の整合性検証。"""
-
-    def test_matches_ok(self):
-        """観点: 全 restriction 値が copy_count にマップされていれば例外なし。"""
+class Testrestriction整合性の検証:
+    def test_全restriction値がcopy_countにマップされていれば例外なし(self):
         gen._validate({
             "restriction_values": ["forbidden", "limited", "unlimited"],
             "restriction_copy_count": {"forbidden": 0, "limited": 1, "unlimited": 3},
         })
 
-    def test_missing_key_raises(self):
-        """観点: copy_count に未マップの restriction 値があれば ValueError。
-
-        silent に 0 や undefined を返さず、SSoT 違反として早期検出する。
-        """
+    def test_copy_countに未マップのrestriction値があればValueError(self):
+        # silent に 0 や undefined を返さず、SSoT 違反として早期検出する。
         with pytest.raises(ValueError, match="missing.*unlimited"):
             gen._validate({
                 "restriction_values": ["forbidden", "limited", "unlimited"],
                 "restriction_copy_count": {"forbidden": 0, "limited": 1},
             })
 
-    def test_extra_key_raises(self):
-        """観点: copy_count に restriction_values 外のキーがあれば ValueError。
-
-        typo や削除漏れによる SSoT 不整合を防ぐ。
-        """
+    def test_copy_countにrestriction_values外のキーがあればValueError(self):
+        # typo や削除漏れによる SSoT 不整合を防ぐ。
         with pytest.raises(ValueError, match="extra.*ghost"):
             gen._validate({
                 "restriction_values": ["forbidden", "limited"],
@@ -377,17 +368,17 @@ class TestValidate:
             })
 
 
-class TestToPascal:
+class TestPascalCaseへの変換:
     @pytest.mark.parametrize(
         ("value", "expected"),
         [
-            ("AI/ML", "AIML"),
-            ("", ""),
-            ("frontend", "Frontend"),
-            ("Compute", "Compute"),
-            ("instance_family", "InstanceFamily"),
-            ("semi-limited", "SemiLimited"),
+            pytest.param("AI/ML", "AIML", id="スラッシュ区切りの AI/ML は AIML になる"),
+            pytest.param("", "", id="空文字は空文字になる"),
+            pytest.param("frontend", "Frontend", id="frontend は Frontend になる"),
+            pytest.param("Compute", "Compute", id="既に PascalCase の Compute はそのまま"),
+            pytest.param("instance_family", "InstanceFamily", id="スネークケースの instance_family は InstanceFamily になる"),
+            pytest.param("semi-limited", "SemiLimited", id="ハイフン区切りの semi-limited は SemiLimited になる"),
         ],
     )
-    def test_to_pascal(self, value, expected):
+    def test_文字列をPascalCaseに変換する(self, value, expected):
         assert gen.convert_to_pascal(value) == expected
