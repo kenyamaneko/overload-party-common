@@ -13,10 +13,11 @@
 1. 編集対象ファイルのパスから対象リポを判定する
    - パスが `./` 起点または `rules/`, `data/`, `db/`, `packages/`, `scripts/`, `docs/` 配下 → `overload-party-common`
    - `../overload-party-<name>/` パターン → 該当リポ
-2. [rules/repos.yaml](rules/repos.yaml) で対象リポの `lang` / `flow` / `prereq_docs` を引く
+2. [rules/repos.yaml](rules/repos.yaml) で対象リポの `lang` / `flow` / `deploy` / `prereq_docs` を引く
 3. 以下のルールを Read して以降の判断に適用する (共通ルール + overload-party 固有 overlay の両方。衝突時は overlay を優先):
    - lang: `../../keyandnotes-rules/rules/lang/<lang>.md` (`lang: none` ならスキップ)。本リポに `rules/lang/<lang>.md` があれば併せて Read する
    - flow: `../../keyandnotes-rules/rules/flow/<flow>.md` (`flow: none` ならスキップ)
+   - deploy: `../../keyandnotes-rules/rules/deploy/<deploy>.md` (`deploy: none` ならスキップ)
    - testing (テストコードを書くとき): `../../keyandnotes-rules/rules/testing.md` + `rules/testing.md`
    - prereq_docs: 列挙された各ファイル (未定義ならスキップ)
 4. リポ固有のルールが必要な場合は対象リポの `docs/` 配下を Read する
