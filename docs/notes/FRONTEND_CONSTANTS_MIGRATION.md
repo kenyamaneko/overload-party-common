@@ -16,7 +16,7 @@
 
 ---
 
-## 1. デッキサイズ (DECK_SIZE = 30) の置き換え 【優先度: 高】
+## デッキサイズ (DECK_SIZE = 30) の置き換え 【優先度: 高】
 
 `INITIAL_VALUES.deckSize` を使用する。
 
@@ -34,7 +34,7 @@ import { INITIAL_VALUES } from '@/generated/constants'
 // INITIAL_VALUES.deckSize を使う
 ```
 
-## 2. Faction 文字列のハードコード除去 【優先度: 高】
+## Faction 文字列のハードコード除去 【優先度: 高】
 
 `SELECTABLE_FACTIONS` / `FACTIONS` を使用する。
 
@@ -64,7 +64,7 @@ export const FACTION_DISPLAY: Record<FactionId | 'neutral', { name: string; colo
 }
 ```
 
-## 3. Phase 文字列の置き換え 【優先度: 中】
+## Phase 文字列の置き換え 【優先度: 中】
 
 `PHASES` 定数を使用する。
 
@@ -73,7 +73,7 @@ export const FACTION_DISPLAY: Record<FactionId | 'neutral', { name: string; colo
 | `features/battle/components/BattleFieldPage.tsx` | 13-20 | `phaseLabels` オブジェクトのキー |
 | `features/battle/lib/npcGame.ts` | 21 | `currentPhase: 'main'` |
 
-## 4. Zone 文字列の置き換え 【優先度: 中】
+## Zone 文字列の置き換え 【優先度: 中】
 
 `ZONES` 定数を使用する。
 
@@ -83,7 +83,7 @@ export const FACTION_DISPLAY: Record<FactionId | 'neutral', { name: string; colo
 | `features/battle/components/field/FieldLayout.tsx` | 39-50 | zone includes チェック |
 | `features/card/components/CardFilterBar.tsx` | 65 | `<option value="support">` |
 
-## 5. Action Type 文字列の置き換え 【優先度: 中】
+## Action Type 文字列の置き換え 【優先度: 中】
 
 `ACTION_TYPES` 定数を使用する。
 
@@ -91,7 +91,7 @@ export const FACTION_DISPLAY: Record<FactionId | 'neutral', { name: string; colo
 |---------|-----|------|
 | `features/battle/hooks/useBattleActions.ts` | 21-41 | `'play_card'`, `'attack'`, `'scale_up'`, `'end_phase'` |
 
-## 6. NPC ゲームモックの初期値 【優先度: 低】
+## NPC ゲームモックの初期値 【優先度: 低】
 
 `INITIAL_VALUES` を使用する。
 
@@ -102,7 +102,7 @@ export const FACTION_DISPLAY: Record<FactionId | 'neutral', { name: string; colo
 | 同上 | 35 | `3` → `INITIAL_VALUES.slotsPerZone` |
 | 同上 | 49 | `25` → `INITIAL_VALUES.deckSize - INITIAL_VALUES.handSize` |
 
-## 7. mockData.ts の整理 【優先度: 低】
+## mockData.ts の整理 【優先度: 低】
 
 `src/lib/api/mockData.ts` に 20+ のハードコード faction/card type 文字列がある。
 モックデータなので優先度は低いが、将来的には API から取得する `cards.json` のデータで置き換えるのが理想。
@@ -113,11 +113,11 @@ export const FACTION_DISPLAY: Record<FactionId | 'neutral', { name: string; colo
 
 以下はサーバー側作業で移行完了済み：
 
-- `types/game.ts` — `GamePhase`, `Rank`, `InstanceFamily`, `EffectDuration`, `Zone` → `generated/constants.ts` から re-export
-- `types/ws.ts` — `GameActionType`, `InstanceFamily` → 生成版に変更
-- `types/api.ts` — `FactionId` → 生成版に変更
-- `types/card.ts` — `Restriction` → 生成版に変更、`request_cost` → `maintenance_cost` 修正
-- `generated/constants.ts` — 自動生成ファイル作成
+- `types/game.ts`：`GamePhase`, `Rank`, `InstanceFamily`, `EffectDuration`, `Zone` → `generated/constants.ts` から re-export
+- `types/ws.ts`：`GameActionType`, `InstanceFamily` → 生成版に変更
+- `types/api.ts`：`FactionId` → 生成版に変更
+- `types/card.ts`：`Restriction` → 生成版に変更、`request_cost` → `maintenance_cost` 修正
+- `generated/constants.ts`：自動生成ファイル作成
 
 ## 生成ファイルの再生成方法
 

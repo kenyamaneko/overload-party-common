@@ -29,7 +29,7 @@ dev 環境の基盤は構築済み。今後のフェーズで必要になる項�
 ## 中期 (リリース前)
 
 ### Terraform リポジトリ分離
-- [ ] `overload-party-infra` リポ作成 (Terraform: GCP プロジェクト, Cloud SQL, VPC, IAM, 静的 IP 等)
+- [ ] `overload-party-infra` リポ作成 (Terraform: Google Cloud プロジェクト, Cloud SQL, VPC, IAM, 静的 IP 等)
   - K8s マニフェスト (`overload-party-k8s`) とはライフサイクル・権限・CI が異なるため別リポ
   - 構成: `environments/{dev,stg,prod}/` + `modules/`
 
@@ -41,10 +41,10 @@ dev 環境の基盤は構築済み。今後のフェーズで必要になる項�
 - [ ] deploy.yaml に承認ステップ追加 (prod)
 
 ### モニタリング / アラート（詳細: [MONITORING.md](MONITORING.md)）
-- [ ] **Phase 1: 構造化ログ** — `log/slog` 導入 + JSON 出力 (Cloud Logging 自動連携)
-- [ ] **Phase 2: Cloud SQL Insights** — Terraform `insights_config` 有効化
-- [ ] **Phase 3: カスタムメトリクス** — `prometheus/client_golang` + PodMonitoring CRD (GKE Managed Prometheus)
-- [ ] **Phase 4: ダッシュボード + アラート** — Cloud Monitoring (Pod restart, error spike, Cloud SQL 高負荷, WS 接続断)
+- [ ] **Phase 1: 構造化ログ**：`log/slog` 導入 + JSON 出力 (Cloud Logging 自動連携)
+- [ ] **Phase 2: Cloud SQL Insights**：Terraform `insights_config` 有効化
+- [ ] **Phase 3: カスタムメトリクス**：`prometheus/client_golang` + PodMonitoring CRD (GKE Managed Prometheus)
+- [ ] **Phase 4: ダッシュボード + アラート**：Cloud Monitoring (Pod restart, error spike, Cloud SQL 高負荷, WS 接続断)
 
 ### セキュリティ
 - [ ] Cloud SQL: Public IP 廃止 + CI db-migrate を GKE Job に移行

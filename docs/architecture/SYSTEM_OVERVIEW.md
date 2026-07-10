@@ -1,34 +1,32 @@
 # システム全体設計
 
----
-
 ## 目次
 
-1. [概要](#1-概要)
-2. [プロジェクト構成](#2-プロジェクト構成multi-repo)
-3. [技術スタック](#3-技術スタック)
-4. [システムアーキテクチャ](#4-システムアーキテクチャ)
+- [概要](#概要)
+- [プロジェクト構成](#プロジェクト構成multi-repo)
+- [技術スタック](#技術スタック)
+- [システムアーキテクチャ](#システムアーキテクチャ)
 
 関連ドキュメント: [APPLICATION.md](APPLICATION.md) / [INFRASTRUCTURE.md](INFRASTRUCTURE.md) / [DATA_DESIGN.md](DATA_DESIGN.md)
 
 ---
 
-## 1. 概要
+## 概要
 
-### 1.1 プロジェクト概要
+### プロジェクト概要
 
-Overload Partyは、クラウドインフラをテーマにした対戦型デジタルカードゲームです。2人のプレイヤーがリアルタイムで対戦し、相手のBudgetを0以下にすることを目指します。
+Overload Party は、クラウドインフラをテーマにした対戦型デジタルカードゲーム。2 人のプレイヤーがリアルタイムで対戦し、相手の Budget を 0 以下にすることを目指す。
 
-### 1.2 主要要件
+### 主要要件
 
 - **リアルタイム対戦**: 2人のプレイヤーが同時にプレイ
-- **複雑な状態管理**: チェーンシステム、継続効果
+- **複雑な状態管理**: リアクティブ効果の解決、継続効果
 - **強整合性**: ゲーム状態の厳密な管理
 - **低レイテンシ**: 快適なゲーム体験
 - **スケーラビリティ**: 多数の同時対戦に対応
 - **クロスプラットフォーム**: iOS/Android対応
 
-### 1.3 非機能要件
+### 非機能要件
 
 | 要件 | 目標値 |
 |------|--------|
@@ -39,7 +37,7 @@ Overload Partyは、クラウドインフラをテーマにした対戦型デジ
 
 ---
 
-## 2. プロジェクト構成（Multi-repo）
+## プロジェクト構成（Multi-repo）
 
 Overload Party は複数の独立した Git リポジトリで構成される。`overload-party-common` がゲームデザイン・カードデータ・ドキュメントの Single Source of Truth（SSoT）となり、コード生成パイプラインで各リポに成果物を配布する。
 
@@ -47,7 +45,7 @@ Overload Party は複数の独立した Git リポジトリで構成される。
 
 gateway は **型契約と transport を分離する原則** に従う。client が消費する型 (REST レスポンス / WS event) は各ドメインサービスが直接公開する。一方 client の通信先は常に gateway 1 つで、認証・WS hub・各サービスへのパススルーを担う。型を所有サービスに集約することで gateway 側の二重実装を排除し、入口を gateway に絞ることで認証と接続管理を中央化する。詳細は [ADR-036](../adr/036-gateway-passthrough-and-service-public-api.md)。
 
-### 2.1 リポジトリ一覧
+### リポジトリ一覧
 
 | リポジトリ | 役割 | 技術 | CI |
 |-----------|------|------|-----|
@@ -62,7 +60,7 @@ gateway は **型契約と transport を分離する原則** に従う。client 
 | **client** | モバイル/Web フロントエンド | React 19, TypeScript, Vite, Capacitor | lint → typecheck → test |
 | **infra** | Google Cloud リソース管理 | Terraform | plan → apply（パス変更時のみ） |
 | **k8s** | GKE デプロイ・運用 | Kustomize, GitHub Actions | deploy / startup / shutdown / scale |
-| **ops** | DB マイグレーション・監視ジョブ・Slack コマンド | Docker, Cloud Run, Cloudflare Workers, Python | CI + 手動 dispatch |
+| **ops** | DB マイグレーション・監視ジョブ | Docker, Cloud Run, Python | CI + 手動 dispatch |
 | **analytics** | Spanner → BigQuery エクスポート | Go, Cloud Functions | 手動デプロイ |
 | **newsfeed** | ニュース記事収集・要約（RSS → Gemini → Pub/Sub publish） | Python 3.12, Vertex AI, Upstash Redis | CI で自動デプロイ |
 | **news** | 収集記事の校閲・配信（newsfeed から Pub/Sub 購読 → gateway 経由で配信） | Go 1.25, Gin, HTMX | 未整備 |
@@ -76,15 +74,13 @@ gateway は **型契約と transport を分離する原則** に従う。client 
 - **support** の問い合わせ受付フォーム（CORS で Origin 制限）
 - **news / support** の管理 UI（IAP で運用者認証）
 
-### 2.2 コード生成パイプライン
+### コード生成パイプライン
 
 外部公開 API 契約の SSoT を **OpenAPI / AsyncAPI** に統一する。自前定義の YAML から OpenAPI / AsyncAPI に揃えることで、spec viewer / mock server / breaking change の差分検査 (`oasdiff` / `asyncapi-diff`) といった既成ツールをそのまま CI / 開発フローに組み込めるようになり、契約進化のリスクを機械的に検知できる。詳細な配布物・ツール選定は [ADR-034](../adr/034-api-contract-ssot-openapi-asyncapi-and-go-module-distribution.md) を参照。
 
 ゲーム定数（`game-design-constants` / `game-logic-constants` 等）は OpenAPI スキーマで素直に表現できないため独自 YAML SSoT を維持する。ドキュメント生成は common の `packages/doc-tools` パッケージが提供する。
 
-### 2.3 リポジトリ間の依存グラフ
-
-
+### リポジトリ間の依存グラフ
 
 ```mermaid
 graph TD
@@ -108,9 +104,9 @@ graph TD
 
 ---
 
-## 3. 技術スタック
+## 技術スタック
 
-### 3.1 フロントエンド
+### フロントエンド
 
 ```
 React + Capacitor (TypeScript)
@@ -129,9 +125,9 @@ React + Capacitor (TypeScript)
 - React エコシステムの豊富なライブラリ
 - 将来的に演出面で不足があれば Unity への移行を検討
 
-### 3.2 バックエンド
+### バックエンド
 
-バックエンドは Go サービス 6 本と C# の Battle Server 1 本の計 7 サービス構成。Gateway がクライアントからのトラフィックを受け、内部 REST でドメインサービスにルーティングする。
+バックエンドは Go サービス 8 本と C# の Battle Server 1 本の計 9 サービス構成。Gateway がクライアントからのトラフィックを受け、内部 REST でドメインサービスにルーティングする。
 
 ```
 Go サービス群 (Go 1.25)
@@ -156,6 +152,8 @@ Battle Server (C# / .NET 10)
 - **scenario** (Go): シナリオ解放判定、シナリオファイル配信
 - **card** (Go): カードマスターデータ管理、デッキバリデーション、カード一覧
 - **battle** (C#): ゲームエンジン、アクション処理、エフェクト、NPC AI、勝利判定、ゲームログ
+- **news** (Go): 収集記事の校閲・配信
+- **support** (Go): お知らせ配信・問い合わせ受付
 
 **選定理由:**
 - Gateway (Go): 高パフォーマンスな並行処理、WebSocket 常時接続に最適
@@ -163,7 +161,7 @@ Battle Server (C# / .NET 10)
 - Battle (C#): 複雑なゲームロジックの表現力、型安全性、.NET エコシステム
 - GKE Standard でゲームサーバー管理
 
-### 3.3 データベース
+### データベース
 
 ```
 Cloud SQL PostgreSQL 16 (Regional: asia-northeast1)
@@ -182,7 +180,7 @@ Cloud Firestore (Native, asia-northeast1)
 - Cloud SQL: ACID トランザクション + SELECT FOR UPDATE による行ロック / JSONB でゲーム状態を柔軟に格納 / Cloud SQL Auth Proxy + IAM 認証でセキュアな接続 / コスト効率 (Spanner 比 ~90% 削減)
 - Firestore: スキーマ DDL 配布が不要な NoSQL KV ストアで、サービス横断の動的設定値を一元管理
 
-### 3.4 認証
+### 認証
 
 ```
 Firebase Authentication
@@ -190,23 +188,23 @@ Firebase Authentication
 └── Google Sign-In
 ```
 
-### 3.5 インフラ
+### インフラ
 
 ```
 Google Cloud (4プロジェクト構成)
 ├── keyandnotes-platform
-│   ├── GKE Standard (全 7 サービス相乗り — 全環境共有)
+│   ├── GKE Standard (全 9 サービス相乗り — 全環境共有)
 │   │     e2-standard-2 (2 vCPU / 8 GiB) × 1 ノード
 │   ├── Artifact Registry (Docker イメージ)
 │   ├── Cloud Pub/Sub (matchmaking-events トピック)
 │   └── Ingress (GCE L7 LB, gateway と shop のみ外部公開)
 ├── overload-party-{dev,stg,prod}
 │   ├── Cloud SQL PostgreSQL (Database — 環境ごと独立、スキーマ単位分割)
-│   ├── Cloud Object Storage (Replays, Logs)
+│   ├── Cloud Storage (Replays, Logs)
 │   └── Cloud Monitoring
 ```
 
-### 3.6 IaC・CI/CD
+### IaC・CI/CD
 
 ```
 Infrastructure as Code
@@ -217,16 +215,17 @@ CI: GitHub Actions
 ├── Docker イメージビルド
 └── Artifact Registry プッシュ
 
-CD: GitHub Actions (on k8s リポ)
-├── Kustomize でイメージタグ更新
-└── kubectl apply -k で GKE にデプロイ
+CD: ArgoCD (GitOps)
+├── deploy.yaml が main push でイメージを AR に push
+├── ArgoCD Image Updater が k8s リポのマニフェストを更新
+└── 人が ArgoCD UI で sync して環境反映 (全環境 manual sync)
 ```
 
 ---
 
-## 4. システムアーキテクチャ
+## システムアーキテクチャ
 
-### 4.1 全体構成図
+### 全体構成図
 
 ```mermaid
 graph TD
@@ -327,7 +326,7 @@ graph TD
 ```
 
 **サーバー間通信:**
-- サービス間は内部 REST API（クラスタ内ネットワーク）。Firebase ID Token 検証と player_id 解決は gateway が一元化し、各ドメインサービスは gateway が発行する HMAC 署名 JWT (`X-Internal-Auth`) を検証して player_id を取得する（[ADR-037](../adr/037-internal-auth-hmac-signed-jwt.md)、詳細は [APPLICATION.md §4.3](APPLICATION.md#43-内部サービス間認証)）
+- サービス間は内部 REST API（クラスタ内ネットワーク）。Firebase ID Token 検証と player_id 解決は gateway が一元化し、各ドメインサービスは gateway が発行する HMAC 署名 JWT (`X-Internal-Auth`) を検証して player_id を取得する（[ADR-037](../adr/037-internal-auth-hmac-signed-jwt.md)、詳細は [APPLICATION.md §内部サービス間認証](APPLICATION.md#内部サービス間認証)）
 - ドメインサービス間の連携は Pub/Sub に集約し、HTTP 直叩きは原則禁止。例外は scenario → account の onboarding 内 name 確定と再開判定のみ（[ADR-025](../adr/025-onboarding-name-via-rest-and-cross-service-http.md)）
 - 外部公開は gateway（クライアント向け WS/REST）を主とし、例外は以下:
   - **shop** の Webhook 受信（Apple / Google の課金サーバー通知）
@@ -342,9 +341,9 @@ graph TD
 - ニュース記事収集: newsfeed (Cloud Run Job) → Cloud Pub/Sub `news-article-collected` → news
 - DB 所有権はサービス単位に分離（DATA_DESIGN.md 参照）
 
-### 4.2 通信フロー
+### 通信フロー
 
-#### 4.2.1 ゲーム開始フロー
+#### ゲーム開始フロー
 
 ```
 Client              Gateway Pod          Battle Pod           Cloud SQL
@@ -365,7 +364,7 @@ Client              Gateway Pod          Battle Pod           Cloud SQL
      │<───────────────────┤                    │                    │
 ```
 
-#### 4.2.2 アクション実行フロー
+#### アクション実行フロー
 
 ```
 Player A (Client)   Gateway Pod          Battle Pod           Cloud SQL      Player B (Client)

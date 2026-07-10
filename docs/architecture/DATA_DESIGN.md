@@ -2,9 +2,14 @@
 
 ## ID 設計方針
 
-`player_id` をはじめとするユーザー関連の主キーには UUID（`gen_random_uuid()`）を採用している。連番 ID ではなく UUID を使う理由は、通信を傍受された場合に ID の値からゲーム数やユーザー数を推測されることを防ぐため。
+ID 採番方式は用途別に 4 分類する（詳細は [ADR-046](../adr/046-cross-repo-id-issuance-policy.md)）:
 
-ゲーム ID (`game_id`) には ULID を採用。時系列ソートが可能かつ衝突耐性が高い。
+- **マスタデータ ID**: 人間可読 slug（`SH-0001` 等）。domain knowledge として人間が直接読み書きするため
+- **対外露出する長寿命エンティティ ID**（`player_id` 等）: UUID v4。連番だと件数が、時系列 ID だと生成時刻が ID から推測できてしまうため、ランダムな UUID v4 で情報漏えいと enumeration を防ぐ
+- **内部ログ / セッション / 履歴系 ID**（`game_id` 等）: UUID v7。append-heavy なテーブルで時系列挿入により B-tree を密に保ち、時間範囲クエリ・cursor pagination・障害調査に ID 単体で使えるようにする
+- **Pub/Sub `event_id`**: UUID v4。subscriber の重複排除キー専用で時系列性は不要
+
+slug を除く全 ID はアプリ側で採番し、ID 列は native `UUID` 型で宣言する。既存の ULID 採用箇所（news `article_id` / matchmaking `match_id`）は据え置き。
 
 ---
 
@@ -48,7 +53,7 @@ matchmaking は RDB スキーマを持たない（Redis + Pub/Sub のみ）。
 | 種類 | 性質 | 置き場 | SSoT | 変更反映 |
 |---|---|---|---|---|
 | ゲーム語彙 | コンパイル時固定。switch 判定・型判別子・DB 列値としてコードにリテラル参照される | common パッケージ配信 | `overload-party-common/data/{game_design_constants,factions}.yaml` → `scripts/generate_constants.py` で Go/C#/TS に codegen | パッケージ再配信（go get / nuget / npm） |
-| 運営チューニング値 | 実行時に調整する動的値（バトル上限、経験値係数、タイムバンク等） | Cloud Firestore `game_config` コレクション | 初期値: `overload-party-common/data/game_config_defaults.yaml` / 運用中: Firestore が SSoT | 初期投入: `overload-party-ops/firestore-seed/seed_game_config.py`。運用中の変更: GCP Console / Firestore admin SDK で即時反映（[ADR-017](../adr/017-game-config-firestore.md)） |
+| 運営チューニング値 | 実行時に調整する動的値（バトル上限、経験値係数、タイムバンク等） | Cloud Firestore `game_config` コレクション | 初期値: `overload-party-common/data/game_config_defaults.yaml` / 運用中: Firestore が SSoT | 初期投入: `overload-party-ops/firestore-seed/seed_game_config.py`。運用中の変更: Google Cloud コンソール / Firestore admin SDK で即時反映（[ADR-017](../adr/017-game-config-firestore.md)） |
 | サービス固有設定 | サービス単位・環境（dev/stg/prod）単位で変わる値（DB URL、`FIRESTORE_PROJECT_ID` 等） | env var | 各サービスの `internal/config/` + `overload-party-k8s` の Deployment manifest | デプロイ |
 
 ### 判断の境界

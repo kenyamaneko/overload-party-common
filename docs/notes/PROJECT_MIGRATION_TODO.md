@@ -6,7 +6,7 @@
 
 **理由**:
 - 本来使用予定だった `overload-party-dev` のプロジェクトIDが、別組織のGoogleアカウントで取得済み
-- GCP プロジェクトIDは削除後30日間予約される
+- Google Cloud プロジェクトIDは削除後30日間予約される
 - その間は同じIDで新規プロジェクトを作成できない
 
 ---
@@ -19,7 +19,7 @@
 
 ## 移行手順
 
-### 1. 新しい `overload-party-dev` プロジェクトを作成
+### 新しい `overload-party-dev` プロジェクトを作成
 
 ```bash
 # プロジェクト作成
@@ -36,7 +36,7 @@ gcloud services enable containerregistry.googleapis.com --project=overload-party
 gcloud services enable iam.googleapis.com --project=overload-party-dev
 ```
 
-### 2. 設定ファイルを更新
+### 設定ファイルを更新
 
 #### `terraform/environments/dev/main.tf`
 
@@ -62,7 +62,7 @@ sed -i '' 's/overload-party-stg/overload-party-dev/g' Makefile
 # または手動で --project=overload-party-stg を --project=overload-party-dev に変更
 ```
 
-### 3. Terraform で新環境をデプロイ
+### Terraform で新環境をデプロイ
 
 ```bash
 # Terraform の state をクリーンアップ（新環境なので）
@@ -77,7 +77,7 @@ make cloud-job-run
 make cloud-job-logs
 ```
 
-### 4. 旧環境（stg）のクリーンアップ
+### 旧環境（stg）のクリーンアップ
 
 ```bash
 # 旧プロジェクト（overload-party-stg）のリソースを削除

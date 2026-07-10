@@ -472,7 +472,7 @@ DB の Yield が高いほど、Compute のスループットが高いほど、�
 @trigger after_step
 @action tap_to_continue
 まだまだ教えてないことは山ほどある。
-Elastic の自動スケーリング、リアクティブ、チェーン……。
+Elastic の自動スケーリング、リアクティブ、施策……。
 でもそれは、自分で確かめた方がいいよ。
 ---
 @trigger after_step
@@ -616,7 +616,7 @@ z-10  FieldLayout（既存）
 
 ### プレイヤーの進捗
 
-Gateway の `players` テーブルに `tutorial_progress` カラムを追加:
+account の `players` テーブルに `tutorial_progress` カラムを追加:
 
 ```sql
 ALTER TABLE players ADD COLUMN tutorial_progress INT NOT NULL DEFAULT 0;
@@ -649,7 +649,7 @@ ALTER TABLE players ADD COLUMN tutorial_progress INT NOT NULL DEFAULT 0;
 
 ## 実装の優先順位
 
-### Phase 1（MVP）— 第1章のみ
+### Phase 1（MVP）: 第1章のみ
 
 1. **Battle:** `tutorial_seed` パラメータの受け入れ + 固定シャッフル
 2. **Gateway:** `npc_battle_start` に `tutorial_chapter` フィールド追加
@@ -657,14 +657,14 @@ ALTER TABLE players ADD COLUMN tutorial_progress INT NOT NULL DEFAULT 0;
 4. **Client:** 第1章の `ja/chapter1.tut` + `parser.ts`
 5. **Client:** BattleFieldPage に `inputFilter` プロップ追加
 
-### Phase 2 — 第2章・第3章
+### Phase 2: 第2章・第3章
 
 6. 第2章・第3章の `.tut` スクリプト
 7. チュートリアル専用デッキの作成（カード選定 + seed 計算）
 8. スキップ機能
 9. 再プレイ機能
 
-### Phase 3 — ポリッシュ
+### Phase 3: ポリッシュ
 
 10. 進捗インジケーター
 11. チュートリアル完了報酬（ノーマルパック 1つ等）

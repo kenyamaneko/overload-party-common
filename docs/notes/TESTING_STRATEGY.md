@@ -29,8 +29,8 @@
 
 DevPage (`/dev`) から以下のモック状態を注入できる:
 
-- `mainPhaseMyTurn()` — メインフェーズ（自分のターン）
-- `battlePhaseMyTurn()` — バトルフェーズ（自分のターン）
+- `mainPhaseMyTurn()`：メインフェーズ（自分のターン）
+- `battlePhaseMyTurn()`：バトルフェーズ（自分のターン）
 
 モックデータの定義: `src/test/mocks/mockGameState.ts`
 
@@ -51,8 +51,8 @@ DevPage (`/dev`) から以下のモック状態を注入できる:
 
 ### 前提条件
 
-- Go サーバー (`overload-party-server`) をローカルで起動
-- サーバーにローカルモード（認証スキップ等）の追加が必要
+- サーバー群をローカルで起動する（構成は ADR-049 のローカル開発インフラを参照）
+- サーバーにローカル開発モード（認証スキップ等）の追加が必要
 
 ### セットアップ
 

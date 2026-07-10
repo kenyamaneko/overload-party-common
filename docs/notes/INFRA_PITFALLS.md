@@ -4,7 +4,7 @@ GKE Autopilot + Cloud SQL + GitHub Actions CI の構築で遭遇した問題と�
 
 ---
 
-## 1. `.gitignore` のベアパターンがサブディレクトリにもマッチする
+## `.gitignore` のベアパターンがサブディレクトリにもマッチする
 
 **症状**: `cmd/api/` と `cmd/ws/` が git に追加されない。CI の `docker build` で `cmd/api` が見つからずに失敗。
 
@@ -21,7 +21,7 @@ GKE Autopilot + Cloud SQL + GitHub Actions CI の構築で遭遇した問題と�
 
 ---
 
-## 2. Cloud SQL Proxy が SA のプロジェクトで Cloud SQL Admin API を呼ぶ
+## Cloud SQL Proxy が SA のプロジェクトで Cloud SQL Admin API を呼ぶ
 
 **症状**: Cloud SQL Proxy が `The proxy has started successfully` と表示されるのに、接続すると `connection reset by peer` になる。
 
@@ -39,7 +39,7 @@ gcloud services enable sqladmin.googleapis.com --project=keyandnotes-platform
 
 ---
 
-## 3. psqldef が PL/pgSQL の `DO $$ ... END $$` を解析できない
+## psqldef が PL/pgSQL の `DO $$ ... END $$` を解析できない
 
 **症状**: `psqldef --dry-run` が `syntax error near 'DO'` で失敗。
 
@@ -49,7 +49,7 @@ gcloud services enable sqladmin.googleapis.com --project=keyandnotes-platform
 
 ---
 
-## 4. GKE Autopilot で AR からのイメージ pull に 403
+## GKE Autopilot で AR からのイメージ pull に 403
 
 **症状**: Pod が `ImagePullBackOff` になり、`failed to authorize: failed to fetch oauth token: 403 Forbidden` と表示される。
 
@@ -68,7 +68,7 @@ gcloud projects add-iam-policy-binding keyandnotes-platform \
 
 ---
 
-## 5. Cloud SQL `db-g1-small` には `edition = "ENTERPRISE"` が必要
+## Cloud SQL `db-g1-small` には `edition = "ENTERPRISE"` が必要
 
 **症状**: `terraform apply` が Cloud SQL インスタンス作成でエラー。
 
@@ -83,7 +83,7 @@ settings {
 
 ---
 
-## 6. DB パスワードを Terraform state に残さない
+## DB パスワードを Terraform state に残さない
 
 **問題**: `random_password` + `google_sql_user` を Terraform で管理すると、パスワードが state ファイルに平文で残る。
 
@@ -112,7 +112,7 @@ terraform state rm 'module.cloudsql.google_sql_user.main'
 
 ---
 
-## 7. `/healthz` は GFE 予約パス
+## `/healthz` は GFE 予約パス
 
 **症状**: ヘルスチェックエンドポイント `/healthz` に対して Google の 404 ページが返される。
 
@@ -122,7 +122,7 @@ terraform state rm 'module.cloudsql.google_sql_user.main'
 
 ---
 
-## 8. GKE Autopilot + Workload Identity での SA 権限設計
+## GKE Autopilot + Workload Identity での SA 権限設計
 
 **ポイント**: GKE Autopilot では以下の SA が異なる用途で使われる。混同しやすいので注意。
 
@@ -135,7 +135,7 @@ terraform state rm 'module.cloudsql.google_sql_user.main'
 
 ---
 
-## 9. golangci-lint の errcheck: `defer tx.Rollback()` がエラーになる
+## golangci-lint の errcheck: `defer tx.Rollback()` がエラーになる
 
 **症状**: `golangci-lint` の errcheck が `tx.Rollback(ctx)` のエラー戻り値を無視していると警告。
 
@@ -151,7 +151,7 @@ defer func() { _ = tx.Rollback(ctx) }()
 
 ---
 
-## GCP Tips
+## Google Cloud Tips
 
 - **Cloud SQL の起動/停止**: `gcloud sql instances patch <name> --activation-policy=ALWAYS|NEVER` で制御。起動に 1-2 分かかる
 - **GKE Autopilot の課金**: Pod が 0 なら $0。ノードは自動管理
@@ -160,7 +160,7 @@ defer func() { _ = tx.Rollback(ctx) }()
 
 ---
 
-## 10. Homebrew 版 .NET SDK で VS Code C# Dev Kit が起動しない (macOS)
+## Homebrew 版 .NET SDK で VS Code C# Dev Kit が起動しない (macOS)
 
 **症状**: VS Code で C# Dev Kit の Solution Explorer が表示されず、F12 (Go to Definition) がクロスプロジェクトで効かない。Output ログに以下のエラー:
 
@@ -194,7 +194,7 @@ dotnet --version  # /usr/local/share/dotnet/dotnet から実行されること�
 
 ---
 
-## 11. WIF の attribute_condition 更新後も認証が通らない
+## WIF の attribute_condition 更新後も認証が通らない
 
 **症状**: WIF の `attribute_condition` にリポを追加し、SA の WIF binding も追加したのに、GitHub Actions で `iam.serviceAccounts.getAccessToken denied` が出る。
 
@@ -204,7 +204,7 @@ dotnet --version  # /usr/local/share/dotnet/dotnet から実行されること�
 
 ---
 
-## 12. Terraform CI の鶏と卵問題 — SA の権限を Terraform 自身が付与する
+## Terraform CI の鶏と卵問題: SA の権限を Terraform 自身が付与する
 
 **症状**: infra リポの CI が `terraform-deployer` SA で apply しようとするが、各環境プロジェクト（dev/stg/prod）で権限がなく失敗する。
 
@@ -220,7 +220,7 @@ dotnet --version  # /usr/local/share/dotnet/dotnet から実行されること�
 
 ---
 
-## 13. Terraform state bucket が別プロジェクトにある場合の権限
+## Terraform state bucket が別プロジェクトにある場合の権限
 
 **症状**: infra CI が `terraform init` で `storage.objects.list access denied` になる。
 
@@ -237,7 +237,7 @@ gsutil iam ch serviceAccount:terraform-deployer@keyandnotes-platform.iam.gservic
 
 ---
 
-## 14. Cloud Resource Manager API が SA のプロジェクトで必要
+## Cloud Resource Manager API が SA のプロジェクトで必要
 
 **症状**: Terraform CI が `google_project_iam_member` の読み取りで `Cloud Resource Manager API has not been used in project 948329072347` エラー。
 
@@ -249,15 +249,15 @@ gsutil iam ch serviceAccount:terraform-deployer@keyandnotes-platform.iam.gservic
 gcloud services enable cloudresourcemanager.googleapis.com --project=keyandnotes-platform
 ```
 
-これは Cloud SQL Proxy のパターン（#2）と同じ。**GCP の API 呼び出しは、対象リソースのプロジェクトではなく SA のプロジェクトで API が有効である必要がある**。
+これは Cloud SQL Proxy のパターン（「Cloud SQL Proxy が SA のプロジェクトで Cloud SQL Admin API を呼ぶ」）と同じ。**Google Cloud の API 呼び出しは、対象リソースのプロジェクトではなく SA のプロジェクトで API が有効である必要がある**。
 
 ---
 
-## 15. `terraform destroy` で Service Networking Connection が削除できない
+## `terraform destroy` で Service Networking Connection が削除できない
 
 **症状**: `terraform destroy` が `Failed to delete connection; Producer services are still using this connection` で失敗。
 
-**原因**: Cloud SQL インスタンスを削除した直後でも、GCP 側の VPC peering 解放に時間がかかる。`google_service_networking_connection` の削除が Cloud SQL 削除の直後だとまだ「使用中」と判定される。
+**原因**: Cloud SQL インスタンスを削除した直後でも、Google Cloud 側の VPC peering 解放に時間がかかる。`google_service_networking_connection` の削除が Cloud SQL 削除の直後だとまだ「使用中」と判定される。
 
 **対処**: state から除外して残りを先に削除する。peering 自体は GCP 側で自然に解放される。
 
@@ -270,7 +270,7 @@ terraform destroy -auto-approve
 
 ---
 
-## 16. Cloud Run Job が別プロジェクトの AR イメージを pull できない
+## Cloud Run Job が別プロジェクトの AR イメージを pull できない
 
 **症状**: Cloud Run Job の作成が `Permission 'artifactregistry.repositories.downloadArtifacts' denied` で失敗。
 
@@ -286,11 +286,11 @@ gcloud artifacts repositories add-iam-policy-binding overload-party \
   --role="roles/artifactregistry.reader"
 ```
 
-**教訓**: Cloud Run Job / Service の image pull には、ユーザーの SA ではなく Google 管理の Service Agent が使われる。GKE の Compute Engine default SA (#4) と同じパターン。
+**教訓**: Cloud Run Job / Service の image pull には、ユーザーの SA ではなく Google 管理の Service Agent が使われる。GKE の Compute Engine default SA（「GKE Autopilot で AR からのイメージ pull に 403」）と同じパターン。
 
 ---
 
-## 17. GitHub Actions の secret 値にコロンが含まれていて gcloud が誤解釈
+## GitHub Actions の secret 値にコロンが含まれていて gcloud が誤解釈
 
 **症状**: ops CI の `gcloud sql instances patch` が `Instance names cannot contain the ':' character` で失敗。
 
@@ -306,7 +306,7 @@ gh secret set CLOUDSQL_INSTANCE_NAME --body "overload-party-db"
 
 ---
 
-## 18. アセット CDN は Cloudflare Free + GCS CNAME バケット
+## アセット CDN は Cloudflare Free + GCS CNAME バケット
 
 **経緯**: Firebase Hosting は無料枠（360 MB/日）が少なく、Cloud CDN は LB 必須で固定費が高い。
 

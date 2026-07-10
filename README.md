@@ -6,7 +6,7 @@ Overload Party の **横断的な共有リソース** を管理するリポジ�
 
 - **ゲームデザイン定数** (faction / card_type / restriction / zone 等。全リポ共通)
 - **アーキテクチャ / ゲームデザイン / ビジネスドキュメント**
-- **Claude Code 開発ルール** (coding / branch / 言語別ルール。全リポ共通)
+- **Claude Code 開発ルールの overload-party 固有 overlay とリポ・レジストリ** (共通 base ルールは keyandnotes-rules リポが SSoT)
 
 ## 構成
 
@@ -23,9 +23,9 @@ packages/
   asyncapi-codegen-tools/         # AsyncAPI 用 codegen ツール (Python)
   doc-tools/                      # ドキュメント生成ツール (Python)
 rules/
-  principles.md                   # 全リポ共通の base ルール (CLAUDE.md から @import)
-  lang/                            # 言語別ルール
-  flow/                            # ブランチ運用別ルール
+  principles.md                   # overload-party 固有 overlay (共通 base は keyandnotes-rules)
+  testing.md                       # テスト方針の overload-party 固有 overlay
+  lang/                            # 言語別ルールの overload-party 固有 overlay
   repos.yaml                       # リポ・レジストリ (path / lang / flow)
 scripts/
   generate_constants.py            # game-design constants 生成 (Go + C# + npm)
@@ -41,7 +41,7 @@ docs/
   game_design/                     # ゲームデザイン (ルール, カード, UI 等)
   business/                        # ビジネス・法務
   notes/                           # 補助メモ
-  adr/                             # ADR (gitignore、手元専用)
+  adr/                             # ADR (アーキテクチャ決定記録)
 ```
 
 ## パッケージ

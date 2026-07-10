@@ -4,7 +4,7 @@
 
 ---
 
-## 1. 契約構造
+## 契約構造
 
 ```
 基本契約（電子契約サービスで1回だけ締結）
@@ -21,7 +21,7 @@
 
 ---
 
-## 2. 連絡手段の使い分け
+## 連絡手段の使い分け
 
 | 用途 | 手段 | 理由 |
 |------|------|------|
@@ -35,7 +35,7 @@
 
 ---
 
-## 3. 電子契約サービスの選定
+## 電子契約サービスの選定
 
 基本契約の締結に使用する。個別発注書には不要。
 
@@ -49,7 +49,7 @@
 
 ---
 
-## 4. 発注フロー（イラストレーター1人あたり）
+## 発注フロー（イラストレーター1人あたり）
 
 ### Phase 0: イラストレーター選定
 
@@ -93,9 +93,9 @@
 
 ---
 
-## 5. 発注計画
+## 発注計画
 
-[PROJECT_PROPOSAL.md](../PROJECT_PROPOSAL.md) のスケジュールに基づく。
+[PROJECT_PROPOSAL.md](../business/PROJECT_PROPOSAL.md) のスケジュールに基づく。
 
 | フェーズ | 時期 | 内容 | 枚数 |
 |---------|------|------|------|
@@ -109,7 +109,7 @@
 
 ---
 
-## 6. 記録の管理
+## 記録の管理
 
 | 対象 | 保管場所 | 保管期間 |
 |------|---------|---------|
@@ -121,8 +121,8 @@
 
 ---
 
-## 7. 関連ドキュメント
+## 関連ドキュメント
 
-- [ILLUSTRATION_CONTRACT_GUIDE.md](ILLUSTRATION_CONTRACT_GUIDE.md) — 著作権条項の解説・チェックリスト
-- [ILLUSTRATION_CONTRACT_TEMPLATE.md](ILLUSTRATION_CONTRACT_TEMPLATE.md) — 基本契約書 + 個別発注書の雛形
-- [PROJECT_PROPOSAL.md](../PROJECT_PROPOSAL.md) — イラストレーター向け企画書
+- [ILLUSTRATION_CONTRACT_GUIDE.md](ILLUSTRATION_CONTRACT_GUIDE.md)：著作権条項の解説・チェックリスト
+- [ILLUSTRATION_CONTRACT_TEMPLATE.md](ILLUSTRATION_CONTRACT_TEMPLATE.md)：基本契約書 + 個別発注書の雛形
+- [PROJECT_PROPOSAL.md](../business/PROJECT_PROPOSAL.md)：イラストレーター向け企画書
