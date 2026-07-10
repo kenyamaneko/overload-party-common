@@ -1,25 +1,27 @@
 # ADR-008: ゲームログ (リプレイ) API の設計
 
-**Status:** Accepted
-**Date:** 2026-03-08
+## ステータス
 
----
+Accepted (2026-03-08)
 
-## 背景
+## 結論
+
+対戦終了後のリプレイ閲覧のため、ゲームログ生成ロジックを **バトルサーバー (C#) の Service レイヤー** (`GameLogService`) に集約し、Gateway は `GameLogHandler` + `BattleClient` によるプロキシのみで完結させる。カード名解決・NPC 判定・イベント定数を保持するバトルサーバーにロジックが閉じ、Gateway に依存が漏れない。
+
+## 背景・課題
 
 対戦終了後のリプレイ閲覧機能が必要になった。ゲームイベントは `game_events` テーブルに時系列で保存されており、これを人間可読な形式に変換して返す API を設計する必要がある。
 
-## 決定
+## 詳細
 
 ### ロジックの配置場所: バトルサーバー
 
-ゲームログの生成ロジックは **バトルサーバー (C#) の Service レイヤー** に配置する。Gateway はプロキシのみ。
-
-**理由:**
 - `ICardCache` (カード名解決) はバトルサーバーが保持している
 - `NpcConstants.IsNpcPlayer()` による NPC 判定もバトルサーバーの Npc レイヤーに存在する
 - イベントタイプの定数 (`WireActionTypes`) もバトルサーバーの Models に定義されている
 - Gateway 側にこれらの依存を持ち込むと責務分離 (ADR-002) に反する
+
+イベント → 説明文変換は `EventData` の `Dictionary<string, object>` から値を抽出し、`ICardCache` でカード名を解決する。
 
 ### エンドポイント
 
@@ -72,9 +74,3 @@ Final Budget: P1=1200  P2=0
 | その他エラー | 500 | `{"error": "..."}` |
 
 Gateway 側は 404 の場合 `getRaw` が `nil` を返す既存の仕組みでハンドリングする。
-
-## 結果
-
-- バトルサーバーの `GameLogService` (Service レイヤー) に全ロジックを集約
-- Gateway 側は `GameLogHandler` + `BattleClient` によるプロキシのみで完結
-- イベント → 説明文変換は `EventData` の `Dictionary<string, object>` から値を抽出し、`ICardCache` でカード名を解決

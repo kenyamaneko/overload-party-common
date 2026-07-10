@@ -1,15 +1,18 @@
 # ADR-019: newsfeed の責務を「取得と publish」に限定
 
-**Status:** Superseded by [ADR-020](020-newsfeed-redis-dedup-reconverge.md) (2026-04-21)
-**Date:** 2026-04-21
+## ステータス
 
-> 本 ADR は採用直後に [ADR-020](020-newsfeed-redis-dedup-reconverge.md) で置き換えられた。ADR-019 は「newsfeed に state を持たせない」ために要約責務を news に寄せたが、その結果 news が「配信」を超えて「ニュース加工プラットフォーム」化する問題が顕在化した。Upstash Redis を dedup state の置き場に採用すれば ADR-019 の前提が崩れるため、ADR-020 で要約・タグ付けを newsfeed に戻している。履歴として本 ADR は残すが、**現行方針は ADR-020 が SSoT**。
+Superseded by [ADR-020](020-newsfeed-redis-dedup-reconverge.md) (2026-04-21)。作成日: 2026-04-21
 
-> このADRは [ADR-011](011-repository-split.md) の「newsfeed: クラウドニュース収集・配信」の配信部分を、[ADR-014](014-db-schema-split-per-service.md) の `newsfeed` スキーマ所有権と合わせて上書きする。
+本 ADR は採用直後に [ADR-020](020-newsfeed-redis-dedup-reconverge.md) で置き換えられた。ADR-019 は「newsfeed に state を持たせない」ために要約責務を news に寄せたが、その結果 news が「配信」を超えて「ニュース加工プラットフォーム」化する問題が顕在化した。Upstash Redis を dedup state の置き場に採用すれば ADR-019 の前提が崩れるため、ADR-020 で要約・タグ付けを newsfeed に戻している。履歴として本 ADR は残すが、**現行方針は ADR-020 が SSoT**。
 
----
+この ADR は [ADR-011](011-repository-split.md) の「newsfeed: クラウドニュース収集・配信」の配信部分を、[ADR-014](014-db-schema-split-per-service.md) の `newsfeed` スキーマ所有権と合わせて上書きする。
 
-## 背景
+## 結論
+
+責務過多になった newsfeed から配信・校閲責務を独立サービス `news` (Go) として切り出し、newsfeed の責務を **RSS 取得 + `news-article-collected` トピックへの publish** に限定する。newsfeed は RSS と Pub/Sub の 2 境界だけを持つ thin なジョブになり、Vertex AI quota / Cloud SQL 可用性の影響を受けなくなる。`news` スキーマへの書き込みは news サービスのみとなって校閲済みテキストを newsfeed の再実行が壊す経路が消え、newsfeed からは `psycopg2-binary` / `google-cloud-storage` / `google-cloud-aiplatform` 依存と Cloud SQL / GCS IAM が消える。news は Go + Clean Architecture + 管理 UI 付きのサービスとして構築されるため、多言語 / 状態遷移 / 運用者向け UI を扱える。
+
+## 背景・課題
 
 [ADR-011](011-repository-split.md) では newsfeed を「クラウドニュース収集・配信」の一体サービスとして位置づけた。[ADR-014](014-db-schema-split-per-service.md) では `newsfeed` スキーマ（`news_articles` 1 テーブル）を newsfeed が所有すると定めた。
 
@@ -28,13 +31,7 @@
 - **責務過多**: newsfeed が外部 RSS 境界・GCS 境界・Vertex AI 境界・DB 境界の 4 つを単一バッチで扱っており、障害面が広い。特に Vertex AI 失敗時に「fetch は成功したが DB に書けない」という責務違反的な詰まり方をする
 - **所有権の曖昧化**: 校閲済みの記事行を newsfeed の再実行が上書きしうる構造。現状は `source_url` UNIQUE + `ON CONFLICT DO NOTHING` で守られているが、「1 スキーマ 1 所有者」原則（ADR-014）が newsfeed には未適用
 
-配信・校閲責務を独立サービス `news` (Go) として切り出し、newsfeed を thin publisher に縮退させる。
-
----
-
-## 決定
-
-newsfeed の責務を **RSS 取得 + `news-article-collected` トピックへの publish** に限定する。
+## 詳細
 
 ### 責務の再分配
 
@@ -88,56 +85,7 @@ newsfeed → news の単一 Pub/Sub トピック経由。ペイロード:
 
 [ADR-012](012-matchmaking-pubsub.md) の「Pub/Sub イベントは送信側が型を所有」原則に照らすと、`ArticleCollectedEvent` の型パッケージは本来 newsfeed 側にあるべき。ただし newsfeed は Python であり Go パッケージを consume しない構成のため、契約型の物理配置による実害は薄い。**本 ADR では物理配置の移動は行わず、`packages/api-news` に置いたまま**とする。将来 Go クライアントから publish する別サービスが出てきた場合に、newsfeed リポへの移管または common への切り出しを再検討する。
 
----
-
-## 検討した代替案
-
-### 案1: newsfeed に要約を残し、`translations` 付きで publish
-
-newsfeed が Vertex AI で ja 要約を作り、`translations: [{lang: "ja", title, summary, body}]` を含むイベントを publish する。ADR-011 の当初責務分担に最も近い。
-
-却下理由:
-
-- newsfeed が Vertex AI quota / deadline で失敗すると publish できない。「fetch + publish」という外部境界片側の薄い仕事が Vertex AI 可用性に引きずられる
-- news 側は en 翻訳を管理 UI で手動追加する動線を持つ。ja を newsfeed 生成・en を news 生成とすると非対称で、校閲 UI の内部実装が不揃いになる
-- 要約は「記事コンテンツの最終形を作る」仕事であり、コンテンツの SSoT である news が所有する方が責務境界と整合する
-
-### 案2: newsfeed → summarizer (新規サービス) → news の 3 段構成
-
-`article-collected` (raw) → summarizer サービス → `article-summarized` (enriched) → news。
-
-却下理由:
-
-- サービスが 1 つ増える。MVP は翻訳 1 言語のみで、疎結合の益が薄い
-- 将来 en の自動生成や別モデル併走が必要になった場合、news の ingest から summarizer を切り出すリファクタは本 ADR のイベント境界を一時的に 2 本に割るだけで済む。今時点で先取りするコストが見合わない
-
-### 案3: newsfeed に GCS アーカイブを残す
-
-将来の監査・再生成に備えて raw JSON を GCS に保管し続ける。
-
-却下理由:
-
-- 現状 `raw_gcs_path` を下流で参照しているコードはない。実需のない副作用を newsfeed に残すと「fetch + publish」という責務が再び広がる
-- archival が必要になった時点で、所有サービス (news) が自スキーマに合わせて archive する設計の方が自然。newsfeed に archival を残すと news 側の障害復旧時にも newsfeed の GCS を読み書きする形になり、責務境界を再度横断する
-
-### 案4: 現状維持（newsfeed が DB 直接書き込み）
-
-却下理由:
-
-- 校閲 UI / 状態遷移 / 多言語対応の要件が newsfeed に流れ込み、バッチジョブが肥大化する
-- 「1 スキーマ 1 所有者」原則（ADR-014）が newsfeed にも適用できる余地を放棄することになる
-
----
-
-## 結果
-
-### 期待される効果
-
-- **責務境界の明確化**: newsfeed は RSS と Pub/Sub の 2 境界だけを持つ thin なジョブになる。Vertex AI quota / Cloud SQL 可用性は newsfeed に影響しない
-- **news の SSoT 化**: `news` スキーマへの書き込みは news サービスのみ。校閲済みテキストを newsfeed の再実行が壊す経路が消える
-- **冪等制御の一元化**: newsfeed の再実行時重複排除は news の `ON CONFLICT DO NOTHING` で吸収する。newsfeed 側に dedup 状態を永続化する先が不要になる
-- **newsfeed の依存削減**: `psycopg2-binary`, `google-cloud-storage`, `google-cloud-aiplatform` 依存と、Cloud SQL / GCS IAM が newsfeed から消える
-- **配信・校閲機能の拡張余地**: news が Go + Clean Architecture + 管理 UI 付きのサービスとして構築されるため、多言語 / 状態遷移 / 運用者向け UI を正面から扱える
+なお `packages/newsfeed-constants`（[ADR-015](015-package-split.md)）は newsfeed 所有のまま据え置き。newsfeed は DB を持たなくなるため Testcontainers（[ADR-016](016-repository-testing-testcontainers.md)）の適用対象からも外れる（理由が「スキーマ未固定」から「DB 責務の消失」へ変わる）。
 
 ### トレードオフ
 
@@ -147,26 +95,39 @@ newsfeed が Vertex AI で ja 要約を作り、`translations: [{lang: "ja", tit
 - **再実行時の Vertex AI コスト**: newsfeed にローカル dedup がない分、news 側が `DO NOTHING` で弾く前に Vertex AI 呼び出しが走る。`source_url` ベースの事前チェックを news の ingest に入れることで緩和可能だが、MVP 規模（2 時間周期・1 回数十件）では無視できる
 - **Pub/Sub 型パッケージの物理配置**: ADR-012 の「送信側所有」原則に対して、`packages/api-news` が受信側 (news) に置かれ続ける。newsfeed が Python で Go パッケージを consume しないため実害は薄いが、将来 Go publisher が増えたタイミングで再検討する
 
-### 移行ステップ
+## 不採用案
 
-本 ADR 採用後、以下の順序で実装する。
+### newsfeed に要約を残し、`translations` 付きで publish
 
-1. **newsfeed のドキュメント更新**: README / ARCHITECTURE の書き換え、DATA_DESIGN / SPEC の廃止。本 ADR と整合する責務境界を明記
-2. **newsfeed の実装書き換え**:
-   - `repository.py` / `storage.py` / `summarizer.py` / `db/schema.sql` の削除
-   - `publisher.py` の新設と `runner.py` の publish 化
-   - `fetcher.py` に `body` / `tags` 抽出を追加
-   - 依存・環境変数・CI / IAM の整理
-3. **news の実装書き換え**: `packages/api-news` の `ArticleCollectedEvent` から `translations` と `tags` を外し `title` + `body` へ。ingest に Vertex AI 要約 + タグ付けを追加
+newsfeed が Vertex AI で ja 要約を作り、`translations: [{lang: "ja", title, summary, body}]` を含むイベントを publish する。ADR-011 の当初責務分担に最も近い。
 
-ステップ 1-2 は本リポ（newsfeed）内で完結し、ステップ 3 は news リポで別 PR として進める。ステップ 3 完了までは newsfeed 側の新実装を merge しても publish 先が古い契約を期待し続けるため、**両リポの切り替えはリリースタイミングを合わせて実施する**。
+却下理由:
 
----
+- newsfeed が Vertex AI quota / deadline で失敗すると publish できない。「fetch + publish」という外部境界片側の薄い仕事が Vertex AI 可用性に引きずられる
+- news 側は en 翻訳を管理 UI で手動追加する動線を持つ。ja を newsfeed 生成・en を news 生成とすると非対称で、校閲 UI の内部実装が不揃いになる
+- 要約は「記事コンテンツの最終形を作る」仕事であり、コンテンツの SSoT である news が所有する方が責務境界と整合する
 
-## 関連 ADR
+### newsfeed → summarizer (新規サービス) → news の 3 段構成
 
-- **[ADR-011](011-repository-split.md)**: リポジトリ分割。本 ADR は newsfeed の責務から「配信」を剥がし、news サービスを新設する形でリポジトリ境界を再定義する
-- **[ADR-012](012-matchmaking-pubsub.md)**: マッチメイキング Pub/Sub 設計。「Pub/Sub イベントは送信側が型を所有」の原則を参照。本 ADR では物理配置の例外を明示する
-- **[ADR-014](014-db-schema-split-per-service.md)**: DB スキーマのサービス単位分割。本 ADR により `newsfeed` スキーマを廃止し、`news` スキーマを news 所有として新設する。ADR-014 本体・補遺の配置案は本 ADR で部分的に上書きされる
-- **[ADR-015](015-package-split.md)**: パッケージ分割と SSoT 分散。`packages/newsfeed-constants` は newsfeed 所有のまま据え置き
-- **[ADR-016](016-repository-testing-testcontainers.md)**: リポジトリテスト方針。newsfeed は DB を持たなくなるため Testcontainers 適用対象外（理由が「スキーマ未固定」から「DB 責務の消失」へ変わる）
+`article-collected` (raw) → summarizer サービス → `article-summarized` (enriched) → news。
+
+却下理由:
+
+- サービスが 1 つ増える。MVP は翻訳 1 言語のみで、疎結合の益が薄い
+- 将来 en の自動生成や別モデル併走が必要になった場合、news の ingest から summarizer を切り出すリファクタは本 ADR のイベント境界を一時的に 2 本に割るだけで済む。今時点で先取りするコストが見合わない
+
+### newsfeed に GCS アーカイブを残す
+
+将来の監査・再生成に備えて raw JSON を GCS に保管し続ける。
+
+却下理由:
+
+- 現状 `raw_gcs_path` を下流で参照しているコードはない。実需のない副作用を newsfeed に残すと「fetch + publish」という責務が再び広がる
+- archival が必要になった時点で、所有サービス (news) が自スキーマに合わせて archive する設計の方が自然。newsfeed に archival を残すと news 側の障害復旧時にも newsfeed の GCS を読み書きする形になり、責務境界を再度横断する
+
+### 現状維持（newsfeed が DB 直接書き込み）
+
+却下理由:
+
+- 校閲 UI / 状態遷移 / 多言語対応の要件が newsfeed に流れ込み、バッチジョブが肥大化する
+- 「1 スキーマ 1 所有者」原則（ADR-014）が newsfeed にも適用できる余地を放棄することになる

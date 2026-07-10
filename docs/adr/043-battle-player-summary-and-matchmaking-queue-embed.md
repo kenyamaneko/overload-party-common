@@ -2,26 +2,11 @@
 
 ## ステータス
 
-Accepted (2026-05-15)
+Accepted (2026-05-15)。[ADR-042](042-gateway-display-meta-cache.md) (gateway 配下に揮発キャッシュ用 Upstash Redis を導入する) を supersede する
 
-Supersedes: [ADR-042](042-gateway-display-meta-cache.md) (gateway 配下に揮発キャッシュ用 Upstash Redis を導入する)
+## 結論
 
-## コンテキスト
-
-ADR-042 (Proposed, 2026-05-12) は対戦相手 / 観戦対象の display name / level を gateway 配下の 2 段キャッシュ (pod-local in-memory + Upstash Redis) で解決する設計を採用した。
-
-実装中 ([gateway PR #57](https://github.com/kenyamaneko/overload-party-gateway/pull/57)) に以下が見えてきて再評価が必要になった:
-
-- 実装規模が当該データ量に対して大きすぎる。port (DisplayMetaStore + DisplayMetaLookup) + adapter (MemoryStore / RedisStore / TwoTier) + DisplayResolver (cache→account fallback) + match_made handler の snapshot 書き込み + Pub/Sub 再配信 + 用途別 Put API、と 6 層に及ぶ
-- ADR-042 が定めた整合性モデル「match 成立時点の snapshot に固定」は本質的に「試合履歴に対戦当時の player summary を含める」設計と同じことを述べている。揮発キャッシュ層を介在させる必然性が薄い
-- 「試合履歴の永続化」は battle service が担うべき責務 (試合結果・winner・winner reason などは既に battle 所有)
-- ADR-037 §5 (JWT sub のみを唯一の信頼源とする) の整合性が ADR-042 で崩れ、cross-player lookup endpoint (`/internal/v1/players/{id}`) を維持することになっていた
-
-ADR-042 で却下した「案 α (battle 同梱)」と「案 β-A1 (matchmaking が account を呼ぶ)」を再評価する。本 ADR は両案のハイブリッド形 (battle が永続化 + matchmaking が gateway から受け取った summary を event に同梱) を採用する。
-
-## 決定
-
-### 設計の骨子
+ADR-042 の 2 段キャッシュ設計が実装規模過剰と判明したため、対戦相手 display meta の解決を次の構成に置き換える。
 
 1. **battle が対戦履歴を永続化する**。新規 `player_summary` テーブルに対戦者 2 名分の `(game_id, player_num, name, level)` を保持する。
 2. **battle の `CreatePvPGame` API 引数を拡張**し、対戦者 2 名分の name / level を受け取る。battle はこれを `player_summary` に書き込み、game state response に同梱して返す。
@@ -31,6 +16,23 @@ ADR-042 で却下した「案 α (battle 同梱)」と「案 β-A1 (matchmaking 
 6. **gateway の relay 経路は battle response を WS payload にそのまま pass-through する** (現行通り)。
 7. ADR-042 で導入した gateway 所有 Upstash Redis インスタンス・関連 cache adapter・DisplayResolver は全廃する。
 8. account の `/internal/v1/players/{playerID}` endpoint は廃止する (cross-player lookup の用途が消えるため)。
+
+gateway 側のコード量が大幅に減り (cache adapter / resolver / 用途別 Put API / Upstash Redis 接続をすべて廃止)、gateway 所有 Upstash Redis + Secret Manager secret + IAM 権限が不要になる。対戦当時の name / level が永続化されて試合終了後のリプレイ・履歴表示でも参照可能になり、spectator は battle response から直接 player summary を得られる。account への呼び出しは matchmaking_start (同期 WS) の 1 回のみで、match_made event 経路が account に依存しないため Pub/Sub retry シナリオが大幅に簡素化される。「JWT sub のみを唯一の信頼源とする」(ADR-037) との整合も復活する。
+
+## 背景・課題
+
+ADR-042 (Proposed, 2026-05-12) は対戦相手 / 観戦対象の display name / level を gateway 配下の 2 段キャッシュ (pod-local in-memory + Upstash Redis) で解決する設計を採用した。
+
+実装中 ([gateway PR #57](https://github.com/kenyamaneko/overload-party-gateway/pull/57)、[gateway issue #47](https://github.com/kenyamaneko/overload-party-gateway/issues/47) の解決を目的とする実装) に以下が見えてきて再評価が必要になった:
+
+- 実装規模が当該データ量に対して大きすぎる。port (DisplayMetaStore + DisplayMetaLookup) + adapter (MemoryStore / RedisStore / TwoTier) + DisplayResolver (cache→account fallback) + match_made handler の snapshot 書き込み + Pub/Sub 再配信 + 用途別 Put API、と 6 層に及ぶ
+- ADR-042 が定めた整合性モデル「match 成立時点の snapshot に固定」は本質的に「試合履歴に対戦当時の player summary を含める」設計と同じことを述べている。揮発キャッシュ層を介在させる必然性が薄い
+- 「試合履歴の永続化」は battle service が担うべき責務 (試合結果・winner・winner reason などは既に battle 所有)
+- ADR-037 の「JWT sub のみを唯一の信頼源とする」方針との整合性が ADR-042 で崩れ、cross-player lookup endpoint (`/internal/v1/players/{id}`) を維持することになっていた
+
+ADR-042 で却下した「battle 同梱」案と「matchmaking が account を呼ぶ」案を再評価する。本 ADR は両案のハイブリッド形 (battle が永続化 + matchmaking が gateway から受け取った summary を event に同梱) を採用する。
+
+## 詳細
 
 ### なぜこの設計か
 
@@ -42,12 +44,12 @@ ADR-042 で却下した「案 α (battle 同梱)」と「案 β-A1 (matchmaking 
 | account への呼び出し回数 | gateway の matchmaking_start (= 同期 WS request) で 1 回のみ。match_made event 経路は account に依存しない |
 | 失敗時の観察性 | account / onboarding 検査の失敗は同期 WS で player に即時 error 返却。match_made event の到着時点では account に依存しないため Pub/Sub retry シナリオが大幅に簡素化される |
 | matchmaking → account 依存 | 発生しない (matchmaking は gateway から渡された値を保存・event に同梱するだけ) |
-| ADR-037 §5 (JWT sub による self-only 強制) | 整合復活。cross-player lookup endpoint が廃止される |
+| JWT sub による self-only 強制 (ADR-037) | 整合復活。cross-player lookup endpoint が廃止される |
 | ADR-036 境界線 | battle 責務を「pure game engine」から「game engine + 不変な対戦履歴」に拡張する (本 ADR で明示) |
 
-### ADR-042 β-A1 (却下) と本案の違い
+### ADR-042 で却下された「matchmaking が account を呼ぶ」案と本案の違い
 
-ADR-042 で却下した β-A1 は「matchmaking が match 成立時に account を呼ぶ」案だった。却下理由は「matchmaking → account の新規依存を発生させ、matchmaking のキュー責務を超える」。
+ADR-042 で却下した案は「matchmaking が match 成立時に account を呼ぶ」だった。却下理由は「matchmaking → account の新規依存を発生させ、matchmaking のキュー責務を超える」。
 
 本案では呼び出し主体が gateway であり、matchmaking は account に依存しない:
 
@@ -56,20 +58,6 @@ ADR-042 で却下した β-A1 は「matchmaking が match 成立時に account �
 - matchmaking のコードベースに account client は導入されない
 
 「player_id + deck_id」というキュー責務の最小性は失われるが、これは display 情報の話に閉じる (gameplay の essential ではなく representation の essential)。
-
-### 検討した代替案
-
-#### 案: ADR-042 の現方針 (gateway 配下に 2 段キャッシュ) を継続
-
-却下理由: 実装規模が当該データ量に対して過剰。試合中の揮発 state とはいえ「snapshot = 対戦当時の不変値」は本質的に履歴であり、それを揮発で扱う設計上の不整合が残る。
-
-#### 案: battle が `CreatePvPGame` 時に account を直接呼ぶ (ADR-042 案 α-1)
-
-却下理由: battle が account に同期依存を持つことになり、battle のテスト・運用に account の状態が必要になる。本 ADR の「battle は外部から渡された値を信頼する」方針と整合せず、ADR-036 の境界拡張も過大になる。
-
-#### 案: gateway が match_made event 受信時に account を呼んで CreatePvPGame に渡す (α-3)
-
-却下理由: account 失敗が Pub/Sub event 経路に絡む。retry policy / 再試行のフローを設計する必要があり、本案 (event 経路から account を切り離す) より失敗時挙動が複雑になる。
 
 ### 実装方針
 
@@ -145,7 +133,7 @@ matchmaking は queue entry にこれらを保存し、match 成立時に `Match
 
 ### ADR-036 境界線の更新
 
-ADR-036 Decision 1 は「battle = pure game engine」「gateway = passthrough + auth + バトル補助」を定義していた。本 ADR で次の補足を追加する:
+ADR-036 の「gateway 責務範囲の再定義」は「battle = pure game engine」「gateway = passthrough + auth + バトル補助」を定義していた。本 ADR で次の補足を追加する:
 
 > battle の責務に「ゲームロジック + **不変な対戦履歴 (対戦当時の player summary を含む)**」を含める。battle は account への同期依存を持たず、対戦履歴データは外部から引数として渡される値を信頼する。
 
@@ -159,7 +147,7 @@ ADR-042 増補 ([#103](https://github.com/kenyamaneko/overload-party-common/pull
 - gateway の cross-player lookup 用途そのものが消えるため、原 ADR-037 task A の「endpoint 削除」close 条件に戻る
 - ADR-042 で追加した「endpoint 維持」の例外は撤回する
 
-## 失敗時挙動
+### 失敗時挙動
 
 | 失敗位置 | 挙動 |
 |----------|------|
@@ -170,31 +158,7 @@ ADR-042 増補 ([#103](https://github.com/kenyamaneko/overload-party-common/pull
 | gateway `HandleMatchMade` の `CreatePvPGame` 失敗 | handler から error を返す。Pub/Sub subscriber が ack しないため event は subscription の retry policy で再試行される |
 | battle `player_summary` 書き込み失敗 | battle 内部 transaction で game 作成も含めて rollback。`CreatePvPGame` は 5xx を返す |
 
-## 結果
-
-### Positive
-
-- gateway 側のコード量が大幅減 (cache adapter / resolver / 用途別 Put API / Upstash Redis 接続 すべて廃止)
-- gateway 所有 Upstash Redis インスタンス + Secret Manager secret + IAM 権限が不要
-- 対戦履歴に対戦当時の name / level が永続化され、試合終了後のリプレイ・履歴表示でも参照可能
-- spectator は battle response から直接 player summary を得られる (gateway での組み立て不要)
-- account への呼び出しは matchmaking_start (同期 WS) のみ。match_made event 経路は account に依存しないため Pub/Sub retry シナリオが大幅に簡素化される
-- ADR-037 §5 (JWT sub による self-only 強制) と整合復活。`/internal/v1/players/{id}` endpoint が完全廃止される
-
-### Negative
-
-- battle の責務が「pure game engine」から「game engine + 不変な対戦履歴」に拡張される (ADR-036 の境界線が動く)
-- battle スキーマに player display 列が追加される (account の master data の snapshot を battle が永続化する)
-- matchmaking のキュー責務に display 情報の保持が加わる (本来の player_id + deck_id 最小性が崩れる)
-- AsyncAPI 契約 (`MatchedPlayer`) に破壊的変更が入る
-
-### 緩和策
-
-- battle は外部から渡された name / level を信頼するのみで account への同期依存は持たない (テスト・運用への影響は最小)
-- matchmaking も同様に account に依存せず、与えられた値を保存するだけ。matchmaking のテストに account fake は不要
-- ADR-036 / ADR-037 / ADR-042 との関係は本 ADR で明示し、境界線の移動を追跡可能にする
-
-## 連動する変更
+### 連動する変更
 
 | リポ | 変更 |
 |---|---|
@@ -206,10 +170,23 @@ ADR-042 増補 ([#103](https://github.com/kenyamaneko/overload-party-common/pull
 | infra | gateway 所有 Upstash Redis 削除 ([infra PR #30](https://github.com/kenyamaneko/overload-party-infra/pull/30) revert、terraform destroy で apply) |
 | k8s | gateway deployment.yaml から `APP_ENV=production` 削除 ([k8s PR #32](https://github.com/kenyamaneko/overload-party-k8s/pull/32) revert) |
 
-## 関連
+### トレードオフ
 
-- [ADR-036](036-gateway-passthrough-and-service-public-api.md): battle 純粋性と gateway pass-through 方針の base。本 ADR で battle の責務に「対戦履歴」を加える境界線変更を行い、ADR-042 で動かした gateway 側の境界 (display meta 組み立て) は撤回する
-- [ADR-037](037-internal-auth-hmac-signed-jwt.md): §5 整合復活。task A の close 条件を「endpoint 削除」原案に戻す
-- [ADR-042](042-gateway-display-meta-cache.md): 本 ADR で supersede
-- gateway issue [#47](https://github.com/kenyamaneko/overload-party-gateway/issues/47): 本 ADR の方針で解決される
-- gateway PR [#57](https://github.com/kenyamaneko/overload-party-gateway/pull/57): ADR-042 方針で実装、本 ADR への方針転換に伴い close 済
+- battle の責務が「pure game engine」から「game engine + 不変な対戦履歴」に拡張される (ADR-036 の境界線が動く)。ただし battle は外部から渡された name / level を信頼するのみで account への同期依存は持たず、テスト・運用への影響は最小
+- battle スキーマに player display 列が追加される (account の master data の snapshot を battle が永続化する)
+- matchmaking のキュー責務に display 情報の保持が加わる (本来の player_id + deck_id 最小性が崩れる)。matchmaking も account に依存せず与えられた値を保存するだけで、テストに account fake は不要
+- AsyncAPI 契約 (`MatchedPlayer`) に破壊的変更が入る
+
+## 不採用案
+
+### ADR-042 の現方針 (gateway 配下に 2 段キャッシュ) を継続
+
+却下理由: 実装規模が当該データ量に対して過剰。試合中の揮発 state とはいえ「snapshot = 対戦当時の不変値」は本質的に履歴であり、それを揮発で扱う設計上の不整合が残る。
+
+### battle が `CreatePvPGame` 時に account を直接呼ぶ
+
+却下理由: battle が account に同期依存を持つことになり、battle のテスト・運用に account の状態が必要になる。本 ADR の「battle は外部から渡された値を信頼する」方針と整合せず、ADR-036 の境界拡張も過大になる。
+
+### gateway が match_made event 受信時に account を呼んで CreatePvPGame に渡す
+
+却下理由: account 失敗が Pub/Sub event 経路に絡む。retry policy / 再試行のフローを設計する必要があり、本案 (event 経路から account を切り離す) より失敗時挙動が複雑になる。

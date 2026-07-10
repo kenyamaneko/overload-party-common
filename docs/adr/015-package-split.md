@@ -1,21 +1,22 @@
 # ADR-015: 共通パッケージ分割と SSoT 分散
 
-**Status:** Accepted (Phase 6/7 完了)
-**Date:** 2026-04-11
+## ステータス
 
----
+Accepted (2026-04-11、Phase 6/7 完了)
 
-## 背景
+## 結論
+
+パッケージ所有をサービス境界と一致させるため、パッケージを **責務単位（RPC / 共通データ / ゲームデザイン）** に分類し直し、**所有サービスのリポジトリに物理配置する**。あわせて SSoT (YAML) も所有サービスのリポジトリに分散させ、各サービスが自分の契約と定数を完全に所有する構造を採る。契約変更の影響範囲が所有サービスに閉じ、gateway はバトルエンジンの内部 enum を知る必要がなくなり、common は「ゲームデザインの SSoT + 横断設計書」のみに縮小してランタイム依存がなくなる。カードマスターデータの配布経路は card サービスに一本化され、embed による SSoT 分散が解消される。
+
+## 背景・課題
 
 [ADR-011](011-repository-split.md) でリポジトリ単位のサービス分割を決定したが、common リポジトリの `packages/` 配下は依然としてモノリス時代の構造のままである。全サービスが参照する契約・型・マスターデータが 1 箇所に集約されており、「どのパッケージを誰が所有するか」がサービス境界と一致していない。本 ADR ではその解消方針を定める。
 
-### 現状の課題
-
 1. **責務の混在**: `packages/gamedata-dotnet` が以下 4 種類の責務を抱えている。
-   - `BattleGatewayRpc_gen.cs` — battle ↔ gateway の RPC envelope 契約
-   - `GameStateView_gen.cs` / `EventData_gen.cs` — battle が生成し client が表示する state / event payload
-   - `GameConstants_gen.cs` / `VariantTypes_gen.cs` — ゲームロジック enum とゲームデザイン定数が混在
-   - `cache/cards_gen.json` — カードマスターデータの embed
+   - `BattleGatewayRpc_gen.cs`: battle ↔ gateway の RPC envelope 契約
+   - `GameStateView_gen.cs` / `EventData_gen.cs`: battle が生成し client が表示する state / event payload
+   - `GameConstants_gen.cs` / `VariantTypes_gen.cs`: ゲームロジック enum とゲームデザイン定数が混在
+   - `cache/cards_gen.json`: カードマスターデータの embed
    これは `packages/gamedata-npm` でも同様である。
 
 2. **カードマスターの所有権のズレ**: [ADR-011](011-repository-split.md) の責務分担では card サービスがカードマスター (`card_definitions`) の所有者となる。しかし現状は `packages/devdata/cache/cards_gen.json` や `packages/gamedata-dotnet/cache/cards_gen.json` として複数の embed が並存しており、「所有は card サービス、配布は embed」という状態が責務境界と食い違っている。
@@ -30,13 +31,11 @@
    - `Faction` / `DeckSize` / `RestrictionCopyCount`（ゲームデザイン定数）
    にもかかわらず、現状では gateway が `TriggerType` や `EffectOp` や `BuffType` といったバトルエンジンの内部 enum まで同じパッケージから読み込む状態になっており、依存範囲が不必要に広い。
 
-## 決定
-
-パッケージを **責務単位（RPC / 共通データ / ゲームデザイン）** に分類し直し、**所有サービスのリポジトリに物理配置する**。あわせて SSoT (YAML) も所有サービスのリポジトリに分散させ、各サービスが自分の契約と定数を完全に所有する構造を採る。
+## 詳細
 
 ### パッケージの 3 分類
 
-#### (A) RPC パッケージ — 2 者間の通信契約
+#### (A) RPC パッケージ（2 者間の通信契約）
 
 各 RPC パッケージは **メッセージの送信側サービスが所有**する。受信側は consume のみ。gateway は複数サービスの RPC パッケージを consume する「ハブ」になる。
 
@@ -53,7 +52,7 @@
 | shop → account (Outbox `subscription-events`) | shop | Go | shop (publisher), account (subscriber) |
 | card → battle (Pub/Sub `card-definitions-updated`) | — | — | ペイロードは invalidation signal のみの極小シグナルであり、型パッケージ化しない。両側で手書き |
 
-#### (B) 共通データパッケージ — 特定サービスに属さないゲームデザインの SSoT
+#### (B) 共通データパッケージ（特定サービスに属さないゲームデザインの SSoT）
 
 | パッケージ | 内容 | 所有 | 参照元 |
 |---|---|---|---|
@@ -63,7 +62,7 @@
 
 共通データパッケージの SSoT は引き続き common に置き、Go / C# / TS の各言語版を common から publish する。これらは「ゲームデザイン = ゲームのルール」であり、どのランタイムサービスにも属さない領域である。
 
-#### (C) サービスロジック定数パッケージ — サービスが自分のロジックのために所有する enum
+#### (C) サービスロジック定数パッケージ（サービスが自分のロジックのために所有する enum）
 
 | 定数群 | 所有 | 内容 |
 |---|---|---|
@@ -97,27 +96,27 @@ SSoT の YAML は common に一元集約せず、所有サービスのリポジ�
 Phase 6/7 完了時点で common に残るのは以下のみ。カード定義 (`data/cards/`)・カード定義型 (`packages/card-data*`)・モデル定義・API 契約・WS 定数・ゲームロジック定数・ショップ定数・newsfeed 定数・各サービス独自スキーマは**すべて対応するサービスリポジトリに移管済み**。
 
 - **SSoT YAML**
-  - `data/factions.yaml` — ファクションマスター
-  - `data/game_design_constants.yaml` — ゲームデザイン定数 (Faction / DeckSize / Restriction / CardType / InstanceFamily / StatType / MatchType / Zone / Rank 等)
+  - `data/factions.yaml`: ファクションマスター
+  - `data/game_design_constants.yaml`: ゲームデザイン定数 (Faction / DeckSize / Restriction / CardType / InstanceFamily / StatType / MatchType / Zone / Rank 等)
 - **パッケージ** (全リポジトリが consume)
-  - `packages/game-design-constants/` — Go module
-  - `packages/game-design-constants-dotnet/` — NuGet `OverloadParty.GameDesignConstants`
-  - `packages/game-design-constants-npm/` — npm `@kenyamaneko/overload-party-game-design-constants`
+  - `packages/game-design-constants/`: Go module
+  - `packages/game-design-constants-dotnet/`: NuGet `OverloadParty.GameDesignConstants`
+  - `packages/game-design-constants-npm/`: npm `@kenyamaneko/overload-party-game-design-constants`
 - **code-gen / バリデーションスクリプト**
-  - `scripts/generate_constants.py` — game-design constants を Go / C# / npm に生成
-  - `scripts/generate_schema_doc.py` — `db/schema_postgres.sql` のインラインコメントから DATA_DESIGN.md のマーカー区間を自動更新
-  - `scripts/ci/detect-changes.sh` — publish 対象検知 (CI 専用)
+  - `scripts/generate_constants.py`: game-design constants を Go / C# / npm に生成
+  - `scripts/generate_schema_doc.py`: `db/schema_postgres.sql` のインラインコメントから DATA_DESIGN.md のマーカー区間を自動更新
+  - `scripts/ci/detect-changes.sh`: publish 対象検知 (CI 専用)
 - **DB (shared スキーマのみ)**
-  - `db/schema_postgres.sql` — `shared.game_config` と `shared.update_updated_at()` トリガ関数のみ
-  - `db/grant_iam.sql` — IAM 認証用権限付与 (ops リポが実行、psqldef 対象外)
+  - `db/schema_postgres.sql`: `shared.game_config` と `shared.update_updated_at()` トリガ関数のみ
+  - `db/grant_iam.sql`: IAM 認証用権限付与 (ops リポが実行、psqldef 対象外)
 - **横断ドキュメント**
-  - `docs/architecture/` — ARCHITECTURE / DATA_DESIGN / I18N / CI_CD 等の横断設計書
-  - `docs/game_design/` — ゲームデザイン資料 (RULEBOOK / CARD_DESIGN_GUIDE / FACTION_GUIDE / TUTORIAL_DESIGN / UI_DESIGN 等)
-  - `docs/business/` — ビジネス・法務資料
+  - `docs/architecture/`: ARCHITECTURE / DATA_DESIGN / I18N / CI_CD 等の横断設計書
+  - `docs/game_design/`: ゲームデザイン資料 (RULEBOOK / CARD_DESIGN_GUIDE / FACTION_GUIDE / TUTORIAL_DESIGN / UI_DESIGN 等)
+  - `docs/business/`: ビジネス・法務資料
 - **CI/CD**
-  - `.github/workflows/publish.yaml` — game-design-constants の Go / NuGet / npm 一括 publish
-  - `.github/workflows/validate.yaml` — Python unit tests + codegen-sync check
-  - `.github/workflows/dispatch-migration.yaml` — `db/schema_postgres.sql` 変更時に ops リポへ repository_dispatch
+  - `.github/workflows/publish.yaml`: game-design-constants の Go / NuGet / npm 一括 publish
+  - `.github/workflows/validate.yaml`: Python unit tests + codegen-sync check
+  - `.github/workflows/dispatch-migration.yaml`: `db/schema_postgres.sql` 変更時に ops リポへ repository_dispatch
 
 ### パッケージの物理配置
 
@@ -189,7 +188,7 @@ overload-party-common/  (縮小後)
 現状 `packages/devdata/cache/cards_gen.json`、`packages/gamedata-dotnet/cache/cards_gen.json` に embed として埋め込まれているカードマスターデータは、**リポジトリ分割後は card サービスが REST API 経由で配布する**方式に改める。
 
 - ランタイムは card サービスが `card_definitions` テーブルから読み出して `GET /internal/v1/cards` で返却する
-- battle は起動時に card サービスから取得して in-memory キャッシュ化する（ARCHITECTURE.md §5.3 参照）
+- battle は起動時に card サービスから取得して in-memory キャッシュ化する（[docs/architecture/APPLICATION.md](../architecture/APPLICATION.md) のカード定義キャッシュの節を参照）
 - client も gateway 経由で card サービスから取得する
 - `packages/*/cache/cards_gen.json` の embed は原則廃止。ただしローカル開発用の devdata だけは、card サービスを毎回起動しなくて済む利便性のために残す余地がある
 - カード定義の**型**（`Card`, `CardStats`, `PassiveEffect` 等）は common の `card-data-*` パッケージとして配布する。型とデータを分離する
@@ -197,8 +196,6 @@ overload-party-common/  (縮小後)
 ### code-gen パイプラインの分散
 
 SSoT が各リポに分散するため、code-gen スクリプトも分散させる必要がある。
-
-**方針**:
 
 - common の `scripts/` のうち、汎用部分（YAML パーサ、Go/C#/TS テンプレートエンジン）を Python パッケージ化して各サービスリポから利用できるようにする
 - 各サービスリポが自分の `data/*.yaml` に対して生成スクリプトを走らせ、自リポ内の `packages/` を更新する
@@ -214,11 +211,11 @@ SSoT が各リポに分散するため、code-gen スクリプトも分散させ
 **Phase 1: 定数の分類整理 (common 内で先行)**
 
 - `data/constants.yaml` を以下 3 ファイルに分割する
-  - `data/game_design_constants.yaml` — common に残すゲームデザイン定数
-  - `data/game_logic_constants.yaml` — 将来 battle リポへ移管予定のゲームロジック enum（当面 common 内）
-  - `data/gateway_ws_constants.yaml` — 将来 gateway リポへ移管予定の WS メッセージタイプ（当面 common 内）
-  - `data/shop_constants.yaml` — 将来 shop リポへ移管予定の Product タイプ（当面 common 内）
-  - `data/newsfeed_constants.yaml` — 将来 newsfeed リポへ移管予定（当面 common 内）
+  - `data/game_design_constants.yaml`: common に残すゲームデザイン定数
+  - `data/game_logic_constants.yaml`: 将来 battle リポへ移管予定のゲームロジック enum（当面 common 内）
+  - `data/gateway_ws_constants.yaml`: 将来 gateway リポへ移管予定の WS メッセージタイプ（当面 common 内）
+  - `data/shop_constants.yaml`: 将来 shop リポへ移管予定の Product タイプ（当面 common 内）
+  - `data/newsfeed_constants.yaml`: 将来 newsfeed リポへ移管予定（当面 common 内）
 - `scripts/generate_constants.py` を拡張し、それぞれ別のパッケージに生成する
 - 既存の `packages/gamedata` は後方互換のため残しつつ、内部で新パッケージを re-export する形にする
 
@@ -239,10 +236,10 @@ SSoT が各リポに分散するため、code-gen スクリプトも分散させ
 **Phase 4: battle-client 用 C# パッケージの責務整理**
 
 - `packages/gamedata-dotnet` を以下に分離する
-  - `packages/game-state-dotnet` — GameStateView / EventData / ゲームロジック enum / VariantTypes
-  - `packages/api-battle-rpc-dotnet` — BattleGatewayRpc 契約
-  - `packages/game-design-constants-dotnet` — Faction / DeckSize 等
-  - `packages/card-data-dotnet` — Card 型 (データは含まない)
+  - `packages/game-state-dotnet`: GameStateView / EventData / ゲームロジック enum / VariantTypes
+  - `packages/api-battle-rpc-dotnet`: BattleGatewayRpc 契約
+  - `packages/game-design-constants-dotnet`: Faction / DeckSize 等
+  - `packages/card-data-dotnet`: Card 型 (データは含まない)
 - battle-client の更新が追随できない間は過渡期として `gamedata-dotnet` を残し、新パッケージを並行して publish する
 
 **Phase 5: カードマスターデータの embed 廃止**
@@ -265,7 +262,7 @@ SSoT が各リポに分散するため、code-gen スクリプトも分散させ
 - `db/schema_postgres.sql` の各サービススキーマ分を各サービスリポに切り出し、マイグレーション責務を各サービスに移管する（ops リポのマイグレーションジョブは各リポを集約する形に再設計する）
 - common の `docs/architecture/` は横断的な設計書のみに縮小する
 
-### 段階間の依存関係
+段階間の依存関係:
 
 - Phase 1 は単独で実施可能
 - Phase 2 は Phase 1 完了後が望ましい（battle が参照する enum を battle 所有にした後で、通信経路を変える方が整合的）
@@ -275,16 +272,6 @@ SSoT が各リポに分散するため、code-gen スクリプトも分散させ
 - Phase 6 は Phase 3〜5 完了後
 - Phase 7 は Phase 6 完了後
 
-## 結果
-
-### 期待される効果
-
-- **所有権の明確化**: 各サービスが自分の契約と定数を完全に所有し、変更の影響範囲が所有サービスに閉じる
-- **依存の最小化**: gateway はバトルエンジンの内部 enum（`TriggerType` / `EffectOp` / `BuffType` 等）を知る必要がなくなる。battle の RPC contract 経由で必要な enum だけ consume する
-- **battle の責務集約**: ゲームロジックに関する型・enum・RPC 契約が全て battle に集約され、「ゲームロジックの変更は battle だけで完結する」という ADR-002 の精神がパッケージレベルでも実現される
-- **common の役割縮小**: common は「ゲームデザインの SSoT + 横断設計書」のみに責務を絞り、ランタイム依存がなくなる
-- **カードマスターの一元化**: カードマスターデータの配布経路が card サービスに一本化され、embed による SSoT 分散が解消される
-
 ### トレードオフ
 
 - **code-gen の分散**: 各サービスリポが自前で code-gen を走らせることになり、共通ジェネレータの配布・バージョニングが必要になる
@@ -292,10 +279,3 @@ SSoT が各リポに分散するため、code-gen スクリプトも分散させ
 - **過渡期の二重管理**: Phase 1〜6 の途中では旧パッケージと新パッケージが並行して存在し、型の二重管理リスクが一時的に発生する。Phase ごとに旧パッケージを退役させるスケジュールを明確にする
 - **client の import 増加**: client は現状 `api-npm` + `gamedata-npm` の 2 つだけ consume しているが、分割後は `api-client-npm`（gateway から）+ `game-state-npm`（battle から）+ `card-data-npm`（common から）+ `game-design-constants-npm`（common から）のように増える。package.json が賑やかになる
 - **境界引き直しコストの集中**: 一度決めたパッケージ境界を後から引き直すコストは高い。Phase 1〜2 の段階でゲーム定数の分類判断を誤ると、後続フェーズで戻りが発生する
-
-### 関連 ADR
-
-- [ADR-011](011-repository-split.md): リポジトリ分割。本 ADR の前提となるサービス境界を定義する
-- [ADR-002](002-battle-server-csharp-separation.md): battle サーバーの C# 分離。本 ADR の「ゲームロジックを battle に集約する」方針はその延長
-- [ADR-014](014-db-schema-split-per-service.md): DB スキーマのサービス単位分割。パッケージ分割と同じく「所有権の明確化」という思想を DB レイヤーに適用したもの
-- [ADR-012](012-matchmaking-pubsub.md): マッチメイキングのハイブリッド設計。本 ADR が定める「Pub/Sub イベントは送信側が型を所有」というルールに整合する

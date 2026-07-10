@@ -1,11 +1,14 @@
 # ADR-033: cross-repo CI/automation 認証を個人 PAT から GitHub App に統一
 
-- Status: Accepted
-- Date: 2026-05-05
-- Deciders: kenyamaneko
-- Related: [overload-party-common#34](https://github.com/kenyamaneko/overload-party-common/issues/34) (Common Read App), [overload-party-common#35](https://github.com/kenyamaneko/overload-party-common/issues/35) (CLAUDE_SYNC App), [overload-party-ops#18](https://github.com/kenyamaneko/overload-party-ops/issues/18) (Ops Automation App), [overload-party-k8s#16](https://github.com/kenyamaneko/overload-party-k8s/issues/16) (ArgoCD Image Updater App)
+## ステータス
 
-## Context
+Accepted (2026-05-05)
+
+## 結論
+
+個人帰属・長期生存・手動 rotation という PAT 運用の構造的問題を解消するため、**12 種の PAT を全廃し、用途別に 4 つの GitHub App に統合する**。各 App は最小権限の原則に従い、permission と installation 範囲を分ける。PAT 発行者個人が組織を抜けても automation が止まらず、監査ログが App 名義で追跡可能になる。token は 1 時間 expire となって漏洩時の窓が大幅に縮小し、Secret 管理対象は 12 PAT から 4 App に集約される。App scope は overload-party-* 全リポ Read なので insteadOf スコープのミスマッチで CI が落ちる問題も構造的に解消し、rate limit も per-installation 15,000 req/hr に改善する。6 サービスリポに散在していた auth セットアップ (~30+ 行) は composite action 1 箇所に集約される。
+
+## 背景・課題
 
 組織 (`@kenyamaneko`) 配下の全リポで CI / automation の cross-repo 認証に **個人 PAT** を使っている。全 PAT を棚卸ししたところ、有効な PAT が 12 種、用途と permissions がバラバラに広がっていた。
 
@@ -20,7 +23,7 @@
 | 5 | `COMMON_GO_MODULES_FETCH` | 6 サービスリポ (card / shop / account / scenario / gateway / matchmaking) の CI で `insteadOf` 経由 Go module fetch | Contents:Read |
 | 6 | `CLAUDE_SYNC` | `overload-party-common/.github/workflows/claude-presets-sync.yaml` (各リポへ `.claude/` 同期 PR/commit) | Contents:Write + Pull-requests:Write |
 | 7 | `PLATFORM_DISPATCH` | `overload-party-k8s/.github/workflows/env-lifecycle.yaml` (keyandnotes-platform への workflow_dispatch) | Actions:Write |
-| 8 | `ARGOCD_IMAGE_UPDATE` | k8s クラスタ内 ArgoCD Image Updater Pod (GCP Secret Manager `argocd-image-updater-github-pat` 経由、`overload-party-k8s` への git write-back) | Contents:Write |
+| 8 | `ARGOCD_IMAGE_UPDATE` | k8s クラスタ内 ArgoCD Image Updater Pod (Secret Manager `argocd-image-updater-github-pat` 経由、`overload-party-k8s` への git write-back) | Contents:Write |
 | 9 | `SERVICES_GO_MODULES_FETCH` | `overload-party-e2e/docker/docker-compose.yml` で BuildKit secret として開発者ローカル使用 | Contents:Read |
 | 10 | `BATTLE_GO_MODULES_FETCH` | 同上 (e2e ローカル)。`overload-party-account/.github/scripts/deploy/build-image.sh` には死コード残骸あり | Contents:Read |
 | 11 | `COMMON_CI_DISPATCH` | grep ヒットなし (Last used 5 週間前)。死蔵候補 | — |
@@ -37,9 +40,7 @@
 
 GitHub 公式ドキュメントは数年前から PAT を automation / CI 用途に推奨しなくなっており、`GitHub App + 短命 token` への移行を案内している。本 ADR で組織横断の方針を確定する。
 
-## Decision
-
-**12 種の PAT を全廃し、用途別に 4 つの GitHub App に統合する**。各 App は最小権限の原則に従い、permission と installation 範囲を分ける。
+## 詳細
 
 ### App 構成
 
@@ -50,7 +51,7 @@ GitHub 公式ドキュメントは数年前から PAT を automation / CI 用途
 | **Claude Sync App** (`overload-party-claude-sync`) | `Contents: Write` + `Pull-requests: Write` | overload-party-* リポ全部 (実 sync 対象は consumers.yaml で制御、将来 consumers が増えた際に再インストール不要にする) | #6 CLAUDE_SYNC | common/claude-presets-sync workflow |
 | **Image Updater App** (`overload-party-image-updater`) | `Contents: Write` | overload-party-k8s のみ | #8 ARGOCD_IMAGE_UPDATE | k8s クラスタ内 ArgoCD Image Updater Pod |
 
-#### App 分割の判断根拠
+App 分割の判断根拠:
 
 - **Read と Write を混ぜない**: Common Read App は overload-party-* 全リポ Read で済むので広く配っても影響が低い。Write は用途別に分割
 - **ArgoCD と CLAUDE_SYNC を同じ Write App に相乗りさせない**: ArgoCD は k8s リポ 1 つの Contents:Write で済むのに対し、CLAUDE_SYNC は複数リポへの Contents:Write + Pull-requests:Write が必要。混ぜるとどちらかが過剰権限になり、漏洩時の blast radius が拡大する
@@ -141,38 +142,12 @@ ArgoCD Image Updater は GitHub App authentication を公式サポートして�
 
 `overload-party-e2e/docker/docker-compose.yml` で開発者がローカルで使う `secrets/SERVICES_GO_MODULES_FETCH` / `secrets/BATTLE_GO_MODULES_FETCH` ファイルは、PAT を直書きする運用から **App private key で都度生成する短命 installation token を書き出す CLI スクリプト** に置き換える。e2e の README に手順を整備する。
 
-## Consequences
+### 移行時のリスク低減
 
-### Positive
+旧 PAT は **すぐ revoke せず一定期間並走** させ、App 移行後の workflow が安定して green であることを確認してから revoke する。移行は Read-only の Common Read App から着手し、Write 系 (Image Updater / Claude Sync) は最後に切り替える。
 
-- **個人帰属からの脱却**: PAT 発行者個人が組織を抜けても automation が止まらない。監査ログが App 名義になり組織活動として追跡可能
-- **token の長期存続を解消**: App token は 1 時間 expire。漏洩時の窓が PAT (数か月〜数年) から 1 時間に短縮
-- **token 数の削減**: 12 PAT → 4 App に集約。Secret 管理 (各リポ secret + GCP Secret Manager) のメンテナンス対象が劇的に減る
-- **書き込み App の影響範囲を最小化**: Image Updater App は overload-party-k8s のみインストール、Claude Sync App は sync 対象リポのみインストールで、漏洩時の被害を構造的に限定
-- **insteadOf スコープと scope ミスマッチ問題の構造的解消**: App scope は overload-party-* 全リポ Read なので新規依存追加で落ちなくなる
-- **死蔵 PAT の発見・除去**: #11 の死蔵 PAT が棚卸しで判明。本 ADR の作業中に revoke する
-- **API rate limit の改善**: App installation token は per-installation で 15,000 req/hr (PAT は per-user で 5,000 req/hr)。複数 workflow が並行する場合や workflow 数が増えた際に PAT で頻発しがちな rate limit に当たる懸念が下がる
-- **重複コードの集約**: 6 サービスリポに散在する auth セットアップ (~30+ 行) が composite action 1 箇所に集約され、新リポ追加時は action を呼ぶか否かの二択になる
-
-### Negative
+### トレードオフ
 
 - **GitHub Actions の外で動くサービスは実装変更が必要**: ArgoCD Image Updater の git write-back を App auth に切り替えるため、Secret Manager への PEM 投入と Image Updater Pod の roll が必要 (設定変更のみで Pod 自体の実装変更は不要)
 - **e2e ローカル開発者の運用変更**: PAT を直書きしていた `secrets/*` ファイルを CLI スクリプト経由で再生成する手順に変わる。各開発者が一度 App private key (or 払い出された short token) を環境に設定する必要がある
 - **App 数が増える**: 4 App それぞれに ID / Installation ID / private key を管理する必要がある。ただし PAT 12 種を管理する現状より総量は少ない
-
-### 緩和策
-
-- App 移行を Phase 分けして進める:
-  - Phase 1: Common Read App (#4, #5) — 影響リポ多いが Read-only で安全。ops#18 / common#34 で並行進行
-  - Phase 2: Ops Automation App の workflow 系 (#1, #2, #3, #7) — workflow 書き換えのみ
-  - Phase 3: Image Updater App (#8) と Claude Sync App (#6) — Write 系で慎重に
-  - Phase 4: e2e ローカル (#9, #10) と死蔵 (#11) のクリーンアップ
-- #12 SLACK_COMMANDS は本 ADR 着手後に Slack コマンド機能ごと廃止 (2026-05-06) したため App 化対象から外し、PAT は単独 revoke で完了させる
-- 各 Phase で旧 PAT を **すぐ revoke せず一定期間並走** させ、App 移行後の workflow が安定して green であることを確認してから revoke する
-
-## 関連 issue
-
-- [overload-party-common#34](https://github.com/kenyamaneko/overload-party-common/issues/34) — Common Read App migration
-- [overload-party-common#35](https://github.com/kenyamaneko/overload-party-common/issues/35) — Claude Sync App migration
-- [overload-party-ops#18](https://github.com/kenyamaneko/overload-party-ops/issues/18) — Ops Automation App migration
-- [overload-party-k8s#16](https://github.com/kenyamaneko/overload-party-k8s/issues/16) — Image Updater App migration

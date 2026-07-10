@@ -1,11 +1,14 @@
 # ADR-039: internal-auth verifier を gateway 配信の Go パッケージ化する
 
-- Status: Accepted
-- Date: 2026-05-11
-- Deciders: kenyamaneko
-- Related: ADR-037 (internal-auth HMAC JWT 化)、ADR-034 (API 契約 SSoT と Go module 配信パターン)
+## ステータス
 
-## Context
+Accepted (2026-05-11)
+
+## 結論
+
+5 リポで完全複製されていた HMAC JWT verifier + Gin middleware 一式を、契約の発行元である gateway から `overload-party-gateway/packages/internalauth-go/` として Go module 配信する (ADR-034 の「契約は発行元リポが publish」原則と整合)。重複 ~1,900 行が解消され、JWT lib 更新・401 形式変更・log/OTel 追加等が 1 PR で全サービスに伝播する。HeaderName / ExpectedIssuer 等が共有定数化されて「ヘッダ名は共通パッケージの定数を使う」規則を遵守でき、middleware の挙動 (401 ステータス・log 形式・span attribute 等) が drift しなくなる。
+
+## 背景・課題
 
 ADR-037 で導入した HMAC JWT verifier 一式 (`internal/adapter/internalauth/{verifier,verifier_test}.go` + `internal/port/internal_auth.go` + Gin middleware `internal/handler/rest/auth_middleware{,_test}.go` + HeaderName / ExpectedIssuer / PlayerIDContextKey 定数) が card / shop / news / scenario / account の **5 リポで完全複製** (`diff` で import path 1 行のみ差分)。verifier 一式 ~1,300 行 + middleware 一式 ~610 行 = 合計 ~1,900 行の重複。
 
@@ -16,9 +19,9 @@ ADR-037 で導入した HMAC JWT verifier 一式 (`internal/adapter/internalauth
 - middleware が repo-local だと「定数は契約、middleware は実装の自由」と解釈される余地が残り、401 ステータス・log 形式・OTel span 等の drift リスクが残る
 - 新規サービス追加のたびに複製が増える
 
-## Decision
+## 詳細
 
-JWT の **issuer は gateway**、HeaderName / ExpectedIssuer 等の契約値は gateway が決めるため、verifier 一式 + Gin middleware を `overload-party-gateway/packages/internalauth-go/` として Go module 配信する (ADR-034 の「契約は発行元リポが publish」原則と整合)。
+JWT の **issuer は gateway**、HeaderName / ExpectedIssuer 等の契約値は gateway が決めるため、verifier 一式 + Gin middleware を gateway のパッケージとして配信する。パッケージ構成は constants.go / port.go / verifier.go / middleware.go + go.mod (リファレンス実装は [card #19](https://github.com/kenyamaneko/overload-party-card/pull/19))。
 
 middleware を同梱する判断:
 
@@ -35,22 +38,8 @@ middleware を同梱する判断:
 
 publish は gateway の `.github/workflows/publish.yaml` が自動 tag を打つ (ws-constants / api-gateway と同パターン)。`packages/internalauth-go/**` への変更が main に merge されると CI が `packages/internalauth-go/vX.Y.Z` を生成し、Go module proxy が GitHub から取得する。手動 `git tag` は禁止事項に反するので採用しない。npm 用の Cloudsmith 配信は不要。
 
-## Consequences
+### トレードオフ
 
-- 重複 ~1,900 行解消、JWT lib 更新・401 形式変更・log/OTel 追加等が 1 PR で全サービスに伝播
-- HeaderName / ExpectedIssuer 等が共有定数化され API 契約規則を遵守
-- middleware の挙動 (401 ステータス・log 形式・span attribute 等) が drift しない
 - shared package が `github.com/gin-gonic/gin` に依存する。現状 5 consumer 全部 Gin なので無痛、将来他 framework 採用時は別 adapter package を追加
 - 5 リポ retrofit PR が初期コスト (1 リポあたり ~12 ファイル変更)
 - 契約変更時は version bump + 5 リポ追従が必要 (現状より同期手順は明示化される)
-
-## Implementation
-
-1. **gateway/packages/internalauth-go/** を新設: constants.go / port.go / verifier.go / verifier_test.go / middleware.go / middleware_test.go + go.mod (card #19 のコードがベース)
-2. **gateway publish workflow を拡張**: `.github/workflows/publish.yaml` に `internalauth_go` filter と tag step を追加 (ws-constants / api-gateway と同パターン)。初回 `v0.1.0` は workflow_dispatch で `bump=minor` を指定して trigger、以降は push to main で patch auto-bump
-3. card / shop / news / scenario / account を順次 retrofit (並列可)
-
-## References
-
-- ADR-037 / ADR-034
-- 既存リファレンス実装: [card #19](https://github.com/kenyamaneko/overload-party-card/pull/19)

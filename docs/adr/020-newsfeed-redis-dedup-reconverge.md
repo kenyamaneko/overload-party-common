@@ -1,17 +1,28 @@
 # ADR-020: newsfeed に dedup + 要約責務を戻す（Upstash Redis 導入）
 
-**Status:** Proposed
-**Date:** 2026-04-21
+## ステータス
 
-> このADRは [ADR-019](019-newsfeed-publisher-boundary.md) を置き換えます。ADR-019 で news に移した要約・タグ付け責務を newsfeed に戻し、冪等性確保の手段を news 側の `ON CONFLICT DO NOTHING` 単体から、**newsfeed 側の Upstash Redis dedup（事前）＋ news 側 `ON CONFLICT`（二次防御）** のハイブリッドに変更します。
+Proposed (2026-04-21)
 
----
+この ADR は [ADR-019](019-newsfeed-publisher-boundary.md) を置き換える。ADR-019 で news に移した要約・タグ付け責務を newsfeed に戻し、冪等性確保の手段を news 側の `ON CONFLICT DO NOTHING` 単体から、**newsfeed 側の Upstash Redis dedup（事前）＋ news 側 `ON CONFLICT`（二次防御）** のハイブリッドに変更する。
 
-## 背景
+## 結論
+
+news の責務過多を解消するため、newsfeed の責務を以下に再定義する:
+
+1. RSS 取得
+2. ULID 採番
+3. **Upstash Redis による source_url ベース dedup**（事前予約、TTL 30 日）
+4. **Vertex AI による日本語要約 + タグ付け**（dedup 通過分のみ）
+5. `news-article-collected` への publish
+
+news の責務は ADR-019 時点の「インジェスト以降」をそのまま維持する。これにより news の責務が「配信」（記事永続化 + 校閲 + 配信 + 翻訳管理）に収まり、加工（要約・タグ）は newsfeed 側に閉じる。同一記事の再要約が 30 日間発生しなくなって Vertex AI の重複呼び出しが削減され、Cloud Run Job は fetch → transform → publish の単一パイプライン（状態は外部 KV に分離）という batch ジョブとして自然な形になる。Upstash Redis / Secret Manager の採用パターンは matchmaking と揃い、news 側は現 `ArticleCollectedEvent` がそのまま使えるため改修不要。
+
+## 背景・課題
 
 ADR-019 では newsfeed を「fetch + publish」の thin な Cloud Run Job に縮退させ、AI 要約・タグ付け・DB 永続化・校閲 UI・配信を news サービスに集約した。実装着手後に次の問題が顕在化した。
 
-### 1. news の責務過多
+### news の責務過多
 
 ADR-019 の責務移譲により news は以下を一手に抱えることになる:
 
@@ -25,29 +36,17 @@ ADR-019 の責務移譲により news は以下を一手に抱えることにな
 
 これは「ニュース配信サービス」というより「ニュース加工プラットフォーム」であり、単一リポジトリで持つ責務としては広すぎる。
 
-### 2. ADR-019 の本当の争点は「AI」ではなく「state」
+### ADR-019 の本当の争点は「AI」ではなく「state」
 
 ADR-019 が要約を news 側に寄せた本来の理由は、「newsfeed で dedup を行うと state が必要になり、thin ジョブの位置づけから外れる」だった。AI 呼び出し自体が嫌だったのではなく、重複再要約を防ぐための state の置き場がなかったことが争点。
 
 ADR-014（クロスサービス SELECT 禁止）と「newsfeed の RDB 所有廃止」により newsfeed は自 DB を持たず、dedup を RDB に戻すと再度スキーマを作る羽目になる。この回避策として「要約を news 側に寄せ、重複再要約コストは news の `ON CONFLICT` で吸収」という構成を取っていた。
 
-### 3. 軽量 KV で state 問題を解消できる
+### 軽量 KV で state 問題を解消できる
 
 要約を newsfeed に戻す条件は「dedup state の置き場」。RDB スキーマを作るのは過剰だが、**短命・TTL 前提・単純 KV** の dedup には Upstash Redis が適合する。[ADR-010](010-matchmaking-queue-upstash-redis.md) / [ADR-012](012-matchmaking-pubsub.md) で matchmaking が既に Upstash Redis を採用済みであり、プラットフォームとして前例がある。
 
----
-
-## 決定
-
-newsfeed の責務を以下に再定義する:
-
-1. RSS 取得
-2. ULID 採番
-3. **Upstash Redis による source_url ベース dedup**（事前予約、TTL 30 日）
-4. **Vertex AI による日本語要約 + タグ付け**（dedup 通過分のみ）
-5. `news-article-collected` への publish
-
-news の責務は ADR-019 時点の「インジェスト以降」をそのまま維持する。
+## 詳細
 
 ### 責務の再分配
 
@@ -108,14 +107,14 @@ matchmaking ([ADR-010](010-matchmaking-queue-upstash-redis.md) / [ADR-012](012-m
 
 #### Secret Manager
 
-本番環境では GCP Secret Manager から取得する:
+本番環境では Google Cloud Secret Manager から取得する:
 
 | シークレット ID | 内容 |
 |---|---|
 | `newsfeed-upstash-redis-endpoint` | `host:port` 形式の Upstash エンドポイント |
 | `newsfeed-upstash-redis-password` | Upstash `default` ユーザーのパスワード |
 
-newsfeed Cloud Run Job のサービスアカウントに `roles/secretmanager.secretAccessor` を付与する。
+newsfeed Cloud Run Job のサービスアカウントには `roles/secretmanager.secretAccessor` に加え、Vertex AI 呼び出し用の `roles/aiplatform.user` と `roles/pubsub.publisher` を付与する。
 
 ローカル開発では `APP_ENV=local` で `UPSTASH_REDIS_URL=redis://localhost:6379/0` を直接読み、Secret Manager 呼び出しをスキップする（matchmaking と同一の分岐）。
 
@@ -167,42 +166,6 @@ if errors > 0:
 - 出力: JSON（`{"summary": "...", "tags": [...]}`）を `response_mime_type="application/json"` で強制
 - タグ語彙: 旧 summarizer を継承
 
----
-
-## 検討した代替案
-
-### 案 1: newsfeed 専用 PostgreSQL スキーマで dedup
-
-却下。ADR-014 の「1 スキーマ 1 所有者」を尊重すると `source_url` UNIQUE 1 テーブルのためにマイグレーション運用・Cloud SQL ユーザー払い出し・Testcontainers まで抱える。短命 + TTL が本質の dedup に RDB は重すぎる。
-
-### 案 2: newsfeed → summarizer (新規サービス) → news の 3 段構成
-
-却下。Cloud Run サービスが 1 つ増えて運用対象が広がる。MVP の翻訳 1 言語規模では疎結合の益が見合わない。将来 en 自動化が必要になった時点で newsfeed から summarizer を切り出すリファクタは、イベント境界を 1 本追加するだけで済む。
-
-### 案 3: news が bulk exists API を提供し、newsfeed が publish 前に問い合わせる
-
-却下。newsfeed が news API の可用性に依存する新しい結合が発生する（2h 周期バッチ中に news がデプロイ中だと取りこぼす等）。dedup 状態は newsfeed の関心事であり news の所有データではないため、API 経由で問い合わせる設計自体が筋悪い。
-
-### 案 4: Cloud Firestore で dedup を実装
-
-却下。[ADR-017](017-game-config-firestore.md) は Firestore を「サービス横断 KV 共有状態」の置き場として正当化しており、newsfeed 専用・短命 KV は ADR の動機とズレる。同じ KV 用途なら既に運用前例のある Upstash Redis の方がプラットフォームとして一貫する。
-
-### 案 5: ADR-019 のまま news に要約を寄せ続ける
-
-却下。news が「配信」を超えて「加工プラットフォーム」に拡大する。ADR-019 本来の争点は「newsfeed に state を持たせたくない」であって「newsfeed に AI を持たせたくない」ではなかった。Upstash Redis により state を最小限で解消できるなら ADR-019 の前提が崩れる。
-
----
-
-## 結果
-
-### 期待される効果
-
-- **news の責務が「配信」に収まる**: 記事永続化 + 校閲 + 配信 + 翻訳管理のみ。加工（要約・タグ）は newsfeed 側に閉じる
-- **Vertex AI 重複呼び出しの削減**: 同一記事の再要約が 30d 期間内は発生しない。ADR-019 想定では news 側 `ON CONFLICT` で弾く前に毎回 Vertex AI が走る構造だった
-- **Cloud Run Job が batch ジョブとして自然な形**: fetch → transform → publish の単一パイプライン、状態は外部 KV に分離
-- **プラットフォーム一貫性**: Upstash Redis / Secret Manager 採用パターンが matchmaking と揃う
-- **news 側の改修不要**: 現 `ArticleCollectedEvent` がそのまま使える
-
 ### トレードオフ
 
 - **newsfeed の依存が再び増える**: `redis-py` + `google-cloud-aiplatform` + `google-cloud-secret-manager`。ADR-019 で削った 2 種を戻し、さらに Redis + Secret Manager が追加される
@@ -211,35 +174,24 @@ if errors > 0:
 - **マーカー滞留リスク**: クラッシュで `DEL` が走らない場合、最長 30d は該当 URL が再処理されない。永続損失ではなく TTL で自動解放される
 - **ADR-019 実装を巻き戻すコスト**: commit 86c7413 で削除した summarizer.py / test_summarizer.py を再投入する必要がある（new: Redis dedup と Secret Manager も追加で実装）
 
-### 移行ステップ
+## 不採用案
 
-1. **overload-party-infra**:
-   - Pub/Sub トピック `news-article-collected` の存在確認
-   - Upstash Redis DB を 3 環境分新設（`overload-party-{dev,stg,prod}-newsfeed`）
-   - Secret Manager に `newsfeed-upstash-redis-endpoint` / `newsfeed-upstash-redis-password` を投入
-   - newsfeed Cloud Run Job のサービスアカウントに以下を付与:
-     - `roles/secretmanager.secretAccessor`
-     - `roles/aiplatform.user`（Vertex AI）
-     - `roles/pubsub.publisher`
-2. **overload-party-newsfeed**:
-   - `summarizer.py` / `test_summarizer.py` を再投入（モデルを Gemini 2.5 Flash に更新）
-   - `dedup.py` / `test_dedup.py` を新設（Redis `SETNX` ラッパー）
-   - `secret_manager.py` を新設（Secret Manager からの取得ヘルパー）
-   - `config.py` に `APP_ENV` 分岐（local は env var 直読み、それ以外は Secret Manager 経由）
-   - `model.py` と `publisher.py` のイベント形式を `translations[]` + `tags` 構造に戻す
-   - `runner.py` を dedup → summarize → publish 構造に書き換え（失敗時 `DEL` ロールバック）
-   - `requirements.txt` に `redis` / `google-cloud-aiplatform` / `google-cloud-secret-manager` を追加
-   - `docker-compose.yml` + `Makefile` で local Valkey を用意
-   - `docs/ARCHITECTURE.md` / `README.md` を本 ADR に整合させる
-3. **overload-party-news**: 変更なし（現 `ArticleCollectedEvent` 形式と一致するため）
+### newsfeed 専用 PostgreSQL スキーマで dedup
 
----
+却下。ADR-014 の「1 スキーマ 1 所有者」を尊重すると `source_url` UNIQUE 1 テーブルのためにマイグレーション運用・Cloud SQL ユーザー払い出し・Testcontainers まで抱える。短命 + TTL が本質の dedup に RDB は重すぎる。
 
-## 関連 ADR
+### newsfeed → summarizer (新規サービス) → news の 3 段構成
 
-- **[ADR-019](019-newsfeed-publisher-boundary.md)**: 本 ADR により **Superseded**。newsfeed を fetch + publish 専任に縮退する決定は、dedup state の置き場問題を news 側の責務過多で代償したため本 ADR で巻き戻す
-- **[ADR-010](010-matchmaking-queue-upstash-redis.md)**: Upstash Redis 採用の前例。本 ADR も接続パターン・Secret Manager 運用を踏襲
-- **[ADR-011](011-repository-split.md)**: リポジトリ分割。本 ADR では「newsfeed: クラウドニュース収集・配信」の「加工」部分を newsfeed に戻す方向で再解釈する
-- **[ADR-012](012-matchmaking-pubsub.md)**: 「Pub/Sub イベントは送信側が型を所有」の原則。`packages/api-news` が news リポに置かれ続ける経緯は ADR-019 §パッケージ境界を継承
-- **[ADR-014](014-db-schema-split-per-service.md)**: クロスサービス SELECT 禁止の原則。news スキーマを newsfeed から直接読む案は本原則により却下した
-- **[ADR-017](017-game-config-firestore.md)**: サービス横断 KV の Firestore 採用。本 ADR の dedup は専用・短命 KV のため Firestore ではなく Redis を採用
+却下。Cloud Run サービスが 1 つ増えて運用対象が広がる。MVP の翻訳 1 言語規模では疎結合の益が見合わない。将来 en 自動化が必要になった時点で newsfeed から summarizer を切り出すリファクタは、イベント境界を 1 本追加するだけで済む。
+
+### news が bulk exists API を提供し、newsfeed が publish 前に問い合わせる
+
+却下。newsfeed が news API の可用性に依存する新しい結合が発生する（2h 周期バッチ中に news がデプロイ中だと取りこぼす等）。dedup 状態は newsfeed の関心事であり news の所有データではないため、API 経由で問い合わせる設計自体が筋悪い。
+
+### Cloud Firestore で dedup を実装
+
+却下。[ADR-017](017-game-config-firestore.md) は Firestore を「サービス横断 KV 共有状態」の置き場として正当化しており、newsfeed 専用・短命 KV は ADR の動機とズレる。同じ KV 用途なら既に運用前例のある Upstash Redis の方がプラットフォームとして一貫する。
+
+### ADR-019 のまま news に要約を寄せ続ける
+
+却下。news が「配信」を超えて「加工プラットフォーム」に拡大する。ADR-019 本来の争点は「newsfeed に state を持たせたくない」であって「newsfeed に AI を持たせたくない」ではなかった。Upstash Redis により state を最小限で解消できるなら ADR-019 の前提が崩れる。
