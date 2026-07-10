@@ -1,17 +1,21 @@
 # NOTE: このファイルは原則として人間が運用する。例外的に許可があった場合のみClaude Codeが修正しても良い。
 
 # overload-party 配下リポのレジストリ。common を primary 作業ディレクトリとして
-# 開発する際、編集対象ファイルのリポを判別し、当該リポに適用すべき lang / flow
-# ルールを解決するために使用する。
+# 開発する際、編集対象ファイルのリポを判別し、当該リポに適用すべき lang / flow /
+# deploy ルールを解決するために使用する。
 #
 # フィールド:
 #   name: リポジトリ名
 #   path: common からの相対パス
 #   lang: go | python | csharp | typescript | iac | none
 #         rules/lang/<lang>.md と 1:1 対応 (none はスキップ)
-#   flow: gitflow | githubflow | none
+#   flow: github-flow | none
 #         rules/flow/<flow>.md と 1:1 対応 (none はスキップ)
-#         none は main 直 push を許容するリポ
+#         ブランチ戦略。none は main 直 push を許容するリポ
+#   deploy: merge-dev-tag-prod | gitops-sync | manual-pipeline |
+#           store-release | artifact-publish | merge-prod | none
+#         rules/deploy/<deploy>.md と 1:1 対応 (none はスキップ)
+#         デプロイ戦略。flow とは独立の軸。デプロイ整備前は none にしておく
 #   prereq_docs: (optional) list[str]
 #         編集前に必ず Read するドキュメント (common からの相対パス)。
 #         repo 固有の前提知識 (ゲームルール等) を強制適用するために使用
@@ -20,96 +24,115 @@ repos:
   - name: overload-party-common
     path: .
     lang: python
-    flow: githubflow
+    flow: github-flow
+    deploy: artifact-publish
 
   - name: overload-party-shop
     path: ../overload-party-shop
     lang: go
-    flow: githubflow
+    flow: github-flow
+    deploy: gitops-sync
 
   - name: overload-party-gateway
     path: ../overload-party-gateway
     lang: go
-    flow: githubflow
+    flow: github-flow
+    deploy: gitops-sync
 
   - name: overload-party-account
     path: ../overload-party-account
     lang: go
-    flow: githubflow
+    flow: github-flow
+    deploy: gitops-sync
 
   - name: overload-party-card
     path: ../overload-party-card
     lang: go
-    flow: githubflow
+    flow: github-flow
+    deploy: gitops-sync
 
   - name: overload-party-matchmaking
     path: ../overload-party-matchmaking
     lang: go
-    flow: githubflow
+    flow: github-flow
+    deploy: gitops-sync
 
   - name: overload-party-scenario
     path: ../overload-party-scenario
     lang: go
-    flow: githubflow
+    flow: github-flow
+    deploy: gitops-sync
 
   - name: overload-party-news
     path: ../overload-party-news
     lang: go
-    flow: githubflow
+    flow: github-flow
+    deploy: gitops-sync
 
   - name: overload-party-support
     path: ../overload-party-support
     lang: go
-    flow: githubflow
+    flow: github-flow
+    deploy: gitops-sync
 
   - name: overload-party-battle
     path: ../overload-party-battle
     lang: csharp
-    flow: githubflow
+    flow: github-flow
+    deploy: gitops-sync
     prereq_docs:
       - docs/game_design/RULEBOOK.md
 
   - name: overload-party-client
     path: ../overload-party-client
     lang: typescript
-    flow: githubflow
+    flow: github-flow
+    deploy: store-release
 
   - name: overload-party-ops
     path: ../overload-party-ops
     lang: python
-    flow: githubflow
+    flow: github-flow
+    deploy: merge-prod
 
   - name: overload-party-infra
     path: ../overload-party-infra
     lang: iac
-    flow: githubflow
+    flow: github-flow
+    deploy: manual-pipeline
 
   - name: overload-party-k8s
     path: ../overload-party-k8s
     lang: iac
-    flow: githubflow
+    flow: github-flow
+    deploy: none
 
   - name: overload-party-newsfeed
     path: ../overload-party-newsfeed
     lang: python
     flow: none
+    deploy: manual-pipeline
 
   - name: overload-party-analytics
     path: ../overload-party-analytics
     lang: go
     flow: none
+    deploy: manual-pipeline
 
   - name: overload-party-assets
     path: ../overload-party-assets
     lang: none
     flow: none
+    deploy: none
 
   - name: overload-party-e2e
     path: ../overload-party-e2e
     lang: typescript
     flow: none
+    deploy: none
 
   - name: overload-party-web
     path: ../overload-party-web
     lang: none
     flow: none
+    deploy: none
