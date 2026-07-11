@@ -1,0 +1,51 @@
+# paths-ignore はトリガー自体を止めるため、無視対象のみの変更では required check が
+# 一度も報告されず branch protection が永久にブロックする。job 側の if で skip させて
+# 必ず何らかの結論 (skipped も含む) を報告させるための判定に使う。
+name: Detect code change
+description: Determine whether a pull request changes any file outside a docs/formatting ignore-list.
+
+inputs:
+  ignore-pathspecs:
+    description: Newline-separated git pathspec exclude patterns (without the ":(exclude)" prefix).
+    required: false
+    default: |
+      *.md
+      docs/**
+      .vscode/**
+      .gitignore
+      LICENSE
+
+outputs:
+  changed:
+    description: "'true' if the pull request changes any file outside ignore-pathspecs, else 'false'."
+    value: ${{ steps.detect.outputs.changed }}
+
+runs:
+  using: composite
+  steps:
+    - name: Detect code change
+      id: detect
+      shell: bash
+      env:
+        IGNORE_PATHSPECS: ${{ inputs.ignore-pathspecs }}
+        PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        PUSH_BEFORE_SHA: ${{ github.event.before }}
+      run: |
+        base="${PR_BASE_SHA:-$PUSH_BEFORE_SHA}"
+        # base が解決できない (新規ブランチの push 等) ときは、判定できないので
+        # 素通しして本来のジョブを走らせる (安全側に倒す)
+        if [ -z "$base" ] || ! git cat-file -e "$base" 2>/dev/null; then
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        args=()
+        while IFS= read -r pattern; do
+          [ -z "$pattern" ] && continue
+          args+=(":(exclude)$pattern")
+        done <<< "$IGNORE_PATHSPECS"
+        changed_files=$(git diff --name-only "$base" HEAD -- . "${args[@]}")
+        if [ -n "$changed_files" ]; then
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "changed=false" >> "$GITHUB_OUTPUT"
+        fi
