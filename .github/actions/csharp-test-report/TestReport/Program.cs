@@ -3,27 +3,39 @@ using TestReport;
 
 if (args.Length < 2)
 {
-    Console.Error.WriteLine("usage: TestReport <trx-path> <title>");
+    Console.Error.WriteLine("usage: TestReport <search-root> <title>");
     return 1;
 }
 
-var trxPath = args[0];
+var searchRoot = args[0];
 var title = args[1];
 var workspace = Environment.GetEnvironmentVariable("GITHUB_WORKSPACE")
     ?? throw new InvalidOperationException("GITHUB_WORKSPACE is empty");
 
-XDocument trx;
-try
+// dotnet test はソリューション内のテストプロジェクトごとに別々の TRX を
+// <プロジェクト>/TestResults/ 配下へ出力する (--results-directory で1か所に
+// 集約すると同名ファイルが上書きされ結果が失われるため使わない)。配下を
+// 再帰的に探索して全 TRX を集計する。
+var trxPaths = Directory.GetFiles(searchRoot, "*.trx", SearchOption.AllDirectories);
+if (trxPaths.Length == 0)
 {
-    trx = XDocument.Load(trxPath);
-}
-catch (Exception ex)
-{
-    Console.Error.WriteLine($"TestReport: failed to open {trxPath}: {ex.Message}");
+    Console.Error.WriteLine($"TestReport: no .trx files found under {searchRoot}");
     return 1;
 }
 
-var results = TrxReport.Parse(trx, workspace);
+var results = trxPaths
+    .SelectMany(trxPath =>
+    {
+        try
+        {
+            return TrxReport.Parse(XDocument.Load(trxPath), workspace);
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"failed to parse {trxPath}: {ex.Message}", ex);
+        }
+    })
+    .ToList();
 
 var passed = results.Count(r => r.Outcome == TestOutcome.Passed);
 var skipped = results.Count(r => r.Outcome == TestOutcome.Skipped);
