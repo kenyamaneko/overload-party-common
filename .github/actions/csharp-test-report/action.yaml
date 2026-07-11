@@ -1,0 +1,21 @@
+name: C# test report
+description: 'Summarize a dotnet test TRX file into $GITHUB_STEP_SUMMARY and PR annotations.'
+
+inputs:
+  trx-path:
+    description: Path to the TRX file produced by dotnet test, relative to the repository root.
+    required: true
+  title:
+    description: Heading used for the $GITHUB_STEP_SUMMARY section (e.g. 単体テスト結果).
+    required: false
+    default: テスト結果
+
+runs:
+  using: composite
+  steps:
+    - name: Summarize and annotate C# test results
+      shell: bash
+      env:
+        TRX_PATH: ${{ inputs.trx-path }}
+        TITLE: ${{ inputs.title }}
+      run: dotnet run --project "${{ github.action_path }}/TestReport" -- "${GITHUB_WORKSPACE}/${TRX_PATH}" "$TITLE"
