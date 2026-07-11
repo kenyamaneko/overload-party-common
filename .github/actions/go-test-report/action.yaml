@@ -18,4 +18,7 @@ runs:
       env:
         JSON_PATH: ${{ inputs.json-path }}
         TITLE: ${{ inputs.title }}
+        # このリポ (overload-party-common) 直下の go.work が action の
+        # モジュールをワークスペース外として拒否するため、無効化する。
+        GOWORK: 'off'
       run: cd "${{ github.action_path }}" && go run . "${GITHUB_WORKSPACE}/${JSON_PATH}" "$TITLE"
