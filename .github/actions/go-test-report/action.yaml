@@ -1,0 +1,21 @@
+name: Go test report
+description: 'Summarize a go test -json stream into $GITHUB_STEP_SUMMARY and PR annotations.'
+
+inputs:
+  json-path:
+    description: Path to the go test -json output file, relative to the repository root.
+    required: true
+  title:
+    description: Heading used for the $GITHUB_STEP_SUMMARY section (e.g. 単体テスト結果).
+    required: false
+    default: テスト結果
+
+runs:
+  using: composite
+  steps:
+    - name: Summarize and annotate Go test results
+      shell: bash
+      env:
+        JSON_PATH: ${{ inputs.json-path }}
+        TITLE: ${{ inputs.title }}
+      run: cd "${{ github.action_path }}" && go run . "${GITHUB_WORKSPACE}/${JSON_PATH}" "$TITLE"
