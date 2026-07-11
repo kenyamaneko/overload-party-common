@@ -53,16 +53,21 @@ type failure struct {
 var fileLineRe = regexp.MustCompile(`(?m)^\s*([A-Za-z0-9_./-]+\.go):(\d+):(?:\d+:)?`)
 
 func main() {
-	if len(os.Args) < 3 {
-		fmt.Fprintln(os.Stderr, "usage: go-test-report <json-path> <title>")
+	if len(os.Args) < 4 {
+		fmt.Fprintln(os.Stderr, "usage: go-test-report <json-path> <title> <module-dir>")
 		os.Exit(1)
 	}
 	jsonPath := os.Args[1]
 	title := os.Args[2]
+	moduleDir := os.Args[3]
 
-	modulePath, err := readModulePath(os.Getenv("GITHUB_WORKSPACE"))
+	modulePath, err := readModulePath(path.Join(os.Getenv("GITHUB_WORKSPACE"), moduleDir))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "go-test-report: module path 特定に失敗、file annotation は best-effort になる: %v\n", err)
+	}
+	modulePrefix := moduleDir
+	if modulePrefix == "." {
+		modulePrefix = ""
 	}
 
 	f, err := os.Open(jsonPath)
@@ -160,7 +165,7 @@ func main() {
 		case "fail":
 			failed++
 			file, line, msg := extractLocation(r.Output.String(), modulePath, r.Package)
-			failures = append(failures, failure{name: r.Package + "." + r.Test, file: file, line: line, msg: msg})
+			failures = append(failures, failure{name: r.Package + "." + r.Test, file: prefixFile(modulePrefix, file), line: line, msg: msg})
 		default:
 		}
 	}
@@ -169,12 +174,22 @@ func main() {
 	for _, pkg := range pkgOrder {
 		if pkgFailed[pkg] && !pkgHasTests[pkg] {
 			file, line, msg := extractBuildFailureLocation(pkgOutput[pkg].String())
-			buildFailures = append(buildFailures, failure{name: pkg + " (ビルド失敗)", file: file, line: line, msg: msg})
+			buildFailures = append(buildFailures, failure{name: pkg + " (ビルド失敗)", file: prefixFile(modulePrefix, file), line: line, msg: msg})
 		}
 	}
 
 	writeSummary(title, passed, failed, skipped, failures, buildFailures)
 	writeAnnotations(failures, buildFailures)
+}
+
+// prefixFile は go.mod のあるディレクトリ (モジュールルート) がリポジトリ
+// ルートと異なる場合に、annotation の file がリポジトリルート相対になる
+// よう module-dir を先頭に足す。file が空 (位置未特定) のときは足さない。
+func prefixFile(modulePrefix, file string) string {
+	if file == "" || modulePrefix == "" {
+		return file
+	}
+	return path.Join(modulePrefix, file)
 }
 
 func readModulePath(workspace string) (string, error) {

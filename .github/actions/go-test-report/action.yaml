@@ -9,6 +9,10 @@ inputs:
     description: Heading used for the $GITHUB_STEP_SUMMARY section (e.g. 単体テスト結果).
     required: false
     default: テスト結果
+  module-dir:
+    description: Directory containing go.mod, relative to the repository root. Set this when go.mod is not at the repository root.
+    required: false
+    default: '.'
 
 runs:
   using: composite
@@ -18,7 +22,8 @@ runs:
       env:
         JSON_PATH: ${{ inputs.json-path }}
         TITLE: ${{ inputs.title }}
+        MODULE_DIR: ${{ inputs.module-dir }}
         # このリポ (overload-party-common) 直下の go.work が action の
         # モジュールをワークスペース外として拒否するため、無効化する。
         GOWORK: 'off'
-      run: cd "${{ github.action_path }}" && go run . "${GITHUB_WORKSPACE}/${JSON_PATH}" "$TITLE"
+      run: cd "${{ github.action_path }}" && go run . "${GITHUB_WORKSPACE}/${JSON_PATH}" "$TITLE" "$MODULE_DIR"
