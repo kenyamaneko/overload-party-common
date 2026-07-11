@@ -44,3 +44,7 @@ packages/*-npm/package-lock.json
 *.env
 .env*
 !.env.example
+
+# .NET build artifacts
+.github/actions/csharp-test-report/**/bin/
+.github/actions/csharp-test-report/**/obj/
