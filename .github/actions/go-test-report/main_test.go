@@ -9,6 +9,42 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestPrefixFile(t *testing.T) {
+	t.Run("module-dir によるファイルパスの補正", func(t *testing.T) {
+		cases := []struct {
+			name         string
+			modulePrefix string
+			file         string
+			wantFile     string
+		}{
+			{
+				name:         "module-dir がリポジトリルート直下のとき、file はそのままになる",
+				modulePrefix: "",
+				file:         "internal/service/shipping_test.go",
+				wantFile:     "internal/service/shipping_test.go",
+			},
+			{
+				name:         "module-dir がサブディレクトリのとき、file の先頭に付与される",
+				modulePrefix: "export-function",
+				file:         "internal/service/shipping_test.go",
+				wantFile:     "export-function/internal/service/shipping_test.go",
+			},
+			{
+				name:         "file が空 (位置未特定) のとき、module-dir を付与しても空のままになる",
+				modulePrefix: "export-function",
+				file:         "",
+				wantFile:     "",
+			},
+		}
+
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				assert.Equal(t, tc.wantFile, prefixFile(tc.modulePrefix, tc.file))
+			})
+		}
+	})
+}
+
 func TestLeafKeys(t *testing.T) {
 	t.Run("t.Run ネストにおける葉テストの判定", func(t *testing.T) {
 		t.Run("子テストが無いとき、そのテストは葉として扱われる", func(t *testing.T) {
