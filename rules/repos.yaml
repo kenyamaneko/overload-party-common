@@ -110,19 +110,19 @@ repos:
   - name: overload-party-newsfeed
     path: ../overload-party-newsfeed
     lang: python
-    flow: none
+    flow: github-flow
     deploy: manual-pipeline
 
   - name: overload-party-analytics
     path: ../overload-party-analytics
     lang: go
-    flow: none
+    flow: github-flow
     deploy: manual-pipeline
 
   - name: overload-party-assets
     path: ../overload-party-assets
     lang: none
-    flow: none
+    flow: github-flow
     deploy: none
 
   - name: overload-party-e2e
