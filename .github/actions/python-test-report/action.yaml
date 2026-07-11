@@ -1,0 +1,21 @@
+name: Python test report
+description: 'Summarize a pytest --junitxml output into $GITHUB_STEP_SUMMARY and PR annotations.'
+
+inputs:
+  xml-path:
+    description: Path to the pytest --junitxml output file, relative to the repository root.
+    required: true
+  title:
+    description: Heading used for the $GITHUB_STEP_SUMMARY section (e.g. テスト結果).
+    required: false
+    default: テスト結果
+
+runs:
+  using: composite
+  steps:
+    - name: Summarize and annotate Python test results
+      shell: bash
+      env:
+        XML_PATH: ${{ inputs.xml-path }}
+        TITLE: ${{ inputs.title }}
+      run: python3 "${{ github.action_path }}/main.py" "${GITHUB_WORKSPACE}/${XML_PATH}" "$TITLE"

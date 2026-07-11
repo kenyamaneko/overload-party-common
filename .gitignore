@@ -34,6 +34,11 @@ packages/*-dotnet/obj/
 packages/*-dotnet/bin/
 packages/*-npm/dist/
 packages/*-npm/node_modules/
+
+# CI composite actions (build artifacts)
+.github/actions/**/bin/
+.github/actions/**/obj/
+.github/actions/**/node_modules/
 # npm lock files are library artifacts, not checked in. Libraries rely on
 # published tarballs for version pinning; consumer repos generate their own
 # lock files. Committing lock files here causes CI publish bugs where sed-
@@ -44,7 +49,3 @@ packages/*-npm/package-lock.json
 *.env
 .env*
 !.env.example
-
-# .NET build artifacts
-.github/actions/csharp-test-report/**/bin/
-.github/actions/csharp-test-report/**/obj/

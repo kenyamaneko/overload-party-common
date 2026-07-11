@@ -1,0 +1,21 @@
+name: TypeScript test report
+description: 'Summarize a vitest --reporter=json output into $GITHUB_STEP_SUMMARY and PR annotations.'
+
+inputs:
+  json-path:
+    description: Path to the vitest --reporter=json output file, relative to the repository root.
+    required: true
+  title:
+    description: Heading used for the $GITHUB_STEP_SUMMARY section (e.g. テスト結果).
+    required: false
+    default: テスト結果
+
+runs:
+  using: composite
+  steps:
+    - name: Summarize and annotate TypeScript test results
+      shell: bash
+      env:
+        JSON_PATH: ${{ inputs.json-path }}
+        TITLE: ${{ inputs.title }}
+      run: node --experimental-strip-types "${{ github.action_path }}/src/main.ts" "${GITHUB_WORKSPACE}/${JSON_PATH}" "$TITLE"

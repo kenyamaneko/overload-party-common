@@ -51,11 +51,29 @@ jobs:
         run: pip install -e packages/codegen-tools
       # 同一起動でまとめて実行すると別パッケージの tests モジュールが衝突するため、パッケージ単位に分割する。
       - name: Run tests (scripts)
-        run: python3 -m pytest scripts/ -v
+        run: python3 -m pytest scripts/ -v --junitxml=pytest-scripts.xml
+      - name: Report test results (scripts)
+        if: ${{ !cancelled() }}
+        uses: ./.github/actions/python-test-report
+        with:
+          xml-path: pytest-scripts.xml
+          title: scripts テスト結果
       - name: Run tests (doc-tools)
-        run: python3 -m pytest packages/doc-tools/tests/ -v
+        run: python3 -m pytest packages/doc-tools/tests/ -v --junitxml=pytest-doc-tools.xml
+      - name: Report test results (doc-tools)
+        if: ${{ !cancelled() }}
+        uses: ./.github/actions/python-test-report
+        with:
+          xml-path: pytest-doc-tools.xml
+          title: doc-tools テスト結果
       - name: Run tests (codegen-tools)
-        run: python3 -m pytest packages/codegen-tools/tests/ -v
+        run: python3 -m pytest packages/codegen-tools/tests/ -v --junitxml=pytest-codegen-tools.xml
+      - name: Report test results (codegen-tools)
+        if: ${{ !cancelled() }}
+        uses: ./.github/actions/python-test-report
+        with:
+          xml-path: pytest-codegen-tools.xml
+          title: codegen-tools テスト結果
 
   codegen-sync:
     name: Codegen sync check
