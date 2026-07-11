@@ -41,6 +41,10 @@ JUnit XML / TRX の出力、PR 上への指摘表示、結果 artifact のいず
 
 テストを実行している 13 リポ全てで、単体テストの step と結合テストの step の両方を対象にする: account / analytics / battle / card / client / common / gateway / matchmaking / news / newsfeed / scenario / shop / support。
 
+### 配置場所
+
+整形処理は言語ごとに 1 本、`overload-party-common` の `.github/actions/<lang>-test-report/` に composite action として実装する: `go-test-report` / `csharp-test-report` / `ts-test-report` / `python-test-report`。各リポの workflow は `uses: kenyamaneko/overload-party-common/.github/actions/<lang>-test-report@main` で参照する。ADR-033 で auth 用 composite action を common に集約したのと同じ構成であり、Go 9 リポ・Python 2 リポ (common / newsfeed) が同じ整形処理を共有するため、修正箇所を 1 か所に保てる。
+
 ### 出力手段
 
 外部の Action には依存せず、自前スクリプトで整形する。gateway が既に採用している `$GITHUB_STEP_SUMMARY` 直書きの形をそのまま延長できる。
@@ -52,7 +56,7 @@ JUnit XML / TRX の出力、PR 上への指摘表示、結果 artifact のいず
 - **TypeScript (client)**: vitest の `--reporter=json` オプションが出す JSON を整形する。
 - **Python (common / newsfeed)**: `pytest --junitxml=report.xml` で生成した JUnit XML を整形する。
 
-整形スクリプトは言語ごとに 1 本ずつ用意し、以下 2 種類の出力を行う。
+各整形処理は、以下 2 種類の出力を行う。
 
 - **`$GITHUB_STEP_SUMMARY` への書き出し**: 通過数・失敗数と、失敗したテスト名の一覧を表形式で追記する。gateway の既存カバレッジ出力はそのまま残し、テスト結果サマリを追加する形にする。
 - **PR への指摘表示**: 失敗したテストについて `::error file=<path>,line=<line>::<message>` の workflow コマンドを出力し、PR の diff 上に行単位で指摘を表示する。
