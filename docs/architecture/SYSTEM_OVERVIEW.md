@@ -314,10 +314,10 @@ graph TD
 
     %% Pub/Sub: subscribe
     match_events -->|subscribe| gw
-    onboarded_events -->|subscribe| account & card & gw
-    card_pack_purchased_events -->|subscribe| card & gw
-    faction_acquired_events -->|subscribe| account & gw
-    premium_events -->|subscribe| account & gw
+    onboarded_events -->|subscribe| account & card
+    card_pack_purchased_events -->|subscribe| card
+    faction_acquired_events -->|subscribe| account
+    premium_events -->|subscribe| account
     news_events -->|subscribe| news
 
     %% GCS
@@ -334,10 +334,10 @@ graph TD
   - **news / support** の管理 UI（IAP で運用者認証）
 - マッチ成立通知: matchmaking → Cloud Pub/Sub `matchmaking-events` → gateway
 - オンボーディング表示名確定: scenario → account 内部 REST `PUT /internal/v1/players/:playerId/name`（onboarding 内 name 入力ステップ。[ADR-025](../adr/025-onboarding-name-via-rest-and-cross-service-http.md)）
-- オンボーディング完了 / 初期ファクション付与 / 初期パック配布: scenario → Cloud Pub/Sub `player-onboarded` → account / card / gateway ([ADR-022](../adr/022-faction-selected-decomposition.md))
-- カードパック購入: shop → Cloud Pub/Sub `card-pack-purchased` → card（GrantPack で配布）/ gateway（WS 副次通知）（[ADR-031](../adr/031-shop-products-normalization-and-faction-purchased-decomposition.md), [ADR-032](../adr/032-card-pack-introduction-and-grant-unification.md)）
-- ファクションアンロック: shop → Cloud Pub/Sub `faction-acquired` → account（player_factions INSERT）/ gateway（WS 一次通知）（[ADR-031](../adr/031-shop-products-normalization-and-faction-purchased-decomposition.md)）
-- プレミアム状態更新: shop → Cloud Pub/Sub `premium-updated` → account / gateway
+- オンボーディング完了 / 初期ファクション付与 / 初期パック配布: scenario → Cloud Pub/Sub `player-onboarded` → account / card ([ADR-022](../adr/022-faction-selected-decomposition.md))
+- カードパック購入: shop → Cloud Pub/Sub `card-pack-purchased` → card（GrantPack で配布）（[ADR-031](../adr/031-shop-products-normalization-and-faction-purchased-decomposition.md), [ADR-032](../adr/032-card-pack-introduction-and-grant-unification.md)）
+- ファクションアンロック: shop → Cloud Pub/Sub `faction-acquired` → account（player_factions INSERT）（[ADR-031](../adr/031-shop-products-normalization-and-faction-purchased-decomposition.md)）
+- プレミアム状態更新: shop → Cloud Pub/Sub `premium-updated` → account
 - ニュース記事収集: newsfeed (Cloud Run Job) → Cloud Pub/Sub `news-article-collected` → news
 - DB 所有権はサービス単位に分離（DATA_DESIGN.md 参照）
 

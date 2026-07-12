@@ -249,10 +249,9 @@ Client         gateway           shop サービス           Apple / Google
   │  ６. shop outbox worker が Pub/Sub に publish:                  │
   │       - card-pack-purchased  → card  (GrantPack で配布)         │
   │       - faction-acquired     → account (player_factions INSERT) │
-  │                              → gateway (WS 一次通知)            │
 ```
 
-`faction_set` の場合、shop は `one_time_purchases` 更新と outbox 行 (card-pack-purchased + faction-acquired) を **同一トランザクションで書く** (Transactional Outbox)。後続の account へのファクションアンロック / card のカード付与 / gateway の WS 通知は、shop outbox worker が Pub/Sub に publish した後に各 subscriber が非同期に処理する。`card_pack` 商品 (将来追加) は shop が `card-pack-purchased` のみを publish し、card 側で `card_pack_id` 指定のパックを配布する (faction-acquired は発生しない)。
+`faction_set` の場合、shop は `one_time_purchases` 更新と outbox 行 (card-pack-purchased + faction-acquired) を **同一トランザクションで書く** (Transactional Outbox)。後続の account へのファクションアンロック / card のカード付与は、shop outbox worker が Pub/Sub に publish した後に各 subscriber が非同期に処理する。`card_pack` 商品 (将来追加) は shop が `card-pack-purchased` のみを publish し、card 側で `card_pack_id` 指定のパックを配布する (faction-acquired は発生しない)。
 
 旧設計では gateway が account / card に同期 REST (`POST /internal/v1/players/{id}/factions` / `/grant-faction-pack`) を呼び分けるオーケストレーションを行っていたが、[ADR-031](../adr/031-shop-products-normalization-and-faction-purchased-decomposition.md) で **業務事実分割と shop publish への集約**が確定し、[ADR-032](../adr/032-card-pack-introduction-and-grant-unification.md) で card 側の REST grant エンドポイント (`/grant-initial-pack` / `/grant-faction-pack`) は完全削除された。所有権境界は [DATA_DESIGN.md](DATA_DESIGN.md)、shop / card / account の責務分界は ADR-031 の「card 側との責務分界」を参照。
 
@@ -264,7 +263,6 @@ shop の DB 書き込みはアトミックで outbox 経由の eventually consis
 1. shop: サブスクリプション状態を更新
 2. shop → Cloud Pub/Sub `premium-updated` に publish
 3. account: subscribe してプレミアム状態を反映
-4. gateway: subscribe して WS でクライアントに通知
 ```
 
 shop → account の同期呼び出しは存在しない。eventually consistent。
@@ -334,7 +332,7 @@ COMMIT
 
 **買い切り商品（`faction_set` / `card_pack`）:**
 
-shop は `one_time_purchases` 更新と outbox 行を **同一トランザクションで書く** (Transactional Outbox、[ADR-031](../adr/031-shop-products-normalization-and-faction-purchased-decomposition.md))。ファクションアンロック (account) / カード付与 (card) / WS 通知 (gateway) は outbox worker が publish する Pub/Sub event を各 subscriber が消費する形で eventually consistent に反映される。
+shop は `one_time_purchases` 更新と outbox 行を **同一トランザクションで書く** (Transactional Outbox、[ADR-031](../adr/031-shop-products-normalization-and-faction-purchased-decomposition.md))。ファクションアンロック (account) / カード付与 (card) は outbox worker が publish する Pub/Sub event を各 subscriber が消費する形で eventually consistent に反映される。
 
 ```
 1. BEGIN (shop)
@@ -348,7 +346,6 @@ shop は `one_time_purchases` 更新と outbox 行を **同一トランザクシ
 2. shop outbox worker が ClaimUnpublished → Cloud Pub/Sub に publish
    → card    subscriber: card-pack-purchased を受け、GrantPack(pack_id) で配布
    → account subscriber: faction-acquired を受け、player_factions に INSERT
-   → gateway subscriber: faction-acquired を一次通知 / card-pack-purchased を副次通知として WS push
 ```
 
 > 2 で各 subscriber が失敗した場合、Pub/Sub の at-least-once 配送と DLQ で再試行し、最終的に DLQ から手動で再投入する。shop 側のトランザクションは既にコミット済みのため補償トランザクションは採用しない（デフォルト値へのフォールバックを行わない方針に整合）。
