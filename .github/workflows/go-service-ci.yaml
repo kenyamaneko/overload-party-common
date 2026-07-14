@@ -1,0 +1,233 @@
+name: Go Service CI
+
+on:
+  workflow_call:
+    inputs:
+      goprivate:
+        description: GOPRIVATE pattern, set as job env on the lint / test / codegen-sync jobs.
+        type: string
+        default: github.com/kenyamaneko/*
+      test-packages:
+        description: Package pattern passed to go test.
+        type: string
+        default: ./...
+      collect-unit-coverage:
+        description: Collect unit test coverage and append a summary line to $GITHUB_STEP_SUMMARY.
+        type: boolean
+        default: false
+      has-integration-tests:
+        description: Skip the test-integration job when false.
+        type: boolean
+        default: true
+      needs-firestore-emulator:
+        description: Provision a Firestore emulator before the integration tests.
+        type: boolean
+        default: false
+      codegen-needs-node:
+        description: Add a Node.js setup step to the codegen-sync job.
+        type: boolean
+        default: false
+      codegen-needs-dotnet:
+        description: Add a .NET setup step to the codegen-sync job.
+        type: boolean
+        default: false
+
+jobs:
+  changes:
+    runs-on: ubicloud-standard-2
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.detect.outputs.changed }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Detect code change
+        id: detect
+        uses: kenyamaneko/overload-party-common/.github/actions/detect-code-change@main
+
+  lint:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubicloud-standard-2
+    timeout-minutes: 10
+    env:
+      GOPRIVATE: ${{ inputs.goprivate }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Configure Go private modules
+        uses: kenyamaneko/overload-party-common/.github/actions/setup-go-private-modules@main
+        with:
+          app-id: ${{ vars.CROSS_REPO_DEPS_APP_ID }}
+          private-key: ${{ secrets.CROSS_REPO_DEPS_APP_PRIVATE_KEY }}
+      # golangci-lint-action のビルド済みバイナリは Go 1.25 未対応のため
+      # go install でソースからビルドして使う
+      - name: Install golangci-lint
+        run: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.1.6
+      - name: Run lint
+        run: golangci-lint run --timeout 5m ./...
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+      - name: Run govulncheck
+        run: govulncheck ./...
+
+  test-unit:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubicloud-standard-2
+    timeout-minutes: 20
+    env:
+      GOPRIVATE: ${{ inputs.goprivate }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Configure Go private modules
+        uses: kenyamaneko/overload-party-common/.github/actions/setup-go-private-modules@main
+        with:
+          app-id: ${{ vars.CROSS_REPO_DEPS_APP_ID }}
+          private-key: ${{ secrets.CROSS_REPO_DEPS_APP_PRIVATE_KEY }}
+      - name: Run unit tests
+        run: go test -race -count=1 ${{ inputs.collect-unit-coverage && '-coverprofile=coverage.out' || '' }} ${{ inputs.test-packages }} -json | tee go-test-unit.json
+      - name: Report test results
+        if: ${{ !cancelled() }}
+        uses: kenyamaneko/overload-party-common/.github/actions/go-test-report@main
+        with:
+          json-path: go-test-unit.json
+          title: 単体テスト結果
+      - name: Report coverage
+        if: inputs.collect-unit-coverage
+        run: go tool cover -func=coverage.out | tail -1 >> "$GITHUB_STEP_SUMMARY"
+
+  test-integration:
+    needs: changes
+    if: needs.changes.outputs.code == 'true' && inputs.has-integration-tests
+    runs-on: ubicloud-standard-2
+    timeout-minutes: 30
+    env:
+      GOPRIVATE: ${{ inputs.goprivate }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Set up Java (Firestore emulator runtime)
+        if: inputs.needs-firestore-emulator
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Set up gcloud (Firestore emulator)
+        if: inputs.needs-firestore-emulator
+        uses: google-github-actions/setup-gcloud@v2
+      - name: Install Firestore emulator component
+        if: inputs.needs-firestore-emulator
+        run: gcloud components install cloud-firestore-emulator beta --quiet
+      - name: Check for integration setup hook
+        id: hook
+        run: echo "exists=$([ -x .github/scripts/ci/setup-integration.sh ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+      - name: Run integration setup hook
+        if: steps.hook.outputs.exists == 'true'
+        run: .github/scripts/ci/setup-integration.sh
+      - name: Configure Go private modules
+        uses: kenyamaneko/overload-party-common/.github/actions/setup-go-private-modules@main
+        with:
+          app-id: ${{ vars.CROSS_REPO_DEPS_APP_ID }}
+          private-key: ${{ secrets.CROSS_REPO_DEPS_APP_PRIVATE_KEY }}
+      - name: Run integration tests
+        run: go test -race -count=1 -tags=integration ${{ inputs.test-packages }} -json | tee go-test-integration.json
+      - name: Report test results
+        if: ${{ !cancelled() }}
+        uses: kenyamaneko/overload-party-common/.github/actions/go-test-report@main
+        with:
+          json-path: go-test-integration.json
+          title: 結合テスト結果
+
+  image-scan:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubicloud-standard-2
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Generate Cross-Repo Deps App token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.CROSS_REPO_DEPS_APP_ID }}
+          private-key: ${{ secrets.CROSS_REPO_DEPS_APP_PRIVATE_KEY }}
+          owner: kenyamaneko
+      - name: Build image
+        env:
+          DOCKER_BUILDKIT: "1"
+          GO_MODULES_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: docker build --secret id=GO_MODULES_TOKEN,env=GO_MODULES_TOKEN -t ${{ github.event.repository.name }}:ci-scan .
+      - name: Scan image for vulnerabilities
+        uses: aquasecurity/trivy-action@v0.35.0
+        with:
+          image-ref: ${{ github.event.repository.name }}:ci-scan
+          exit-code: "1"
+          severity: "CRITICAL,HIGH"
+
+  codegen-sync:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubicloud-standard-2
+    timeout-minutes: 15
+    env:
+      GOPRIVATE: ${{ inputs.goprivate }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Check for codegen hook
+        id: hook
+        run: echo "exists=$([ -x .github/scripts/ci/codegen.sh ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+      - name: Set up Python
+        if: steps.hook.outputs.exists == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Set up Go
+        if: steps.hook.outputs.exists == 'true'
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Set up Node.js
+        if: steps.hook.outputs.exists == 'true' && inputs.codegen-needs-node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Set up .NET (NSwag)
+        if: steps.hook.outputs.exists == 'true' && inputs.codegen-needs-dotnet
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Configure private repo auth
+        if: steps.hook.outputs.exists == 'true'
+        # pip install で git+https://github.com/kenyamaneko/... を clone するために
+        # token-based 認証 (insteadOf) を git config に注入する。
+        uses: kenyamaneko/overload-party-common/.github/actions/setup-go-private-modules@main
+        with:
+          app-id: ${{ vars.CROSS_REPO_DEPS_APP_ID }}
+          private-key: ${{ secrets.CROSS_REPO_DEPS_APP_PRIVATE_KEY }}
+      - name: Install oapi-codegen
+        if: steps.hook.outputs.exists == 'true'
+        run: go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.7.0
+      - name: Run codegen
+        if: steps.hook.outputs.exists == 'true'
+        run: .github/scripts/ci/codegen.sh
+      - name: Check for drift
+        if: steps.hook.outputs.exists == 'true'
+        run: .github/scripts/ci/check-codegen-drift.sh

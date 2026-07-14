@@ -1,0 +1,48 @@
+name: Go Service Deploy
+
+on:
+  workflow_call:
+    inputs:
+      image-name:
+        description: Image name in Artifact Registry (matches the repository name).
+        type: string
+        required: true
+
+jobs:
+  push-image:
+    runs-on: ubicloud-standard-2
+    timeout-minutes: 30
+    env:
+      PROJECT_ID: keyandnotes-platform
+      REGISTRY: asia-northeast1-docker.pkg.dev
+      REPOSITORY: overload-party
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.CI_SERVICE_ACCOUNT }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGISTRY }} --quiet
+
+      - name: Generate Cross-Repo Deps App token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.CROSS_REPO_DEPS_APP_ID }}
+          private-key: ${{ secrets.CROSS_REPO_DEPS_APP_PRIVATE_KEY }}
+          owner: kenyamaneko
+
+      - name: Build and push image
+        uses: kenyamaneko/overload-party-common/.github/actions/build-and-push-image@main
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ inputs.image-name }}
+          go-modules-token: ${{ steps.app-token.outputs.token }}
