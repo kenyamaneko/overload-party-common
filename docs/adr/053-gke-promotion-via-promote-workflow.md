@@ -24,39 +24,6 @@ gitops-sync (ADR-050) が定義する昇格モデル (dev = 自動反映 / stg =
 
 ADR-050 はこの反映モデルを gitops-sync として分類したが、バージョン起点の stg 反映と同一 digest 昇格は実装されていない (common#201)。
 
-## 詳細
-
-### 変更しないもの
-
-- 各サービスリポの deploy.yaml (main push → `:<sha>` / `:latest` を push)
-- prod の Application の manual sync
-
-### ApplicationSet (overload-party-k8s)
-
-- Image Updater の annotation (image-list / update-strategy / allow-tags / write-back) を dev の Application にのみ付与する (goTemplate の env 分岐)
-- dev / stg の syncPolicy を automated にする。prune は付けず、リソース削除を伴う変更は従来どおり手動 sync で prune する
-- stg / prod の kustomization `newTag` は promote workflow だけが書き換える。「Image Updater が上書きする」旨のコメントを実態に合わせて更新する
-
-### promote workflow (overload-party-ops)
-
-`workflow_dispatch` (inputs: service = 9 サービスの choice / bump = patch・minor・major) で次を行う。
-
-1. k8s リポの dev overlay の `newTag` から昇格対象の sha を解決する (dev で稼働中のビルドだけが昇格できる)
-2. サービスリポの既存 `vX.Y.Z` タグから次バージョンを採番する
-3. `gcloud artifacts docker tags add` で対象 sha イメージに `vX.Y.Z` タグを追加する (同一 digest)
-4. サービスリポの対象コミットへ git tag `vX.Y.Z` を発行する
-5. k8s リポの stg / prod overlay の `newTag` を `vX.Y.Z` に commit する。stg は automated sync で反映され、prod は人の sync 待ちになる
-
-認証は既存の運用系 workflow と同型にする (GitHub App token で k8s / サービスリポへ write、WIF で Artifact Registry)。
-
-### ロールバック
-
-k8s リポで promote の commit を revert する (stg は自動で戻り、prod は手動 sync で戻す)。または旧 digest を対象に promote し直す。
-
-### ルール文書との差分
-
-rules/deploy/gitops-sync.md は「SemVer タグを人が手動で打つ」「タグ push → stg 自動 sync」と記述しており、本 ADR ではタグの発行主体が promote workflow になる。パッケージ publish で確立した「タグの手動打ちを禁止し workflow を唯一の発行元にする」流儀に合わせたもので、rules 側の文言更新は keyandnotes-rules へ提案する (rules は人間運用のため)。
-
 ## 不採用案
 
 ### サービスリポのタグ push を起点にする

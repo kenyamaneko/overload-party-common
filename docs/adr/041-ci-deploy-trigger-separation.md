@@ -24,19 +24,3 @@ ADR-038 (CI 時間削減) と ADR-040 (Ubicloud 移行) で CI 課金は抑制�
 4. **image push workflow 不在**: 9 GKE サービス中 news / support のみ image push 系 workflow が無い
 
 なお、ArgoCD の sync policy は manual。Service リポ image push → Image Updater がマニフェスト書き換え → 人が ArgoCD UI で sync する流れなので、CI 段階での品質ゲート漏れは production 反映の前段で必ず人が判断する。
-
-## 詳細
-
-リポ別適用:
-
-| 区分 | 対象 | 変更 |
-|---|---|---|
-| A. 死んだ workflow 削除 | overload-party-k8s | deploy.yaml + terraform.yaml を削除 |
-| B. post-merge CI 重複削減 | gateway / card / matchmaking / battle | ci.yaml から build-and-push を deploy.yaml (push:main) に切り出し |
-| C. デプロイの手動ボタン化 | analytics / newsfeed | deploy を workflow_dispatch に変更、`needs:` で lint/test 待ち |
-| D. deploy.yaml 新設 | news / support | shop/account/scenario と同形の deploy.yaml を追加 |
-
-### トレードオフ
-
-- workflow ファイル数が増える (各リポで ci + deploy)
-- analytics / newsfeed の運用が自動 → 手動 dispatch に変わるため周知が必要

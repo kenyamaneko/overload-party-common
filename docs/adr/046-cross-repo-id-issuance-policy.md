@@ -30,64 +30,7 @@ slug を除く全 ID をアプリ側採番に統一する (DB default に採番�
 
 問題は ULID と UUID v4 が「採用基準なしに混ざっている」点であり、ULID か UUID かそれ自体ではない。新規テーブルを追加するたびに「何で採番するか」が個別判断になり、宣言と実装の乖離 (battle で発生) が再発する余地が残っている。
 
-## 詳細
-
-### なぜこの分類か
-
-**マスタデータ ID に slug を使う理由**: カード ID やパック ID は domain knowledge そのもので、ログ・運用調査・テストフィクスチャで人間が直接読み書きする。`SH-0001` のように陣営・連番が表記に乗ることが価値で、ランダム ID に置き換える理由がない。
-
-**対外露出する長寿命 ID に UUID v4 を残す理由**: `player_id` のように URL / API レスポンスで外部に晒される ID は **生成時刻を漏らしたくない**。ULID / UUID v7 は上位 48 bit がミリ秒タイムスタンプなので、ID 単体からアカウント作成時刻が逆引きでき、enumeration 攻撃の手掛かりにもなる。長寿命エンティティは件数が小さく append-heavy でもないため、UUID v4 のランダム挿入による B-tree 性能劣化も実害が出ない。
-
-**内部ログ系に UUID v7 を採用する理由**: `game_id` / 試合履歴 / セッション系の表は append-heavy で件数が時間に比例して伸びる。UUID v4 を PK に使うとランダム挿入で B-tree が断片化し、ページ分割・random I/O・WAL 書き込み量が増えて insert throughput と index サイズの両方が劣化する。UUID v7 は時系列順に append されるので右端ページに集中して書き込まれ、insert は実質 sequential I/O に近づき index も密に埋まる。あわせて以下の運用上の恩恵が乗る:
-
-- 時間範囲クエリを ID 範囲で書ける (`WHERE id BETWEEN <t1 の v7> AND <t2 の v7>`) のでパーティション pruning やアーカイブ削除が ID 列だけで成立する
-- cursor pagination が `id > $last_id` の一発で書ける ((created_at, id) の複合 cursor が不要)
-- 障害調査で ID から発生時刻が即座に分かる
-
-**ULID ではなく UUID v7 を新基準にする理由**: ULID と UUID v7 は技術的なメリット (時系列順 + ランダムサフィックス + 128 bit) が同一だが、UUID v7 は RFC 9562 (2024) で標準化された UUID の一バリアントであり、既存の `UUID` 型・既存のライブラリ・既存のツール (psql, pg_dump, datadog, etc.) がそのまま使える。ULID は表現が独立 (Crockford Base32 26 文字) で `UUID` 型に乗らず、列型を `VARCHAR(26)` で持つことになる。新基準としては「標準形式の上で時系列性を得る」UUID v7 の方が後方影響が小さい。
-
-**Pub/Sub event_id に UUID v4 を選ぶ理由**: event_id は subscriber 側の重複排除キーとしてのみ使われ、時系列性は別途 publish 時刻フィールドが担う。ランダムで十分。
-
-**採番をアプリ側に統一する理由**: 採番点を DB default (`gen_random_uuid()` / PG18 `uuidv7()`) に置く案も検討したが、slug を除く全 ID をアプリ側採番に統一する。ID を「永続化の副作用」ではなく「アプリが所有するドメインの値」として扱えることが理由:
-
-- INSERT 前に ID が確定するので、集約を組み立ててから FK を先に埋めて一括 INSERT する・event_id を outbox に先発番する・idempotency キーを先行発行する、といった流れが自然に書ける。`game_id` を FK に持つ試合履歴を同一トランザクションで組む battle がまさにこれに該当する
-- 特定 DB の採番機能 (PG18 `uuidv7()` 等) に依存しないので、ストアや Postgres バージョンに非依存
-- generator を注入してテストで ID を固定でき、決定的なテストが書ける
-
-アプリ側採番の代償は schema 宣言とコードの二重管理である (battle の `game_id` で宣言 ULID / 実体 GUID hex の乖離として顕在化した)。これは手運用の注意に依存せず、(1) ID 列を `VARCHAR(N)` でなく native `UUID` 型にして列幅 drift という故障モードそのものを消し、(2) 生成した ID を実列に通す検証を CI に置くことで構造的に塞ぐ。この前提のもとで二重管理の代償を許容する。
-
-### 既存 ID の扱い
-
-| 対象 | 対応 | 理由 |
-|------|------|------|
-| account `player_id` (UUID v4) | 据え置き | 型・バリアントは新基準に整合 (対外露出は UUID v4)。採番点は `gen_random_uuid()` の DB default のままだが、既存稼働分の移行リスク > 採番点統一の便益のため据え置き。新規テーブルはアプリ側採番に従う |
-| news `article_id` (ULID) | 据え置き | 性能特性は UUID v7 と同等、cross-repo 参照あり、移行リスク > 統一の便益 |
-| matchmaking `match_id` (ULID) | 据え置き | 同上 |
-| battle `game_id` (宣言 ULID / 実体 GUID hex) | **UUID v7 へ移行** | SSoT と実体が乖離しており、修正が必要。本 ADR を契機に新基準で揃える |
-| 既存 Pub/Sub `event_id` (UUID v4) | 据え置き | 既に新基準に整合 |
-| **新規追加するテーブル** | 本 ADR の表に従う | — |
-
-「ULID は据え置き、新規は UUID v7」が中途半端に見えるが、性能特性が同等な以上、既存 ULID を UUID v7 に統一する正味の便益はライブラリ・schema・FK の書き換えコストを下回る。横断統一は新規テーブルが追加されるたびに徐々に達成される。
-
-### 影響範囲
-
-battle (本 ADR 採択と同時に修正):
-
-- `db/schema.sql`: `game_id VARCHAR(26) -- ULID` を `game_id UUID` に変更 (FK 参照を含む全箇所)
-- `data/openapi.yaml`: `gameID` description の「ULID」表記を「UUID v7」に修正
-- `docs/DATA_DESIGN.md`: 「ULID」表記を「UUID v7」に修正
-- `src/OverloadParty.Battle.Engine/GameEngine.cs` の採番: `Guid.NewGuid().ToString("N")` を `Guid.CreateVersion7()` に置換。battle は net10 ターゲットなので .NET 標準 API で v7 を採番でき、サードパーティライブラリは不要。あわせて canonical 形式 (ハイフン有り) で永続化する (現状の `"N"` 書式 = ハイフン無し 32 hex をやめる)
-- 既存テストでの `[..26]` truncate を除去
-- 採番 ID を実 `UUID` 列へ INSERT して round-trip する統合テストを追加
-
-account / news / matchmaking / card / shop / scenario / その他は現時点での変更なし。新規テーブル追加・新規 ID 採番点を追加するときに本 ADR の分類表に従う (能動的な既存 ID 移行は行わない)。
-
-### 横断ルール
-
-- ID 列は native `UUID` 型で宣言する (`VARCHAR(N)` で持たない)。列幅 drift という故障モード (battle で発生) を型レベルで消すため
-- 採番点を持つサービスは、採番した ID を実 schema の ID 列へ INSERT して round-trip する統合テストを 1 本持つ。採番方式と列宣言の乖離を CI で検出するため。横断 lint 等の共通ツール化は再発・規模拡大が見えた時点で判断する (現時点では過剰)
-- ID 採番方式の SSoT は本 ADR とする。`rules/principles.md` への展開はしない (採番方式は rules に列挙するほどの運用ルールではなく、詳細は ADR で足りる)
-- 新規テーブルの review チェックリストに ID 採番方式の確認項目を追加
+対外露出する長寿命 ID を UUID v7 / ULID でなく UUID v4 に留めるのは、上位ビットに生成時刻を持つ形式だと ID からアカウント作成時刻を逆引きでき enumeration の手掛かりを与えるためで、件数が小さく append-heavy でない長寿命エンティティでは v4 のランダム挿入による性能劣化も実害が出ない。マスタデータに人間可読 slug を使うのは、カード ID やパック ID が運用調査やテストで人間が直接読み書きする domain knowledge であり、陣営・連番が表記に乗ること自体に価値があるためである。
 
 ## 不採用案
 
