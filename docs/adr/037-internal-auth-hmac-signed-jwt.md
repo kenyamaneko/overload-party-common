@@ -36,4 +36,4 @@ card / account / scenario / news の Phase 3c でも同方式を踏襲する想�
 
 初版では shop が `X-Player-Id` を実装済の前提で「Phase 1 は `X-Internal-Auth` と `X-Player-Id` の両方を受け入れる並走期間」を設け、後続の Phase 4 で `X-Player-Id` 受付を撤廃する設計だった。
 
-shop は gateway より先行して稼働する運用が予定されておらず、並走期間を保つコスト (検証経路の二重化 / fallback テストの維持) が利得に見合わないため、Phase 1 から JWT 一本化する形に変更する。これにより全サービスで `X-Player-Id` 受付を持つフェーズが消えるため、Phase 4 (X-Player-Id 撤廃) は不要となり削除する。本文の「段階移行」「player_id 引き渡し経路の現状とゴール」は本 Amendment 反映済みの内容である。
+shop は gateway より先行して稼働する運用が予定されておらず、並走期間を保つコスト (検証経路の二重化 / fallback テストの維持) が利得に見合わないため、Phase 1 から JWT 一本化する形に変更する。これにより全サービスで `X-Player-Id` 受付を持つフェーズが消えるため、Phase 4 (X-Player-Id 撤廃) は不要となり削除する。

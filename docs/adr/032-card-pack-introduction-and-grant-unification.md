@@ -91,6 +91,6 @@ card 側 subscriber が `ev.Faction` を `"faction_set_<faction>"` に内部マ�
 
 ## Amendment: 2026-05-24 seed 整合性検証責務を overload-party-ops に移譲
 
-「ADR-031 との接続」で「shop seed の `card_pack_id` ⊂ card seed の `pack_id` 整合検証 CI を overload-party-common に追加する」と決定したが、移譲先を **overload-party-ops** に変更する。詳細な理由は [ADR-031 の Amendment](031-shop-products-normalization-and-faction-purchased-decomposition.md) を参照。
+本 ADR では shop seed の `card_pack_id` ⊂ card seed の `pack_id` 整合検証 CI を overload-party-common に追加すると決定したが、移譲先を **overload-party-ops** に変更する。詳細な理由は [ADR-031 の Amendment](031-shop-products-normalization-and-faction-purchased-decomposition.md) を参照。
 
 実装: overload-party-ops/cross-repo-seeds/ (kenyamaneko/overload-party-ops#36 / kenyamaneko/overload-party-ops#37)

@@ -44,7 +44,7 @@ DB は単一スキーマのまま、アプリ側の ORM / リポジトリ層で�
 
 ## Amendment: 2026-04-11 スキーマ配置の最終確定
 
-本 ADR 本体の「スキーマ配置案」には `game_config` / `cosmetic_items` / `factions` 等の横断マスタに関する placeholder を残していたが、その後の対話で**最終確定**した内容を以下に記録する。本体の配置案を読む際は、本 Amendment を上書き指示として扱うこと。
+スキーマ配置には `game_config` / `cosmetic_items` / `factions` 等の横断マスタに関する未確定箇所が残っていたが、その後の対話で**最終確定**した内容を以下に記録する。以下が現行方針の SSoT である。
 
 ### `shared` スキーマの新設
 
@@ -67,7 +67,7 @@ DB は単一スキーマのまま、アプリ側の ORM / リポジトリ層で�
 
 ### スキーマ配置の最終確定版
 
-本 ADR 本体 §スキーマ配置案の表は以下で**置き換える**。
+スキーマとテーブルの所有を以下で確定する。
 
 | スキーマ | 所有サービス | 主な対象テーブル |
 |---|---|---|
@@ -94,4 +94,4 @@ DB は単一スキーマのまま、アプリ側の ORM / リポジトリ層で�
 - [docs/architecture/ARCHITECTURE.md §スキーマ分割とオーナーシップ](../architecture/ARCHITECTURE.md)
 - [docs/architecture/DATA_DESIGN.md スキーマ所有権マップ](../architecture/DATA_DESIGN.md)
 
-本 ADR 本体（「スキーマ配置案」節と「`game_config`, `cosmetic_items` 等の横断マスタ」に関する注記）は歴史的経緯として残しているが、**現行の方針は本 Amendment が SSoT** となる。
+**現行の方針は本 Amendment が SSoT** となる。

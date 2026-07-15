@@ -34,11 +34,11 @@ Accepted (2026-05-09)。末尾の Amendment 3 件 (2026-05-09: Cloudsmith 配布
 
 ## Amendment: 2026-05-09 Cloudsmith 配布 / WS-AsyncAPI / client scope
 
-本 Amendment では以下の 3 点を追加する (いずれも本文各セクションに反映済み):
+本 Amendment では以下の 3 点を追加する:
 
-1. **NuGet / npm の cross-repo 配布チャンネルを Cloudsmith に切替** (本文「NuGet / npm 配布」)。GitHub Packages 経由の dotnet/npm 配布を全廃する
-2. **WebSocket プロトコルは AsyncAPI 3.0 で記述** (本文「適用範囲」)。OpenAPI は WS を扱えない。`gateway/data/ws_constants.yaml` および `battle/packages/game-state-*/` の WS payload schemas は Phase 2/3b で AsyncAPI に移行する
-3. **client (overload-party-client) を本 ADR scope に正式に組み込む** (本文「適用範囲」)。`@kenyamaneko/*` の 6 npm パッケージを GitHub Packages から Cloudsmith に切替、AsyncAPI/OpenAPI 由来の生成物に追従させる
+1. **NuGet / npm の cross-repo 配布チャンネルを Cloudsmith に切替**。GitHub Packages 経由の dotnet/npm 配布を全廃する
+2. **WebSocket プロトコルは AsyncAPI 3.0 で記述**。OpenAPI は WS を扱えない。`gateway/data/ws_constants.yaml` および `battle/packages/game-state-*/` の WS payload schemas は Phase 2/3b で AsyncAPI に移行する
+3. **client (overload-party-client) を本 ADR scope に正式に組み込む**。`@kenyamaneko/*` の 6 npm パッケージを GitHub Packages から Cloudsmith に切替、AsyncAPI/OpenAPI 由来の生成物に追従させる
 
 ### 経緯 (NuGet 完全廃止案 → AR 一本化案 → Cloudsmith)
 
@@ -219,5 +219,5 @@ OpenAPI 3.x の `operationId` は operation を一意識別する optional フ�
 
 本 Amendment は **REST endpoint path のみ**を対象とする。principles の「契約リテラル禁止」の残る 2 項は以下のとおり別経路で扱う:
 
-- **イベント名 (Pub/Sub `event_type` discriminator)**: 既に AsyncAPI codegen 由来で定数化済み (本文「Topic 名と event_type の取り扱い」参照)。本 Amendment 範囲外
+- **イベント名 (Pub/Sub `event_type` discriminator)**: 既に AsyncAPI codegen 由来で定数化済み。本 Amendment 範囲外
 - **ヘッダ名 (`X-OP-Internal-Auth` 等)**: ADR-039 の `internalauth-go` で定数化済み (RequestEditorFn 経由で header 注入する接続点)。各リポの実装が当該定数を参照しているかは pilot 横展開時に併せて棚卸しする

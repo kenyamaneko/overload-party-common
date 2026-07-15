@@ -89,7 +89,7 @@ shop は `card-pack-purchased` だけを publish し、account は card に同�
 
 ## Amendment: 2026-05-24 整合性検証責務を overload-party-ops に移譲
 
-「card 側との責務分界」で「整合性検証 (shop seed の `card_pack_id` ⊂ card seed の `pack_id`) を overload-party-common に置く」と決定したが、移譲先を **overload-party-ops** に変更する。
+本 ADR では整合性検証 (shop seed の `card_pack_id` ⊂ card seed の `pack_id`) を overload-party-common に置くと決定したが、移譲先を **overload-party-ops** に変更する。
 
 移譲の理由:
 
@@ -100,7 +100,7 @@ shop は `card-pack-purchased` だけを publish し、account は card に同�
 
 影響:
 
-- 「card 側との責務分界」の整合性検証行の「overload-party-common」は **overload-party-ops** に読み替える
+- 整合性検証の担当は overload-party-common から **overload-party-ops** に読み替える
 - 実装は overload-party-ops/cross-repo-seeds/check.py + .github/workflows/validate-cross-repo-seeds.yaml に配置済 (kenyamaneko/overload-party-ops#36 / kenyamaneko/overload-party-ops#37)
 
 ## Amendment: 2026-06-16 card のデッキ検証で faction 所持を account に同期照会する
@@ -113,7 +113,7 @@ shop は `card-pack-purchased` だけを publish し、account は card に同�
 
 card はデッキ作成/編集時に account の内部エンドポイント `GET /internal/v1/players/{playerID}/factions` を**同期照会**し、宣言ファクション ∈ 所持ファクション を検証する。
 
-- faction 所有権の SSoT は引き続き account。card は faction イベントを購読せず、所有権を永続化しない (「各 subscriber の副作用」の購読方針は不変)。card は検証時にオンデマンドで読むだけ。
+- faction 所有権の SSoT は引き続き account。card は faction イベントを購読せず、所有権を永続化しない (card が faction を購読しない方針は不変)。card は検証時にオンデマンドで読むだけ。
 - 照会は低頻度なデッキ構築操作に限る。デッキ READ 時の `is_valid` 再算出には含めない (READ 増幅を避ける)。
 
 ### 同期 RPC 方針との整合
