@@ -31,3 +31,9 @@ ADR-052 で各リポの CI テストレポート出力は標準化済みで、�
 - **各リポが自分の Pages にカタログを公開する (リポ別)**: ADR-052 の artifact 判断に手を付けず配線も軽いが、全仕様を 1 枚で俯瞰する狙いが得られない。
 - **各リポで共通中間形式に正規化してから artifact 化する**: 正規化ロジックが各リポ CI に分散する。パーサを common に集約すれば、言語追加時も common だけを触れば済む。
 - **nightly schedule で集約する**: 配線は最も軽いが、カタログが最大 24 時間古くなる。main マージの `repository_dispatch` で即時に再公開する。
+
+## Amendment: 2026-07-15 C# だけは中間形式を経由する
+
+C# (battle) は対象要素を `[Trait("対象", "…")]` に、ケース名を `[Fact/Theory(DisplayName = "…")]` に持つ。しかしこの `対象` trait はどの標準の .NET テスト結果ファイルにも出力されない。TRX は DisplayName を testName に含むが trait を落とし、`JUnitXml.TestLogger` は trait も DisplayName も出さず英語のメソッド名を出す。そのため「テスト結果ファイルを言語別パーサで正規化する」という本文の方式は C# では成立せず、グループ階層を作れない。
+
+そこで C# に限り、パーサの入力を標準のテスト結果ファイルではなく battle が抽出した中間 JSON にする。battle は抽出ステップ (テスト DLL のリフレクション、または `.cs` ソースの走査) で `[Theory]` を各行に展開しつつ `{target, case, skipped, source}` の平坦なレコードを出力し、common の `csharp-json` パーサがそれを共通モデルに正規化する。パーサと正規化は本文どおり common に残るため、これは不採用案「各リポで共通中間形式に正規化してから artifact 化する」(正規化を各リポ CI に分散させる案) とは異なる。他の 3 言語 (Go の `go test -json`・Python の JUnit XML・TS の vitest JSON) は本文どおり結果ファイルを直接パースする。
