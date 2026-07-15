@@ -19,43 +19,6 @@ Accepted (2026-05-03)
 
 夜間バッチに固定する積極的理由は薄く、「朝に手動トリガでも問題ない」運用上の許容があった。
 
-## 詳細
-
-### 構成
-
-| 要素 | 配置 |
-|---|---|
-| スラッシュコマンド本体 | `overload-party-ops/.claude/commands/review-yesterday.md` |
-| 機能ディレクトリ (設定・ドキュメント) | `overload-party-ops/auto-review/` |
-| 対象リポ一覧 (SSoT) | `auto-review/repos.yaml` |
-| レビュー観点 (SSoT) | `auto-review/review_criteria.yaml` |
-| GitHub Issue ラベル | `auto-review` (旧 nightly-review 時代から継続) |
-| ローカル出力 | `~/reviews/{前日日付}/{repo}.md` と `index.md` |
-
-### 動作
-
-1. ユーザが Claude Code 内で `/review-yesterday` を実行
-2. 親エージェントが `repos.yaml` / `review_criteria.yaml` を Read
-3. 対象リポすべてに対して `general-purpose` Subagent を **並列**ディスパッチ
-4. 各 Subagent が `gh repo clone` でローカルにチェックアウトし、`gh api` で前日 00:00 JST 以降の差分を取得、リポ全体を Read/Grep/Glob しながら観点に沿ってレビュー
-5. 結果を `~/reviews/{前日日付}/{repo}.md` に書き出し、指摘ありなら各リポに GitHub Issue を起票
-6. 親が `index.md` に集約してチャットに 1 行サマリと Issue URL 一覧を返す
-
-Issue 起票挙動 (リポごと 1 Issue/日、LGTM はスキップ、同タイトル前方一致で dedup、`auto-review` ラベル) とレビュー観点 YAML のスキーマは旧方式から継承する。出力先は GitHub Issue 単独からローカル `~/reviews/` + GitHub Issue の二重出力になる。
-
-### 命名ルール
-
-- スラッシュコマンドは動詞始まり: `/review-yesterday`
-- 機能ディレクトリは名詞 (`___-review`): `auto-review/`
-- GitHub Issue ラベルと出力語彙を `auto-review` / `~/reviews/` に統一
-
-### トレードオフ
-
-- **手動トリガが必要**: 朝に Claude Code 内で `/review-yesterday` を 1 回叩く必要がある。蓋を開けない日はレビューがスキップされる
-- **Mac の Claude Code に依存**: ヘッドレス環境 (CI / 出張中スマホ閲覧) からは実行不可
-- **実行所要時間がフォアグラウンド**: 旧 Cloud Run Job 方式の「寝てる間に終わる」が消え、実行中はユーザのセッションを占有する (Subagent 並列で数分〜十数分想定)
-- **Claude Code バージョン差分の影響を受ける**: スラッシュコマンドの仕様変更 (`@file` 参照・Subagent ツール仕様等) があれば本機能も追従が必要
-
 ## Amendment: 2026-05-20 配置を common に移行
 
 スラッシュコマンドと機能ディレクトリの配置を `overload-party-ops` から `overload-party-common` に移行した。理由は「全リポの開発起点を common に集約する」運用方針 (`overload-party-common` を primary working directory として扱う)。同時にコマンド名を「差分 / 全体」の対称軸で揃え、全体スキャン用コマンドを新設した。
