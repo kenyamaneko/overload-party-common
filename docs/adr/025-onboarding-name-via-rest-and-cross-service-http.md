@@ -2,9 +2,9 @@
 
 ## ステータス
 
-Accepted (2026-04-26)。「表示名確定経路を REST 同期書込に切替」と「オンボーディング進行の業務真実は account に集約」の両節は [ADR-026](026-onboarding-status-as-account-responsibility.md) により上書きされる
+Accepted (2026-04-26)。本 ADR の表示名確定を REST 同期書込に切り替える決定と、オンボーディング進行の業務真実を account に集約する決定は、[ADR-026](026-onboarding-status-as-account-responsibility.md) で上書きされた。
 
-本 ADR は [ADR-021](021-onboarding-scenario.md) の「イベント契約」節 (`PlayerOnboardedEvent.display_name` を outbox 経由で配信する設計) を部分的に上書きする。表示名はオンボーディング内の name 入力ステップで scenario が account に対し同期 REST で書き込み、`PlayerOnboardedEvent` payload からは `display_name` を撤去する。これに伴い、ドメインサービス間 HTTP 直叩きを **onboarding ユースケース内に限った例外** として明示的に許容する。
+本 ADR は [ADR-021](021-onboarding-scenario.md) のイベント設計（`PlayerOnboardedEvent.display_name` を outbox 経由で配信する部分）を部分的に上書きする。表示名はオンボーディング内の name 入力ステップで scenario が account に対し同期 REST で書き込み、`PlayerOnboardedEvent` payload からは `display_name` を撤去する。これに伴い、ドメインサービス間 HTTP 直叩きを **onboarding ユースケース内に限った例外** として明示的に許容する。
 
 ## 結論
 
@@ -14,7 +14,7 @@ Accepted (2026-04-26)。「表示名確定経路を REST 同期書込に切替�
 
 ### 現行設計と顕在化した問題
 
-[ADR-021](021-onboarding-scenario.md) の「イベント契約」節 / [ADR-022](022-faction-selected-decomposition.md) の「オンボーディング起因」節では、scenario はオンボーディング完了時に `PlayerOnboardedEvent` を 1 本 publish し、payload に `display_name` を載せて account / card / gateway へ伝搬する設計とした。account は subscriber 内で `players.name` を UPDATE する。
+[ADR-021](021-onboarding-scenario.md) と [ADR-022](022-faction-selected-decomposition.md) では、scenario はオンボーディング完了時に `PlayerOnboardedEvent` を 1 本 publish し、payload に `display_name` を載せて account / card / gateway へ伝搬する設計とした。account は subscriber 内で `players.name` を UPDATE する。
 
 この設計を実装した結果、以下の問題が顕在化した。
 
@@ -53,82 +53,7 @@ account の [`player_onboarded_subscriber.go`](../../../overload-party-account/i
 
 要件 (a) (b) (c) を全て満たす経路は直叩きしかない。
 
-## 制約
-
-- オンボーディング内 name 入力で account のバリデーションを即時中継できること (UX 要件)
-- name 確定と onboarding 進行管理 (checkpoint) を scenario が原子的に保持できること
-- 業務真実 (`players.name`) の SSoT は account に維持すること
-- ドメイン間 HTTP 直叩きの拡散を防ぎ、今回の例外を再利用条件で縛ること
-- 既存の Pub/Sub 経路 (`PlayerOnboardedEvent`) は引き続き card / gateway / account の他副作用 (faction 反映 / 初期パック配布 / WS 通知) のために保持すること
-- account 側 subscriber の先行実装と契約の齟齬を解消すること
-
-## 詳細
-
-### 表示名確定経路を REST 同期書込に切替
-
-オンボーディング内の name 入力ステップでは、scenario が account の `PUT /internal/v1/players/:playerId/name` を同期 REST で呼び出して表示名を確定する。account 側 `ErrInvalidName` (400) はそのまま scenario REST のレスポンスとして中継し、ユーザーに即時再入力を促す。
-
-scenario には `internal/adapter/http/accountclient.go` を新設し、onboarding service には `OnboardingNameUpdater` / `OnboardingPlayerReader` 等の **狭い port** を切って注入する（汎用的な「account クライアント」として共有しない）。
-
-`PlayerOnboardedEvent` payload から `display_name` フィールドを撤去する。`scripts/generate_types.py` を使った再生成と、scenario / account / card / gateway の関連箇所を本 ADR 採用 PR で同時に更新する。
-
-表示名 SSoT を account に一本化することで、scenario の `displayNameMaxRunes = 21` (当時の値) と account の `MaxNameRunes = 20` の齟齬は scenario 側削除によって解消する。境界値テストは account 側 [`internal/model/name_test.go`](../../../overload-party-account/internal/model/name_test.go) が網羅する。
-
-### ドメイン間 HTTP 直叩きの例外許容ルール
-
-ドメインサービス間の HTTP 直叩きは **原則禁止** とする。これは現行の Pub/Sub + gateway ハブ構造を維持するためのルールである。本 ADR では以下の例外を **onboarding 内に限定** して許容する。将来別ユースケースで同種の要件 (即時バリデーション中継) が出てきたときは「例外を許容する条件」を再評価する起点とし、安易に「ADR-025 で許容されているから」を拡大解釈しないこと。
-
-#### 例外を許容する条件
-
-以下の 3 条件をすべて満たす場合に限り、ドメイン間 HTTP 直叩きを許容する。新規に直叩きを追加する場合は本 ADR を参照し、当該ユースケースが 3 条件を満たすことを別 ADR で正当化すること。
-
-1. **即時 UX フィードバックが業務要件**: ユーザーの 1 回の入力に対し、業務バリデーションの結果を同一トランザクション粒度で返す必要があること。Pub/Sub では成立しない場合
-2. **業務真実の SSoT が呼び出し先に存在**: 呼び出し先サービスが当該ドメインの SSoT を保持しており、呼び出し元は中継のみを行うこと (呼び出し元に同等のデータを複製しない)
-3. **gateway 経由ルートが認証境界の都合で成立しない**: クライアントから直接呼ぶ既存ルートが authentication / authorization の制約で再利用不可能であること
-
-#### 実装上の制約
-
-例外を許容する場合でも以下の制約を全て守ること。
-
-- **狭い port インターフェースで注入**: `OnboardingNameUpdater` のように利用ユースケース名を冠した port を切り、`AccountClient` のような汎用型を service 層から見せない
-- **adapter 層に閉じ込め**: HTTP の概念 (status code、URL、ヘッダ) は `internal/adapter/http/<callee>client.go` 内に閉じ込め、service 層ではドメイン例外 (`ErrInvalidName` 相当) のみを扱う
-- **共有しない**: 呼び出し元サービス内専用とし、他のドメインサービスからの再利用 (例: scenario の accountclient を他サービスが import) を構造的に禁ずる。`internal/adapter/http/` 配下に置き、`packages/` に出さない
-- **エラー中継**: 呼び出し先の業務エラー (400) は呼び出し元の API レスポンスへそのまま中継する。呼び出し先のインフラエラー (5xx / timeout) は呼び出し元の 5xx として再現する。握り潰しは禁止
-- **接続先 URL は env 注入**: `<CALLEE>_BASE_URL` の env で URL を受け取り、Kubernetes ClusterIP DNS (`http://<callee>.<ns>.svc.cluster.local:<port>` 形式) を想定する。リテラルでハードコードしない
-
-#### 許容する具体的な直叩き
-
-scenario → account の以下 2 経路を本 ADR で許容する。これ以外の経路は別 ADR の対象。
-
-|呼び出し|目的|エラー中継|
-|---|---|---|
-|`PUT /internal/v1/players/:playerId/name`|オンボーディング内 name 入力ステップでの表示名確定|400 `ErrInvalidName` を scenario の 400 に中継|
-|`GET /internal/v1/players/:playerId`|オンボーディング再開判定 (`Name` / `SelectedFaction` の nullable から次の checkpoint を導出)|404 はオンボーディング前段階で発生し得ない (Register 必須) ため 5xx 扱いで上層に伝搬|
-
-### オンボーディング進行の業務真実は account に集約
-
-オンボーディング再開判定は account の Player 状態 (`Name` / `SelectedFaction`) を SSoT として導出する。再開判定エンドポイント (`GET /internal/v1/players/:playerId/onboarding/resume`) で account の Player を取得し、次の checkpoint を導出する。scenario 側で進行 checkpoint を独自に永続化することは行わない (`scenario.player_onboarding` テーブルは [ADR-021](021-onboarding-scenario.md) 既存の「完了マーク (PK once-only)」専用のまま)。
-
-| account の状態 | 次の checkpoint |
-|---|---|
-| `Name == nil` | `started` (名前入力から再生) |
-| `Name != nil && SelectedFaction == nil` | `name_set` (初期 faction 選択から再生) |
-| `Name != nil && SelectedFaction != nil && player_onboarding に行なし` | `faction_set` (最終演出から再生) |
-| `player_onboarding に行あり` | `completed` (ホームへ) |
-
-[ADR-021](021-onboarding-scenario.md) の「`scenario.player_onboarding` テーブル」節が「display_name / faction_id を保存しない」と定めた SSoT 集約方針と整合する。
-
-### ADR-021 / ADR-022 の supersede
-
-- ADR-021 の「イベント契約」節の `display_name` を outbox 経由で伝搬する設計を本 ADR で部分上書きする。`PlayerOnboardedEvent` から `display_name` を撤去し、payload は `event_id` / `event_type` / `timestamp` / `player_id` / `initial_faction_id` のみとする。ADR-021 本文には本 ADR への supersede note を追記する
-- ADR-022 の「オンボーディング起因」節の subscriber 副作用テーブル「account: `players.display_name` UPDATE + ...」から display_name UPDATE を除外する形に更新する。account の `player_onboarded_subscriber` 実装は既に本 ADR と整合しており、契約だけが追従する形となる
-
-### トレードオフ
-
-- プロジェクト最初のドメイン間 HTTP 直叩きが導入される。アーキ方針上の例外条項を新設する必要がある
-- scenario の可用性が account の可用性に直接連動する (account ダウン時に scenario の name 入力ステップが 5xx)。ただし name 確定できなければオンボーディング進行できないという業務上の依存関係と等価で、隠蔽すべき情報ではない
-- scenario の運用対象が「DB + GCS + Pub/Sub + outbox + account REST」に増える
-- account の REST 契約 (`PUT /name` のリクエスト/レスポンス schema) 変更が scenario の動作と直結する。subscriber 経路と異なり Pub/Sub の `event_type` で版を分離できないため、契約変更時は両者を同時にデプロイする必要がある
+したがって本 ADR は直叩きを onboarding ユースケース内に限った例外として許容する。将来同種の直叩きを追加する場合は、(1) 即時バリデーション中継が業務要件であること、(2) 業務真実の SSoT が呼び出し先サービスにあり呼び出し元は中継のみを行うこと、(3) gateway 経由ルートが認証境界の都合で成立しないこと、の 3 条件をすべて満たすことを別 ADR で正当化する。
 
 ## 不採用案
 
