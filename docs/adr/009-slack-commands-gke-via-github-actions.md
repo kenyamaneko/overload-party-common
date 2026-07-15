@@ -20,26 +20,3 @@ Slack コマンドの受け口は Cloud Run 上の FastAPI サービス（slack-
 
 Python の Google Cloud クライアントライブラリや kubernetes ライブラリで代替も可能だが、
 対象 API が多い（GKE, Compute, Cloudflare）ため依存が重くなる点は同様。
-
-## 詳細
-
-```
-Slack → Cloudflare Worker (即時応答)
-         ↓ Bearer token 認証
-       Cloud Run (FastAPI)
-         ↓ GitHub API (workflow_dispatch)
-       GitHub Actions
-         ↓ gcloud / kubectl
-       GKE, Cloudflare, etc.
-         ↓ Slack webhook
-       完了通知
-```
-
-- Cloudflare Worker が Slack の 3 秒タイムアウトを吸収し、Cloud Run のコールドスタートの影響を回避する
-- Cloud Run 側は GitHub API を叩くだけなので軽量なまま維持できる
-- 既存の startup.yaml, env-up.sh, env-down.sh の処理を統合する
-
-### Cloud SQL 系コマンドとの使い分け
-
-Cloud SQL の起動・停止（/db-start, /db-stop）は対象 API が Cloud SQL Admin API のみのため、
-Cloud Run から REST API を直接呼ぶ方式で実装済み。対象 API が少ない場合はこちらが適切。
