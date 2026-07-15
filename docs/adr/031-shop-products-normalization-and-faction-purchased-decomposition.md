@@ -45,145 +45,6 @@ card 側で `card_pack.pack_id` を **faction ごとに分ける** 設計が確�
 
 これにより shop は **`card_pack_id` 1 個で配布内容が完全に決まる** 形になる (同期 RPC 不要、payload 自己完結)。
 
-## 詳細
-
-### shop products を type 別副表に分解する
-
-副表は **singular `product_<type>`** 形式で命名統一する (1:1 派生の SQL 慣習に従い、master の plural との対比で役割が読み取れる形)。
-
-```
-shop.products (              -- type 横断の共通商品マスター
-  product_id PK, name, type, price,
-  requires_product_id, description, image_url, is_active
-)
-
-shop.product_card_pack (
-  product_id   PK / FK -> products,
-  card_pack_id VARCHAR(50) NOT NULL  -- card.card_pack.pack_id への論理参照
-)
--- type IN ('faction_set','card_pack') の行が必ず 1 件持つ
-
-shop.product_faction (
-  product_id PK / FK -> products,
-  faction    VARCHAR(20) NOT NULL CHECK (faction IN ('SHE','Tenki','Sugar','Tuners'))
-)
--- type='faction_set' の行が必ず 1 件持つ
--- shop が faction-acquired publish 時に参照
-
-shop.product_cosmetic (
-  product_id PK / FK -> products,
-  item_type  VARCHAR(20) NOT NULL,
-  item_no    BIGINT NOT NULL,
-  FOREIGN KEY (item_type, item_no) REFERENCES shop.cosmetic_items
-)
--- type='cosmetic' の行が必ず 1 件持つ
-
-shop.product_subscription (
-  product_id    PK / FK -> products,
-  period_months INT NOT NULL CHECK (period_months > 0)  -- 課金周期 (月数)
-)
--- type='subscription' の行が必ず 1 件持つ
-```
-
-整合性ルール:
-
-| type | 必須副表 |
-|---|---|
-| `faction_set` | `product_card_pack` + `product_faction` |
-| `card_pack` | `product_card_pack` のみ |
-| `cosmetic` | `product_cosmetic` のみ |
-| `subscription` | `product_subscription` のみ |
-
-`type` discriminator と副表の存在/不在の整合は **application 層**で担保する (DB CHECK で完全に縛ると `type` を副表側にも持たせる必要があり overengineering)。
-
-`product_subscription` は subscription variant 拡張 (将来の `premium_yearly` / `premium_family` 等) を見据えて `period_months` 列を持つ。本 ADR 採用時点では `premium_monthly` のみ存在し `period_months=1` で seed する。
-
-副次効果:
-
-- `Product.Content` JSONB 全廃 (`FactionSetContent` / `CosmeticContent` も削除)
-- `cosmetic_items` への FK が DB レベルで成立 (現状 app 整合)
-- 新 type 追加時は **新副表追加のみ**で `products` 共通表に変更が及ばない
-- shop の domain 型は `Product` 共通型 + per-type 型 (`FactionSetProduct` / `CardPackProduct` / `CosmeticProduct` / `SubscriptionProduct`) に分離される ([ADR-029](029-type-layer-separation.md) の domain 層強化)
-- 副表 dispatch は `domain.NewProductView(common, faction *string, itemType *string, itemNo *int64, periodMonths *int64) (ProductView, error)` の factory 関数として domain 層に閉じる (repository は Scan + factory 委譲のみ)
-
-### `faction-purchased` を 2 イベントに分割
-
-shop が publish するイベントを業務事実単位に分解する。
-
-新イベント `card-pack-purchased`:
-
-| 要素 | 値 |
-|---|---|
-| topic | `card-pack-purchased` |
-| event_type | `card_pack_purchased` |
-| payload | `{ event_type, event_id, timestamp, player_id, card_pack_id }` |
-| publisher | shop |
-| subscribers | card (pack 配布) |
-
-card は `card_pack_id` を受け取り `GrantPack(card_pack_id)` で配布する。faction 情報は payload に含めない (card 側で `card_pack_id` から逆引きできるため)。
-
-新イベント `faction-acquired`:
-
-| 要素 | 値 |
-|---|---|
-| topic | `faction-acquired` |
-| event_type | `faction_acquired` |
-| payload | `{ event_type, event_id, timestamp, player_id, faction }` |
-| publisher | shop |
-| subscribers | account (`player_factions` INSERT) / gateway (WS 一次通知) |
-
-旧 `faction-purchased` から意図的に名前を変える: 購入由来のニュアンスを排除し、業務事実「player が faction を獲得した」に寄せる。
-
-shop 内の publish 経路: faction_set 商品購入時、shop は **outbox に 2 行 enqueue** する (同一トランザクション)。
-
-1. `card-pack-purchased`: `product_card_pack.card_pack_id` から組み立て
-2. `faction-acquired`: `product_faction.faction` から組み立て
-
-card_pack 商品 (将来) 購入時は `card-pack-purchased` の 1 行のみ。
-
-副表分解により、shop が faction-acquired publish に必要な faction 情報は **`product_faction` 副表に正規化された状態**で参照できる (sparse 列を引かなくて済む)。
-
-### 各 subscriber の副作用 (移行後)
-
-| イベント | account | card | gateway |
-|---|---|---|---|
-| `card-pack-purchased` | — | `GrantPack(card_pack_id)` で配布 | (副次通知、判断は gateway 側) |
-| `faction-acquired` | `player_factions` INSERT | — | WS 一次通知 (`faction_acquired` push) |
-| `player-onboarded` (既存) | 変更なし | 変更なし | 変更なし |
-| `premium-updated` (既存) | 変更なし | — | 変更なし |
-
-card は `faction-acquired` を購読**しない** (card の関心は pack 配布のみ)。account は `card-pack-purchased` を購読しない (account の関心は所有権のみ)。**subscriber 視点の関心と event の業務事実が 1:1 で対応する**形に整理される。
-
-### Pub/Sub infra の変化
-
-| 要素 | 現状 | 移行後 |
-|---|---|---|
-| `faction-purchased` topic + DLQ | 存在 | **削除** |
-| `faction-purchased-{account,card,gateway}-sub` | 存在 | **削除** |
-| `faction-acquired` topic + DLQ | — | **新設** |
-| `faction-acquired-{account,gateway}-sub` | — | **新設** (card は購読しない) |
-| `card-pack-purchased` topic + DLQ | — | **新設** |
-| `card-pack-purchased-{card,gateway}-sub` | — | **新設** (account は購読しない) |
-| IAM: shop SA | faction-purchased + premium-updated publisher | **faction-acquired + card-pack-purchased + premium-updated** publisher |
-
-### card 側との責務分界
-
-| 領域 | SSoT | 物理的な所有 |
-|---|---|---|
-| card_pack マスター (どのカードを何枚配るか) | card | `card.card_pack` テーブル |
-| 商品 → card_pack の関係 | shop | `shop.product_card_pack.card_pack_id` |
-| card_pack_id の存在性 | card | shop は論理参照のみ (FK なし) |
-| 整合性検証 | overload-party-common | CI で「shop seed の card_pack_id ⊂ card seed の pack_id」を検証 |
-
-shop は **card_pack の中身を一切知らない**。`card_pack_id` という ID 文字列だけを握る。runtime に不正な `card_pack_id` が渡れば card subscriber が `port.ErrNotFound` で nack → DLQ する設計。
-
-### トレードオフ
-
-- **Pub/Sub 契約の破壊的変更**: shop の publish 経路が 1 → 2 に増える。account / card / gateway の subscriber 全改修。本番稼働前なのでドレイン配慮は不要
-- **shop 内の DB / domain refactor が大きい**: products 副表分解は Content JSONB 全廃を伴う。GetActiveProducts のクエリが multi-table LEFT JOIN になり、domain 型も per-type 型に分離される。実装ボリュームは L
-- **outbox 行が 1 → 2 行/購入**: faction_set 商品購入時。既存 outbox パターンで自然に乗るがコード上は Builder の戻り値が `[]OutboxEvent` に変わる
-- **subscription 数の増加**: account / gateway は新 2 topic を購読。card / gateway は subscription 数が増える (Pub/Sub の pull 並行数制限には抵触しない)
-
 ## 不採用案
 
 ### `products` に `card_pack_id` / `faction` を NULL 列として追加
@@ -228,7 +89,7 @@ shop は `card-pack-purchased` だけを publish し、account は card に同�
 
 ## Amendment: 2026-05-24 整合性検証責務を overload-party-ops に移譲
 
-「card 側との責務分界」で「整合性検証 (shop seed の `card_pack_id` ⊂ card seed の `pack_id`) を overload-party-common に置く」と決定したが、移譲先を **overload-party-ops** に変更する。
+本 ADR では整合性検証 (shop seed の `card_pack_id` ⊂ card seed の `pack_id`) を overload-party-common に置くと決定したが、移譲先を **overload-party-ops** に変更する。
 
 移譲の理由:
 
@@ -239,7 +100,7 @@ shop は `card-pack-purchased` だけを publish し、account は card に同�
 
 影響:
 
-- 「card 側との責務分界」の整合性検証行の「overload-party-common」は **overload-party-ops** に読み替える
+- 整合性検証の担当は overload-party-common から **overload-party-ops** に読み替える
 - 実装は overload-party-ops/cross-repo-seeds/check.py + .github/workflows/validate-cross-repo-seeds.yaml に配置済 (kenyamaneko/overload-party-ops#36 / kenyamaneko/overload-party-ops#37)
 
 ## Amendment: 2026-06-16 card のデッキ検証で faction 所持を account に同期照会する
@@ -252,7 +113,7 @@ shop は `card-pack-purchased` だけを publish し、account は card に同�
 
 card はデッキ作成/編集時に account の内部エンドポイント `GET /internal/v1/players/{playerID}/factions` を**同期照会**し、宣言ファクション ∈ 所持ファクション を検証する。
 
-- faction 所有権の SSoT は引き続き account。card は faction イベントを購読せず、所有権を永続化しない (「各 subscriber の副作用」の購読方針は不変)。card は検証時にオンデマンドで読むだけ。
+- faction 所有権の SSoT は引き続き account。card は faction イベントを購読せず、所有権を永続化しない (card が faction を購読しない方針は不変)。card は検証時にオンデマンドで読むだけ。
 - 照会は低頻度なデッキ構築操作に限る。デッキ READ 時の `is_valid` 再算出には含めない (READ 増幅を避ける)。
 
 ### 同期 RPC 方針との整合

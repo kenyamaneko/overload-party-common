@@ -21,60 +21,6 @@ Proposed (2026-04-10)
 
 併せて、ADR-011 のリポジトリ分割に伴うインフラ再構築が控えている。クラスタごと作り直すタイミングに合わせて移行するのが、ダウンタイムとオペレーションコストを最小化できる最適なタイミングである。
 
-## 制約
-
-同等ワークロード（2 vCPU / 8 GiB 相当）を両モードで動かした場合の月額目安。
-
-| 項目 | Autopilot (現行) | Standard (移行後) |
-|------|-----------------|------------------|
-| 課金単位 | Pod requests (CPU/memory/storage) | VM (ノード単位) |
-| 月額概算 | 約 $90〜$110 | 約 $49 |
-| クラスタ管理費 | 含む（第 1 クラスタは無料枠あり） | 同左 |
-
-数字はリージョン asia-northeast1・オンデマンド価格・1 ノード前提の概算であり、Committed Use Discount 等は考慮していない。
-
-## 詳細
-
-### クラスタ構成
-
-| 項目 | 値 |
-|------|-----|
-| モード | Standard |
-| リージョン | asia-northeast1 |
-| マシンタイプ | e2-standard-2 (2 vCPU / 8 GiB memory) |
-| ノード数 | 1 |
-| ノードプール | デフォルト 1 本のみ |
-
-### サービス配置
-
-全ゲームバックエンドサービス（ADR-011 で分割される gateway / account / matchmaking / shop / scenario / card / battle）を**同一ノード上に 1 Pod ずつ**同居させる。レプリカ数は当面いずれも 1 とし、HA は現段階では追求しない（ユーザー規模と SLO に見合わないため）。
-
-外部公開は 1 つの Ingress に集約し、以下の 2 サービスのみ外部からアクセス可能とする。それ以外のサービスはすべて ClusterIP とし、gateway からの内部 REST 経由でのみ到達可能にする。
-
-| サービス | レプリカ | Service type | 公開理由 |
-|----------|---------|-------------|---------|
-| gateway | 1 | Ingress (外部) | クライアントからの REST/WS エントリーポイント |
-| shop | 1 | Ingress (外部) | Apple / Google からの購入 webhook 受信のため公開エンドポイントが必要 |
-| account | 1 | ClusterIP | gateway からの内部 REST のみ |
-| matchmaking | 1 | ClusterIP | gateway からの内部 REST + Upstash Redis Pub/Sub (ADR-012) |
-| scenario | 1 | ClusterIP | gateway からの内部 REST のみ |
-| card | 1 | ClusterIP | gateway / battle からの内部 REST のみ |
-| battle | 1 | ClusterIP | gateway からの内部 REST のみ（既存、ADR-002） |
-
-合計 7 Pod を 1 ノード (`e2-standard-2`: 2 vCPU / 8 GiB) に相乗りさせる前提であり、各サービスの resource requests はノード容量を超えない範囲で配分する。resource limits と requests の具体値は k8s マニフェスト側で管理し、実測に応じてチューニングする。
-
-なお、newsfeed はバッチ処理ジョブとして **Cloud Run Jobs** 上で稼働するため、本 ADR のノード配置・サイジングの対象外である。
-
-### 移行方針
-
-ADR-011 のインフラ再構築と同じ Terraform 適用タイミングで実施する。既存 Autopilot クラスタと並行稼働はさせず、新 Standard クラスタへの切り替えをもって旧クラスタは破棄する。詳細な移行手順は別途 runbook として overload-party-k8s / overload-party-infra 側で管理する。
-
-### トレードオフ
-
-- **ノードの自己管理**: OS アップグレード・セキュリティパッチ・ノードプールのバージョン管理を自分で行う必要がある。GKE の自動アップグレードチャネルを有効化して運用負荷を抑える
-- **単一ノードが SPOF**: ノード障害時にクラスタ全体が停止する。現状のユーザー規模と SLO（ベストエフォート）では許容範囲とするが、ユーザー数が増えた段階でマルチノード化を再検討する
-- **dev/stg の自動停止運用は継続**: コスト最適化のため、既存の dev/stg 環境を 2 AM JST に自動シャットダウンする運用は Standard 移行後も継続する。Standard クラスタでもノードプールのサイズを 0 にすることで同等のコスト削減が可能である
-
 ## 不採用案
 
 ### Autopilot を継続する

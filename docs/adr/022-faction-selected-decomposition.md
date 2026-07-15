@@ -4,9 +4,9 @@
 
 Proposed (2026-04-22)
 
-本 ADR は [ADR-021](021-onboarding-scenario.md) の「イベント契約」節の 2 イベント設計 (`player-onboarded` + `faction-selected`) を部分的に上書きする。scenario の onboarding 完了に伴う publish は `player-onboarded` 1 本に縮退し、shop 起因の faction 取得は新トピック `faction-purchased` として独立する。
+本 ADR は [ADR-021](021-onboarding-scenario.md) のイベント設計（`player-onboarded` + `faction-selected` の 2 イベント）を部分的に上書きする。scenario の onboarding 完了に伴う publish は `player-onboarded` 1 本に縮退し、shop 起因の faction 取得は新トピック `faction-purchased` として独立する。
 
-**本 ADR の「オンボーディング起因」節で account subscriber の副作用に挙げた `players.display_name` UPDATE は [ADR-025](025-onboarding-name-via-rest-and-cross-service-http.md) で除外される**。表示名はオンボード内 name 入力ステップで scenario が account の `PUT /internal/v1/players/:playerId/name` を同期 REST で呼んで確定するため、`PlayerOnboardedEvent` payload には `display_name` を載せず、subscriber では表示名の反映を行わない (account 側 subscriber は `player_factions` INSERT + `players.selected_faction` UPDATE のみ)。card / gateway 側の副作用は変更なし。
+**本 ADR で account subscriber の副作用に挙げた `players.display_name` UPDATE は [ADR-025](025-onboarding-name-via-rest-and-cross-service-http.md) で除外された**。表示名はオンボード内 name 入力ステップで scenario が account の `PUT /internal/v1/players/:playerId/name` を同期 REST で呼んで確定するため、`PlayerOnboardedEvent` payload には `display_name` を載せず、subscriber では表示名の反映を行わない (account 側 subscriber は `player_factions` INSERT + `players.selected_faction` UPDATE のみ)。card / gateway 側の副作用は変更なし。
 
 ## 結論
 
@@ -31,7 +31,7 @@ Proposed (2026-04-22)
 
 ### オンボーディング起因の発火が `PlayerOnboardedEvent` と情報重複している
 
-[ADR-021](021-onboarding-scenario.md) の「イベント契約」節で scenario は onboarding 完了時に以下の 2 イベントを同時 publish する設計とした:
+[ADR-021](021-onboarding-scenario.md) では scenario が onboarding 完了時に以下の 2 イベントを同時 publish する設計とした:
 
 - `PlayerOnboardedEvent { player_id, display_name, initial_faction_id, ... }`
 - `FactionSelectedEvent { player_id, faction, source=scenario_initial, ... }`
@@ -41,78 +41,6 @@ Proposed (2026-04-22)
 ### `common/packages/pubsub-events` の役割が過剰
 
 events.go package doc の原則は "events with a single publisher should live in that publisher's api-<svc> package"。`PlayerOnboardedEvent` は既に scenario 側に、`PremiumUpdatedEvent` は shop に移動予定。`FactionSelectedEvent` を分解すれば **cross-publisher event は残らず**、common/pubsub-events そのものが不要になる。package 自体を維持する運用コスト (タグ管理・Dockerfile fetch・go.mod require × 5 repo) に対して、残る型が無い。
-
-## 詳細
-
-### オンボーディング起因 → `PlayerOnboardedEvent` 単体で完結
-
-- scenario は onboarding 完了時に `PlayerOnboardedEvent` 1 本だけを publish する (現行の 2 イベント atomic 設計を 1 イベントに縮退)
-- ペイロードは既存の `player_id` / `display_name` / `initial_faction_id` で充分
-- subscriber が account / **card** / **gateway** の 3 つに拡大 (従来 account のみの想定を card / gateway まで広げる)
-
-各 subscriber の副作用 (移行後):
-
-| subscriber | 副作用 |
-|---|---|
-| account | `players.display_name` UPDATE + `player_factions` INSERT + `players.selected_faction` UPDATE |
-| card | faction + Neutral の初期カードパック配布 |
-| gateway | WS `onboarding_complete` 通知 push (旧 `faction_selection_complete` 相当) |
-
-scenario の outbox は `PlayerOnboardedEvent` 1 行のみ enqueue する。ADR-021 の「書き込み側（scenario service）」節の「2 イベント同一トランザクション」は `PlayerOnboardedEvent` 1 本の enqueue に縮退する。
-
-### shop 購入起因 → `FactionPurchasedEvent` を新設
-
-- shop は faction 購入 commit 時に `FactionPurchasedEvent` を publish する (既存の `faction-selected` topic は rename)
-- 新トピック: `faction-purchased` (subscribers: account / card / gateway)
-- ペイロード: `player_id` / `faction` / `event_id` / `timestamp` (Source フィールドは不要)
-
-各 subscriber の副作用 (移行後):
-
-| subscriber | 副作用 |
-|---|---|
-| account | `player_factions` INSERT のみ (`selected_faction` は変更しない) |
-| card | faction のカードのみ配布 (Neutral 無し) |
-| gateway | WS `faction_purchase_complete` push |
-
-### イベント型の配置 (ADR-015 の送信側所有原則に完全準拠)
-
-| 型 / 定数 | 配置 |
-|---|---|
-| `PlayerOnboardedEvent`, `TopicPlayerOnboarded`, `EventTypePlayerOnboarded` | `scenario/packages/api-scenario` (ADR-021 で決定済み、現状維持) |
-| `FactionPurchasedEvent`, `TopicFactionPurchased`, `EventTypeFactionPurchased` | `shop/packages/api-shop` (新規追加) |
-| `PremiumUpdatedEvent`, `TopicPremiumUpdated`, `EventTypePremiumUpdated`, `PremiumUpdatedSourceShop` | `shop/packages/api-shop` (common から移動) |
-
-### `common/packages/pubsub-events` の廃止
-
-削除対象:
-
-- `FactionSelectedEvent` / `EventTypeFactionSelected` / `FactionSourceScenarioInitial` / `FactionSourceShopPurchase`
-- `PremiumUpdatedEvent` / `EventTypePremiumUpdated` / `PremiumUpdatedSourceShop`
-- 全 `Topic*` / `Sub*` / `DLQ*` 定数
-
-結果として package の中身が空になるため、**`packages/pubsub-events` ディレクトリごと削除** し、関連する publish workflow も撤去する。
-
-### Pub/Sub infra の変化
-
-| 要素 | 現状 | 移行後 |
-|---|---|---|
-| `faction-selected` topic + DLQ | 存在 (まだ未使用、ADR-021 後に使用予定だった) | **削除** |
-| `faction-selected-{account,card,gateway}-sub` | 存在 | **削除** |
-| `faction-purchased` topic + DLQ | — | **新設** |
-| `faction-purchased-{account,card,gateway}-sub` | — | **新設** |
-| `player-onboarded` topic | ADR-021 で新設予定 | 変更なし (新設) |
-| `player-onboarded-account-sub` | ADR-021 で新設予定 | 変更なし (新設) |
-| `player-onboarded-card-sub` | — | **新設** |
-| `player-onboarded-gateway-sub` | — | **新設** |
-| IAM: scenario SA | faction-selected topic publisher + player-onboarded topic publisher | **player-onboarded topic publisher のみ** (faction-purchased は発行しない) |
-| IAM: shop SA | faction-selected topic publisher + premium-updated topic publisher | **faction-purchased topic publisher** + premium-updated topic publisher |
-
-### トレードオフ
-
-- **Pub/Sub 契約の破壊的変更**: `faction-selected` topic → `faction-purchased` topic への rename、`player-onboarded` subscriber の拡大。本番稼働前なのでメッセージドレイン配慮は不要だが、同期が必要な repo が 8 リポに広がる
-- **card / gateway が 2 subscription を持つ**: 従来 `faction-selected` 1 本だったのが `player-onboarded` と `faction-purchased` の 2 本に。subscription 接続数が倍増するが、Pub/Sub の pull 並行数制限には引っかからない
-- **ADR-021 の supersede**: ADR-021 の「イベント契約」「書き込み側（scenario service）」両節の「2 イベント同一トランザクション」設計を本 ADR で縮退させる必要がある (ADR-021 本文に note を追記)
-- **scenario の event_builder が 1 メソッドに減る**: `BuildFactionSelected` 削除で、scenario 側の outbox 行の種類は 1 種類のみに
 
 ## 不採用案
 
