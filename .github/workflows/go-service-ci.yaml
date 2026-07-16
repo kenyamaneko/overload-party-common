@@ -49,7 +49,8 @@ jobs:
 
   lint:
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    # PR の品質ゲート専用。push:main は test-unit のテスト観点カタログ再生成のみが目的のため対象外
+    if: needs.changes.outputs.code == 'true' && github.event_name == 'pull_request'
     runs-on: ubicloud-standard-2
     timeout-minutes: 10
     env:
@@ -107,10 +108,38 @@ jobs:
       - name: Report coverage
         if: inputs.collect-unit-coverage
         run: go tool cover -func=coverage.out | tail -1 >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload test catalog source
+        if: github.event_name == 'push' && !cancelled()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-catalog-source
+          path: go-test-unit.json
+          # common の集約 workflow (ADR-055) が dispatch を受けて即座に取得するため、長期保持は不要
+          retention-days: 14
+      - name: Generate test catalog dispatch token
+        if: github.event_name == 'push' && !cancelled()
+        id: catalog-dispatch-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.OPS_AUTOMATION_APP_ID }}
+          private-key: ${{ secrets.OPS_AUTOMATION_APP_PRIVATE_KEY }}
+          owner: kenyamaneko
+          repositories: overload-party-common
+      - name: Dispatch test catalog update to common
+        if: github.event_name == 'push' && !cancelled()
+        env:
+          GH_TOKEN: ${{ steps.catalog-dispatch-token.outputs.token }}
+        run: |
+          gh api repos/kenyamaneko/overload-party-common/dispatches \
+            -f event_type=test-catalog-updated \
+            -F "client_payload[repo]=${{ github.event.repository.name }}" \
+            -F "client_payload[sha]=${{ github.sha }}" \
+            -F "client_payload[run_id]=${{ github.run_id }}"
 
   test-integration:
     needs: changes
-    if: needs.changes.outputs.code == 'true' && inputs.has-integration-tests
+    # PR の品質ゲート専用。push:main のテスト観点カタログ再生成は test-unit の結果のみを使う
+    if: needs.changes.outputs.code == 'true' && inputs.has-integration-tests && github.event_name == 'pull_request'
     runs-on: ubicloud-standard-2
     timeout-minutes: 30
     env:
@@ -156,7 +185,8 @@ jobs:
 
   image-scan:
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    # PR の品質ゲート専用。push:main は test-unit のテスト観点カタログ再生成のみが目的のため対象外
+    if: needs.changes.outputs.code == 'true' && github.event_name == 'pull_request'
     runs-on: ubicloud-standard-2
     timeout-minutes: 20
     steps:
@@ -183,7 +213,8 @@ jobs:
 
   codegen-sync:
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    # PR の品質ゲート専用。push:main は test-unit のテスト観点カタログ再生成のみが目的のため対象外
+    if: needs.changes.outputs.code == 'true' && github.event_name == 'pull_request'
     runs-on: ubicloud-standard-2
     timeout-minutes: 15
     env:
