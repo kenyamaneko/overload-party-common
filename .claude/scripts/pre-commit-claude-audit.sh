@@ -99,6 +99,27 @@ if [ ! -f "${RULES_DIR}/principles.md" ]; then
   exit 2
 fi
 
+# principles.md が @import する base ルール一覧を手書きリストで複製すると、principles.md 側の
+# 更新に追従しない二重管理になる。keyandnotes-rules の共有ロジックから動的に導出する。
+COMMON_LIB="${COMMON_DIR}/../../keyandnotes-rules/scripts/claude-audit-common.sh"
+if [ ! -f "$COMMON_LIB" ]; then
+  printf '⚠️  pre-commit-claude-audit: 共有ロジック (%s) が見つからない。audit 不能のため fail-safe で commit ブロック。\n' "$COMMON_LIB" >&2
+  exit 2
+fi
+# shellcheck source=/dev/null
+source "$COMMON_LIB"
+
+# testing.md は呼び出し側 (このスクリプト) が既に無条件で emit_rule しているため、自動導出から除外する。
+auto_inject_refs_raw=$(kn_auto_inject_refs "$RULES_DIR" "${RULES_DIR}/principles.md" "testing.md")
+if [ $? -ne 0 ]; then
+  printf '⚠️  pre-commit-claude-audit: principles.md が参照する base ルールの自動導出に失敗。audit 不能のため fail-safe で commit ブロック。\n' >&2
+  exit 2
+fi
+AUTO_INJECT_REFS=()
+while IFS= read -r ref; do
+  [ -n "$ref" ] && AUTO_INJECT_REFS+=("$ref")
+done <<< "$auto_inject_refs_raw"
+
 # 共通ベース (keyandnotes-rules) と overload-party overlay (common) を対で注入する。
 # base を注入したら同じ相対パスの overlay も必ず注入する不変条件をこの関数に閉じ込め、
 # base だけ足して overlay が監査から漏れる事故を構造的に防ぐ。
@@ -140,6 +161,9 @@ build_prompt() {
 HEADER
 
   emit_rule "principles.md"
+  for ref in "${AUTO_INJECT_REFS[@]}"; do
+    emit_rule "$ref"
+  done
   emit_rule "testing.md"
   if [ "$lang" != "none" ]; then
     emit_rule "lang/${lang}.md"
