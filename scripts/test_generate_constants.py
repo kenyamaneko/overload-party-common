@@ -367,6 +367,13 @@ class Testrestriction整合性の検証:
                 "restriction_copy_count": {"forbidden": 0, "limited": 1, "ghost": 9},
             })
 
+    def test_不足と余剰が同時にあればValueErrorに両方の内容を含む(self):
+        with pytest.raises(ValueError, match=r"missing.*limited.*extra.*ghost"):
+            gen._validate({
+                "restriction_values": ["forbidden", "limited"],
+                "restriction_copy_count": {"forbidden": 0, "ghost": 9},
+            })
+
 
 class TestPascalCaseへの変換:
     @pytest.mark.parametrize(
@@ -382,3 +389,18 @@ class TestPascalCaseへの変換:
     )
     def test_文字列をPascalCaseに変換する(self, value, expected):
         assert gen.convert_to_pascal(value) == expected
+
+
+class TestScreamingSnakeCaseへの変換:
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [
+            pytest.param("AI/ML", "AIML", id="スラッシュ区切りの AI/ML は AIML になる"),
+            pytest.param("semi-limited", "SEMI_LIMITED", id="ハイフン区切りの semi-limited は SEMI_LIMITED になる"),
+            pytest.param("instance_family", "INSTANCE_FAMILY", id="スネークケースの instance_family は INSTANCE_FAMILY になる"),
+            pytest.param("DataResource", "DATARESOURCE", id="パスカルケースの DataResource は DATARESOURCE になる"),
+            pytest.param("", "", id="空文字は空文字になる"),
+        ],
+    )
+    def test_文字列をSCREAMING_SNAKE_CASEに変換する(self, value, expected):
+        assert gen.convert_to_screaming_snake(value) == expected

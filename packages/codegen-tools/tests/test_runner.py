@@ -240,6 +240,16 @@ class Testモデル定義の不正検出:
                 "has no `target`",
                 id="target フィールドが無いとエラーになる",
             ),
+            pytest.param(
+                [{"name": "x", "targets": [], "types": []}],
+                "non-empty list",
+                id="targets が空リストのとき非空リストを要求するエラーになる",
+            ),
+            pytest.param(
+                [{"name": "x", "targets": "wire", "types": []}],
+                "non-empty list",
+                id="targets がリストでないときも同じエラーになる",
+            ),
         ],
     )
     def test_不正なtarget指定でValueErrorになる(
@@ -281,6 +291,30 @@ class Testモデル定義の不正検出:
         assert "section #2" in err
         assert "`name`" in err
         # fail-fast: 出力ファイルは 1 件も書かれない
+        assert not (tmp_path / "out").exists()
+
+    @pytest.mark.parametrize(
+        "models_data",
+        [
+            pytest.param({"other": 1}, id="filesセクションが無いとき"),
+            pytest.param({"files": []}, id="filesが空リストのとき"),
+        ],
+    )
+    def test_filesセクションが無いか空のときrc1とstderrで報告し出力しない(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str], models_data: dict
+    ) -> None:
+        yaml_path = tmp_path / "models.yaml"
+        _write_yaml(yaml_path, models_data)
+        runner = CodegenRunner(
+            models_yaml=yaml_path,
+            repo_root=tmp_path,
+            targets={"wire": GoTarget(tmp_path / "out", "p")},
+        )
+        rc = runner.run()
+        assert rc == 1
+        err = capsys.readouterr().err
+        assert "models.yaml" in err
+        assert "`files:`" in err
         assert not (tmp_path / "out").exists()
 
 
