@@ -66,5 +66,32 @@ export const RESTRICTION_COPY_COUNT: Record<Restriction, number> = {
 
 export const INITIAL_VALUES = {
   deckSize: 30,
+  initialBudget: 5000,
+  initialInsightPool: 0,
+  initialHandSize: 5,
 } as const;
+
+export const GAME_RULES = {
+  handLimit: 6,
+  slotsPerZone: 3,
+  maxTurns: 30,
+  launchFailureTurn: 3,
+} as const;
+
+export const RANK_MULTIPLIERS: Record<Rank, number> = {
+  small: 1,
+  medium: 2,
+  large: 3,
+};
+
+export interface FamilyMultiplier {
+  stat: number;
+  av: number;
+}
+
+export const FAMILY_MULTIPLIERS: Record<(typeof INSTANCE_FAMILIES)[number], FamilyMultiplier> = {
+  M: { stat: 1.0, av: 1.0 },
+  C: { stat: 1.3, av: 0.7 },
+  R: { stat: 0.7, av: 1.3 },
+};
 

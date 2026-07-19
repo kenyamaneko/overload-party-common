@@ -5,6 +5,9 @@ namespace OverloadParty.GameDesignConstants;
 public static class InitialValues
 {
     public const int DeckSize = 30;
+    public const int InitialBudget = 5000;
+    public const int InitialInsightPool = 0;
+    public const int InitialHandSize = 5;
 }
 
 public static class Factions
@@ -120,5 +123,30 @@ public static class Subtypes
         public const string ObjectStorage = "ObjectStorage";
         public const string CacheDB = "CacheDB";
     }
+}
+
+public static class GameRules
+{
+    public const int HandLimit = 6;
+    public const int SlotsPerZone = 3;
+    public const int MaxTurns = 30;
+    public const int LaunchFailureTurn = 3;
+}
+
+public static class RankMultipliers
+{
+    public const long Small = 1;
+    public const long Medium = 2;
+    public const long Large = 3;
+}
+
+public static class FamilyMultipliers
+{
+    public const double MStat = 1.0;
+    public const double MAv = 1.0;
+    public const double CStat = 1.3;
+    public const double CAv = 0.7;
+    public const double RStat = 0.7;
+    public const double RAv = 1.3;
 }
 
