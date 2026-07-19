@@ -76,6 +76,7 @@ export const GAME_RULES = {
   slotsPerZone: 3,
   maxTurns: 30,
   launchFailureTurn: 3,
+  maxAttachmentsPerResource: 2,
 } as const;
 
 export const RANK_MULTIPLIERS: Record<Rank, number> = {

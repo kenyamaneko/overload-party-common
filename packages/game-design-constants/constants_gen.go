@@ -179,6 +179,7 @@ const (
 	GameRuleSlotsPerZone = 3
 	GameRuleMaxTurns = 30
 	GameRuleLaunchFailureTurn = 3
+	GameRuleMaxAttachmentsPerResource = 2
 )
 
 // RankMultipliers maps rank to its stat multiplier.

@@ -85,6 +85,7 @@ game_rules:
   slots_per_zone: 3
   max_turns: 30
   launch_failure_turn: 3
+  max_attachments_per_resource: 2
 
 # Resizable ランクに応じたステータス倍率。
 rank_multipliers:

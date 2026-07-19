@@ -131,6 +131,7 @@ public static class GameRules
     public const int SlotsPerZone = 3;
     public const int MaxTurns = 30;
     public const int LaunchFailureTurn = 3;
+    public const int MaxAttachmentsPerResource = 2;
 }
 
 public static class RankMultipliers
