@@ -62,7 +62,7 @@ dev/stg のフィードバックループが速くなる利点がある。ただ
 
 ## Amendment: 2026-07-20 GitOps ツールを Flux へ移行
 
-GitOps ツール選定（決定 1: ArgoCD 導入）と承認機構（決定 3: 全環境 manual sync）は、keyandnotes-platform ADR-005 の決定により置き換えられた。決定 2（image tag 更新の実行主体）も Flux の image-automation-controller に置き換わる。承認行為は「人が sync を実行する」から「image 更新用の専用ブランチから main への PR を人が merge する」へ変わる。
+GitOps ツール選定（決定 1: ArgoCD 導入）と承認機構（決定 3: 全環境 manual sync）は、keyandnotes-platform ADR-005 の決定により置き換えられた。決定 2（イメージタグ更新の実行主体）も Flux の image-automation-controller に置き換わる。承認行為は「人が sync を実行する」から「イメージ更新用の専用ブランチから main への PR を人が merge する」へ変わる。
 
 決定 4（Application 粒度 = service × env、Flux では Kustomization 粒度として踏襲）と、決定 8（nodepool 単位の nightly shutdown）は変更なく有効。
 
