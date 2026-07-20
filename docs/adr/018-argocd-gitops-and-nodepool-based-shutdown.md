@@ -59,3 +59,11 @@ dev/stg のフィードバックループが速くなる利点がある。ただ
 ### Pod scale 0 方式を継続する
 
 `kubectl scale --replicas=0` は実装が単純だが、Standard モードでは **Pod を 0 にしても VM 課金は止まらない**ため夜間コスト削減の目的を果たせない。また ArgoCD の desired state と衝突し、`ignoreDifferences` や Application `suspend` のような回避が必要になる。nodepool 0 ノード方式なら Deployment の spec は変化しないため ArgoCD と衝突せず（Pod は Pending のまま、Application は Degraded 扱い）、コスト削減も VM 単位で確実に効く。
+
+## Amendment: 2026-07-20 GitOps ツールを Flux へ移行
+
+GitOps ツール選定（決定 1: ArgoCD 導入）と承認機構（決定 3: 全環境 manual sync）は、keyandnotes-platform ADR-005 の決定により置き換えられた。決定 2（image tag 更新の実行主体）も Flux の image-automation-controller に置き換わる。承認行為は「人が sync を実行する」から「image 更新用の専用ブランチから main への PR を人が merge する」へ変わる。
+
+決定 4（Application 粒度 = service × env、Flux では Kustomization 粒度として踏襲）と、決定 8（nodepool 単位の nightly shutdown）は変更なく有効。
+
+詳細は keyandnotes-platform ADR-005、実装は overload-party-k8s#46 を参照。
