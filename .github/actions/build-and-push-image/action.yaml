@@ -1,5 +1,5 @@
 name: Build and push image
-description: Build a Go service Docker image with the Cross-Repo Deps token mounted as a build secret, then push sha and latest tags to Artifact Registry.
+description: Build a Go service Docker image with the Cross-Repo Deps token mounted as a build secret, then push epoch-prefixed sha, sha, and latest tags to Artifact Registry.
 
 inputs:
   image:
