@@ -2,7 +2,9 @@
 
 ## ステータス
 
-Proposed (2026-04-14)
+Superseded by [ADR-056](056-retire-gke-gitops-return-to-cloudrun.md) (2026-07-24)。旧ステータス: Proposed (2026-04-14)
+
+GitOps 化とノードプール単位の夜間停止の決定は、GKE の廃止により失効した。現行の実行基盤とコスト削減方式は ADR-056 を参照のこと。
 
 ## 結論
 

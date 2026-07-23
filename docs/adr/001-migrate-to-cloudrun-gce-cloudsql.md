@@ -2,7 +2,9 @@
 
 ## ステータス
 
-Accepted (2026-02-26)
+Superseded by [ADR-056](056-retire-gke-gitops-return-to-cloudrun.md) (2026-07-24)。旧ステータス: Accepted (2026-02-26)
+
+Cloud Run + GCE + Cloud SQL という基盤の振り分けは ADR-056 が踏襲する。本 ADR の採用後に GKE へ移した構成を ADR-056 が巻き戻すため、現行の実行基盤は ADR-056 を参照のこと。
 
 ## 結論
 
