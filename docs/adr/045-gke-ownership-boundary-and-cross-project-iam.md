@@ -2,9 +2,9 @@
 
 ## ステータス
 
-Proposed (2026-05-20)
+Superseded by [ADR-056](056-retire-gke-gitops-return-to-cloudrun.md) (2026-07-24)。旧ステータス: Proposed (2026-05-20)
 
-本 ADR は keyandnotes-platform リポの「ノードプールスケーリング戦略とGKEの所有権」 (`keyandnotes-platform/docs/ARCHITECTURE.md` から参照) を supersede する。
+GKE ノードプールの所有境界の決定は、GKE の廃止により失効した。現行の実行基盤と cross-project の権限構成は ADR-056 を参照のこと。
 
 ## 結論
 
