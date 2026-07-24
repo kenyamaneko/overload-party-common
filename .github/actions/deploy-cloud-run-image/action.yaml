@@ -1,0 +1,37 @@
+name: Deploy Cloud Run image
+description: Update a Cloud Run service to an already-pushed image tag.
+
+inputs:
+  service-name:
+    description: Cloud Run service name.
+    required: true
+  image:
+    description: Full image path excluding tag (e.g. asia-northeast1-docker.pkg.dev/keyandnotes-platform/overload-party/shop).
+    required: true
+  image-tag:
+    description: Image tag to deploy (commit sha).
+    required: true
+  project-id:
+    description: Google Cloud project ID of the target environment.
+    required: true
+  region:
+    description: Cloud Run region of the target environment.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Update Cloud Run service image
+      shell: bash
+      env:
+        SERVICE_NAME: ${{ inputs.service-name }}
+        IMAGE: ${{ inputs.image }}
+        IMAGE_TAG: ${{ inputs.image-tag }}
+        PROJECT_ID: ${{ inputs.project-id }}
+        REGION: ${{ inputs.region }}
+      run: |
+        gcloud run services update "${SERVICE_NAME}" \
+          --image "${IMAGE}:${IMAGE_TAG}" \
+          --project "${PROJECT_ID}" \
+          --region "${REGION}" \
+          --quiet

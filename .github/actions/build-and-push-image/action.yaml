@@ -6,8 +6,9 @@ inputs:
     description: Full image path excluding tag (e.g. asia-northeast1-docker.pkg.dev/keyandnotes-platform/overload-party/shop).
     required: true
   go-modules-token:
-    description: Cross-Repo Deps App token used for private Go module resolution during the build.
-    required: true
+    description: Cross-Repo Deps App token used for private Go module resolution during the build. Omit for builds with no private Go module dependency.
+    required: false
+    default: ""
 
 runs:
   using: composite
