@@ -41,4 +41,4 @@ Durable Objects は WebSocket とゲーム単位の状態管理に適し、ゼ�
 
 ## Amendment: 2026-07-25 gateway のホスティングを ADR-058 へ移す
 
-gateway を GCE の Managed Instance Group で常時起動する決定は [ADR-058](058-gateway-on-cloudrun-single-instance.md) が置き換える。不採用案「gateway も Cloud Run で常時起動する」が前提とした、WebSocket サーバはゼロへスケールできないという理解が誤っていた。一インスタンスに固定する点は ADR-058 でも維持し、固定する対象が常時動かす下限から同時に動く上限へ変わる。本 ADR の他の決定は維持する。
+gateway を GCE の Managed Instance Group で常時起動する決定は [ADR-058](058-gateway-on-cloudrun-single-instance.md) が置き換える。不採用案「gateway も Cloud Run で常時起動する」が前提とした、WebSocket サーバはゼロへスケールできないという理解が誤っていた。一インスタンスに固定する点は ADR-058 でも維持し、固定する対象が常時動かす下限から同時に動く上限へ変わる。本 ADR の他の決定は維持する。ただし結論に記した本番の月額コストは gateway が常時起動の VM である前提で見積もったものなので、再算定が要る。
