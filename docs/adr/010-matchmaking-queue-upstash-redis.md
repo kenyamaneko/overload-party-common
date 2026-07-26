@@ -2,7 +2,7 @@
 
 ## ステータス
 
-Superseded by [ADR-012](012-matchmaking-pubsub.md) (2026-04-11)。旧ステータス: Proposed (2026-04-08)
+Superseded by [ADR-012](012-matchmaking-pubsub.md)
 
 本 ADR で採用した Upstash Redis Sorted Set によるキュー永続化の決定は ADR-012 に継承されている。ADR-012 ではさらに、リポジトリ分割（[ADR-011](011-repository-split.md)）に伴うサービス間の非同期通知チャネルとして **Google Cloud Pub/Sub (Exactly-Once Delivery 有効)** を採用し、キュー層 (Upstash Redis) とメッセージング層 (Cloud Pub/Sub) を分離したハイブリッド設計としている。今後は ADR-012 を参照のこと。
 

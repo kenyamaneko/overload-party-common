@@ -2,7 +2,7 @@
 
 ## ステータス
 
-Superseded by [ADR-020](020-newsfeed-redis-dedup-reconverge.md) (2026-04-21)。作成日: 2026-04-21
+Superseded by [ADR-020](020-newsfeed-redis-dedup-reconverge.md)
 
 本 ADR は採用直後に [ADR-020](020-newsfeed-redis-dedup-reconverge.md) で置き換えられた。ADR-019 は「newsfeed に state を持たせない」ために要約責務を news に寄せたが、その結果 news が「配信」を超えて「ニュース加工プラットフォーム」化する問題が顕在化した。Upstash Redis を dedup state の置き場に採用すれば ADR-019 の前提が崩れるため、ADR-020 で要約・タグ付けを newsfeed に戻している。履歴として本 ADR は残すが、**現行方針は ADR-020 が SSoT**。
 
