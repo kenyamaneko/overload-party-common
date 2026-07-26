@@ -35,10 +35,10 @@ Overload Party の RDB は **1 つの PostgreSQL インスタンスの上で、�
 | Cloud Firestore (Native, asia-northeast1) | サービス横断の動的設定値 `game_config` コレクション ([ADR-017](../adr/017-game-config-firestore.md)) | account, shop, battle, scenario, gateway |
 | Upstash Redis (Sorted Set) | マッチメイキングキュー | matchmaking |
 | Cloud Pub/Sub (Exactly-Once) | マッチ成立イベント `matchmaking-events` | matchmaking → gateway |
-| Cloud Pub/Sub (At-Least-Once) | オンボーディング完了イベント `player-onboarded` ([ADR-022](../adr/022-faction-selected-decomposition.md)) | scenario → account, card, gateway |
-| Cloud Pub/Sub (At-Least-Once) | カードパック購入イベント `card-pack-purchased` ([ADR-031](../adr/031-shop-products-normalization-and-faction-purchased-decomposition.md), [ADR-032](../adr/032-card-pack-introduction-and-grant-unification.md)) | shop → card, gateway |
-| Cloud Pub/Sub (At-Least-Once) | ファクションアンロックイベント `faction-acquired` ([ADR-031](../adr/031-shop-products-normalization-and-faction-purchased-decomposition.md)) | shop → account, gateway |
-| Cloud Pub/Sub (At-Least-Once) | プレミアム状態変更 `premium-updated` | shop → account, gateway |
+| Cloud Pub/Sub (At-Least-Once) | オンボーディング完了イベント `player-onboarded` ([ADR-022](../adr/022-faction-selected-decomposition.md)) | scenario → account, card |
+| Cloud Pub/Sub (At-Least-Once) | カードパック購入イベント `card-pack-purchased` ([ADR-031](../adr/031-shop-products-normalization-and-faction-purchased-decomposition.md), [ADR-032](../adr/032-card-pack-introduction-and-grant-unification.md)) | shop → card |
+| Cloud Pub/Sub (At-Least-Once) | ファクションアンロックイベント `faction-acquired` ([ADR-031](../adr/031-shop-products-normalization-and-faction-purchased-decomposition.md)) | shop → account |
+| Cloud Pub/Sub (At-Least-Once) | プレミアム状態変更 `premium-updated` | shop → account |
 | Cloud Pub/Sub (At-Least-Once) | ニュース記事収集 `news-article-collected` | newsfeed → news |
 | Google Cloud Storage | ストーリースクリプト | scenario |
 
