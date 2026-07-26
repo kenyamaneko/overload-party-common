@@ -31,6 +31,11 @@ on:
           - game-design-constants-dotnet
           - game-design-constants-npm
 
+concurrency:
+  group: publish-${{ github.ref }}
+  # タグの採番が競合しないように、先行ジョブの完了を待つ
+  cancel-in-progress: false
+
 permissions:
   contents: write
   id-token: write
