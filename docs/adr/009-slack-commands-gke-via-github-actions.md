@@ -2,7 +2,7 @@
 
 ## ステータス
 
-Accepted (2026-03-19)
+Superseded by [ADR-033](033-cross-repo-auth-github-app-migration.md)
 
 ## 結論
 
