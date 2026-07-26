@@ -2,7 +2,7 @@
 
 ## ステータス
 
-Superseded by [ADR-056](056-retire-gke-gitops-return-to-cloudrun.md) (2026-07-24)。旧ステータス: Proposed (2026-04-10)
+Superseded by [ADR-056](056-retire-gke-gitops-return-to-cloudrun.md)
 
 GKE Standard 化の決定は、GKE 自体の廃止により失効した。現行の実行基盤は ADR-056 を参照のこと。
 
