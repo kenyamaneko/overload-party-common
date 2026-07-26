@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"os"
 	"path"
 	"testing"
@@ -8,6 +9,132 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+const testFailureJSON = `{"Action":"run","Package":"pkg","Test":"TestFoo"}
+{"Action":"output","Package":"pkg","Test":"TestFoo","Output":"    a_test.go:10: 期待値と異なる\n"}
+{"Action":"fail","Package":"pkg","Test":"TestFoo"}
+{"Action":"fail","Package":"pkg"}
+`
+
+const buildFailureJSON = `{"ImportPath":"badpkg","Action":"build-output","Output":"# badpkg\n"}
+{"ImportPath":"badpkg","Action":"build-output","Output":"./badpkg.go:5:2: undefined: Foo\n"}
+{"ImportPath":"badpkg","Action":"build-fail"}
+`
+
+const packageOnlyFailureJSON = `{"Action":"run","Package":"pkg","Test":"TestFoo"}
+{"Action":"pass","Package":"pkg","Test":"TestFoo"}
+{"Action":"fail","Package":"pkg"}
+`
+
+const truncatedStreamJSON = `{"Action":"run","Package":"pkg","Test":"TestFoo"}
+{"Action":"output","Package":"pkg","Test":"TestFoo","Output":"    a_test.go:10: 期待値と異なる\n"}
+{"Action":"fail","Package":"pkg","Test":"TestFoo"}
+`
+
+const allSuccessJSON = `{"Action":"run","Package":"pkg","Test":"TestFoo"}
+{"Action":"pass","Package":"pkg","Test":"TestFoo"}
+{"Action":"pass","Package":"pkg"}
+`
+
+func setupFixture(t *testing.T, jsonContent string) (jsonPath, summaryPath string) {
+	t.Helper()
+	dir := t.TempDir()
+	t.Setenv("GITHUB_WORKSPACE", dir)
+	summaryPath = path.Join(dir, "summary.md")
+	t.Setenv("GITHUB_STEP_SUMMARY", summaryPath)
+	jsonPath = path.Join(dir, "go-test.json")
+	writeFile(t, jsonPath, jsonContent)
+	return jsonPath, summaryPath
+}
+
+func runWithFixture(t *testing.T, jsonContent string) int {
+	t.Helper()
+	jsonPath, _ := setupFixture(t, jsonContent)
+	return run([]string{jsonPath, "テスト結果", "."})
+}
+
+func captureStdout(t *testing.T, fn func()) string {
+	t.Helper()
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	original := os.Stdout
+	os.Stdout = w
+	defer func() { os.Stdout = original }()
+
+	fn()
+
+	require.NoError(t, w.Close())
+	out, err := io.ReadAll(r)
+	require.NoError(t, err)
+	return string(out)
+}
+
+func TestRun(t *testing.T) {
+	t.Run("go test -json 集計結果に基づく終了コード判定", func(t *testing.T) {
+		cases := []struct {
+			name         string
+			jsonContent  string
+			wantExitCode int
+		}{
+			{
+				name:         "失敗したテストが含まれるとき、終了コードは1になる",
+				jsonContent:  testFailureJSON,
+				wantExitCode: 1,
+			},
+			{
+				name:         "ビルドに失敗したパッケージが含まれるとき、終了コードは1になる",
+				jsonContent:  buildFailureJSON,
+				wantExitCode: 1,
+			},
+			{
+				name:         "個々のテストが全て成功していてもパッケージ全体が失敗と報告されているとき、終了コードは1になる",
+				jsonContent:  packageOnlyFailureJSON,
+				wantExitCode: 1,
+			},
+			{
+				name:         "失敗したテストの後でストリームが途切れ、パッケージ全体の結果イベントが届いていないとき、終了コードは1になる",
+				jsonContent:  truncatedStreamJSON,
+				wantExitCode: 1,
+			},
+			{
+				name:         "すべてのテストが成功しているとき、終了コードは0になる",
+				jsonContent:  allSuccessJSON,
+				wantExitCode: 0,
+			},
+		}
+
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				assert.Equal(t, tc.wantExitCode, runWithFixture(t, tc.jsonContent))
+			})
+		}
+	})
+}
+
+func TestRunFailureOutput(t *testing.T) {
+	t.Run("テスト失敗時のサマリと注記の出力", func(t *testing.T) {
+		t.Run("失敗したテストが含まれるとき、失敗件数を含むサマリが出力される", func(t *testing.T) {
+			jsonPath, summaryPath := setupFixture(t, testFailureJSON)
+
+			run([]string{jsonPath, "テスト結果", "."})
+
+			summary, err := os.ReadFile(summaryPath)
+			require.NoError(t, err)
+			assert.Contains(t, string(summary), "| 失敗 | 1 |")
+			assert.Contains(t, string(summary), "- pkg.TestFoo")
+		})
+
+		t.Run("失敗したテストが含まれるとき、失敗箇所を示す注記が出力される", func(t *testing.T) {
+			jsonPath, _ := setupFixture(t, testFailureJSON)
+
+			stdout := captureStdout(t, func() {
+				run([]string{jsonPath, "テスト結果", "."})
+			})
+
+			assert.Contains(t, stdout, "::error file=a_test.go,line=10::pkg.TestFoo: 期待値と異なる")
+		})
+	})
+}
 
 func TestPrefixFile(t *testing.T) {
 	t.Run("module-dir によるファイルパスの補正", func(t *testing.T) {

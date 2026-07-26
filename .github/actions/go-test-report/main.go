@@ -1,6 +1,7 @@
 // go-test-report は go test -json の出力ストリームを読み、
 // $GITHUB_STEP_SUMMARY への表形式サマリと、失敗テストに対する
-// GitHub Actions の workflow コマンド (::error::) を出力する。
+// GitHub Actions の workflow コマンド (::error::) を出力した上で、
+// 失敗の有無に応じた終了コードで終了する。
 package main
 
 import (
@@ -53,13 +54,19 @@ type failure struct {
 var fileLineRe = regexp.MustCompile(`(?m)^\s*([A-Za-z0-9_./-]+\.go):(\d+):(?:\d+:)?`)
 
 func main() {
-	if len(os.Args) < 4 {
+	os.Exit(run(os.Args[1:]))
+}
+
+// run は go test -json の出力ストリームを集計し、サマリと annotation を
+// 出力した上で、失敗が 1 件以上あれば 1、なければ 0 を返す。
+func run(args []string) int {
+	if len(args) < 3 {
 		fmt.Fprintln(os.Stderr, "usage: go-test-report <json-path> <title> <module-dir>")
-		os.Exit(1)
+		return 1
 	}
-	jsonPath := os.Args[1]
-	title := os.Args[2]
-	moduleDir := os.Args[3]
+	jsonPath := args[0]
+	title := args[1]
+	moduleDir := args[2]
 
 	modulePath, err := readModulePath(path.Join(os.Getenv("GITHUB_WORKSPACE"), moduleDir))
 	if err != nil {
@@ -73,7 +80,7 @@ func main() {
 	f, err := os.Open(jsonPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "go-test-report: failed to open %s: %v\n", jsonPath, err)
-		os.Exit(1)
+		return 1
 	}
 	defer f.Close()
 
@@ -145,7 +152,7 @@ func main() {
 	}
 	if err := scanner.Err(); err != nil {
 		fmt.Fprintf(os.Stderr, "go-test-report: failed to read %s: %v\n", jsonPath, err)
-		os.Exit(1)
+		return 1
 	}
 
 	leaf := leafKeys(order, results)
@@ -180,6 +187,13 @@ func main() {
 
 	writeSummary(title, passed, failed, skipped, failures, buildFailures)
 	writeAnnotations(failures, buildFailures)
+
+	// 個別テストが全て pass でもパッケージ全体が fail と報告されることがあるため、
+	// failed・buildFailures に加えて pkgFailed も判定に使う。
+	if failed > 0 || len(buildFailures) > 0 || len(pkgFailed) > 0 {
+		return 1
+	}
+	return 0
 }
 
 // prefixFile は go.mod のあるディレクトリ (モジュールルート) がリポジトリ
