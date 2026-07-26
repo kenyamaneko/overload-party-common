@@ -1,10 +1,10 @@
-# ADR-061: 運用操作の Slack コマンド経由の実行を廃止する
+# ADR-062: 運用操作の Slack コマンド経由の実行を廃止する
 
 ## ステータス
 
 Accepted (2026-05-06)
 
-この ADR は [ADR-009](009-slack-commands-gke-via-github-actions.md) を置き換える (Superseded)。
+この ADR は [ADR-009](009-slack-commands-gke-via-github-actions.md) を置き換える。
 
 ## 結論
 

@@ -2,7 +2,7 @@
 
 ## ステータス
 
-Superseded by [ADR-061](061-retire-slack-commands-for-ops.md) (2026-05-06)。旧ステータス: Accepted (2026-03-19)
+Superseded by [ADR-062](062-retire-slack-commands-for-ops.md) (2026-05-06)。旧ステータス: Accepted (2026-03-19)
 
 ## 結論
 
