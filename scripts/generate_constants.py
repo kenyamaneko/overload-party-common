@@ -72,6 +72,18 @@ def convert_to_screaming_snake(value):
     return value.upper()
 
 
+def convert_to_camel(key):
+    """YAML の snake_case キーを camelCase 識別子に変換します（TS プロパティ名用）。
+
+    Args:
+        key: 変換元の snake_case キー文字列。
+
+    Returns:
+        camelCase 化した識別子文字列。
+    """
+    return re.sub(r"_([a-z])", lambda m: m.group(1).upper(), key)
+
+
 @dataclass(frozen=True)
 class EnumCodegenRule:
     """YAML の flat string list を 3 言語の string const 列挙型として codegen するルール。
@@ -132,6 +144,27 @@ def build_go_const_block(comment, prefix, values):
     return lines
 
 
+def build_go_int_const_block(comment, prefix, items):
+    """YAML の int 値マッピングから Go の const ブロックを生成します。
+
+    Args:
+        comment: ブロック先頭に付すコメント文。
+        prefix: 各定数名に付ける接頭辞。
+        items: 定数名 (YAML キー) と値のマッピング。
+
+    Returns:
+        生成した Go ソース行のリスト。
+    """
+    lines = [f"// {comment}."]
+    lines.append("const (")
+    for key, val in items.items():
+        name = f"{prefix}{convert_to_pascal(key)}"
+        lines.append(f"\t{name} = {val}")
+    lines.append(")")
+    lines.append("")
+    return lines
+
+
 def build_go_header(package):
     """Go ファイルのヘッダーを生成します。
 
@@ -153,12 +186,7 @@ def generate_go_game_design(data, factions):
     """Go の game-design-constants パッケージを生成します。"""
     lines = build_go_header("game_design")
 
-    iv = data["initial_values"]
-    lines.append("// Deck size.")
-    lines.append("const (")
-    lines.append(f"\tDeckSize = {iv['deck_size']}")
-    lines.append(")")
-    lines.append("")
+    lines.extend(build_go_int_const_block("Initial values", "", data["initial_values"]))
 
     sorted_factions = sorted(factions, key=lambda f: f["sort_order"])
     lines.append("// Factions.")
@@ -234,6 +262,32 @@ def generate_go_game_design(data, factions):
     lines.append("}")
     lines.append("")
 
+    lines.extend(build_go_int_const_block("Game rules", "GameRule", data["game_rules"]))
+
+    rank_mult = data["rank_multipliers"]
+    lines.append("// RankMultipliers maps rank to its stat multiplier.")
+    lines.append("var RankMultipliers = map[string]int{")
+    for r in data["ranks"]:
+        lines.append(f"\tRank{convert_to_pascal(r)}: {rank_mult[r]},")
+    lines.append("}")
+    lines.append("")
+
+    lines.append("// FamilyMultiplier holds the stat and availability multipliers for an instance family.")
+    lines.append("type FamilyMultiplier struct {")
+    lines.append("\tStat float64")
+    lines.append("\tAv   float64")
+    lines.append("}")
+    lines.append("")
+
+    family_mult = data["family_multipliers"]
+    lines.append("// FamilyMultipliers maps instance family to its multipliers.")
+    lines.append("var FamilyMultipliers = map[string]FamilyMultiplier{")
+    for fam in data["instance_families"]:
+        m = family_mult[fam]
+        lines.append(f"\tInstanceFamily{convert_to_pascal(fam)}: {{Stat: {m['stat']}, Av: {m['av']}}},")
+    lines.append("}")
+    lines.append("")
+
     _write_file(GO_GAME_DESIGN_DIR / "constants_gen.go", lines)
 
 
@@ -253,6 +307,27 @@ def build_cs_static_class(class_name, values, indent="    "):
     for v in values:
         name = convert_to_pascal(v)
         lines.append(f'{indent}public const string {name} = "{v}";')
+    lines.append("}")
+    lines.append("")
+    return lines
+
+
+def build_cs_int_static_class(class_name, items, indent="    "):
+    """YAML の int 値マッピングから C# の static class（int 定数群）を生成します。
+
+    Args:
+        class_name: 生成する static class 名。
+        items: 定数名 (YAML キー) と値のマッピング。
+        indent: 各メンバー行のインデント文字列。
+
+    Returns:
+        生成した C# ソース行のリスト。
+    """
+    lines = [f"public static class {class_name}"]
+    lines.append("{")
+    for key, val in items.items():
+        name = convert_to_pascal(key)
+        lines.append(f"{indent}public const int {name} = {val};")
     lines.append("}")
     lines.append("")
     return lines
@@ -279,12 +354,7 @@ def generate_csharp_game_design(data, factions):
     """C# の game-design-constants NuGet パッケージを生成します。"""
     lines = build_cs_header("OverloadParty.GameDesignConstants")
 
-    iv = data["initial_values"]
-    lines.append("public static class InitialValues")
-    lines.append("{")
-    lines.append(f"    public const int DeckSize = {iv['deck_size']};")
-    lines.append("}")
-    lines.append("")
+    lines.extend(build_cs_int_static_class("InitialValues", data["initial_values"]))
 
     sorted_factions = sorted(factions, key=lambda f: f["sort_order"])
 
@@ -362,6 +432,26 @@ def generate_csharp_game_design(data, factions):
             lines.append("    }")
         lines.append("}")
         lines.append("")
+
+    lines.extend(build_cs_int_static_class("GameRules", data["game_rules"]))
+
+    rank_mult = data["rank_multipliers"]
+    lines.append("public static class RankMultipliers")
+    lines.append("{")
+    for r in data["ranks"]:
+        lines.append(f"    public const long {convert_to_pascal(r)} = {rank_mult[r]};")
+    lines.append("}")
+    lines.append("")
+
+    family_mult = data["family_multipliers"]
+    lines.append("public static class FamilyMultipliers")
+    lines.append("{")
+    for fam in data["instance_families"]:
+        m = family_mult[fam]
+        lines.append(f"    public const double {convert_to_pascal(fam)}Stat = {m['stat']};")
+        lines.append(f"    public const double {convert_to_pascal(fam)}Av = {m['av']};")
+    lines.append("}")
+    lines.append("")
 
     _write_file(DOTNET_GAME_DESIGN_DIR / "GameDesignConstants_gen.cs", lines)
 
@@ -477,9 +567,38 @@ def generate_ts_game_design(data, factions):
     iv = data["initial_values"]
     lines.append("export const INITIAL_VALUES = {")
     for key, val in iv.items():
-        camel = re.sub(r'_([a-z])', lambda m: m.group(1).upper(), key)
-        lines.append(f"  {camel}: {val},")
+        lines.append(f"  {convert_to_camel(key)}: {val},")
     lines.append("} as const;")
+    lines.append("")
+
+    game_rules = data["game_rules"]
+    lines.append("export const GAME_RULES = {")
+    for key, val in game_rules.items():
+        lines.append(f"  {convert_to_camel(key)}: {val},")
+    lines.append("} as const;")
+    lines.append("")
+
+    rank_mult = data["rank_multipliers"]
+    lines.append("export const RANK_MULTIPLIERS: Record<Rank, number> = {")
+    for r in data["ranks"]:
+        lines.append(f"  {r}: {rank_mult[r]},")
+    lines.append("};")
+    lines.append("")
+
+    lines.append("export interface FamilyMultiplier {")
+    lines.append("  stat: number;")
+    lines.append("  av: number;")
+    lines.append("}")
+    lines.append("")
+
+    family_mult = data["family_multipliers"]
+    lines.append(
+        "export const FAMILY_MULTIPLIERS: Record<(typeof INSTANCE_FAMILIES)[number], FamilyMultiplier> = {"
+    )
+    for fam in data["instance_families"]:
+        m = family_mult[fam]
+        lines.append(f"  {fam}: {{ stat: {m['stat']}, av: {m['av']} }},")
+    lines.append("};")
     lines.append("")
 
     _write_file(NPM_GAME_DESIGN_DIR / "src" / "index.ts", lines)
@@ -491,22 +610,45 @@ def _load_yaml(path):
         return yaml.safe_load(f)
 
 
+def _validate_key_set_matches(mapping_name, mapping, declared_name, declared_values):
+    """mapping のキー集合が declared_values と完全一致するか検証します。
+
+    Args:
+        mapping_name: 検証対象マッピングの YAML キー名 (エラーメッセージ用)。
+        mapping: キー集合を検証する対象のマッピング。
+        declared_name: 比較対象となる宣言済みリストの YAML キー名 (エラーメッセージ用)。
+        declared_values: 比較対象となる宣言済みの値リスト。
+
+    Raises:
+        ValueError: mapping のキー集合が declared_values と一致しない場合。
+    """
+    declared = set(declared_values)
+    mapped = set(mapping.keys())
+    if declared == mapped:
+        return
+    missing = declared - mapped
+    extra = mapped - declared
+    details = []
+    if missing:
+        details.append(f"missing in {mapping_name}: {sorted(missing)}")
+    if extra:
+        details.append(f"extra in {mapping_name}: {sorted(extra)}")
+    raise ValueError(
+        f"{mapping_name} keys must match {declared_name} exactly. " + "; ".join(details)
+    )
+
+
 def _validate(data):
     """YAML の整合性を検証します。"""
-    declared = set(data["restriction_values"])
-    mapped = set(data["restriction_copy_count"].keys())
-    if declared != mapped:
-        missing = declared - mapped
-        extra = mapped - declared
-        details = []
-        if missing:
-            details.append(f"missing in restriction_copy_count: {sorted(missing)}")
-        if extra:
-            details.append(f"extra in restriction_copy_count: {sorted(extra)}")
-        raise ValueError(
-            "restriction_copy_count keys must match restriction_values exactly. "
-            + "; ".join(details)
-        )
+    _validate_key_set_matches(
+        "restriction_copy_count", data["restriction_copy_count"], "restriction_values", data["restriction_values"]
+    )
+    _validate_key_set_matches(
+        "rank_multipliers", data["rank_multipliers"], "ranks", data["ranks"]
+    )
+    _validate_key_set_matches(
+        "family_multipliers", data["family_multipliers"], "instance_families", data["instance_families"]
+    )
 
 
 def main():

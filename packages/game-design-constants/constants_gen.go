@@ -2,9 +2,12 @@
 
 package game_design
 
-// Deck size.
+// Initial values.
 const (
 	DeckSize = 30
+	InitialBudget = 5000
+	InitialInsightPool = 0
+	InitialHandSize = 5
 )
 
 // Factions.
@@ -168,5 +171,34 @@ var RestrictionCopyCount = map[string]int{
 	RestrictionLimited: 1,
 	RestrictionSemiLimited: 2,
 	RestrictionForbidden: 0,
+}
+
+// Game rules.
+const (
+	GameRuleHandLimit = 6
+	GameRuleSlotsPerZone = 3
+	GameRuleMaxTurns = 30
+	GameRuleLaunchFailureTurn = 3
+	GameRuleMaxAttachmentsPerResource = 2
+)
+
+// RankMultipliers maps rank to its stat multiplier.
+var RankMultipliers = map[string]int{
+	RankSmall: 1,
+	RankMedium: 2,
+	RankLarge: 3,
+}
+
+// FamilyMultiplier holds the stat and availability multipliers for an instance family.
+type FamilyMultiplier struct {
+	Stat float64
+	Av   float64
+}
+
+// FamilyMultipliers maps instance family to its multipliers.
+var FamilyMultipliers = map[string]FamilyMultiplier{
+	InstanceFamilyM: {Stat: 1.0, Av: 1.0},
+	InstanceFamilyC: {Stat: 1.3, Av: 0.7},
+	InstanceFamilyR: {Stat: 0.7, Av: 1.3},
 }
 

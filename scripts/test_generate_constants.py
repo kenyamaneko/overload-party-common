@@ -27,6 +27,12 @@ def fixture_data():
             "Compute": ["VM"],
         },
         "initial_values": {"deck_size": 30},
+        "game_rules": {"hand_limit": 6, "slots_per_zone": 3},
+        "rank_multipliers": {"small": 1, "medium": 2},
+        "family_multipliers": {
+            "M": {"stat": 1.0, "av": 1.0},
+            "C": {"stat": 1.3, "av": 0.7},
+        },
     }
 
 
@@ -64,7 +70,7 @@ class TestGo言語のgolden出力:
 
             package game_design
 
-            // Deck size.
+            // Initial values.
             const (
             \tDeckSize = 30
             )
@@ -170,6 +176,30 @@ class TestGo言語のgolden出力:
             \tRestrictionLimited: 1,
             }
 
+            // Game rules.
+            const (
+            \tGameRuleHandLimit = 6
+            \tGameRuleSlotsPerZone = 3
+            )
+
+            // RankMultipliers maps rank to its stat multiplier.
+            var RankMultipliers = map[string]int{
+            \tRankSmall: 1,
+            \tRankMedium: 2,
+            }
+
+            // FamilyMultiplier holds the stat and availability multipliers for an instance family.
+            type FamilyMultiplier struct {
+            \tStat float64
+            \tAv   float64
+            }
+
+            // FamilyMultipliers maps instance family to its multipliers.
+            var FamilyMultipliers = map[string]FamilyMultiplier{
+            \tInstanceFamilyM: {Stat: 1.0, Av: 1.0},
+            \tInstanceFamilyC: {Stat: 1.3, Av: 0.7},
+            }
+
             ''')
         assert got == expected
 
@@ -271,6 +301,26 @@ class TestCSharp言語のgolden出力:
                 }
             }
 
+            public static class GameRules
+            {
+                public const int HandLimit = 6;
+                public const int SlotsPerZone = 3;
+            }
+
+            public static class RankMultipliers
+            {
+                public const long Small = 1;
+                public const long Medium = 2;
+            }
+
+            public static class FamilyMultipliers
+            {
+                public const double MStat = 1.0;
+                public const double MAv = 1.0;
+                public const double CStat = 1.3;
+                public const double CAv = 0.7;
+            }
+
             ''')
         assert got == expected
 
@@ -340,31 +390,94 @@ class TestTypeScript言語のgolden出力:
               deckSize: 30,
             } as const;
 
+            export const GAME_RULES = {
+              handLimit: 6,
+              slotsPerZone: 3,
+            } as const;
+
+            export const RANK_MULTIPLIERS: Record<Rank, number> = {
+              small: 1,
+              medium: 2,
+            };
+
+            export interface FamilyMultiplier {
+              stat: number;
+              av: number;
+            }
+
+            export const FAMILY_MULTIPLIERS: Record<(typeof INSTANCE_FAMILIES)[number], FamilyMultiplier> = {
+              M: { stat: 1.0, av: 1.0 },
+              C: { stat: 1.3, av: 0.7 },
+            };
+
             ''')
         assert got == expected
 
 
-class Testrestriction整合性の検証:
-    def test_全restriction値がcopy_countにマップされていれば例外なし(self):
-        gen._validate({
-            "restriction_values": ["forbidden", "limited", "unlimited"],
-            "restriction_copy_count": {"forbidden": 0, "limited": 1, "unlimited": 3},
-        })
+class Testキー集合整合性の検証:
+    def test_宣言値の集合とマッピングのキー集合が一致していれば例外なし(self):
+        gen._validate_key_set_matches(
+            "copy_count", {"a": 0, "b": 1, "c": 3}, "values", ["a", "b", "c"]
+        )
 
-    def test_copy_countに未マップのrestriction値があればValueError(self):
+    def test_マッピングに未マップの宣言値があればValueError(self):
         # silent に 0 や undefined を返さず、SSoT 違反として早期検出する。
-        with pytest.raises(ValueError, match="missing.*unlimited"):
-            gen._validate({
-                "restriction_values": ["forbidden", "limited", "unlimited"],
-                "restriction_copy_count": {"forbidden": 0, "limited": 1},
-            })
+        with pytest.raises(ValueError, match="missing.*c"):
+            gen._validate_key_set_matches(
+                "copy_count", {"a": 0, "b": 1}, "values", ["a", "b", "c"]
+            )
 
-    def test_copy_countにrestriction_values外のキーがあればValueError(self):
+    def test_マッピングに宣言値外のキーがあればValueError(self):
         # typo や削除漏れによる SSoT 不整合を防ぐ。
         with pytest.raises(ValueError, match="extra.*ghost"):
+            gen._validate_key_set_matches(
+                "copy_count", {"a": 0, "b": 1, "ghost": 9}, "values", ["a", "b"]
+            )
+
+    def test_不足と余剰が同時にあればValueErrorに両方の内容を含む(self):
+        with pytest.raises(ValueError, match=r"missing.*b.*extra.*ghost"):
+            gen._validate_key_set_matches(
+                "copy_count", {"a": 0, "ghost": 9}, "values", ["a", "b"]
+            )
+
+
+class Test全体検証の配線:
+    def test_restriction_rankmultiplier_familymultiplierの全整合性が取れていれば例外なし(self):
+        gen._validate({
+            "restriction_values": ["forbidden", "limited"],
+            "restriction_copy_count": {"forbidden": 0, "limited": 1},
+            "ranks": ["small", "medium"],
+            "rank_multipliers": {"small": 1, "medium": 2},
+            "instance_families": ["M", "C"],
+            "family_multipliers": {
+                "M": {"stat": 1.0, "av": 1.0},
+                "C": {"stat": 1.3, "av": 0.7},
+            },
+        })
+
+    def test_rank_multipliersがranksと不整合のときValueError(self):
+        with pytest.raises(ValueError, match="rank_multipliers keys must match ranks"):
             gen._validate({
                 "restriction_values": ["forbidden", "limited"],
-                "restriction_copy_count": {"forbidden": 0, "limited": 1, "ghost": 9},
+                "restriction_copy_count": {"forbidden": 0, "limited": 1},
+                "ranks": ["small", "medium"],
+                "rank_multipliers": {"small": 1},
+                "instance_families": ["M", "C"],
+                "family_multipliers": {
+                    "M": {"stat": 1.0, "av": 1.0},
+                    "C": {"stat": 1.3, "av": 0.7},
+                },
+            })
+
+    def test_family_multipliersがinstance_familiesと不整合のときValueError(self):
+        with pytest.raises(ValueError, match="family_multipliers keys must match instance_families"):
+            gen._validate({
+                "restriction_values": ["forbidden", "limited"],
+                "restriction_copy_count": {"forbidden": 0, "limited": 1},
+                "ranks": ["small", "medium"],
+                "rank_multipliers": {"small": 1, "medium": 2},
+                "instance_families": ["M", "C"],
+                "family_multipliers": {"M": {"stat": 1.0, "av": 1.0}},
             })
 
     def test_不足と余剰が同時にあればValueErrorに両方の内容を含む(self):
@@ -389,6 +502,20 @@ class TestPascalCaseへの変換:
     )
     def test_文字列をPascalCaseに変換する(self, value, expected):
         assert gen.convert_to_pascal(value) == expected
+
+
+class TestCamelCaseへの変換:
+    @pytest.mark.parametrize(
+        ("key", "expected"),
+        [
+            pytest.param("deck_size", "deckSize", id="スネークケースの deck_size は deckSize になる"),
+            pytest.param("launch_failure_turn", "launchFailureTurn", id="複数アンダースコアの launch_failure_turn は launchFailureTurn になる"),
+            pytest.param("maxturns", "maxturns", id="アンダースコアが無い maxturns はそのまま"),
+            pytest.param("", "", id="空文字は空文字になる"),
+        ],
+    )
+    def test_文字列をcamelCaseに変換する(self, key, expected):
+        assert gen.convert_to_camel(key) == expected
 
 
 class TestScreamingSnakeCaseへの変換:

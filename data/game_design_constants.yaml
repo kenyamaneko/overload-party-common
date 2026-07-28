@@ -76,3 +76,25 @@ initial_values:
   # パッケージ定数として配信する。運営チューニング値は Firestore game_config コレクションで管理。
   # 配置ルールの SSoT: docs/architecture/DATA_DESIGN.md#定数設定値の配置ルール
   deck_size: 30
+  initial_budget: 5000
+  initial_insight_pool: 0
+  initial_hand_size: 5
+
+game_rules:
+  hand_limit: 6
+  slots_per_zone: 3
+  max_turns: 30
+  launch_failure_turn: 3
+  max_attachments_per_resource: 2
+
+# Resizable ランクに応じたステータス倍率。
+rank_multipliers:
+  small: 1
+  medium: 2
+  large: 3
+
+# stat はスループット/Yield 系倍率、av は可用性倍率。
+family_multipliers:
+  M: { stat: 1.0, av: 1.0 }
+  C: { stat: 1.3, av: 0.7 }
+  R: { stat: 0.7, av: 1.3 }
