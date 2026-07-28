@@ -2,7 +2,7 @@
 
 ## ステータス
 
-Superseded by [ADR-043](043-battle-player-summary-and-matchmaking-queue-embed.md)。旧ステータス: Proposed (2026-05-12)
+Superseded by [ADR-043](043-battle-player-summary-and-matchmaking-queue-embed.md)
 
 ## 結論
 

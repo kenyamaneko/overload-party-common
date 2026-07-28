@@ -130,3 +130,7 @@ card はデッキ作成/編集時に account の内部エンドポイント `GET
 - account: 内部エンドポイント新設 (overload-party-account#36)
 - card: `port.FactionClient` + accountClient + デッキ検証 (overload-party-card#49)
 - k8s: card deployment に `ACCOUNT_SERVICE_URL` 注入 (overload-party-k8s#39)
+
+## Amendment: 2026-07-12 gateway subscriber 記載の無効化
+
+本文の subscriber 表と Pub/Sub infra 表にある gateway (WS 一次通知 / 副次通知、`faction-acquired-gateway-sub` / `card-pack-purchased-gateway-sub`) は、[ADR-027](027-gateway-pubsub-fanout-removal.md) が廃止した client 通知転用の配線であり、同 ADR の例外条件の正当化を経ていないため無効とする。`faction-acquired` の subscriber は account のみ、`card-pack-purchased` の subscriber は card のみ。infra に作成されていた gateway 向け subscription 2 本は削除した。

@@ -7,9 +7,34 @@ on:
         description: Image name in Artifact Registry (matches the repository name).
         type: string
         required: true
+      service-name:
+        description: Cloud Run service name. Defaults to image-name when omitted.
+        type: string
+        default: ""
+      needs-go-modules-token:
+        description: Generate the Cross-Repo Deps App token for private Go module resolution during the build. Set false for builds with no private Go module dependency (e.g. C#).
+        type: boolean
+        default: true
+      target:
+        description: Deploy target environment (dev / stg / prod).
+        type: string
+        required: true
+      project-id:
+        description: Google Cloud project ID of the target environment.
+        type: string
+        required: true
+      region:
+        description: Cloud Run region of the target environment.
+        type: string
+        required: true
+      version:
+        description: Git tag to resolve and promote. Required when target is stg or prod.
+        type: string
+        default: ""
 
 jobs:
-  push-image:
+  deploy-dev:
+    if: inputs.target == 'dev'
     runs-on: ubicloud-standard-2
     timeout-minutes: 30
     env:
@@ -33,7 +58,12 @@ jobs:
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker ${{ env.REGISTRY }} --quiet
 
+      - name: Check for repo-local build script
+        id: build-hook
+        run: echo "exists=$([ -x .github/scripts/ci/build-and-push-image.sh ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
       - name: Generate Cross-Repo Deps App token
+        if: inputs.needs-go-modules-token
         id: app-token
         uses: actions/create-github-app-token@v1
         with:
@@ -41,8 +71,74 @@ jobs:
           private-key: ${{ secrets.CROSS_REPO_DEPS_APP_PRIVATE_KEY }}
           owner: kenyamaneko
 
+      - name: Build and push image (repo-local script)
+        if: steps.build-hook.outputs.exists == 'true'
+        run: .github/scripts/ci/build-and-push-image.sh
+        env:
+          REGISTRY: ${{ env.REGISTRY }}
+          PROJECT_ID: ${{ env.PROJECT_ID }}
+          REPOSITORY: ${{ env.REPOSITORY }}
+          IMAGE_NAME: ${{ inputs.image-name }}
+          IMAGE_TAG: ${{ github.sha }}
+
       - name: Build and push image
+        if: steps.build-hook.outputs.exists != 'true'
         uses: kenyamaneko/overload-party-common/.github/actions/build-and-push-image@main
         with:
           image: ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ inputs.image-name }}
-          go-modules-token: ${{ steps.app-token.outputs.token }}
+          go-modules-token: ${{ inputs.needs-go-modules-token && steps.app-token.outputs.token || '' }}
+
+      - name: Deploy image to Cloud Run (dev)
+        uses: kenyamaneko/overload-party-common/.github/actions/deploy-cloud-run-image@main
+        with:
+          service-name: ${{ inputs.service-name || inputs.image-name }}
+          image: ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ inputs.image-name }}
+          image-tag: ${{ github.sha }}
+          project-id: ${{ inputs.project-id }}
+          region: ${{ inputs.region }}
+
+  promote:
+    if: inputs.target == 'stg' || inputs.target == 'prod'
+    runs-on: ubicloud-standard-2
+    timeout-minutes: 15
+    env:
+      PROJECT_ID: keyandnotes-platform
+      REGISTRY: asia-northeast1-docker.pkg.dev
+      REPOSITORY: overload-party
+    steps:
+      - name: Validate version input
+        env:
+          VERSION: ${{ inputs.version }}
+          TARGET: ${{ inputs.target }}
+        run: |
+          if [ -z "${VERSION}" ]; then
+            echo "::error::version input is required to promote to ${TARGET}"
+            exit 1
+          fi
+
+      - name: Checkout target version
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.version }}
+
+      - name: Resolve commit for target version
+        id: resolve
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.CI_SERVICE_ACCOUNT }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy image to Cloud Run
+        uses: kenyamaneko/overload-party-common/.github/actions/deploy-cloud-run-image@main
+        with:
+          service-name: ${{ inputs.service-name || inputs.image-name }}
+          image: ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ inputs.image-name }}
+          image-tag: ${{ steps.resolve.outputs.sha }}
+          project-id: ${{ inputs.project-id }}
+          region: ${{ inputs.region }}

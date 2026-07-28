@@ -2,7 +2,9 @@
 
 ## ステータス
 
-Accepted (2026-05-10)。末尾の Amendment (2026-05-10: shop の X-Player-Id 並走廃止) を含めて現行方針とする。検証実装を各リポで重複実装する方針は [ADR-039](039-internal-auth-verifier-shared-package.md) (共有パッケージ化) で上書きされた
+Superseded by [ADR-057](057-cloudrun-service-auth-iam-and-rs256.md)
+
+内部認証を HMAC 署名 JWT (HS256) とする決定は ADR-057 が置き換える。ADR-057 は署名を非対称鍵 (RS256) に変更し、サービス間の到達制御を Cloud Run の呼び出し IAM に分離する。検証実装の共有パッケージ化 ([ADR-039](039-internal-auth-verifier-shared-package.md)) の枠組みは維持され、署名方式のみが変わる。今後は ADR-057 を参照のこと。
 
 ## 結論
 

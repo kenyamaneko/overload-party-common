@@ -480,6 +480,13 @@ class Test全体検証の配線:
                 "family_multipliers": {"M": {"stat": 1.0, "av": 1.0}},
             })
 
+    def test_不足と余剰が同時にあればValueErrorに両方の内容を含む(self):
+        with pytest.raises(ValueError, match=r"missing.*limited.*extra.*ghost"):
+            gen._validate({
+                "restriction_values": ["forbidden", "limited"],
+                "restriction_copy_count": {"forbidden": 0, "ghost": 9},
+            })
+
 
 class TestPascalCaseへの変換:
     @pytest.mark.parametrize(

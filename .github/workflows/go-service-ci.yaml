@@ -97,6 +97,8 @@ jobs:
           app-id: ${{ vars.CROSS_REPO_DEPS_APP_ID }}
           private-key: ${{ secrets.CROSS_REPO_DEPS_APP_PRIVATE_KEY }}
       - name: Run unit tests
+        # パイプの終了ステータスが go test のものになるよう、pipefail が付く bash を明示する
+        shell: bash
         run: go test -race -count=1 ${{ inputs.collect-unit-coverage && '-coverprofile=coverage.out' || '' }} ${{ inputs.test-packages }} -json | tee go-test-unit.json
       - name: Report test results
         if: ${{ !cancelled() }}
@@ -146,6 +148,8 @@ jobs:
           app-id: ${{ vars.CROSS_REPO_DEPS_APP_ID }}
           private-key: ${{ secrets.CROSS_REPO_DEPS_APP_PRIVATE_KEY }}
       - name: Run integration tests
+        # パイプの終了ステータスが go test のものになるよう、pipefail が付く bash を明示する
+        shell: bash
         run: go test -race -count=1 -tags=integration ${{ inputs.test-packages }} -json | tee go-test-integration.json
       - name: Report test results
         if: ${{ !cancelled() }}

@@ -2,7 +2,9 @@
 
 ## ステータス
 
-Accepted (2026-07-11)
+Superseded by [ADR-056](056-retire-gke-gitops-return-to-cloudrun.md)
+
+GKE サービスの環境昇格を promote workflow で行う決定は、GKE の廃止により失効した。現行のデプロイと環境昇格の方式は ADR-056 を参照のこと。
 
 ## 結論
 

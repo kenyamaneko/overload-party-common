@@ -2,7 +2,9 @@
 
 ## ステータス
 
-Accepted (2026-07-09)
+Superseded by [ADR-056](056-retire-gke-gitops-return-to-cloudrun.md)
+
+公開 Ingress を常時起動する決定は、GKE Ingress の廃止により失効した。現行の外部公開の方式は ADR-056 を参照のこと。
 
 ## 結論
 
