@@ -77,6 +77,14 @@ class TestGo型への変換:
                 id="boolean は bool になる",
             ),
             pytest.param(
+                {"type": "number"}, True, "float64",
+                id="必須の number 型は float64 になる",
+            ),
+            pytest.param(
+                {"type": "number"}, False, "*float64",
+                id="optional の number 型はポインタの float64 になる",
+            ),
+            pytest.param(
                 {"type": "array", "items": {"type": "string"}}, True, "[]string",
                 id="string の array は []string になる",
             ),
@@ -274,3 +282,107 @@ class TestAsyncAPIスペックのパース:
         out = parse_spec(spec)
         f = out["types"][0]["fields"][0]
         assert f == {"name": "ExpiresAt", "type": "*time.Time", "json": "expires_at,omitempty"}
+
+    def test_2値以上のenumを持つプロパティはフィールドにはなるが定数は生成されない(self):
+        spec = {
+            "components": {
+                "schemas": {
+                    "FooEvent": {
+                        "type": "object",
+                        "required": ["status"],
+                        "properties": {
+                            "status": {"type": "string", "enum": ["a", "b"]},
+                        },
+                    }
+                }
+            }
+        }
+        out = parse_spec(spec)
+        assert out["types"][0]["fields"] == [
+            {"name": "Status", "type": "string", "json": "status"},
+        ]
+        assert out["constants"] == []
+
+    @pytest.mark.parametrize(
+        "spec",
+        [
+            pytest.param({}, id="componentsが無いとき"),
+            pytest.param({"components": {}}, id="schemasが無いときも同様"),
+        ],
+    )
+    def test_componentsまたはschemasが無いとき型も定数も生成されない(self, spec):
+        out = parse_spec(spec)
+        assert out["types"] == []
+        assert out["constants"] == []
+
+    def test_propertiesの無いobjectスキーマはフィールドの無い型になる(self):
+        spec = {
+            "components": {
+                "schemas": {
+                    "FooEvent": {"type": "object"},
+                }
+            }
+        }
+        out = parse_spec(spec)
+        assert out["types"] == [
+            {"name": "FooEvent", "comment": "FooEvent", "fields": []},
+        ]
+
+    def test_requiredの無いスキーマは全フィールドがomitempty付きのoptionalになる(self):
+        spec = {
+            "components": {
+                "schemas": {
+                    "FooEvent": {
+                        "type": "object",
+                        "properties": {
+                            "bar": {"type": "string"},
+                        },
+                    }
+                }
+            }
+        }
+        out = parse_spec(spec)
+        assert out["types"][0]["fields"] == [
+            {"name": "Bar", "type": "*string", "json": "bar,omitempty"},
+        ]
+
+    def test_プロパティ定義がmappingでないときそのプロパティはフィールドにならない(self):
+        spec = {
+            "components": {
+                "schemas": {
+                    "FooEvent": {
+                        "type": "object",
+                        "required": ["bar"],
+                        "properties": {
+                            "bar": "not-a-mapping",
+                        },
+                    }
+                }
+            }
+        }
+        out = parse_spec(spec)
+        assert out["types"][0]["fields"] == []
+
+    def test_constと単一値enumが併存するとき両方の定数が生成される(self):
+        spec = {
+            "components": {
+                "schemas": {
+                    "FooEvent": {
+                        "type": "object",
+                        "required": ["event_type"],
+                        "properties": {
+                            "event_type": {"type": "string", "const": "foo_happened"},
+                            "source": {"type": "string", "enum": ["shop"]},
+                        },
+                    }
+                }
+            }
+        }
+        out = parse_spec(spec)
+        names_and_values = {
+            (v["name"], v["value"])
+            for block in out["constants"]
+            for v in block["values"]
+        }
+        assert ("EventTypeFoo", "foo_happened") in names_and_values
+        assert ("FooSourceShop", "shop") in names_and_values

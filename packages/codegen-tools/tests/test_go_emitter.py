@@ -231,6 +231,41 @@ class Test構造体の生成:
         assert any('json:"f"' in line and "db:" not in line for line in json_only)
         assert any('db:"f_col"' in line and "json:" not in line for line in db_only)
 
+    @pytest.mark.parametrize(
+        "type_def",
+        [
+            pytest.param({"name": "X"}, id="fieldsキーの無い型"),
+            pytest.param({"name": "X", "fields": []}, id="fieldsが空リストの型"),
+        ],
+    )
+    def test_フィールドの無い型はフィールドの無いstructとして出力される(self, type_def) -> None:
+        out = render_struct(type_def, GoStyle())
+        assert out == ["type X struct {", "}", ""]
+
+    @pytest.mark.parametrize(
+        "field_def",
+        [
+            pytest.param(
+                {"name": "F", "type": "string", "json": "f"},
+                id="追加タグキーの値が無いフィールド",
+            ),
+            pytest.param(
+                {"name": "F", "type": "string", "json": "f", "tag": ""},
+                id="追加タグキーの値が空文字のフィールド",
+            ),
+        ],
+    )
+    def test_追加タグの値が無いときタグに足されない(self, field_def) -> None:
+        style = GoStyle(field_extra_tag_key="tag")
+        td = {"name": "X", "fields": [field_def]}
+        out = render_struct(td, style)
+        assert out == [
+            "type X struct {",
+            '\tF string `json:"f"`',
+            "}",
+            "",
+        ]
+
 
 class TestGoファイルの生成:
     def test_ヘッダとpackageとimportとstructで構成する(self) -> None:
