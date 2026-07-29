@@ -3,6 +3,7 @@
 import textwrap
 
 import pytest
+import yaml
 
 import generate_constants as gen
 
@@ -58,6 +59,33 @@ def fixture_factions():
             "sort_order": 0,
         },
     ]
+
+
+@pytest.fixture
+def real_ssot():
+    game_design = yaml.safe_load(gen.GAME_DESIGN_YAML.read_text(encoding="utf-8"))
+    factions = yaml.safe_load(gen.FACTIONS_YAML.read_text(encoding="utf-8"))["factions"]
+    return game_design, factions
+
+
+@pytest.fixture
+def generated_outputs(tmp_path, monkeypatch, fixture_data, fixture_factions):
+    monkeypatch.setattr(gen, "GO_GAME_DESIGN_DIR", tmp_path / "go")
+    monkeypatch.setattr(gen, "DOTNET_GAME_DESIGN_DIR", tmp_path / "dotnet")
+    monkeypatch.setattr(gen, "NPM_GAME_DESIGN_DIR", tmp_path / "npm")
+    gen.generate_go_game_design(fixture_data, fixture_factions)
+    gen.generate_csharp_game_design(fixture_data, fixture_factions)
+    gen.generate_ts_game_design(fixture_data, fixture_factions)
+    return {
+        "go": (tmp_path / "go" / "constants_gen.go").read_text(encoding="utf-8"),
+        "cs": (tmp_path / "dotnet" / "GameDesignConstants_gen.cs").read_text(encoding="utf-8"),
+        "ts": (tmp_path / "npm" / "src" / "index.ts").read_text(encoding="utf-8"),
+    }
+
+
+def _stripped_lines(text):
+    """生成テキストを行ごとに前後空白を除いたリストに変換します。"""
+    return [line.strip() for line in text.splitlines()]
 
 
 class TestGo言語のgolden出力:
@@ -412,6 +440,142 @@ class TestTypeScript言語のgolden出力:
 
             ''')
         assert got == expected
+
+
+class Test実SSoTから生成した結果がコミット済み生成物と一致する:
+    @pytest.mark.parametrize(
+        ("generate", "dir_attr", "output_relpath", "committed_relpath"),
+        [
+            pytest.param(
+                gen.generate_go_game_design,
+                "GO_GAME_DESIGN_DIR",
+                "constants_gen.go",
+                "packages/game-design-constants/constants_gen.go",
+                id="Go言語のとき、実SSoTから生成した結果がコミット済みconstants_gen.goと一致する",
+            ),
+            pytest.param(
+                gen.generate_csharp_game_design,
+                "DOTNET_GAME_DESIGN_DIR",
+                "GameDesignConstants_gen.cs",
+                "packages/game-design-constants-dotnet/GameDesignConstants_gen.cs",
+                id="CSharp言語のとき、実SSoTから生成した結果がコミット済みGameDesignConstants_gen.csと一致する",
+            ),
+            pytest.param(
+                gen.generate_ts_game_design,
+                "NPM_GAME_DESIGN_DIR",
+                "src/index.ts",
+                "packages/game-design-constants-npm/src/index.ts",
+                id="TypeScript言語のとき、実SSoTから生成した結果がコミット済みindex.tsと一致する",
+            ),
+        ],
+    )
+    def test_実SSoTから生成する(self, tmp_path, monkeypatch, real_ssot, generate, dir_attr, output_relpath, committed_relpath):
+        game_design, factions = real_ssot
+        monkeypatch.setattr(gen, dir_attr, tmp_path)
+        generate(game_design, factions)
+
+        got = (tmp_path / output_relpath).read_text(encoding="utf-8")
+        committed = (gen.ROOT / committed_relpath).read_text(encoding="utf-8")
+        assert got == committed
+
+
+class Test生成の冪等性:
+    @pytest.mark.parametrize(
+        ("generate", "dir_attr", "output_relpath"),
+        [
+            pytest.param(gen.generate_go_game_design, "GO_GAME_DESIGN_DIR", "constants_gen.go", id="Go言語のとき、実SSoTから2回生成しても出力が同一になる"),
+            pytest.param(gen.generate_csharp_game_design, "DOTNET_GAME_DESIGN_DIR", "GameDesignConstants_gen.cs", id="CSharp言語のとき、実SSoTから2回生成しても出力が同一になる"),
+            pytest.param(gen.generate_ts_game_design, "NPM_GAME_DESIGN_DIR", "src/index.ts", id="TypeScript言語のとき、実SSoTから2回生成しても出力が同一になる"),
+        ],
+    )
+    def test_実SSoTから2回生成する(self, tmp_path, monkeypatch, real_ssot, generate, dir_attr, output_relpath):
+        game_design, factions = real_ssot
+
+        monkeypatch.setattr(gen, dir_attr, tmp_path / "run1")
+        generate(game_design, factions)
+
+        monkeypatch.setattr(gen, dir_attr, tmp_path / "run2")
+        generate(game_design, factions)
+
+        first = (tmp_path / "run1" / output_relpath).read_text(encoding="utf-8")
+        second = (tmp_path / "run2" / output_relpath).read_text(encoding="utf-8")
+        assert first == second
+
+
+class Test陣営一覧が3言語の生成物に全件現れる:
+    def test_is_collectibleの真偽に関わらず全陣営がGoのFaction定数に現れる(self, generated_outputs):
+        lines = _stripped_lines(generated_outputs["go"])
+        assert 'FactionNeutral = "Neutral"' in lines
+        assert 'FactionSHE = "SHE"' in lines
+
+    def test_is_collectibleの真偽に関わらず全陣営がCSharpのFactions定数に現れる(self, generated_outputs):
+        lines = _stripped_lines(generated_outputs["cs"])
+        assert 'public const string Neutral = "Neutral";' in lines
+        assert 'public const string SHE = "SHE";' in lines
+
+    def test_is_collectibleの真偽に関わらず全陣営がTSのFACTIONS配列に現れる(self, generated_outputs):
+        lines = _stripped_lines(generated_outputs["ts"])
+        assert 'export const FACTIONS = ["Neutral", "SHE"] as const;' in lines
+
+
+class Test選択可能陣営がis_collectibleが真の陣営のみになる:
+    def test_is_collectibleが真の陣営のみGoのSelectableFactionsに現れる(self, generated_outputs):
+        lines = _stripped_lines(generated_outputs["go"])
+        assert "FactionSHE," in lines
+        assert "FactionNeutral," not in lines
+
+    def test_is_collectibleが真の陣営のみCSharpのSelectableFactionsに現れる(self, generated_outputs):
+        lines = _stripped_lines(generated_outputs["cs"])
+        assert "Factions.SHE," in lines
+        assert "Factions.Neutral," not in lines
+
+    def test_is_collectibleが真の陣営のみTSのSELECTABLE_FACTIONSに現れる(self, generated_outputs):
+        lines = _stripped_lines(generated_outputs["ts"])
+        assert 'export const SELECTABLE_FACTIONS = ["SHE"] as const;' in lines
+
+
+class TestFactionByIDが全陣営を被覆する:
+    def test_全陣営がGoのFactionByIDに現れる(self, generated_outputs):
+        lines = _stripped_lines(generated_outputs["go"])
+        assert '"Neutral": FactionsMetadata[0],' in lines
+        assert '"SHE": FactionsMetadata[1],' in lines
+
+    def test_全陣営がTSのFACTION_BY_IDに現れる(self, generated_outputs):
+        lines = _stripped_lines(generated_outputs["ts"])
+        assert '"Neutral": FACTIONS_METADATA[0],' in lines
+        assert '"SHE": FACTIONS_METADATA[1],' in lines
+
+
+class TestInstanceFamilyのTS_union型にのみ空文字が追加される:
+    def test_InstanceFamily型は空文字を許容するunionになる(self, generated_outputs):
+        lines = _stripped_lines(generated_outputs["ts"])
+        assert "export type InstanceFamily = (typeof INSTANCE_FAMILIES)[number] | '';" in lines
+
+    @pytest.mark.parametrize(
+        "type_declaration_line",
+        [
+            pytest.param("export type Zone = (typeof ZONES)[number];", id="Zone型のとき、空文字を含まないunionになる"),
+            pytest.param("export type Rank = (typeof RANKS)[number];", id="Rank型のとき、空文字を含まないunionになる"),
+            pytest.param("export type Restriction = (typeof RESTRICTION_VALUES)[number];", id="Restriction型のとき、空文字を含まないunionになる"),
+            pytest.param("export type MatchType = (typeof MATCH_TYPES)[number];", id="MatchType型のとき、空文字を含まないunionになる"),
+            pytest.param("export type StatType = (typeof STAT_TYPES)[number];", id="StatType型のとき、空文字を含まないunionになる"),
+        ],
+    )
+    def test_InstanceFamily以外の型は空文字を含まないunionになる(self, generated_outputs, type_declaration_line):
+        lines = _stripped_lines(generated_outputs["ts"])
+        assert type_declaration_line in lines
+
+
+class TestRestrictionCopyCountのキー集合がrestriction_valuesと一致する:
+    def test_restriction_values全件がGoのRestrictionCopyCountに現れる(self, generated_outputs):
+        lines = _stripped_lines(generated_outputs["go"])
+        assert "RestrictionForbidden: 0," in lines
+        assert "RestrictionLimited: 1," in lines
+
+    def test_restriction_values全件がTSのRESTRICTION_COPY_COUNTに現れる(self, generated_outputs):
+        lines = _stripped_lines(generated_outputs["ts"])
+        assert "forbidden: 0," in lines
+        assert "limited: 1," in lines
 
 
 class Testキー集合整合性の検証:
