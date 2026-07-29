@@ -88,6 +88,14 @@ def _stripped_lines(text):
     return [line.strip() for line in text.splitlines()]
 
 
+def _block_lines(text, opening, closing):
+    """開始行と終了行に挟まれたブロックの中身を、行ごとの集合として抽出します。"""
+    lines = _stripped_lines(text)
+    start = lines.index(opening) + 1
+    end = lines.index(closing, start)
+    return set(lines[start:end])
+
+
 class TestGo言語のgolden出力:
     def test_固定入力がGoの期待出力と完全一致する(self, tmp_path, monkeypatch, fixture_data, fixture_factions):
         monkeypatch.setattr(gen, "GO_GAME_DESIGN_DIR", tmp_path)
@@ -567,15 +575,21 @@ class TestInstanceFamilyのTS_union型にのみ空文字が追加される:
 
 
 class TestRestrictionCopyCountのキー集合がrestriction_valuesと一致する:
-    def test_restriction_values全件がGoのRestrictionCopyCountに現れる(self, generated_outputs):
-        lines = _stripped_lines(generated_outputs["go"])
-        assert "RestrictionForbidden: 0," in lines
-        assert "RestrictionLimited: 1," in lines
+    def test_GoのRestrictionCopyCountのキー集合がrestriction_valuesと一致する(self, generated_outputs):
+        block = _block_lines(
+            generated_outputs["go"],
+            "var RestrictionCopyCount = map[string]int{",
+            "}",
+        )
+        assert block == {"RestrictionForbidden: 0,", "RestrictionLimited: 1,"}
 
-    def test_restriction_values全件がTSのRESTRICTION_COPY_COUNTに現れる(self, generated_outputs):
-        lines = _stripped_lines(generated_outputs["ts"])
-        assert "forbidden: 0," in lines
-        assert "limited: 1," in lines
+    def test_TSのRESTRICTION_COPY_COUNTのキー集合がrestriction_valuesと一致する(self, generated_outputs):
+        block = _block_lines(
+            generated_outputs["ts"],
+            "export const RESTRICTION_COPY_COUNT: Record<Restriction, number> = {",
+            "};",
+        )
+        assert block == {"forbidden: 0,", "limited: 1,"}
 
 
 class Testキー集合整合性の検証:
