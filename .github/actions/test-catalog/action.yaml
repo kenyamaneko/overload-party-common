@@ -1,0 +1,37 @@
+name: Test viewpoint catalog
+description: 'Render a test viewpoint catalog page from test result files.'
+
+inputs:
+  sections:
+    description: 'One --section spec per line (カテゴリ:ラベル:形式:パス[:プレフィクス]). Paths are relative to the repository root.'
+    required: true
+  title:
+    description: Page heading, shown in the browser tab (e.g. shop テスト観点カタログ).
+    required: true
+  output-dir:
+    description: Directory the index.html is written to, relative to the repository root.
+    required: false
+    default: _site
+  commit:
+    description: Commit SHA recorded on the generated page.
+    required: false
+    default: ${{ github.sha }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+    - name: Install doc-tools
+      shell: bash
+      run: pip install "${{ github.action_path }}/../../../packages/doc-tools"
+    - name: Render test viewpoint catalog
+      shell: bash
+      env:
+        SECTIONS: ${{ inputs.sections }}
+        TITLE: ${{ inputs.title }}
+        OUTPUT_DIR: ${{ inputs.output-dir }}
+        COMMIT: ${{ inputs.commit }}
+      run: bash "${{ github.action_path }}/render.sh"
