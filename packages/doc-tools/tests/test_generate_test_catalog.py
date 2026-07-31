@@ -290,10 +290,19 @@ class Test由来によるセクション振り分け:
         with pytest.raises(ValueError):
             route_cases_to_specs([outer], [BehaviorCase((), "x", False, "pkg/other")])
 
-    def test_複数のプレフィクスに前方一致する由来があるときValueErrorになる(self):
+    def test_複数のプレフィクスに前方一致する由来はより長いプレフィクスのセクションに入る(self):
         outer = SectionSpec("外", "svc", "go-json", Path("r.json"), ("pkg",))
         inner = SectionSpec("内", "svc", "go-json", Path("r.json"), ("pkg/repo",))
-        with pytest.raises(ValueError):
+        repo_case = BehaviorCase((), "内のケース", False, "pkg/repo/order")
+        root_case = BehaviorCase((), "外のケース", False, "pkg/handler/order")
+        result = route_cases_to_specs([outer, inner], [repo_case, root_case])
+        assert result[outer] == [root_case]
+        assert result[inner] == [repo_case]
+
+    def test_同じ長さのプレフィクスが複数のセクションに並ぶ由来があるときValueErrorになる(self):
+        outer = SectionSpec("外", "svc", "go-json", Path("r.json"), ("pkg/repo",))
+        inner = SectionSpec("内", "svc", "go-json", Path("r.json"), ("pkg/repo",))
+        with pytest.raises(ValueError, match="同じ長さで振り分けられる"):
             route_cases_to_specs([outer, inner], [BehaviorCase((), "x", False, "pkg/repo/order")])
 
 
