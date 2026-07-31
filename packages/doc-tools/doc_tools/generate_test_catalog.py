@@ -298,6 +298,10 @@ def route_cases_to_specs(
 ) -> dict[SectionSpec, list[BehaviorCase]]:
     """1 つの結果ファイルから読んだケース群を、由来のプレフィクスでセクションへ振り分ける。
 
+    複数のセクションに当てはまる由来は、最も長い (最も具体的な) プレフィクスを持つ
+    セクションに入れる。同じ長さで並ぶ指定は、どちらに入れるべきか決められないため
+    エラーにする。
+
     Args:
         specs: 同じ結果ファイルを参照する SectionSpec のリスト。
         cases: その結果ファイルから読んだ BehaviorCase のリスト。
@@ -306,7 +310,8 @@ def route_cases_to_specs(
         SectionSpec ごとに振り分けられた BehaviorCase のリスト。
 
     Raises:
-        ValueError: どのセクションにも、または複数セクションに振り分けられるケースがあるとき。
+        ValueError: どのセクションにも振り分けられない由来があるとき、または
+            最も長いプレフィクスが複数のセクションで並ぶとき。
     """
     if len(specs) == 1 and specs[0].prefixes is None:
         return {specs[0]: cases}
@@ -314,16 +319,18 @@ def route_cases_to_specs(
     assigned: dict[SectionSpec, list[BehaviorCase]] = {spec: [] for spec in specs}
     for case in cases:
         matches = [
-            spec
+            (spec, max((len(p) for p in spec.prefixes if case.source_file.startswith(p)), default=-1))
             for spec in specs
             if spec.prefixes is not None
-            and any(case.source_file.startswith(prefix) for prefix in spec.prefixes)
         ]
+        matches = [(spec, length) for spec, length in matches if length >= 0]
         if not matches:
             raise ValueError(f"どのセクションにも振り分けられない由来です: {case.source_file}")
-        if len(matches) > 1:
-            raise ValueError(f"複数のセクションに振り分けられる由来です: {case.source_file}")
-        assigned[matches[0]].append(case)
+        longest = max(length for _, length in matches)
+        best = [spec for spec, length in matches if length == longest]
+        if len(best) > 1:
+            raise ValueError(f"複数のセクションに同じ長さで振り分けられる由来です: {case.source_file}")
+        assigned[best[0]].append(case)
     return assigned
 
 
