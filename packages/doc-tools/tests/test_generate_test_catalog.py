@@ -310,35 +310,43 @@ class Testセクションの組み立て:
 
 class TestMarkdownの描画:
     def test_射程の注意書きが引用として入る(self):
-        output = render_markdown([], commit=None)
+        output = render_markdown([], commit=None, title="カタログの表題")
         assert "> 本カタログは" in output
+
+    def test_渡した表題が最上位の見出しになる(self):
+        output = render_markdown([], commit=None, title="shop テスト観点カタログ")
+        assert "# shop テスト観点カタログ" in output
 
     def test_セクション見出しにケース総数が入る(self):
         tree = build_group_tree([
             BehaviorCase((), "ケースA", False, "s"),
             BehaviorCase(("対象",), "ケースB", False, "s"),
         ])
-        output = render_markdown([("外から見た振る舞い", "svc", tree)], commit=None)
+        output = render_markdown([("外から見た振る舞い", "svc", tree)], commit=None, title="カタログの表題")
         assert "### svc（全 2 ケース）" in output
 
     def test_同じカテゴリが連続するときカテゴリ見出しは1回だけ入る(self):
         tree = build_group_tree([BehaviorCase((), "ケース", False, "s")])
         output = render_markdown(
-            [("外から見た振る舞い", "a", tree), ("外から見た振る舞い", "b", tree)], commit=None
+            [("外から見た振る舞い", "a", tree), ("外から見た振る舞い", "b", tree)],
+            commit=None,
+            title="カタログの表題",
         )
         assert output.count("## 外から見た振る舞い") == 1
 
     def test_カテゴリが切り替わるとき新しいカテゴリ見出しが入る(self):
         tree = build_group_tree([BehaviorCase((), "ケース", False, "s")])
         output = render_markdown(
-            [("外から見た振る舞い", "a", tree), ("内部の挙動", "b", tree)], commit=None
+            [("外から見た振る舞い", "a", tree), ("内部の挙動", "b", tree)],
+            commit=None,
+            title="カタログの表題",
         )
         assert "## 外から見た振る舞い" in output
         assert "## 内部の挙動" in output
 
     def test_グループは見出しケースは箇条書きとして現れる(self):
         tree = build_group_tree([BehaviorCase(("対象",), "ケースA", False, "s")])
-        output = render_markdown([("外から見た振る舞い", "svc", tree)], commit=None)
+        output = render_markdown([("外から見た振る舞い", "svc", tree)], commit=None, title="カタログの表題")
         assert "#### 対象" in output
         assert "- ケースA" in output
 
@@ -347,42 +355,49 @@ class TestMarkdownの描画:
             BehaviorCase(("Z対象",), "ケースZ", False, "s"),
             BehaviorCase(("A対象",), "ケースA", False, "s"),
         ])
-        output = render_markdown([("外から見た振る舞い", "svc", tree)], commit=None)
+        output = render_markdown([("外から見た振る舞い", "svc", tree)], commit=None, title="カタログの表題")
         assert output.index("#### A対象") < output.index("#### Z対象")
 
     def test_skip中のケースには未検証の注記が付く(self):
         tree = build_group_tree([BehaviorCase((), "未実装のケース", True, "s")])
-        output = render_markdown([("外から見た振る舞い", "svc", tree)], commit=None)
+        output = render_markdown([("外から見た振る舞い", "svc", tree)], commit=None, title="カタログの表題")
         assert "未実装のケース（skip 中のため未検証）" in output
 
     def test_ケース名の山括弧はタグと誤解釈されない形に変換される(self):
         tree = build_group_tree([BehaviorCase((), "<script> を含むケース", False, "s")])
-        output = render_markdown([("外から見た振る舞い", "svc", tree)], commit=None)
+        output = render_markdown([("外から見た振る舞い", "svc", tree)], commit=None, title="カタログの表題")
         assert "&lt;script&gt;" in output
 
     def test_commitを渡すと生成元commitの行が入る(self):
-        assert "生成元 commit: `abc123`" in render_markdown([], commit="abc123")
+        assert "生成元 commit: `abc123`" in render_markdown(
+            [], commit="abc123", title="カタログの表題"
+        )
 
     def test_commitを渡さないと生成元commitの行は入らない(self):
-        assert "生成元 commit" not in render_markdown([], commit=None)
+        assert "生成元 commit" not in render_markdown([], commit=None, title="カタログの表題")
 
 
 class TestHTMLの描画:
     def test_日本語ページとして本文にケース名と注意書きが入る(self):
         tree = build_group_tree([BehaviorCase((), "ケースA", False, "s")])
-        output = render_html([("外から見た振る舞い", "svc", tree)], commit=None)
+        output = render_html([("外から見た振る舞い", "svc", tree)], commit=None, title="カタログの表題")
         assert '<html lang="ja">' in output
         assert "ケースA" in output
         assert "本カタログは" in output
 
+    def test_渡した表題がタブ名と最上位の見出しになる(self):
+        output = render_html([], commit=None, title="shop テスト観点カタログ")
+        assert "<title>shop テスト観点カタログ</title>" in output
+        assert "<h1>shop テスト観点カタログ</h1>" in output
+
     def test_下位グループは折りたたみ可能なdetailsとしてケース数の注記付きで現れる(self):
         tree = build_group_tree([BehaviorCase(("対象",), "ケースA", False, "s")])
-        output = render_html([("外から見た振る舞い", "svc", tree)], commit=None)
+        output = render_html([("外から見た振る舞い", "svc", tree)], commit=None, title="カタログの表題")
         assert "<details><summary>対象（全 1 ケース）</summary>" in output
 
     def test_skip中のケースには専用クラスと注記が付く(self):
         tree = build_group_tree([BehaviorCase((), "未実装のケース", True, "s")])
-        output = render_html([("外から見た振る舞い", "svc", tree)], commit=None)
+        output = render_html([("外から見た振る舞い", "svc", tree)], commit=None, title="カタログの表題")
         assert '<li class="skipped">未実装のケース（skip 中のため未検証）</li>' in output
 
 

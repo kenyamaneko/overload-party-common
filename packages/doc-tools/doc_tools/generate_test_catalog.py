@@ -1,4 +1,4 @@
-"""各リポのテスト実行結果から、テスト観点カタログを生成する。
+"""リポジトリのテスト実行結果から、テスト観点カタログを生成する。
 
 テストの命名規約 (keyandnotes-rules testing.md「テストの命名」) に従ったテスト名を、
 グループ (テスト対象の要素) とケース (シナリオ) の階層に復元し、Markdown または HTML で
@@ -19,7 +19,7 @@ Usage::
     python -m doc_tools.generate_test_catalog \\
         --section '外から見た振る舞い:shop:go-json:results/shop.json:github.com/kenyamaneko/overload-party-shop/internal/handler' \\
         --section '内部の挙動:shop:go-json:results/shop.json:github.com/kenyamaneko/overload-party-shop/internal/repository' \\
-        --format html --commit "$SHA"
+        --format html --title "shop テスト観点カタログ" --commit "$SHA"
 """
 
 from __future__ import annotations
@@ -49,11 +49,9 @@ SKIPPED_NOTE = "（skip 中のため未検証）"
 
 # テストの無い仕様はカタログに現れないため、「載っていない = 仕様がない」という誤読を防ぐ
 DISCLAIMER = (
-    "本カタログは全リポの自動テストのテスト名から生成した「テスト済みの観点」の一覧であり、"
+    "本カタログはこのリポジトリの自動テストのテスト名から生成した「テスト済みの観点」の一覧であり、"
     "仕様の全量ではない。テストの無い仕様はここに現れない。"
 )
-
-PAGE_TITLE = "Overload Party テスト観点カタログ"
 
 MARKDOWN_INDENT = "  "
 
@@ -417,17 +415,20 @@ def append_group_markdown(lines: list[str], node: GroupNode, depth: int) -> None
         append_group_markdown(lines, subgroup, depth + 1)
 
 
-def render_markdown(sections: list[tuple[str, str, GroupNode]], commit: str | None) -> str:
+def render_markdown(
+    sections: list[tuple[str, str, GroupNode]], commit: str | None, title: str
+) -> str:
     """テスト観点カタログを Markdown で描画する。
 
     Args:
         sections: (カテゴリ, セクション名, グループ木) のリスト。
         commit: 生成元 commit の SHA。None なら記載しない。
+        title: ページの表題。
 
     Returns:
         Markdown 文書全体。
     """
-    lines = [f"# {PAGE_TITLE}", "", f"> {DISCLAIMER}", ""]
+    lines = [f"# {escape_text(title)}", "", f"> {DISCLAIMER}", ""]
     if commit is not None:
         lines += [f"生成元 commit: `{commit}`", ""]
     current_category = None
@@ -473,12 +474,15 @@ def append_group_html(parts: list[str], node: GroupNode) -> None:
         parts.append("</details>")
 
 
-def render_html(sections: list[tuple[str, str, GroupNode]], commit: str | None) -> str:
+def render_html(
+    sections: list[tuple[str, str, GroupNode]], commit: str | None, title: str
+) -> str:
     """テスト観点カタログを単一ファイルの HTML ページとして描画する。
 
     Args:
         sections: (カテゴリ, セクション名, グループ木) のリスト。
         commit: 生成元 commit の SHA。None なら記載しない。
+        title: ページの表題。
 
     Returns:
         HTML 文書全体。
@@ -489,7 +493,7 @@ def render_html(sections: list[tuple[str, str, GroupNode]], commit: str | None) 
         "<head>",
         '<meta charset="utf-8">',
         '<meta name="viewport" content="width=device-width, initial-scale=1">',
-        f"<title>{PAGE_TITLE}</title>",
+        f"<title>{escape_text(title)}</title>",
         "<style>",
         "body { font-family: sans-serif; max-width: 60rem; margin: 0 auto; padding: 1rem 1.5rem; line-height: 1.7; }",
         "blockquote { border-left: 4px solid #c9c9c9; margin: 1rem 0; padding: 0.25rem 1rem; background: #f6f6f6; }",
@@ -502,7 +506,7 @@ def render_html(sections: list[tuple[str, str, GroupNode]], commit: str | None) 
         "</style>",
         "</head>",
         "<body>",
-        f"<h1>{PAGE_TITLE}</h1>",
+        f"<h1>{escape_text(title)}</h1>",
         f"<blockquote>{DISCLAIMER}</blockquote>",
     ]
     if commit is not None:
@@ -564,12 +568,13 @@ def main(argv: list[str] | None = None) -> None:
         help="カテゴリ名・セクション名・形式・結果ファイルのパス・振り分けプレフィクス (複数指定可)",
     )
     parser.add_argument("--format", choices=("markdown", "html"), required=True, help="出力形式")
+    parser.add_argument("--title", required=True, help="ページの表題")
     parser.add_argument("--commit", default=None, help="生成元 commit の SHA (省略可)")
     args = parser.parse_args(argv)
 
     sections = build_sections(args.section)
     renderer = render_markdown if args.format == "markdown" else render_html
-    sys.stdout.write(renderer(sections, args.commit))
+    sys.stdout.write(renderer(sections, args.commit, args.title))
 
 
 if __name__ == "__main__":

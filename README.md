@@ -8,6 +8,8 @@ Overload Party の **横断的な共有リソース** を管理するリポジ�
 - **アーキテクチャ / ゲームデザイン / ビジネスドキュメント**
 - **Claude Code 開発ルールの overload-party 固有 overlay とリポ・レジストリ** (共通 base ルールは keyandnotes-rules リポが SSoT)
 
+[テスト観点カタログ](https://kenyamaneko.github.io/overload-party-common/): 各リポのテスト名から生成した、テスト済みの観点の一覧。
+
 ## 構成
 
 ```
@@ -34,7 +36,7 @@ scripts/
   skills/                          # Claude Code 用 skill
 .github/
   workflows/                       # validate / publish
-  actions/                         # publish / Cloudsmith 認証用 composite action
+  actions/                         # publish / Cloudsmith 認証 / テスト観点カタログ用 composite action
   scripts/                         # 上記 action / workflow のスクリプト
 docs/
   architecture/                    # システム設計ドキュメント
@@ -42,6 +44,7 @@ docs/
   business/                        # ビジネス・法務
   notes/                           # 補助メモ
   adr/                             # ADR (アーキテクチャ決定記録)
+  pages/                           # GitHub Pages で公開する静的ページ
 ```
 
 ## パッケージ

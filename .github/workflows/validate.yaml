@@ -1,6 +1,6 @@
 name: Validate
 
-# game-design-constants の codegen-sync check + unit tests。
+# game-design-constants の codegen-sync check + unit tests、テスト観点カタログの公開。
 
 on:
   push:
@@ -15,6 +15,9 @@ on:
       - "packages/game-design-constants-npm/**"
       - "packages/doc-tools/**"
       - "packages/codegen-tools/**"
+      - ".github/actions/test-catalog/**"
+      - ".github/workflows/validate.yaml"
+      - "docs/pages/**"
   pull_request:
     paths:
       - "data/game_design_constants.yaml"
@@ -26,10 +29,14 @@ on:
       - "packages/game-design-constants-npm/**"
       - "packages/doc-tools/**"
       - "packages/codegen-tools/**"
+      - ".github/actions/test-catalog/**"
+      - ".github/workflows/validate.yaml"
+      - "docs/pages/**"
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # main の run は GitHub Pages への deploy を含むため、後続の push で打ち切らない
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   unit-tests:
@@ -74,6 +81,54 @@ jobs:
         with:
           xml-path: pytest-codegen-tools.xml
           title: codegen-tools テスト結果
+      - name: Upload test results
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-results
+          path: pytest-*.xml
+          retention-days: 1
+
+  publish-catalog:
+    name: Publish test viewpoint catalog
+    needs: unit-tests
+    if: github.event_name == 'push'
+    runs-on: ubicloud-standard-2
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Download test results
+        uses: actions/download-artifact@v4
+        with:
+          name: pytest-results
+      - name: Render test viewpoint catalog
+        uses: ./.github/actions/test-catalog
+        with:
+          title: common テスト観点カタログ
+          output-dir: _site/catalog
+          sections: |
+            外から見た振る舞い:ゲーム定数の生成:pytest-junit:pytest-scripts.xml
+            外から見た振る舞い:ドキュメント生成:pytest-junit:pytest-doc-tools.xml:tests.test_generate_api_docs,tests.test_generate_schema_doc,tests.test_generate_test_catalog
+            外から見た振る舞い:コード生成:pytest-junit:pytest-codegen-tools.xml:tests.test_runner
+            内部の挙動:ドキュメント生成の内部部品:pytest-junit:pytest-doc-tools.xml:tests.test_utils
+            内部の挙動:コード生成の内部部品:pytest-junit:pytest-codegen-tools.xml:tests.test_go_emitter,tests.test_yaml_loader
+      - name: Place cross-repo index page
+        run: cp docs/pages/index.html _site/index.html
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
 
   codegen-sync:
     name: Codegen sync check

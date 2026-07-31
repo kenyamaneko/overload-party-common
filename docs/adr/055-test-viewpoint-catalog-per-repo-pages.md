@@ -45,3 +45,13 @@ ADR-052 で各リポの CI テストレポート出力は標準化済みで、�
 C# (battle) は対象要素を `[Trait("対象", "…")]` に、ケース名を `[Fact/Theory(DisplayName = "…")]` に持つ。しかしこの `対象` trait はどの標準の .NET テスト結果ファイルにも出力されない。TRX は DisplayName を testName に含むが trait を落とし、`JUnitXml.TestLogger` は trait も DisplayName も出さず英語のメソッド名を出す。そのため「テスト結果ファイルを言語別パーサで正規化する」という本文の方式は C# では成立せず、グループ階層を作れない。
 
 そこで C# に限り、パーサの入力を標準のテスト結果ファイルではなく battle が抽出した中間 JSON にする。battle は抽出ステップ (テスト DLL のリフレクション、または `.cs` ソースの走査) で `[Theory]` を各行に展開しつつ `{target, case, skipped, source}` の平坦なレコードを出力し、common の `csharp-json` パーサがそれを共通モデルに正規化する。パーサと正規化は本文どおり common に残るため、これは不採用案「各リポで生成ロジックも個別実装する」とは異なる。他の 3 言語 (Go の `go test -json`・Python の JUnit XML・TS の vitest JSON) は本文どおり結果ファイルを直接パースする。
+
+## Amendment: 2026-07-31 生成ロジックは composite action として配る
+
+本文は「各リポが `doc-tools` を `pip install` して利用する」としていたが、配布は common の composite action に載せる形に改める。common は private なので、`pip install` で取得するには cross-repo の App 資格情報が各リポに要る。この資格情報は Go 8 リポと battle にしかなく、analytics・client・newsfeed には無い。composite action は common の Actions アクセス設定だけで全リポから参照でき、追加の資格情報を要さない。ADR-052 のテストレポート整形も同じ形で配っており、経路が一つにまとまる。
+
+action は common 内の `doc-tools` を install してカタログの HTML を描画するところまでを担う。GitHub Pages への公開 (成果物の受け渡しと deploy) は各リポの workflow に残す。common の Pages はインデックスページを起点に置き、common 自身のカタログはその下の階層に置く。
+
+カテゴリの振り分けはテストの由来 (パッケージ・モジュール) のプレフィクスで行い、どのセクションにも入らない由来があれば生成を失敗させる。テストを持つパッケージが増えたときに設定の更新を強制するためで、更新を怠ると main のカタログ公開が止まる。既定のカテゴリへ落とすと、分類されないまま気付かれずに紛れ込む。
+
+per-repo 公開ではリポごとにページが分かれるため、ページの表題は生成時に指定する。
