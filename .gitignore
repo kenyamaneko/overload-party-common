@@ -21,6 +21,7 @@ __pycache__/
 .pytest_cache/
 .venv/
 venv/
+packages/*/build/
 
 # Docs (local only)
 docs/notes/

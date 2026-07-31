@@ -200,11 +200,33 @@ def parse_pytest_junit(path: Path) -> list[BehaviorCase]:
     return cases
 
 
+def make_relative_to_working_directory(path_text: str) -> str:
+    """絶対パスを実行位置からの相対パスに直す。
+
+    Args:
+        path_text: 変換するパス。相対パスならそのまま返す。
+
+    Returns:
+        実行位置からの相対パス。
+
+    Raises:
+        ValueError: 絶対パスが実行位置の配下に無いとき。
+    """
+    path = Path(path_text)
+    if not path.is_absolute():
+        return path_text
+    try:
+        return str(path.relative_to(Path.cwd()))
+    except ValueError as exc:
+        raise ValueError(f"実行位置の配下に無いパスです: {path_text}") from exc
+
+
 def parse_vitest_json(path: Path) -> list[BehaviorCase]:
     """vitest ``--reporter=json`` の JSON を BehaviorCase の列に変換する。
 
     ``ancestorTitles`` (``describe`` のネスト) をグループ連鎖、``title`` (``it`` 名) を
-    ケース名、テストファイルのパスを由来とする。
+    ケース名、テストファイルのパスを由来とする。由来は絶対パスで出力されるため、
+    振り分けのプレフィクスをリポジトリ内のパスで書けるよう実行位置からの相対パスに直す。
 
     Args:
         path: vitest ``--reporter=json`` の出力ファイル。
@@ -213,12 +235,13 @@ def parse_vitest_json(path: Path) -> list[BehaviorCase]:
         文書順の BehaviorCase のリスト。
 
     Raises:
-        ValueError: assertionResult に status / title / ancestorTitles が無いとき。
+        ValueError: assertionResult に status / title / ancestorTitles が無いとき、
+            または由来が実行位置の配下に無いとき。
     """
     document = json.loads(path.read_text(encoding="utf-8"))
     cases = []
     for test_result in document["testResults"]:
-        source_file = test_result["name"]
+        source_file = make_relative_to_working_directory(test_result["name"])
         for assertion in test_result["assertionResults"]:
             if "title" not in assertion or "status" not in assertion:
                 raise ValueError(f"assertionResult に title / status がありません: {path}")
