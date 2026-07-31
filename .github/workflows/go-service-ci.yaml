@@ -31,6 +31,10 @@ on:
         description: Add a .NET setup step to the codegen-sync job.
         type: boolean
         default: false
+    outputs:
+      code-changed:
+        description: "'true' when the run touched code. The test jobs, and therefore the test result artifacts, exist only then."
+        value: ${{ jobs.changes.outputs.code }}
 
 jobs:
   changes:
@@ -109,6 +113,13 @@ jobs:
       - name: Report coverage
         if: inputs.collect-unit-coverage
         run: go tool cover -func=coverage.out | tail -1 >> "$GITHUB_STEP_SUMMARY"
+      # 同一 run 内でテスト観点カタログを組むためだけに使うので保持は最短にする
+      - name: Upload unit test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: go-test-unit
+          path: go-test-unit.json
+          retention-days: 1
 
   test-integration:
     needs: changes
@@ -157,6 +168,13 @@ jobs:
         with:
           json-path: go-test-integration.json
           title: 結合テスト結果
+      # 同一 run 内でテスト観点カタログを組むためだけに使うので保持は最短にする
+      - name: Upload integration test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: go-test-integration
+          path: go-test-integration.json
+          retention-days: 1
 
   image-scan:
     needs: changes
