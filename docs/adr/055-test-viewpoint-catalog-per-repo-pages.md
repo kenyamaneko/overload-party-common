@@ -46,12 +46,10 @@ C# (battle) は対象要素を `[Trait("対象", "…")]` に、ケース名を 
 
 そこで C# に限り、パーサの入力を標準のテスト結果ファイルではなく battle が抽出した中間 JSON にする。battle は抽出ステップ (テスト DLL のリフレクション、または `.cs` ソースの走査) で `[Theory]` を各行に展開しつつ `{target, case, skipped, source}` の平坦なレコードを出力し、common の `csharp-json` パーサがそれを共通モデルに正規化する。パーサと正規化は本文どおり common に残るため、これは不採用案「各リポで生成ロジックも個別実装する」とは異なる。他の 3 言語 (Go の `go test -json`・Python の JUnit XML・TS の vitest JSON) は本文どおり結果ファイルを直接パースする。
 
-## Amendment: 2026-07-31 生成ロジックは composite action として配る
+## Amendment: 2026-07-31 生成ロジックの届け方を composite action にする
 
-本文は「各リポが `doc-tools` を `pip install` して利用する」としていたが、配布は common の composite action に載せる形に改める。common は private なので、`pip install` で取得するには cross-repo の App 資格情報が各リポに要る。この資格情報は Go 8 リポと battle にしかなく、analytics・client・newsfeed には無い。composite action は common の Actions アクセス設定だけで全リポから参照でき、追加の資格情報を要さない。ADR-052 のテストレポート整形も同じ形で配っており、経路が一つにまとまる。
+本文は「各リポはこれを `pip install` して利用する」としていたが、各リポへの届け方を common の composite action に改める。common は private なので、各リポから直接取得するには cross-repo の資格情報が要る。この資格情報を持たないリポがあり、揃えるには新たな配布が要る。composite action は common の Actions アクセス設定だけで全リポから参照でき、追加の資格情報を要さない。ADR-052 のテストレポート整形も同じ形で配っているため、経路が一つにまとまる。
 
-action は common 内の `doc-tools` を install してカタログの HTML を描画するところまでを担う。GitHub Pages への公開 (成果物の受け渡しと deploy) は各リポの workflow に残す。common の Pages はインデックスページを起点に置き、common 自身のカタログはその下の階層に置く。
+生成ロジックを common に SSoT として置き各リポがそれを利用するという結論は変わらない。action が参照するのも common の生成ロジックであり、不採用案「各リポで生成ロジックも個別実装する」の棄却理由も変わらない。
 
-カテゴリの振り分けはテストの由来 (パッケージ・モジュール) のプレフィクスで行い、どのセクションにも入らない由来があれば生成を失敗させる。テストを持つパッケージが増えたときに設定の更新を強制するためで、更新を怠ると main のカタログ公開が止まる。既定のカテゴリへ落とすと、分類されないまま気付かれずに紛れ込む。
-
-per-repo 公開ではリポごとにページが分かれるため、ページの表題は生成時に指定する。
+カテゴリの振り分けは、どのセクションにも入らない由来があればカタログの生成を失敗させる。既定のカテゴリへ落とすと分類されないまま紛れ込むため、テストを持つパッケージが増えたときに振り分け設定の更新を強制する。

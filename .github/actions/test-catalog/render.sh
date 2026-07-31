@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # テスト結果からテスト観点カタログの HTML を描画し、$OUTPUT_DIR に書き出す。
-# test-catalog action から呼ばれる。
 #
 # 入力は環境変数:
 #   SECTIONS   : --section の指定を 1 行 1 件で並べたもの
