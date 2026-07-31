@@ -153,6 +153,25 @@ class TestvitestのJSONのパース:
         path = _write(tmp_path / "vitest.json", json.dumps(report))
         assert parse_vitest_json(path)[0].source_file == "src/stores/deckStore.test.ts"
 
+    def test_絶対パスの由来は実行位置からの相対パスになる(self, tmp_path: Path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        report = self._report(
+            str(tmp_path / "src/stores/deckStore.test.ts"),
+            [{"ancestorTitles": [], "title": "起動する", "status": "passed"}],
+        )
+        path = _write(tmp_path / "vitest.json", json.dumps(report))
+        assert parse_vitest_json(path)[0].source_file == "src/stores/deckStore.test.ts"
+
+    def test_実行位置の外を指す絶対パスの由来があるときValueErrorになる(self, tmp_path: Path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        report = self._report(
+            "/elsewhere/src/stores/deckStore.test.ts",
+            [{"ancestorTitles": [], "title": "起動する", "status": "passed"}],
+        )
+        path = _write(tmp_path / "vitest.json", json.dumps(report))
+        with pytest.raises(ValueError, match="実行位置の配下に無いパスです"):
+            parse_vitest_json(path)
+
     def test_skippedステータスは未検証扱いになる(self, tmp_path: Path):
         report = self._report(
             "src/stores/deckStore.test.ts",
