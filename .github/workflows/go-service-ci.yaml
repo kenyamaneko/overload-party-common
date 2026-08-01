@@ -23,6 +23,10 @@ on:
         description: Skip the image-scan job when false. Set it for repositories without a Dockerfile.
         type: boolean
         default: true
+      needs-private-modules:
+        description: Authenticate to private kenyamaneko repositories before the Go steps. Set it false for repositories that depend on none.
+        type: boolean
+        default: true
       collect-unit-coverage:
         description: Collect unit test coverage and append a summary line to $GITHUB_STEP_SUMMARY.
         type: boolean
@@ -78,6 +82,7 @@ jobs:
         with:
           go-version-file: ${{ inputs.module-dir }}/go.mod
       - name: Configure Go private modules
+        if: inputs.needs-private-modules
         uses: kenyamaneko/overload-party-common/.github/actions/setup-go-private-modules@main
         with:
           app-id: ${{ vars.CROSS_REPO_DEPS_APP_ID }}
@@ -108,8 +113,9 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
+          go-version-file: ${{ inputs.module-dir }}/go.mod
       - name: Configure Go private modules
+        if: inputs.needs-private-modules
         uses: kenyamaneko/overload-party-common/.github/actions/setup-go-private-modules@main
         with:
           app-id: ${{ vars.CROSS_REPO_DEPS_APP_ID }}
@@ -192,6 +198,7 @@ jobs:
         if: steps.hook.outputs.exists == 'true'
         run: .github/scripts/ci/setup-integration.sh
       - name: Configure Go private modules
+        if: inputs.needs-private-modules
         uses: kenyamaneko/overload-party-common/.github/actions/setup-go-private-modules@main
         with:
           app-id: ${{ vars.CROSS_REPO_DEPS_APP_ID }}
