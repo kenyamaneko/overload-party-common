@@ -114,6 +114,12 @@ jobs:
         with:
           app-id: ${{ vars.CROSS_REPO_DEPS_APP_ID }}
           private-key: ${{ secrets.CROSS_REPO_DEPS_APP_PRIVATE_KEY }}
+      - name: Check for unit setup hook
+        id: hook
+        run: echo "exists=$([ -x .github/scripts/ci/setup-unit.sh ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+      - name: Run unit setup hook
+        if: steps.hook.outputs.exists == 'true'
+        run: .github/scripts/ci/setup-unit.sh
       - name: Run unit tests
         # パイプの終了ステータスが go test のものになるよう、pipefail が付く bash を明示する
         shell: bash
