@@ -32,11 +32,30 @@ fi
 # 文字列リテラル / HEREDOC 内の偶発マッチを避けるため実行可能部分のみ抽出 (machine-audit と同手法)
 exec_cmd=$(printf '%s' "$cmd" | sed -E '/<</q' | sed -E 's/"[^"]*"//g; s/'\''[^'\'']*'\''//g')
 
-if ! printf '%s' "$exec_cmd" | grep -qE '(^|[[:space:]&|;`(])git[[:space:]]+commit'; then
+if ! printf '%s' "$exec_cmd" | grep -qE '(^|[[:space:]&|;`(])git[[:space:]]+(-C[[:space:]]+[^[:space:]]+[[:space:]]+)?commit'; then
   exit 0
 fi
-if printf '%s' "$exec_cmd" | grep -qE 'git[[:space:]]+commit[[:space:]]+(--help|-h)([[:space:]]|$)'; then
+if printf '%s' "$exec_cmd" | grep -qE 'git[[:space:]]+(-C[[:space:]]+[^[:space:]]+[[:space:]]+)?commit[[:space:]]+(--help|-h)([[:space:]]|$)'; then
   exit 0
+fi
+
+# PreToolUse は commit の実行前に発火するため、同じ呼び出しに書いたステージ操作は監査時点でまだ index に載っていない。
+if printf '%s' "$exec_cmd" | grep -qE '(^|[[:space:]&|;`(])git[[:space:]]+(-C[[:space:]]+[^[:space:]]+[[:space:]]+)?(add|rm|mv)([[:space:]]|$)'; then
+  printf '❌ git add / git rm / git mv を git commit と同じ Bash 呼び出しに書かないでください。hook がステージ済み差分を読めず監査が素通りします。ステージ操作を先に別の呼び出しで完了させてください。\n' >&2
+  exit 2
+fi
+if printf '%s' "$exec_cmd" | grep -qE '(^|[[:space:]&|;`(])git[[:space:]]+(-C[[:space:]]+[^[:space:]]+[[:space:]]+)?checkout[[:space:]].*[[:space:]]--[[:space:]]'; then
+  printf '❌ git checkout <ref> -- <path> を git commit と同じ Bash 呼び出しに書かないでください。index を書き換えるため hook がステージ済み差分を読めず監査が素通りします。先に別の呼び出しで完了させてください。\n' >&2
+  exit 2
+fi
+if printf '%s' "$exec_cmd" | grep -qE '(^|[[:space:]&|;`(])git[[:space:]]+(-C[[:space:]]+[^[:space:]]+[[:space:]]+)?restore[[:space:]].*--staged'; then
+  printf '❌ git restore --staged を git commit と同じ Bash 呼び出しに書かないでください。index を書き換えるため hook がステージ済み差分を読めず監査が素通りします。先に別の呼び出しで完了させてください。\n' >&2
+  exit 2
+fi
+commit_flags=$(printf '%s' "$exec_cmd" | sed -E 's/.*git[[:space:]]+(-C[[:space:]]+[^[:space:]]+[[:space:]]+)?commit//' | sed -E 's/[;&|].*//')
+if printf '%s' "$commit_flags" | grep -qE '(^|[[:space:]])(--all|--include|--patch|-[A-Za-z]*[aip][A-Za-z]*)([[:space:]]|$)'; then
+  printf '❌ git commit の -a / --all / -i / --include / -p / --patch は使わないでください。commit 自身がステージを兼ねるため hook が差分を読めません。git add を別の呼び出しで済ませてから commit してください。\n' >&2
+  exit 2
 fi
 
 # commit コマンドの書き方で監査がスキップされないようにするため
