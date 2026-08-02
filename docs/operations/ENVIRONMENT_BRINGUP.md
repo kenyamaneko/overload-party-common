@@ -128,7 +128,16 @@ card が起動しないと、起動時に card を呼ぶ battle も作成でき�
 
 card はカードのマスターデータを起動時に一度だけデータベースから読み、メモリに保持する。再読み込みの経路は無い。seed を流しても、動いているリビジョンは古いデータを配り続ける。
 
-同じイメージを指定し直して新しいリビジョンを作る。
+**この手順は card が既に存在する環境でのみ実行する。**`gcloud run services update` は対象が無いとサービスを作ってしまい、env が 1 つも無いサービスが terraform の管理外に生まれる。そうなると terraform は自分の state に無いサービスを作ろうとして `Error 409: Resource 'card' already exists` で止まり、以降 apply が通らなくなる。新規環境では card がまだ無いので、この手順は飛ばして次に進む。
+
+先に存在を確かめる。
+
+```
+gcloud run services describe card --project <project-id> --region asia-northeast1 \
+  --format="value(metadata.name)"
+```
+
+存在する場合だけ、同じイメージを指定し直して新しいリビジョンを作る。
 
 ```
 gcloud run services update card --project <project-id> --region asia-northeast1 \
@@ -155,7 +164,9 @@ gcloud run services add-iam-policy-binding card --project <project-id> --region 
   --role="roles/run.invoker"
 ```
 
-gateway は `module.battle.uri` を受け取るため、battle が作成されるまで作成されない。同じ apply の中で gateway への付与が gateway 自身より先に走ることもあり、その場合は `Resource 'gateway' ... does not exist` で失敗する。もう一度 apply すれば通る。
+gateway は battle / card / matchmaking / account / shop の URI を受け取るため、**このうち 1 つでも作成できないと gateway も作成されない**。同じ apply の中で gateway への付与が gateway 自身より先に走ることもあり、その場合は `Resource 'gateway' ... does not exist` で失敗する。もう一度 apply すれば通る。
+
+シークレットが揃っていないサービスがあると、そのサービスと gateway の 2 つが作成できない。prod は shop の課金検証シークレットが未投入のため、この状態になっている (overload-party-shop#129)。
 
 ### 9. イメージをデプロイする
 
