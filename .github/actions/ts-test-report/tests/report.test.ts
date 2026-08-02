@@ -29,7 +29,7 @@ describe('vitest json レポート解析', () => {
     expect(result.skipped).toBe(1)
   })
 
-  it('未知のstatus値を持つとき、エラーになる', () => {
+  it('結果の種別が未知のとき、エラーになる', () => {
     const json = JSON.stringify({
       testResults: [
         {
@@ -79,7 +79,7 @@ describe('失敗位置の抽出', () => {
     expect(line).toBe(5)
   })
 
-  it('file:line が見つからないとき、file と line はともに null になる', () => {
+  it('スタックトレースに失敗位置が無いとき、相対パスも行番号も返さない', () => {
     const { file, line } = extractLocation('予期しない例外が発生しました', '/repo')
 
     expect(file).toBeNull()
@@ -134,9 +134,9 @@ describe('注釈生成', () => {
 
 describe('workflowコマンド本文エスケープ', () => {
   it.each([
-    { label: 'パーセント記号を含む', input: '100%失敗', want: '100%25失敗' },
-    { label: '復帰(CR)を含む', input: '1行目\r2行目', want: '1行目%0D2行目' },
-    { label: '改行(LF)を含む', input: '1行目\n2行目', want: '1行目%0A2行目' },
+    { label: 'パーセント記号を含むとき、%25 に置換される', input: '100%失敗', want: '100%25失敗' },
+    { label: '復帰(CR)を含むとき、%0D に置換される', input: '1行目\r2行目', want: '1行目%0D2行目' },
+    { label: '改行(LF)を含むとき、%0A に置換される', input: '1行目\n2行目', want: '1行目%0A2行目' },
   ])('$label', ({ input, want }) => {
     expect(escapeData(input)).toBe(want)
   })
@@ -144,8 +144,8 @@ describe('workflowコマンド本文エスケープ', () => {
 
 describe('workflowコマンドプロパティエスケープ', () => {
   it.each([
-    { label: 'コロンを含む', input: 'src/foo:bar.ts', want: 'src/foo%3Abar.ts' },
-    { label: 'カンマを含む', input: 'a,b.ts', want: 'a%2Cb.ts' },
+    { label: 'コロンを含むとき、%3A に置換される', input: 'src/foo:bar.ts', want: 'src/foo%3Abar.ts' },
+    { label: 'カンマを含むとき、%2C に置換される', input: 'a,b.ts', want: 'a%2Cb.ts' },
   ])('$label', ({ input, want }) => {
     expect(escapeProperty(input)).toBe(want)
   })

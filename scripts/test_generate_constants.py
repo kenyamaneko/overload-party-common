@@ -96,7 +96,7 @@ def _block_line_set(text, opening, closing):
     return set(lines[start:end])
 
 
-class TestGo言語のgolden出力:
+class TestGoの生成結果:
     def test_固定入力がGoの期待出力と完全一致する(self, tmp_path, monkeypatch, fixture_data, fixture_factions):
         monkeypatch.setattr(gen, "GO_GAME_DESIGN_DIR", tmp_path)
         gen.generate_go_game_design(fixture_data, fixture_factions)
@@ -240,7 +240,7 @@ class TestGo言語のgolden出力:
         assert got == expected
 
 
-class TestCSharp言語のgolden出力:
+class TestCSharpの生成結果:
     def test_固定入力がCSharpの期待出力と完全一致する(self, tmp_path, monkeypatch, fixture_data, fixture_factions):
         monkeypatch.setattr(gen, "DOTNET_GAME_DESIGN_DIR", tmp_path)
         gen.generate_csharp_game_design(fixture_data, fixture_factions)
@@ -361,7 +361,7 @@ class TestCSharp言語のgolden出力:
         assert got == expected
 
 
-class TestTypeScript言語のgolden出力:
+class TestTypeScriptの生成結果:
     def test_固定入力がTypeScriptの期待出力と完全一致する(self, tmp_path, monkeypatch, fixture_data, fixture_factions):
         monkeypatch.setattr(gen, "NPM_GAME_DESIGN_DIR", tmp_path)
         gen.generate_ts_game_design(fixture_data, fixture_factions)
@@ -450,7 +450,7 @@ class TestTypeScript言語のgolden出力:
         assert got == expected
 
 
-class Test実SSoTから生成した結果がコミット済み生成物と一致する:
+class Test実SSoTからの生成:
     @pytest.mark.parametrize(
         ("generate", "dir_attr", "output_relpath", "committed_relpath"),
         [
@@ -541,7 +541,7 @@ class TestSSoTにキーが欠けているときの停止:
             generate(fixture_data, fixture_factions)
 
 
-class Test陣営一覧が3言語の生成物に全件現れる:
+class Test生成物への陣営一覧の反映:
     def test_is_collectibleの真偽に関わらず全陣営がGoのFaction定数に現れる(self, generated_outputs):
         lines = _stripped_lines(generated_outputs["go"])
         assert 'FactionNeutral = "Neutral"' in lines
@@ -557,35 +557,35 @@ class Test陣営一覧が3言語の生成物に全件現れる:
         assert 'export const FACTIONS = ["Neutral", "SHE"] as const;' in lines
 
 
-class Test選択可能陣営がis_collectibleが真の陣営のみになる:
-    def test_is_collectibleが真の陣営のみGoのSelectableFactionsに現れる(self, generated_outputs):
+class Test選択可能な陣営の絞り込み:
+    def test_is_collectibleが偽の陣営を含むときGoのSelectableFactionsにはis_collectibleが真の陣営だけが現れる(self, generated_outputs):
         lines = _stripped_lines(generated_outputs["go"])
         assert "FactionSHE," in lines
         assert "FactionNeutral," not in lines
 
-    def test_is_collectibleが真の陣営のみCSharpのSelectableFactionsに現れる(self, generated_outputs):
+    def test_is_collectibleが偽の陣営を含むときCSharpのSelectableFactionsにはis_collectibleが真の陣営だけが現れる(self, generated_outputs):
         lines = _stripped_lines(generated_outputs["cs"])
         assert "Factions.SHE," in lines
         assert "Factions.Neutral," not in lines
 
-    def test_is_collectibleが真の陣営のみTSのSELECTABLE_FACTIONSに現れる(self, generated_outputs):
+    def test_is_collectibleが偽の陣営を含むときTSのSELECTABLE_FACTIONSにはis_collectibleが真の陣営だけが現れる(self, generated_outputs):
         lines = _stripped_lines(generated_outputs["ts"])
         assert 'export const SELECTABLE_FACTIONS = ["SHE"] as const;' in lines
 
 
-class TestFactionByIDが全陣営を被覆する:
-    def test_全陣営がGoのFactionByIDに現れる(self, generated_outputs):
+class TestIDから陣営を引く表の生成:
+    def test_is_collectibleが偽の陣営を含むときも全陣営がGoのFactionByIDに現れる(self, generated_outputs):
         lines = _stripped_lines(generated_outputs["go"])
         assert '"Neutral": FactionsMetadata[0],' in lines
         assert '"SHE": FactionsMetadata[1],' in lines
 
-    def test_全陣営がTSのFACTION_BY_IDに現れる(self, generated_outputs):
+    def test_is_collectibleが偽の陣営を含むときも全陣営がTSのFACTION_BY_IDに現れる(self, generated_outputs):
         lines = _stripped_lines(generated_outputs["ts"])
         assert '"Neutral": FACTIONS_METADATA[0],' in lines
         assert '"SHE": FACTIONS_METADATA[1],' in lines
 
 
-class TestInstanceFamilyのTS_union型にのみ空文字が追加される:
+class TestインスタンスファミリのTypeScript型の生成:
     def test_InstanceFamily型は空文字を許容するunionになる(self, generated_outputs):
         lines = _stripped_lines(generated_outputs["ts"])
         assert "export type InstanceFamily = (typeof INSTANCE_FAMILIES)[number] | '';" in lines

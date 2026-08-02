@@ -220,7 +220,7 @@ class Test構造体の生成:
         out = render_struct(td, style)
         assert out[:3] == ["// line1", "//", "// line3"]
 
-    def test_emit_tagsで同じfield定義から異なるタグ集合を出す(self) -> None:
+    def test_出力するタグを指定したとき同じフィールド定義から別のタグの組み合わせが出る(self) -> None:
         style = GoStyle(should_align_field=True, tag_keys=("json",))
         td = {
             "name": "X",
@@ -291,7 +291,7 @@ class TestGoファイルの生成:
         )
         assert '"context"' in out
 
-    def test_has_trailing_blank_lineで末尾に空行を足す(self) -> None:
+    def test_末尾に空行を足す指定のとき生成ファイルの最後が空行になる(self) -> None:
         out = render_go_file(
             package="foo",
             types=[{"name": "X", "fields": [{"name": "S", "type": "string"}]}],
