@@ -12,8 +12,8 @@
 #   flow: github-flow | none
 #         rules/flow/<flow>.md と 1:1 対応 (none はスキップ)
 #         ブランチ戦略。none は main 直 push を許容するリポ
-#   deploy: merge-dev-tag-prod | gitops-sync | manual-pipeline |
-#           store-release | artifact-publish | merge-prod | none
+#   deploy: merge-dev-tag-prod | merge-dev-tag-stg-promote-prod | gitops-sync |
+#           manual-pipeline | store-release | artifact-publish | merge-prod | none
 #         rules/deploy/<deploy>.md と 1:1 対応 (none はスキップ)
 #         デプロイ戦略。flow とは独立の軸。デプロイ整備前は none にしておく
 #   prereq_docs: (optional) list[str]
@@ -31,55 +31,55 @@ repos:
     path: ../overload-party-shop
     lang: go
     flow: github-flow
-    deploy: gitops-sync
+    deploy: merge-dev-tag-stg-promote-prod
 
   - name: overload-party-gateway
     path: ../overload-party-gateway
     lang: go
     flow: github-flow
-    deploy: gitops-sync
+    deploy: merge-dev-tag-stg-promote-prod
 
   - name: overload-party-account
     path: ../overload-party-account
     lang: go
     flow: github-flow
-    deploy: gitops-sync
+    deploy: merge-dev-tag-stg-promote-prod
 
   - name: overload-party-card
     path: ../overload-party-card
     lang: go
     flow: github-flow
-    deploy: gitops-sync
+    deploy: merge-dev-tag-stg-promote-prod
 
   - name: overload-party-matchmaking
     path: ../overload-party-matchmaking
     lang: go
     flow: github-flow
-    deploy: gitops-sync
+    deploy: merge-dev-tag-stg-promote-prod
 
   - name: overload-party-scenario
     path: ../overload-party-scenario
     lang: go
     flow: github-flow
-    deploy: gitops-sync
+    deploy: merge-dev-tag-stg-promote-prod
 
   - name: overload-party-news
     path: ../overload-party-news
     lang: go
     flow: github-flow
-    deploy: gitops-sync
+    deploy: merge-dev-tag-stg-promote-prod
 
   - name: overload-party-support
     path: ../overload-party-support
     lang: go
     flow: github-flow
-    deploy: gitops-sync
+    deploy: merge-dev-tag-stg-promote-prod
 
   - name: overload-party-battle
     path: ../overload-party-battle
     lang: csharp
     flow: github-flow
-    deploy: gitops-sync
+    deploy: merge-dev-tag-stg-promote-prod
     prereq_docs:
       - docs/game_design/RULEBOOK.md
 
