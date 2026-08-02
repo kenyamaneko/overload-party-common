@@ -90,7 +90,7 @@ class TestGo型への変換:
             ),
             pytest.param(
                 {"type": "object"}, True, "map[string]interface{}",
-                id="object は map[string]interface{} にフォールバックする",
+                id="object は map[string]interface{} になる",
             ),
             pytest.param(
                 {"$ref": "#/components/schemas/EventTranslation"}, True, "EventTranslation",
@@ -111,20 +111,51 @@ class TestGo型への変換:
         assert convert_to_go_type(prop, required=required) == expected
 
     @pytest.mark.parametrize(
-        "prop",
+        ("prop", "message"),
         [
             pytest.param(
                 {"$ref": "external.yaml#/Foo"},
+                "only local component refs are supported",
                 id="外部ファイル参照の ref は ValueError になる",
             ),
             pytest.param(
                 {"$ref": "#/components/schemas/"},
+                "empty schema name",
                 id="空の local ref は ValueError になる",
             ),
         ],
     )
-    def test_不正なrefはValueErrorになる(self, prop):
-        with pytest.raises(ValueError):
+    def test_不正なrefはValueErrorになる(self, prop, message):
+        with pytest.raises(ValueError, match=message):
+            convert_to_go_type(prop, required=True)
+
+    @pytest.mark.parametrize(
+        ("prop", "message"),
+        [
+            pytest.param(
+                {"format": "date-time"},
+                "must declare a type",
+                id="type が無いプロパティは型を宣言していないというエラーになる",
+            ),
+            pytest.param(
+                {"type": "str"},
+                "unsupported schema type",
+                id="対応していない type のプロパティは未対応の型というエラーになる",
+            ),
+            pytest.param(
+                {"type": "array"},
+                "must declare items",
+                id="items の無い array は items の宣言が要るというエラーになる",
+            ),
+            pytest.param(
+                {"type": "array", "items": "string"},
+                "must declare items",
+                id="items が mapping でない array は items の宣言が要るというエラーになる",
+            ),
+        ],
+    )
+    def test_型を決められないプロパティはValueErrorになる(self, prop, message):
+        with pytest.raises(ValueError, match=message):
             convert_to_go_type(prop, required=True)
 
 
@@ -253,7 +284,7 @@ class TestAsyncAPIスペックのパース:
         out = parse_spec(spec)
         assert out["types"][0]["fields"][0]["name"] == "CustomName"
 
-    def test_object以外のスキーマはスキップする(self):
+    def test_object以外のスキーマがあるときValueErrorになる(self):
         spec = {
             "components": {
                 "schemas": {
@@ -262,8 +293,8 @@ class TestAsyncAPIスペックのパース:
                 }
             }
         }
-        out = parse_spec(spec)
-        assert [t["name"] for t in out["types"]] == ["Real"]
+        with pytest.raises(ValueError, match="JustAString"):
+            parse_spec(spec)
 
     def test_optionalなdate_timeはポインタかつomitemptyになる(self):
         spec = {
@@ -304,14 +335,32 @@ class TestAsyncAPIスペックのパース:
         assert out["constants"] == []
 
     @pytest.mark.parametrize(
-        "spec",
+        ("spec", "message"),
         [
-            pytest.param({}, id="componentsが無いとき"),
-            pytest.param({"components": {}}, id="schemasが無いときも同様"),
+            pytest.param(
+                {}, "must declare components",
+                id="components が無いとき components の宣言が要るというエラーになる",
+            ),
+            pytest.param(
+                {"components": None}, "must declare components",
+                id="components が空のとき components の宣言が要るというエラーになる",
+            ),
+            pytest.param(
+                {"components": {}}, "must declare components.schemas",
+                id="schemas が無いとき schemas の宣言が要るというエラーになる",
+            ),
+            pytest.param(
+                {"components": {"schemas": None}}, "must declare components.schemas",
+                id="schemas が空のとき schemas の宣言が要るというエラーになる",
+            ),
         ],
     )
-    def test_componentsまたはschemasが無いとき型も定数も生成されない(self, spec):
-        out = parse_spec(spec)
+    def test_componentsまたはschemasが無いときValueErrorになる(self, spec, message):
+        with pytest.raises(ValueError, match=message):
+            parse_spec(spec)
+
+    def test_スキーマが1件も無いとき型も定数も生成されない(self):
+        out = parse_spec({"components": {"schemas": {}}})
         assert out["types"] == []
         assert out["constants"] == []
 
@@ -346,7 +395,7 @@ class TestAsyncAPIスペックのパース:
             {"name": "Bar", "type": "*string", "json": "bar,omitempty"},
         ]
 
-    def test_プロパティ定義がmappingでないときそのプロパティはフィールドにならない(self):
+    def test_プロパティ定義がmappingでないときValueErrorになる(self):
         spec = {
             "components": {
                 "schemas": {
@@ -360,8 +409,25 @@ class TestAsyncAPIスペックのパース:
                 }
             }
         }
-        out = parse_spec(spec)
-        assert out["types"][0]["fields"] == []
+        with pytest.raises(ValueError, match="FooEvent.bar"):
+            parse_spec(spec)
+
+    def test_型の無いプロパティがあるときValueErrorになる(self):
+        spec = {
+            "components": {
+                "schemas": {
+                    "FooEvent": {
+                        "type": "object",
+                        "required": ["bar"],
+                        "properties": {
+                            "bar": {"description": "型の指定を忘れた項目"},
+                        },
+                    }
+                }
+            }
+        }
+        with pytest.raises(ValueError, match="must declare a type"):
+            parse_spec(spec)
 
     def test_constと単一値enumが併存するとき両方の定数が生成される(self):
         spec = {
