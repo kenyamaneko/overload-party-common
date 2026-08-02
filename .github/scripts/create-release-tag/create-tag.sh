@@ -17,7 +17,14 @@ last_tag="$(git tag -l 'v*.*.*' | sort -V | tail -1)"
 if [ -z "${last_tag}" ]; then
   version="${FIRST_VERSION}"
 else
-  IFS='.' read -r major minor patch <<< "${last_tag#v}"
+  # 桁が数値でないタグから採番すると誤った版を打つため、vX.Y.Z 以外は弾く
+  if [[ ! "${last_tag}" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+    echo "::error::Latest tag '${last_tag}' is not a vX.Y.Z release tag. Remove it before releasing."
+    exit 1
+  fi
+  major="${BASH_REMATCH[1]}"
+  minor="${BASH_REMATCH[2]}"
+  patch="${BASH_REMATCH[3]}"
   case "${BUMP}" in
     major) version="$((major + 1)).0.0" ;;
     minor) version="${major}.$((minor + 1)).0" ;;

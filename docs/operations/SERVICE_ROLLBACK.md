@@ -1,6 +1,6 @@
 # サービスの切り戻し手順
 
-Cloud Run に載っているサービスを前の版へ戻すときの手順。反映するイメージは digest で固定されるので、リリースタグ・commit sha・digest・リビジョンが一対一で対応する。本書はその対応を辿って、今動いている成果物を特定し、戻し、戻ったことを確かめるまでを扱う。
+Cloud Run に載っているサービスを前の版へ戻すときの手順。反映するイメージは digest で固定されるので、リリースタグ・commit sha・digest・リビジョンが一対一で対応する。
 
 以下のコマンドは全て `--region asia-northeast1` を前提にする。`<image>` は `asia-northeast1-docker.pkg.dev/keyandnotes-platform/overload-party/<service>` を指す。
 
@@ -8,15 +8,15 @@ Cloud Run に載っているサービスを前の版へ戻すときの手順。�
 
 | 環境 | 反映の起点 | 戻す手段 |
 |---|---|---|
-| dev | main への push | リビジョンへ traffic を戻す |
-| stg | `vX.Y.Z` タグの push | リビジョンへ traffic を戻す |
-| prod | `deploy.yaml` の `workflow_dispatch` (`version` にタグを渡す) | 前のタグを渡して再実行する、またはリビジョンへ traffic を戻す |
+| dev | main への push | リビジョンへトラフィックを戻す |
+| stg | `vX.Y.Z` タグの push | リビジョンへトラフィックを戻す |
+| prod | `deploy.yaml` の `workflow_dispatch` (`version` にタグを渡す) | 前のタグを渡して再実行する、またはリビジョンへトラフィックを戻す |
 
 stg は「タグを push すると反映される」形なので、過去の版を選んで反映し直す入口が無い。リリースタグの発行 workflow は必ず新しい版を採番するため、stg を戻すときはリビジョンで戻す。
 
 ## 1. 今動いている成果物を調べる
 
-traffic を受けているリビジョンを見る。
+トラフィックを受けているリビジョンを見る。
 
 ```
 gcloud run services describe <service> --project <project-id> --region asia-northeast1 \
@@ -82,7 +82,7 @@ gcloud artifacts docker images describe <image>:<commit-sha> \
 
 サービスリポの `deploy.yaml` を `workflow_dispatch` で実行し、`version` に 2 で決めたタグを渡す。2 で確かめた digest がそのまま載る。
 
-### リビジョンへ traffic を戻す
+### リビジョンへトラフィックを戻す
 
 戻したいリビジョンを選ぶ。イメージの digest を出すと、どの版かを 1 の対応で確かめられる。
 
@@ -96,7 +96,7 @@ gcloud run services update-traffic <service> --project <project-id> --region asi
   --to-revisions=<revision>=100
 ```
 
-リビジョン名を指定して traffic を寄せると、その後のデプロイで新しいリビジョンができても traffic は移らない。原因を直した版を反映する前に、traffic を最新へ戻す。
+リビジョン名を指定してトラフィックを寄せると、その後のデプロイで新しいリビジョンができてもトラフィックは移らない。原因を直した版を反映する前に、トラフィックを最新へ戻す。
 
 ```
 gcloud run services update-traffic <service> --project <project-id> --region asia-northeast1 \
@@ -105,7 +105,7 @@ gcloud run services update-traffic <service> --project <project-id> --region asi
 
 ## 4. 戻ったことを確認する
 
-1 と同じ 2 つのコマンドで、traffic を受けているリビジョンと、そのリビジョンの digest が戻す先のものになっていることを確かめる。digest が 2 で確かめた値と一致すれば、意図した成果物が載っている。
+1 と同じ 2 つのコマンドで、トラフィックを受けているリビジョンと、そのリビジョンの digest が戻す先のものになっていることを確かめる。digest が 2 で確かめた値と一致すれば、意図した成果物が載っている。
 
 サービスが応答することも確かめる。
 
