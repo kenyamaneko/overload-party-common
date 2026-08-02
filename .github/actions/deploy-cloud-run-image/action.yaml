@@ -1,5 +1,5 @@
 name: Deploy Cloud Run image
-description: 'Update an existing Cloud Run service to an already-pushed image tag. The service must have been created by terraform, which owns its configuration.'
+description: 'Resolve an already-pushed image tag to its digest and update an existing Cloud Run service to that digest. The service must have been created by terraform, which owns its configuration.'
 
 inputs:
   service-name:
@@ -10,6 +10,9 @@ inputs:
     required: true
   image-tag:
     description: Image tag to deploy (commit sha).
+    required: true
+  registry-project-id:
+    description: Google Cloud project ID hosting the Artifact Registry repository.
     required: true
   project-id:
     description: Google Cloud project ID of the target environment.
@@ -27,6 +30,7 @@ runs:
         SERVICE_NAME: ${{ inputs.service-name }}
         IMAGE: ${{ inputs.image }}
         IMAGE_TAG: ${{ inputs.image-tag }}
+        REGISTRY_PROJECT_ID: ${{ inputs.registry-project-id }}
         PROJECT_ID: ${{ inputs.project-id }}
         REGION: ${{ inputs.region }}
       run: bash ${{ github.action_path }}/../../scripts/deploy-cloud-run-image/update-image.sh

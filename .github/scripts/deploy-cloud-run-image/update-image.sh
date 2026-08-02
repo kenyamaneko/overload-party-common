@@ -12,8 +12,16 @@ if ! gcloud run services describe "${SERVICE_NAME}" \
   exit 1
 fi
 
+# タグは後から別のイメージへ付け替えられるため、stg で確かめた物と同じ物が prod に載るよう digest に固定して反映する。
+if ! DIGEST="$(gcloud artifacts docker images describe "${IMAGE}:${IMAGE_TAG}" \
+  --project "${REGISTRY_PROJECT_ID}" \
+  --format="value(image_summary.digest)")" || [ -z "${DIGEST}" ]; then
+  echo "::error::Could not resolve the digest of '${IMAGE}:${IMAGE_TAG}' in Artifact Registry. Push the image for this commit before deploying it."
+  exit 1
+fi
+
 gcloud run services update "${SERVICE_NAME}" \
-  --image "${IMAGE}:${IMAGE_TAG}" \
+  --image "${IMAGE}@${DIGEST}" \
   --project "${PROJECT_ID}" \
   --region "${REGION}" \
   --quiet
