@@ -1,21 +1,29 @@
 # モニタリング・ログ方針
 
-決定日: 2026-02-26
+監視の構成をどう決めたか、その理由は [ADR-063](../adr/063-cloud-run-monitoring-and-alerting.md) にある。本ドキュメントは現在の構成をまとめる。
 
 ---
 
 ## 概要
 
-GKE Autopilot + Cloud SQL 構成に対する、ログ・メトリクス・アラートの方針。
+Cloud Run + Cloud SQL 構成に対する、ログ・メトリクス・アラートの方針。
 分散トレーシングは現時点では不要（サービス構成がシンプルなため）。
 
 ---
 
 ## 構造化ログ
 
-### 採用技術: `log/slog` (Go 1.21+ 標準)
+### 採用技術
 
-**選定理由:**
+いずれの言語も、Cloud Logging が `severity` を解釈できる JSON を標準出力に出す。`severity` で絞るアラートはこれが成り立つことを前提にしている。
+
+| 言語 | 実装 | 対象 |
+|------|------|------|
+| Go | `log/slog` (Go 1.21+ 標準) | account / analytics / card / gateway / matchmaking / news / scenario / shop / support |
+| C# | Cloud Logging 互換の JSON フォーマッタ | battle |
+| Python | JSON フォーマッタ | newsfeed |
+
+**Go で `log/slog` を選んだ理由:**
 - 外部依存なし（標準ライブラリ）
 - JSON 出力 → Cloud Logging が自動解析（構造化フィールドでフィルタ・検索可能）
 - config の `LOG_LEVEL` をそのまま活用可能（`slog.LevelVar` で動的変更）
@@ -29,7 +37,7 @@ GKE Autopilot + Cloud SQL 構成に対する、ログ・メトリクス・アラ
 
 ### 出力形式
 
-本番環境（GKE）:
+Cloud Run 上:
 ```json
 {
   "time": "2026-02-26T10:30:00Z",
@@ -47,8 +55,9 @@ GKE Autopilot + Cloud SQL 構成に対する、ログ・メトリクス・アラ
 
 ### Cloud Logging 連携
 
-- GKE 上のコンテナが stdout に JSON を出力すれば、Cloud Logging が自動収集・解析
-- 追加のエージェントやサイドカーは不要（GKE Autopilot のビルトイン機能）
+- Cloud Run 上のコンテナが標準出力に JSON を出力すれば、Cloud Logging が自動収集・解析
+- 追加のエージェントやサイドカーは不要
+- ログは稼働している環境のプロジェクトに直接集まる。プロジェクトをまたぐ転送は無い
 - `severity` フィールドを Cloud Logging の標準に合わせることで、ログレベルフィルタが機能する
 
 ### severity マッピング
@@ -90,35 +99,22 @@ slog の JSONHandler をカスタマイズして `level` → `severity` に変�
 
 ## メトリクス
 
-### 採用技術: Prometheus client (`prometheus/client_golang`) + GKE Managed Prometheus
+### 標準メトリクス
 
-**構成:**
-```
-[Go App] → /metrics エンドポイント (Prometheus 形式)
-              ↓
-[GKE Managed Prometheus] → 自動スクレイプ (PodMonitoring CRD)
-              ↓
-[Cloud Monitoring] → ダッシュボード + アラート
-```
-
-**GKE Managed Prometheus (GMP) の利点:**
-- GKE Autopilot で自動有効化済み（追加 Pod 不要）
-- `PodMonitoring` CRD を作成するだけでスクレイプ開始
-- Cloud Monitoring のダッシュボード・アラートと統合
-- Grafana の自前運用が不要
-
-### ビルトインメトリクス（GKE Autopilot 自動収集）
-
-追加設定なしで利用可能:
+アプリ側の実装なしで収集される。アラートの条件はここから組む。
 
 | メトリクス | 内容 |
 |-----------|------|
-| Container CPU / Memory | Pod のリソース使用率 |
-| Pod restart count | 異常再起動の検知 |
-| HTTP latency (Ingress) | LB レイヤーのレスポンスタイム |
-| Cloud SQL CPU / Memory / Connections | DB の基本メトリクス |
+| 要求数（応答コードのクラス別） | 5xx 応答の発生 |
+| 応答時間 | 要求を処理し終えるまでの時間の分布 |
+| ログ件数（`severity` 別） | ERROR ログの発生 |
+| ジョブの試行結果 | Cloud Run ジョブの実行の成否 |
+| コンテナの CPU / メモリ | インスタンスのリソース使用率 |
+| Cloud SQL CPU / メモリ / 接続数 | DB の基本メトリクス |
 
-### カスタムメトリクス（アプリケーション側で実装）
+### カスタムメトリクス
+
+いずれも未実装で、アプリからメトリクスを出す仕組みも入っていない。残すか取り下げるかは [common#179](https://github.com/kenyamaneko/overload-party-common/issues/179) で判断する。
 
 | メトリクス名 | 種類 | ラベル | 用途 |
 |-------------|------|--------|------|
@@ -131,52 +127,62 @@ slog の JSONHandler をカスタマイズして `level` → `severity` に変�
 | `api_request_duration_seconds` | Histogram | `method`, `path`, `status` | API レスポンスタイム |
 | `npc_battles_total` | Counter | `difficulty` | NPC 戦の回数 |
 
-### PodMonitoring CRD（K8s マニフェスト）
-
-```yaml
-apiVersion: monitoring.googleapis.com/v1
-kind: PodMonitoring
-metadata:
-  name: api-server
-spec:
-  selector:
-    matchLabels:
-      app: api-server
-  endpoints:
-    - port: http
-      path: /metrics
-      interval: 30s
-```
-
 ---
 
 ## アラート
 
-### Cloud Monitoring アラートポリシー
+アラートポリシーの定義は overload-party-infra が持ち、dev / stg / prod の 3 環境すべてに置く。
 
-| アラート | 条件 | 重要度 | 通知先 |
-|---------|------|--------|--------|
-| Pod 異常再起動 | restart count > 2 in 5min | High | メール / Slack |
-| エラーレート急増 | 5xx rate > 5% for 5min | High | メール / Slack |
-| Cloud SQL 高負荷 | CPU > 80% for 10min | Medium | メール |
-| WS 接続断 | active connections = 0 (稼働時間帯) | High | メール / Slack |
-| Cloud SQL 接続数超過 | connections > 80% of max | Medium | メール |
+### Cloud Run サービス
+
+Cloud Run サービス 9 本（account / battle / card / gateway / matchmaking / news / scenario / shop / support）に当てる。
+
+| アラート | 条件 | 対象 |
+|---------|------|------|
+| 5xx 応答が発生した | 集計期間内の 5xx 応答が許容件数を超えた | 9 本すべて |
+| 応答が遅い | 応答時間の 95 パーセンタイルが上限を超えた | gateway を除く 8 本 |
+| ERROR ログが出た | 集計期間内の `severity=ERROR` のログが許容件数を超えた | 9 本すべて |
+
+gateway に応答時間のアラートを当てないのは、WebSocket 接続では応答時間が接続の継続時間そのものになり、応答の遅さを表さないため。
+
+ERROR ログのアラートは、どの環境でも単発では発報しない。5xx を返す障害は ERROR ログにも現れるため、両方を単発で発報させると 1 件の障害で通知が 2 通届く。要求の失敗は 5xx のアラートが受け持つ。
+
+許容件数は環境ごとに変える。dev と stg は動作確認やテストでわざとエラーを起こすため、prod より緩めてある。
+
+### Cloud Run ジョブ
+
+| アラート | 条件 | 対象 |
+|---------|------|------|
+| 実行が失敗した | 失敗した試行が 1 件でもある | newsfeed のジョブ |
+
+ジョブは要求を受けず動作確認のエラーが紛れ込まないため、環境を問わず 1 件の失敗で発報する。ジョブはサービスの一覧から導けないので、ジョブを増やしたときは監視対象の一覧に足す作業が要る。
+
+### 予算アラート
+
+環境ごとのプロジェクトに月次の予算を置き、50 / 80 / 100 % を超えたところで通知する。超過しても使用は自動で止めない（請求データの反映に数時間の遅れがあり、止めても超過を防ぎきれないため）。
+
+### 現在のアラートで拾えないもの
+
+- **デプロイの失敗と、稼働できるリビジョンが 1 本も無い状態**：起動に失敗したコンテナは要求を受け取らないため 5xx が出ず、起動 1 回あたりの ERROR ログも許容件数に届かない。今後の扱いは [ADR-063](../adr/063-cloud-run-monitoring-and-alerting.md) の残課題にある
+- **analytics**：Cloud Functions で動いており、Cloud Run のメトリクスに乗らない
+- **db-migrate ジョブ**：CI/CD が起動するジョブで、監視の要否が未決
+- **Cloud Run ジョブの ERROR ログ**：ログ件数のメトリクスがジョブを対象に含めるかを確認できておらず、当てていない。実行そのものは成功してログにだけエラーが出る場合は気づけない
 
 ### 通知チャネル
 
-- **Phase 1:** メール通知（設定が簡単）
-- **Phase 2:** Slack Webhook 連携（リアルタイム性向上）
+メール通知が現行。Slack の通知チャンネル ID を受け取る設定はあるが、未設定のため送られない。Slack へ送るには Cloud Monitoring のコンソールで通知チャンネルを作り、その ID を各環境に設定する（OAuth の承認を伴うため Terraform では作成できない）。
 
 ---
 
 ## Cloud SQL Insights
+
+現時点では有効にしていない。
 
 - Terraform で `insights_config` を有効化するだけ
 - クエリの実行計画・レイテンシ・ロック待ちを可視化
 - 追加コスト: ごく小さい（ストレージのみ）
 
 ```hcl
-# terraform/modules/cloudsql/main.tf に追加
 insights_config {
   query_insights_enabled  = true
   query_plans_per_minute  = 5
@@ -193,40 +199,13 @@ insights_config {
 **現時点では不採用。**
 
 理由:
-- サービス構成がシンプル（API + WS + DB のみ）
-- マイクロサービス間呼び出しがない
+- サービス構成がシンプル
 - 対戦処理はインメモリで完結し、外部サービス呼び出しが少ない
-- 構造化ログ + カスタムメトリクスで大半の問題は診断可能
+- 構造化ログで大半の問題は診断可能
 
 将来必要になった場合:
 - Cloud Trace + OpenTelemetry SDK で導入可能
 - slog ベースの設計なら、後から trace ID をログに付与しやすい
-
----
-
-## 導入ロードマップ
-
-```
-Phase 1: 構造化ログ (slog 導入 + JSON 出力)          ← 最優先
-  - slog の初期化ヘルパー作成
-  - 既存の log.Printf / fmt.Printf を slog に置換
-  - Cloud Logging での動作確認
-
-Phase 2: Cloud SQL Insights 有効化                   ← Terraform 1行
-  - insights_config を Terraform に追加
-  - apply して動作確認
-
-Phase 3: カスタムメトリクス (Prometheus client)       ← アプリ実装
-  - prometheus/client_golang 追加
-  - /metrics エンドポイント追加
-  - カスタムメトリクスの計装
-  - PodMonitoring CRD 作成
-
-Phase 4: ダッシュボード + アラート                    ← 運用整備
-  - Cloud Monitoring ダッシュボード作成
-  - アラートポリシー設定
-  - 通知チャネル設定 (メール → Slack)
-```
 
 ---
 
@@ -235,9 +214,10 @@ Phase 4: ダッシュボード + アラート                    ← 運用整�
 | サービス | 無料枠 | 想定コスト |
 |---------|-------|-----------|
 | Cloud Logging | 50 GB/月 | 無料枠内（ゲームサーバーのログ量は少ない） |
-| Cloud Monitoring | 基本無料 | 無料 |
-| GKE Managed Prometheus | 最初の数百万サンプル無料 | 無料枠内 |
-| Cloud SQL Insights | ストレージのみ | 月数十円程度 |
-| Cloud Monitoring アラート | 基本無料 | 無料 |
+| Cloud Monitoring（標準メトリクス） | 基本無料 | 無料 |
+| Cloud Monitoring アラートポリシー（1 環境あたり 27 本） | 基本無料 | 無料 |
+| Cloud SQL Insights | ストレージのみ | 月数十円程度（有効化した場合） |
 
 **追加コスト: ほぼゼロ**（Google Cloud の無料枠で収まる規模）
+
+> 最終更新: 2026-08-03
