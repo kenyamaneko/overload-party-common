@@ -44,7 +44,7 @@ if printf '%s' "$exec_cmd" | grep -qE 'git[[:space:]]+(-C[[:space:]]+[^[:space:]
   exit 0
 fi
 
-# --- (8/HARD) ステージ操作と commit の同一呼び出し禁止 ---
+# --- ステージ操作と commit の同一呼び出し禁止 ---
 # PreToolUse は commit の実行前に発火するため、同じ呼び出しに書いたステージ操作は監査時点でまだ index に載っていない。
 if printf '%s' "$exec_cmd" | grep -qE '(^|[[:space:]&|;`(])git[[:space:]]+(-C[[:space:]]+[^[:space:]]+[[:space:]]+)?(add|rm|mv)([[:space:]]|$)'; then
   printf '❌ git add / git rm / git mv を git commit と同じ Bash 呼び出しに書かないでください。hook がステージ済み差分を読めず監査が素通りします。ステージ操作を先に別の呼び出しで完了させてください。\n' >&2
