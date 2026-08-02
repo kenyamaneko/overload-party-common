@@ -207,8 +207,8 @@ class TestCシャープの中間JSONのパース:
 
     def test_Theoryを展開した複数行が個別のケースになる(self, tmp_path: Path):
         records = [
-            {"target": "送料計算", "case": "閾値未満のとき 500 円になる (amount: 2999)", "source": "Battle.Tests.Fee"},
-            {"target": "送料計算", "case": "閾値未満のとき 500 円になる (amount: 0)", "source": "Battle.Tests.Fee"},
+            {"target": "送料計算", "case": "閾値未満のとき 500 円になる (amount: 2999)", "skipped": False, "source": "Battle.Tests.Fee"},
+            {"target": "送料計算", "case": "閾値未満のとき 500 円になる (amount: 0)", "skipped": False, "source": "Battle.Tests.Fee"},
         ]
         path = _write(tmp_path / "csharp.json", json.dumps(records))
         assert parse_csharp_catalog_json(path) == [
@@ -217,7 +217,7 @@ class TestCシャープの中間JSONのパース:
         ]
 
     def test_対象が空文字のときグループ連鎖が空になる(self, tmp_path: Path):
-        records = [{"target": "", "case": "起動する", "source": "Battle.Tests.Boot"}]
+        records = [{"target": "", "case": "起動する", "skipped": False, "source": "Battle.Tests.Boot"}]
         path = _write(tmp_path / "csharp.json", json.dumps(records))
         assert parse_csharp_catalog_json(path)[0].group_chain == ()
 
@@ -226,10 +226,30 @@ class TestCシャープの中間JSONのパース:
         path = _write(tmp_path / "csharp.json", json.dumps(records))
         assert parse_csharp_catalog_json(path)[0].is_skipped is True
 
-    def test_必須キーが無いレコードがあるときValueErrorになる(self, tmp_path: Path):
-        records = [{"target": "送料計算", "source": "Battle.Tests.Fee"}]
+    def test_skippedが偽のケースは検証済み扱いになる(self, tmp_path: Path):
+        records = [{"target": "送料計算", "case": "3000 円のとき無料になる", "skipped": False, "source": "Battle.Tests.Fee"}]
         path = _write(tmp_path / "csharp.json", json.dumps(records))
-        with pytest.raises(ValueError):
+        assert parse_csharp_catalog_json(path)[0].is_skipped is False
+
+    @pytest.mark.parametrize(
+        "missing_key",
+        [
+            pytest.param("target", id="target が無いとき target が欠けたことを示すエラーになる"),
+            pytest.param("case", id="case が無いとき case が欠けたことを示すエラーになる"),
+            pytest.param("skipped", id="skipped が無いとき skipped が欠けたことを示すエラーになる"),
+            pytest.param("source", id="source が無いとき source が欠けたことを示すエラーになる"),
+        ],
+    )
+    def test_必須キーの欠けたレコードを読む(self, tmp_path: Path, missing_key):
+        record = {
+            "target": "送料計算",
+            "case": "3000 円のとき無料になる",
+            "skipped": False,
+            "source": "Battle.Tests.Fee",
+        }
+        del record[missing_key]
+        path = _write(tmp_path / "csharp.json", json.dumps([record]))
+        with pytest.raises(ValueError, match=f"レコードに {missing_key} がありません"):
             parse_csharp_catalog_json(path)
 
 

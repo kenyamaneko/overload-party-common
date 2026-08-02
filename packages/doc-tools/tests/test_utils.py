@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from doc_tools.utils import update_markers
 
 
@@ -40,20 +42,19 @@ class Testマーカー間コンテンツの更新:
         changed = update_markers(doc, {"foo": "same"})
         assert changed is False
 
-    def test_replacementsに無いマーカーはWARNINGを出しスキップする(self, tmp_path: Path, capsys):
+    def test_生成元に無い名前のマーカーがあるときエラーで停止し文書を残す(self, tmp_path: Path):
         doc = tmp_path / "doc.md"
-        doc.write_text(
+        original = (
             "<!-- BEGIN GENERATED: unknown -->\n"
             "content\n"
-            "<!-- END GENERATED: unknown -->\n",
-            encoding="utf-8",
+            "<!-- END GENERATED: unknown -->\n"
         )
+        doc.write_text(original, encoding="utf-8")
 
-        changed = update_markers(doc, {})
-        assert changed is False
+        with pytest.raises(SystemExit, match="'unknown' not found in models.yaml"):
+            update_markers(doc, {}, source_label="models.yaml")
 
-        captured = capsys.readouterr()
-        assert "WARNING" in captured.err
+        assert doc.read_text(encoding="utf-8") == original
 
     def test_複数マーカーを同時に更新する(self, tmp_path: Path):
         doc = tmp_path / "doc.md"

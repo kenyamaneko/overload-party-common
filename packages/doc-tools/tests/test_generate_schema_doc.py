@@ -123,10 +123,30 @@ class Testスキーマのパース:
     def test_CREATE_TABLE文を含まないSQLからもテーブルが抽出されない(self):
         assert parse_schema("-- このファイルにはテーブル定義が無い\n") == {}
 
-    def test_制約行しか持たないテーブルは抽出されない(self):
+    def test_制約行しか持たないテーブルがあるときエラーになる(self):
         sql = "CREATE TABLE t (\n    PRIMARY KEY (a)\n);\n"
-        tables = parse_schema(sql)
-        assert "t" not in tables
+        with pytest.raises(ValueError, match="no column found in CREATE TABLE t"):
+            parse_schema(sql)
+
+    def test_文末のセミコロンが無くパースできないCREATE_TABLEがあるときエラーになる(self):
+        sql = "CREATE TABLE t (\n    a INTEGER NOT NULL -- 列a\n"
+        with pytest.raises(ValueError, match="declares 1 tables but 0 were parsed"):
+            parse_schema(sql)
+
+    def test_スキーマ違いで同名のテーブルが2つあるときエラーになる(self):
+        sql = (
+            "CREATE TABLE shared.t (\n    a INTEGER NOT NULL -- 列a\n);\n"
+            "CREATE TABLE account.t (\n    b INTEGER NOT NULL -- 列b\n);\n"
+        )
+        with pytest.raises(ValueError, match="declares 2 tables but 1 were parsed"):
+            parse_schema(sql)
+
+    def test_コメント中のCREATE_TABLEはテーブル数に数えない(self):
+        sql = (
+            "-- CREATE TABLE を説明するコメント\n"
+            "CREATE TABLE t (\n    a INTEGER NOT NULL -- 列a\n);\n"
+        )
+        assert list(parse_schema(sql)) == ["t"]
 
     def test_TIMESTAMP_WITH_TIME_ZONE型は複数語のまま抽出される(self):
         sql = "CREATE TABLE t (\n    created_at TIMESTAMP WITH TIME ZONE NOT NULL -- 作成日時\n);\n"
@@ -229,24 +249,32 @@ class Testマーカー挿入対象の検出:
         assert "| `key` | TEXT | No | 設定キー |" in result
         assert "| `display_name` | TEXT | No | 表示名 |" in result
 
-    def test_表名を特定できないテーブルは囲まれない(self, tmp_path: Path):
+    def test_DDLに無い表名のテーブルは囲まれない(self, tmp_path: Path):
         sql_file = tmp_path / "schema.sql"
         sql_file.write_text(SAMPLE_SQL, encoding="utf-8")
 
         doc_file = tmp_path / "DATA_DESIGN.md"
-        original = (
+        doc_file.write_text(
             "# Data Design\n\n"
+            "**GameConfig** (`shared.game_config`)\n\n"
             "| カラム名 | 型 | Nullable | 説明 |\n"
             "|---|---|---|---|\n"
-            "| `key` | TEXT | No | 設定キー |\n"
+            "| `key` | TEXT | No | 設定キー |\n\n"
+            "**LegacyTable** (`shared.legacy_table`)\n\n"
+            "| カラム名 | 型 | Nullable | 説明 |\n"
+            "|---|---|---|---|\n"
+            "| `legacy_key` | TEXT | No | 旧設定キー |\n",
+            encoding="utf-8",
         )
-        doc_file.write_text(original, encoding="utf-8")
 
         run(sql_file, doc_file, do_add_markers=True)
 
-        assert doc_file.read_text(encoding="utf-8") == original
+        result = doc_file.read_text(encoding="utf-8")
+        assert result.count("<!-- BEGIN GENERATED:") == 1
+        assert "<!-- BEGIN GENERATED: game_config -->" in result
+        assert "| `legacy_key` | TEXT | No | 旧設定キー |" in result
 
-    def test_囲む対象のテーブルが無いとき文書が変わらない(self, tmp_path: Path):
+    def test_囲む対象のテーブルが無いときエラーで停止し文書を残す(self, tmp_path: Path):
         sql_file = tmp_path / "schema.sql"
         sql_file.write_text(SAMPLE_SQL, encoding="utf-8")
 
@@ -254,7 +282,8 @@ class Testマーカー挿入対象の検出:
         original = "# Data Design\n\n本文のみ。\n"
         doc_file.write_text(original, encoding="utf-8")
 
-        run(sql_file, doc_file, do_add_markers=True)
+        with pytest.raises(SystemExit, match="no table to add markers to"):
+            run(sql_file, doc_file, do_add_markers=True)
 
         assert doc_file.read_text(encoding="utf-8") == original
 

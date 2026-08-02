@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import re
-import sys
 from pathlib import Path
 from typing import Callable
 
@@ -34,10 +33,14 @@ def update_markers(
     Args:
         doc_path: 対象 Markdown ファイル
         replacements: {マーカー名: 生成 Markdown} のマッピング
-        source_label: WARNING メッセージで表示するソース名
+        source_label: エラーメッセージで表示するソース名
 
     Returns:
         差し替えが発生した場合 True
+
+    Raises:
+        SystemExit: ドキュメントが存在しないとき、ドキュメントのマーカーに対応する
+            生成結果が replacements に無いとき。
     """
     if not doc_path.exists():
         raise SystemExit(
@@ -55,12 +58,11 @@ def update_markers(
 
         md = replacements.get(key)
         if md is None:
-            print(
-                f"WARNING: '{key}' not found in {source_label}, "
-                f"skipping marker in {doc_path.name}",
-                file=sys.stderr,
+            raise SystemExit(
+                f"ERROR: '{key}' not found in {source_label} "
+                f"but {doc_path.name} has a marker for it. "
+                f"Remove the marker or restore '{key}' in {source_label}."
             )
-            return match.group(0)
 
         new_block = f"{begin_tag}\n{md}\n{end_tag}"
         if new_block != match.group(0):
@@ -90,6 +92,9 @@ def add_markers_generic(
         name_set: マーカー名として許可される名前の集合
         header_pattern: テーブルヘッダー行の期待値（strip 後）
         find_name: (lines, table_header_index, name_set) → マーカー名 or None
+
+    Raises:
+        SystemExit: ドキュメントが存在しないとき、マーカーを 1 つも挿入できないとき。
     """
     if not doc_path.exists():
         raise SystemExit(
@@ -121,8 +126,11 @@ def add_markers_generic(
         regions.append((table_header_line, end, name))
 
     if not regions:
-        print("No tables found to add markers to.", file=sys.stderr)
-        return
+        raise SystemExit(
+            f"ERROR: no table to add markers to in {doc_path.name}. "
+            f"A target table must have the header '{header_pattern}' "
+            f"and a name from the generation source above it."
+        )
 
     for begin, end, name in reversed(regions):
         lines.insert(end + 1, f"<!-- END GENERATED: {name} -->")
