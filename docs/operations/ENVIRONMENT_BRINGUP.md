@@ -1,6 +1,6 @@
 # 環境の立ち上げ手順
 
-overload-party の環境 (dev / stg / prod) でサービスが動く状態を作るときの手順。`terraform apply` だけでは各サービスは起動しない。apply が作らないものが 3 つあり、それぞれ別の操作で入れる必要がある。
+overload-party の環境 (dev / stg / prod) でサービスが動く状態を作るときの手順。`terraform apply` だけでは各サービスは起動しない。apply が作らないものがあり、それぞれ別の操作で入れる必要がある。
 
 ## terraform が作らないもの
 
@@ -8,7 +8,8 @@ overload-party の環境 (dev / stg / prod) でサービスが動く状態を作
 |---|---|---|---|
 | Secret Manager | シークレットの入れ物と `secretAccessor` | 値のバージョン | gateway / support / shop |
 | Cloud Firestore | データベースと読み取り権限 | `game_config` コレクションの値 | account / card / shop / scenario / gateway / battle |
-| Cloud SQL | インスタンスとデータベース | 起動状態 (`activation_policy`) とスキーマ | データベースを使う全サービス |
+| Cloud SQL | インスタンスとデータベース | 起動状態 (`activation_policy`)・`postgres` のパスワード・スキーマ | データベースを使う全サービス |
+| Upstash Redis | シークレットの入れ物 (upstash の state) | 接続 URL の値 | gateway / matchmaking |
 
 Cloud Run サービスは revision が ready になるまで作成完了とみなされないため、これらが欠けているとコンテナが起動できず `terraform apply` そのものが失敗する。「apply が通らない」と「値が入っていない」は同じ原因であることが多い。
 
@@ -33,6 +34,13 @@ gcloud secrets versions add <secret-id> --project <project-id> --data-file=<path
 ```
 
 shop の 5 つは App Store Connect と Google Play の資格情報が要る。取得手順は overload-party-shop の `docs/operations/IAP_SECRETS.md` にある。
+
+Upstash の接続 URL は upstash 側の state が値を持っている。先に `providers/upstash/env/<env>` を apply してから、その output を投入する。
+
+```
+terraform -chdir=providers/upstash/env/<env> output -raw gateway_redis_url \
+  | gcloud secrets versions add gateway-upstash-redis-url --project <project-id> --data-file=-
+```
 
 投入済みかは版の数で確かめる。
 
@@ -75,17 +83,39 @@ gcloud sql instances describe overload-party-db --project <project-id> \
 
 `activation_policy` は terraform の `ignore_changes` に入っていて、起動と停止は運用側が所有する。terraform で状態を戻そうとしないこと。コスト保護が効かなくなる。
 
-### 5. データベースのスキーマを適用する
+### 5. postgres のパスワードを揃える
+
+マイグレーションは組み込みの `postgres` ユーザーで接続し、パスワードを `migration-db-password` から読む。terraform は `root_password` を `ignore_changes` に入れており、インスタンス側とシークレットのどちらも作らないため、両者が食い違っていることがある。
+
+食い違っているとマイグレーションがこう落ちる。
+
+```
+pq: password authentication failed for user "postgres" (28P01)
+ERROR: psqldef failed — aborting before grant_iam.sql
+```
+
+インスタンス側をシークレットの値に合わせる。パスワードが argv に載らないよう標準入力から渡す。
+
+```
+gcloud secrets versions access latest --secret=migration-db-password --project <project-id> \
+  | gcloud sql users set-password postgres --instance=overload-party-db \
+      --project <project-id> --prompt-for-password
+```
+
+### 6. データベースのスキーマとマスターデータを適用する
 
 インスタンスが起動していても、スキーマが無ければテーブルを読むサービスは起動できない。terraform が作るのは空のデータベースまで。
 
-`db-migrate` ジョブを実行する。ジョブ自体は terraform (`jobs/db-migration`) が作る。
+**`db-migrate` ジョブを直接実行してはいけない。**スキーマと seed は `fetch-schemas.py` が各サービスリポから取得してイメージにビルド時に焼き込む。ジョブを再実行しても、イメージに入っている時点の SQL を流し直すだけで、各リポの最新は反映されない。
+
+overload-party-ops の `db-migrate.yaml` を `workflow_dispatch` で実行する。イメージの再ビルドからジョブの更新、実行までを通す。
 
 ```
-gcloud run jobs execute db-migrate --project <project-id> --region asia-northeast1 --wait
+gh workflow run db-migrate.yaml --repo kenyamaneko/overload-party-ops \
+  -f environment=<dev|stg> -f dry_run=false
 ```
 
-適用されていないと card がこう落ちる。
+スキーマが適用されていないと card がこう落ちる。
 
 ```
 card fatal
@@ -94,13 +124,42 @@ error="load card cache: query cards: ERROR: relation \"card.card_definitions\" d
 
 card が起動しないと、起動時に card を呼ぶ battle も作成できない。
 
-### 6. terraform apply をやり直す
+### 7. card を再起動する
 
-2 から 5 が揃った状態で apply すると、Cloud Run サービスが ready になり作成が完了する。
+card はカードのマスターデータを起動時に一度だけデータベースから読み、メモリに保持する。再読み込みの経路は無い。seed を流しても、動いているリビジョンは古いデータを配り続ける。
 
-### 7. イメージをデプロイする
+同じイメージを指定し直して新しいリビジョンを作る。
 
-CI はイメージの差し替えだけを行い、サービスを作らない。存在しないサービスに対してデプロイすると失敗する。必ず 6 を先に通す。
+```
+gcloud run services update card --project <project-id> --region asia-northeast1 \
+  --image asia-northeast1-docker.pkg.dev/keyandnotes-platform/overload-party/card:latest
+```
+
+反映されていないと battle がこう落ちる。カード定義に battle が知らない効果名が含まれている状態。
+
+```
+System.InvalidOperationException: Unknown custom effect: <effect-name>
+```
+
+### 8. terraform apply をやり直す
+
+2 から 7 が揃った状態で apply すると、Cloud Run サービスが ready になり作成が完了する。
+
+新規環境では初回の apply が battle の作成で失敗する。`iam_grants` は付与先をサービス名の文字列で指定していて参照を持たないため `depends_on` で全サービスの作成完了を待つが、battle は起動時に card を呼ぶので card への `run.invoker` を要求する。この循環は terraform では解けない。
+
+回避するには、battle の作成が失敗した時点で呼び出し先の付与を手で作り、apply をやり直す。
+
+```
+gcloud run services add-iam-policy-binding card --project <project-id> --region asia-northeast1 \
+  --member="serviceAccount:overload-party-battle@<project-id>.iam.gserviceaccount.com" \
+  --role="roles/run.invoker"
+```
+
+gateway は `module.battle.uri` を受け取るため、battle が作成されるまで作成されない。同じ apply の中で gateway への付与が gateway 自身より先に走ることもあり、その場合は `Resource 'gateway' ... does not exist` で失敗する。もう一度 apply すれば通る。
+
+### 9. イメージをデプロイする
+
+CI はイメージの差し替えだけを行い、サービスを作らない。存在しないサービスに対してデプロイすると失敗する。必ず 8 を先に通す。
 
 ## 起動しないときの切り分け
 
