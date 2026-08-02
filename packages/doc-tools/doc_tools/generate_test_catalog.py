@@ -5,6 +5,9 @@
 標準出力に書き出す。overload-party は多言語・多リポのため、テスト結果の形式ごとに専用の
 パーサを持ち、共通の BehaviorCase 列に正規化してから描画する。
 
+トップレベルのグループ名が ``[タグ]`` で始まるときは、タグを上位グループの見出しとして 1 階層
+挿入する。タグを持たないグループは「その他」の見出しにまとめる。
+
 対応する結果形式:
 
 - ``go-json``: ``go test -json`` の JSON Lines
@@ -27,8 +30,10 @@ from __future__ import annotations
 import argparse
 import html
 import json
+import re
 import sys
 import xml.etree.ElementTree as ET
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -54,6 +59,12 @@ DISCLAIMER = (
 )
 
 MARKDOWN_INDENT = "  "
+
+# 上位グループ見出しに使う、トップレベルグループ名の先頭に置くタグ
+GROUP_TAG_PATTERN = re.compile(r"^\[([^\[\]]+)\]\s*(.+)$")
+
+# タグの無いトップレベルグループをまとめる見出し
+UNTAGGED_GROUP_LABEL = "その他"
 
 
 @dataclass(frozen=True)
@@ -372,6 +383,48 @@ def build_sections(specs: list[SectionSpec]) -> list[tuple[str, str, GroupNode]]
     ]
 
 
+def split_group_tag(group_name: str) -> tuple[str, str]:
+    """トップレベルグループ名を上位グループ見出しと表示名に分ける。
+
+    Args:
+        group_name: 先頭に ``[タグ]`` を持ちうるグループ名。
+
+    Returns:
+        (上位グループ見出し, タグを剥がしたグループ名) の組。タグが無ければ見出しは「その他」。
+    """
+    matched = GROUP_TAG_PATTERN.match(group_name)
+    if matched is None:
+        return UNTAGGED_GROUP_LABEL, group_name
+    return matched.group(1), matched.group(2)
+
+
+def insert_tag_level(group_chain: tuple[str, ...]) -> tuple[str, ...]:
+    """グループ連鎖の先頭に、タグから導いた上位グループを差し込む。
+
+    Args:
+        group_chain: パーサが復元したグループ連鎖。
+
+    Returns:
+        上位グループを先頭に足した連鎖。連鎖が空なら空のまま返す。
+    """
+    if not group_chain:
+        return group_chain
+    tag, clean_name = split_group_tag(group_chain[0])
+    return (tag, clean_name, *group_chain[1:])
+
+
+def sort_group_names(names: Iterable[str]) -> list[str]:
+    """グループ名をタグ名順に並べ、「その他」を最後に置く。
+
+    Args:
+        names: 並べ替えるグループ名。
+
+    Returns:
+        並べ替えたグループ名のリスト。
+    """
+    return sorted(names, key=lambda name: (name == UNTAGGED_GROUP_LABEL, name))
+
+
 def build_group_tree(cases: list[BehaviorCase]) -> GroupNode:
     """ケース列をグループ連鎖に沿った木に組み上げる。
 
@@ -384,7 +437,7 @@ def build_group_tree(cases: list[BehaviorCase]) -> GroupNode:
     root = GroupNode()
     for case in cases:
         node = root
-        for group_name in case.group_chain:
+        for group_name in insert_tag_level(case.group_chain):
             node = node.subgroups.setdefault(group_name, GroupNode())
         node.cases.append(case)
     return root
@@ -471,7 +524,7 @@ def render_markdown(
             lines.append(f"- {format_case_text(case)}")
         if root.cases:
             lines.append("")
-        for group_name in sorted(root.subgroups):
+        for group_name in sort_group_names(root.subgroups):
             lines += [f"#### {escape_text(group_name)}", ""]
             append_group_markdown(lines, root.subgroups[group_name], 0)
             lines.append("")
@@ -494,7 +547,7 @@ def append_group_html(parts: list[str], node: GroupNode) -> None:
             css_class = ' class="skipped"' if case.is_skipped else ""
             parts.append(f"<li{css_class}>{format_case_text(case)}</li>")
         parts.append("</ul>")
-    for group_name in sorted(node.subgroups):
+    for group_name in sort_group_names(node.subgroups):
         subgroup = node.subgroups[group_name]
         parts.append(
             f"<details><summary>{escape_text(group_name)}"
