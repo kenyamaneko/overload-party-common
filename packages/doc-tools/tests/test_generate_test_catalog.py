@@ -260,17 +260,60 @@ class Testグループ木の組み立て:
             BehaviorCase(("グループA",), "ケース2", False, "s"),
         ]
         tree = build_group_tree(cases)
-        assert list(tree.subgroups) == ["グループA"]
-        assert [c.case_name for c in tree.subgroups["グループA"].cases] == ["ケース1", "ケース2"]
-
-    def test_グループ連鎖が空のケースはルート直下に置かれる(self):
-        tree = build_group_tree([BehaviorCase((), "ケースX", False, "s")])
-        assert [c.case_name for c in tree.cases] == ["ケースX"]
-        assert tree.subgroups == {}
+        assert list(tree.subgroups["その他"].subgroups) == ["グループA"]
+        assert [
+            c.case_name for c in tree.subgroups["その他"].subgroups["グループA"].cases
+        ] == ["ケース1", "ケース2"]
 
     def test_グループ連鎖が2段のとき入れ子のノードになる(self):
         tree = build_group_tree([BehaviorCase(("外", "内"), "ケースX", False, "s")])
-        assert [c.case_name for c in tree.subgroups["外"].subgroups["内"].cases] == ["ケースX"]
+        assert [
+            c.case_name for c in tree.subgroups["その他"].subgroups["外"].subgroups["内"].cases
+        ] == ["ケースX"]
+
+    def test_先頭にタグを持つトップレベルグループはタグを見出しとしてその下に置かれる(self):
+        tree = build_group_tree([BehaviorCase(("[認証系]ログイン処理",), "ケースX", False, "s")])
+        assert list(tree.subgroups) == ["認証系"]
+        assert [
+            c.case_name for c in tree.subgroups["認証系"].subgroups["ログイン処理"].cases
+        ] == ["ケースX"]
+
+    def test_同じタグを持つトップレベルグループが別々の由来にあるとき1つの見出しに集約される(self):
+        cases = [
+            BehaviorCase(("[認証系]ログイン処理",), "ケース1", False, "pkg/login"),
+            BehaviorCase(("[認証系]トークン検証",), "ケース2", False, "pkg/token"),
+        ]
+        tree = build_group_tree(cases)
+        assert list(tree.subgroups) == ["認証系"]
+        assert list(tree.subgroups["認証系"].subgroups) == ["ログイン処理", "トークン検証"]
+
+    def test_タグを持たないトップレベルグループはその他の下に置かれる(self):
+        tree = build_group_tree([BehaviorCase(("ログイン処理",), "ケースX", False, "s")])
+        assert list(tree.subgroups) == ["その他"]
+        assert [
+            c.case_name for c in tree.subgroups["その他"].subgroups["ログイン処理"].cases
+        ] == ["ケースX"]
+
+    def test_2段目以降のグループ名が角括弧で始まっていてもタグとして扱わない(self):
+        cases = [BehaviorCase(("[認証系]ログイン処理", "[内側]入力検証"), "ケースX", False, "s")]
+        tree = build_group_tree(cases)
+        assert list(tree.subgroups["認証系"].subgroups["ログイン処理"].subgroups) == [
+            "[内側]入力検証"
+        ]
+
+    def test_角括弧の中身が空のときタグとして扱わずグループ名の一部として残る(self):
+        tree = build_group_tree([BehaviorCase(("[]ログイン処理",), "ケースX", False, "s")])
+        assert list(tree.subgroups) == ["その他"]
+        assert list(tree.subgroups["その他"].subgroups) == ["[]ログイン処理"]
+
+    def test_グループ連鎖が空のケースはタグを持つグループとは別にルート直下に置かれる(self):
+        cases = [
+            BehaviorCase((), "ケースX", False, "s"),
+            BehaviorCase(("[認証系]ログイン処理",), "ケースY", False, "s"),
+        ]
+        tree = build_group_tree(cases)
+        assert [c.case_name for c in tree.cases] == ["ケースX"]
+        assert list(tree.subgroups) == ["認証系"]
 
 
 class Testケース数の数え上げ:
@@ -343,8 +386,12 @@ class Testセクションの組み立て:
         ]
         sections = build_sections(specs)
         assert [(cat, label) for cat, label, _ in sections] == [("外", "svc-go"), ("外", "svc-ts")]
-        assert [c.case_name for c in sections[0][2].subgroups["対象"].cases] == ["Goのケース"]
-        assert [c.case_name for c in sections[1][2].subgroups["対象"].cases] == ["TSのケース"]
+        assert [
+            c.case_name for c in sections[0][2].subgroups["その他"].subgroups["対象"].cases
+        ] == ["Goのケース"]
+        assert [
+            c.case_name for c in sections[1][2].subgroups["その他"].subgroups["対象"].cases
+        ] == ["TSのケース"]
 
     def test_同じ結果ファイルに複数の形式が指定されたときValueErrorになる(self, tmp_path: Path):
         path = _write(tmp_path / "r.json", "[]")
@@ -392,19 +439,12 @@ class TestMarkdownの描画:
         assert "## 外から見た振る舞い" in output
         assert "## 内部の挙動" in output
 
-    def test_グループは見出しケースは箇条書きとして現れる(self):
-        tree = build_group_tree([BehaviorCase(("対象",), "ケースA", False, "s")])
+    def test_上位グループは見出しその下のグループとケースは箇条書きとして現れる(self):
+        tree = build_group_tree([BehaviorCase(("[認証系]ログイン処理",), "ケースA", False, "s")])
         output = render_markdown([("外から見た振る舞い", "svc", tree)], commit=None, title="カタログの表題")
-        assert "#### 対象" in output
+        assert "#### 認証系" in output
+        assert "- **ログイン処理**" in output
         assert "- ケースA" in output
-
-    def test_トップレベルのグループは入力順によらず名前順に並ぶ(self):
-        tree = build_group_tree([
-            BehaviorCase(("Z対象",), "ケースZ", False, "s"),
-            BehaviorCase(("A対象",), "ケースA", False, "s"),
-        ])
-        output = render_markdown([("外から見た振る舞い", "svc", tree)], commit=None, title="カタログの表題")
-        assert output.index("#### A対象") < output.index("#### Z対象")
 
     def test_skip中のケースには未検証の注記が付く(self):
         tree = build_group_tree([BehaviorCase((), "未実装のケース", True, "s")])
@@ -447,6 +487,48 @@ class TestHTMLの描画:
         tree = build_group_tree([BehaviorCase((), "未実装のケース", True, "s")])
         output = render_html([("外から見た振る舞い", "svc", tree)], commit=None, title="カタログの表題")
         assert '<li class="skipped">未実装のケース（skip 中のため未検証）</li>' in output
+
+
+class Test上位グループ見出しの並び順:
+    def _tagged_tree(self) -> GroupNode:
+        return build_group_tree([
+            BehaviorCase(("[認証系]ログイン処理",), "ケース1", False, "s"),
+            BehaviorCase(("[描画系]盤面の描画",), "ケース2", False, "s"),
+        ])
+
+    def _untagged_and_tagged_tree(self) -> GroupNode:
+        return build_group_tree([
+            BehaviorCase(("タグの無い対象",), "ケース1", False, "s"),
+            BehaviorCase(("[描画系]盤面の描画",), "ケース2", False, "s"),
+        ])
+
+    def test_タグ見出しはMarkdownでタグ名順に並ぶ(self):
+        output = render_markdown(
+            [("外から見た振る舞い", "svc", self._tagged_tree())], commit=None, title="カタログの表題"
+        )
+        assert output.index("#### 描画系") < output.index("#### 認証系")
+
+    def test_タグ見出しはHTMLでタグ名順に並ぶ(self):
+        output = render_html(
+            [("外から見た振る舞い", "svc", self._tagged_tree())], commit=None, title="カタログの表題"
+        )
+        assert output.index("<summary>描画系") < output.index("<summary>認証系")
+
+    def test_その他の見出しはMarkdownで他のタグ見出しより後に出る(self):
+        output = render_markdown(
+            [("外から見た振る舞い", "svc", self._untagged_and_tagged_tree())],
+            commit=None,
+            title="カタログの表題",
+        )
+        assert output.index("#### 描画系") < output.index("#### その他")
+
+    def test_その他の見出しはHTMLで他のタグ見出しより後に出る(self):
+        output = render_html(
+            [("外から見た振る舞い", "svc", self._untagged_and_tagged_tree())],
+            commit=None,
+            title="カタログの表題",
+        )
+        assert output.index("<summary>描画系") < output.index("<summary>その他")
 
 
 class Testセクション引数のパース:
