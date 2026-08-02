@@ -43,13 +43,22 @@ _CREATE_TABLE_RE = re.compile(
     re.DOTALL | re.IGNORECASE,
 )
 
+_CREATE_TABLE_KEYWORD_RE = re.compile(r"CREATE\s+TABLE\b", re.IGNORECASE)
+
+_LINE_COMMENT_RE = re.compile(r"--[^\n]*")
+
 _TYPE_STOP = frozenset(
     {"NOT", "DEFAULT", "GENERATED", "REFERENCES", "CHECK", "PRIMARY", "UNIQUE", "CONSTRAINT"}
 )
 
 
 def parse_schema(sql_text: str) -> dict[str, Table]:
-    """CREATE TABLE 文をパースしてテーブル定義を返す。"""
+    """CREATE TABLE 文をパースしてテーブル定義を返す。
+
+    Raises:
+        ValueError: カラムを 1 つも抽出できない CREATE TABLE があるとき、
+            DDL 中の CREATE TABLE の数と抽出できたテーブルの数が食い違うとき。
+    """
     tables: dict[str, Table] = {}
 
     for m in _CREATE_TABLE_RE.finditer(sql_text):
@@ -107,8 +116,20 @@ def parse_schema(sql_text: str) -> dict[str, Table]:
 
             columns.append(Column(col_name, col_type, is_nullable, doc))
 
-        if columns:
-            tables[table_name] = Table(table_name, columns)
+        if not columns:
+            raise ValueError(
+                f"no column found in CREATE TABLE {qualified}. "
+                f"The DDL for {qualified} cannot be parsed."
+            )
+        tables[table_name] = Table(table_name, columns)
+
+    declared = len(_CREATE_TABLE_KEYWORD_RE.findall(_LINE_COMMENT_RE.sub("", sql_text)))
+    if declared != len(tables):
+        raise ValueError(
+            f"the DDL declares {declared} tables but {len(tables)} were parsed "
+            f"({sorted(tables)}). Either a CREATE TABLE statement cannot be parsed, "
+            f"or two of them share one unqualified table name."
+        )
 
     return tables
 

@@ -82,7 +82,7 @@ def convert_to_go_type(prop: dict[str, Any], required: bool) -> str:
     """JSON Schema の型情報から Go 型文字列に変換する.
 
     `$ref` はローカル component schema 名にのみ解決し、required に応じて値型 /
-    ポインタ型 / 配列要素型を切り替える。外部 ref や形式不正は例外で fail-fast。
+    ポインタ型 / 配列要素型を切り替える。
 
     Args:
         prop: JSON Schema のプロパティ定義。
@@ -90,12 +90,18 @@ def convert_to_go_type(prop: dict[str, Any], required: bool) -> str:
 
     Returns:
         対応する Go 型を表す文字列。
+
+    Raises:
+        ValueError: 外部 ref や形式不正の ref のとき、`type` が無いか対応外のとき、
+            array に mapping の `items` が無いとき。
     """
     if "$ref" in prop:
         base = _resolve_local_ref(prop["$ref"])
         return base if required else f"*{base}"
 
-    json_type = prop.get("type", "object")
+    if "type" not in prop:
+        raise ValueError(f"schema property must declare a type, got {prop!r}")
+    json_type = prop["type"]
 
     if json_type == "string":
         if prop.get("format") == "date-time":
@@ -110,12 +116,17 @@ def convert_to_go_type(prop: dict[str, Any], required: bool) -> str:
     elif json_type == "boolean":
         base = "bool"
     elif json_type == "array":
-        item_type = convert_to_go_type(prop.get("items", {}), required=True)
+        items = prop.get("items")
+        if not isinstance(items, dict):
+            raise ValueError(
+                f"array property must declare items as a mapping, got {prop!r}"
+            )
+        item_type = convert_to_go_type(items, required=True)
         return f"[]{item_type}"
     elif json_type == "object":
         base = "map[string]interface{}"
     else:
-        base = "interface{}"
+        raise ValueError(f"unsupported schema type {json_type!r} in {prop!r}")
 
     return base if required else f"*{base}"
 
@@ -138,27 +149,43 @@ def _build_type_comment(schema_name: str, description: str | None) -> str:
 def parse_spec(spec: dict[str, Any]) -> dict[str, Any]:
     """asyncapi spec dict を {types, constants} に変換する.
 
-    components/schemas のうち type=object のスキーマを type 定義として、
-    各プロパティの const / 単一値 enum を constants として抽出する。
-    多値 enum およびトップレベル schema enum は本パーサのスコープ外。
+    components/schemas の各スキーマを type 定義として、各プロパティの const /
+    単一値 enum を constants として抽出する。多値 enum は定数を生成しない。
+
+    Raises:
+        ValueError: components/schemas が mapping として無いとき、スキーマが
+            type=object でないとき、プロパティが mapping でないとき。
     """
-    components = spec.get("components", {})
-    schemas = components.get("schemas", {})
+    components = spec.get("components")
+    if not isinstance(components, dict):
+        raise ValueError(f"spec must declare components as a mapping, got {components!r}")
+    schemas = components.get("schemas")
+    if not isinstance(schemas, dict):
+        raise ValueError(
+            f"spec must declare components.schemas as a mapping, got {schemas!r}"
+        )
 
     types: list[dict[str, Any]] = []
     const_values: list[dict[str, str]] = []
     enum_values: list[dict[str, str]] = []
 
     for schema_name, schema in schemas.items():
-        if not isinstance(schema, dict) or schema.get("type") != "object":
-            continue
+        if not isinstance(schema, dict):
+            raise ValueError(f"schema {schema_name!r} must be a mapping, got {schema!r}")
+        if schema.get("type") != "object":
+            raise ValueError(
+                f"schema {schema_name!r} must have type 'object', "
+                f"got {schema.get('type')!r}"
+            )
 
         required = set(schema.get("required", []) or [])
         fields: list[dict[str, Any]] = []
 
         for prop_name, prop in (schema.get("properties") or {}).items():
             if not isinstance(prop, dict):
-                continue
+                raise ValueError(
+                    f"property {schema_name}.{prop_name} must be a mapping, got {prop!r}"
+                )
 
             go_name = prop.get("x-go-name") or convert_to_go_name(prop_name)
             is_required = prop_name in required

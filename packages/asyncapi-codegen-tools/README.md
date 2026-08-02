@@ -38,7 +38,7 @@ generate(
 
 ## 生成ルール
 
-入力 `components/schemas/*` の `type: object` のみが対象。
+入力 `components/schemas/*` の全 schema が対象。扱えない定義は Go 型に落とさずエラーで停止する。
 
 ### struct
 
@@ -121,10 +121,18 @@ weird_field:
 
 ## 制約 / scope 外
 
-- `type: object` 以外のトップレベル schema (string-typed enum 等) は無視
-- 多値 enum (例: `enum: [a, b, c]`) は本パッケージで扱わない (typed enum を生成したい場合は別途検討)
-- channels / operations / bindings は読まない (payload schema のみが対象)
-- `oneOf` / `allOf` / `$ref` の解決は未対応
+spec の誤りが型なしフィールドとして本番の wire に届かないよう、以下はエラーで停止する。
+
+- `type: object` 以外のトップレベル schema (string-typed enum 等)
+- `type` を書いていない property、対応する Go 型が無い `type`、`items` の無い `array`
+- `components` / `components.schemas` の欠落、mapping でない schema / property
+- ローカル component 以外を指す `$ref`
+
+以下は生成の対象外。
+
+- 多値 enum (例: `enum: [a, b, c]`) の定数 (typed enum を生成したい場合は別途検討)
+- channels / operations / bindings (payload schema のみが対象)
+- `oneOf` / `allOf` の解決
 
 ## 開発
 

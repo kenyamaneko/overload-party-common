@@ -267,19 +267,19 @@ def parse_csharp_catalog_json(path: Path) -> list[BehaviorCase]:
         配列順の BehaviorCase のリスト。
 
     Raises:
-        ValueError: レコードに target / case / source が無いとき。
+        ValueError: レコードに target / case / skipped / source が無いとき。
     """
     records = json.loads(path.read_text(encoding="utf-8"))
     cases = []
     for record in records:
-        for key in ("target", "case", "source"):
+        for key in ("target", "case", "skipped", "source"):
             if key not in record:
                 raise ValueError(f"レコードに {key} がありません: {path}: {record}")
         target = record["target"]
         group_chain = (target,) if target else ()
         cases.append(
             BehaviorCase(
-                group_chain, record["case"], bool(record.get("skipped", False)), record["source"]
+                group_chain, record["case"], bool(record["skipped"]), record["source"]
             )
         )
     return cases
