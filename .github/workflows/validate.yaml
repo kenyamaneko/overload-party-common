@@ -151,9 +151,4 @@ jobs:
         run: python3 scripts/generate_constants.py
 
       - name: Verify no diff
-        run: |
-          if ! git diff --exit-code -- packages/game-design-constants/ packages/game-design-constants-dotnet/ packages/game-design-constants-npm/; then
-            echo "::error::Generated files are out of sync. Run generate scripts and commit."
-            git diff --stat
-            exit 1
-          fi
+        run: .github/scripts/validate/verify-no-generated-diff.sh
