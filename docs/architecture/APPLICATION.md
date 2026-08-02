@@ -69,11 +69,11 @@ battle は対戦中に大量のカードデータを参照するため、毎回 
 
 battle 側のインメモリキャッシュの更新戦略は以下のとおりとする。
 
-- **初期ロード**: battle Pod 起動時に card サービスの REST API `GET /api/v1/cards` で全カード定義を取得し、プロセス内のインメモリキャッシュに保持する
+- **初期ロード**: battle のインスタンス起動時に card サービスの REST API `GET /api/v1/cards` で全カード定義を取得し、プロセス内のインメモリキャッシュに保持する
 - **更新通知**: card サービスがカードマスター更新時に、Cloud Pub/Sub のトピック `card-definitions-updated` に invalidation イベントを publish する。ペイロードは `{type: "invalidated"}` のようなシグナルのみで、どのカードが変わったかといった差分情報は含めない
 - **到達保証**: このトピックの subscription は **at-least-once** で十分（Exactly-Once Delivery は不要）。重複受信しても battle 側は「キャッシュを破棄して REST API で全件再取得」するだけで、操作として冪等であるため
-- **Subscription の設計**: battle Pod ごとに **別々の subscription** を割り当てる（broadcast 構成）。マッチメイキングイベント（`matchmaking-events-gateway`）が競合コンシューマで 1 Pod のみ受信するのと逆で、カード invalidation は **全 battle Pod に届く必要がある**（各 Pod が独立した in-memory キャッシュを持つため）。Pod 名や Pod インスタンス ID をサフィックスに含めた動的命名の subscription を起動時に作成・終了時に削除する運用を想定する
-- **当面の前提**: 現行インフラ方針（GKE Standard 単一ノード・1 replica per service）下では battle Pod は 1 個しかないため、この broadcast 構成の挙動は単一 subscription とほぼ変わらない。ただし水平スケール時に即座に機能する設計として最初からこの形で組む
+- **Subscription の設計**: battle のインスタンスごとに **別々の subscription** を割り当てる（broadcast 構成）。マッチメイキングイベント（`matchmaking-events-gateway`）が競合コンシューマで 1 インスタンスのみ受信するのと逆で、カード invalidation は **全 battle インスタンスに届く必要がある**（各インスタンスが独立した in-memory キャッシュを持つため）。インスタンス ID をサフィックスに含めた動的命名の subscription を起動時に作成・終了時に削除する運用を想定する
+- **当面の前提**: battle の Cloud Run サービスは最小インスタンス数 0・最大インスタンス数 3 で、実際に同時稼働するインスタンスは通常 1 個に留まるため、この broadcast 構成の挙動は単一 subscription とほぼ変わらない。ただし水平スケール時に即座に機能する設計として最初からこの形で組む
 - **レスポンス形状**: card サービスの `GET /api/v1/cards` は全カード定義を 1 レスポンスで返却する。件数は 126 枚程度で、毎回全件返しても負荷上問題にならない。差分配信やページングは不要
 - **バージョン整合性**: カードマスターにはバージョン番号が付与されており、`games.card_data_version` に記録される。battle が扱うゲーム状態と対応するカード定義バージョンのズレは、ゲーム開始時に battle が保持しているキャッシュのバージョンを `games.card_data_version` として記録することで検証可能にする
 
@@ -86,7 +86,7 @@ battle 側のインメモリキャッシュの更新戦略は以下のとおり�
 ### 通信原則
 
 - **URL は gateway、契約は各サービス**: client は `VITE_API_BASE_URL` (= gateway) にのみ到達するが、REST 公開仕様 (型契約) は各サービスが自リポの `data/openapi.yaml` で持つ。gateway は path-prefix forwarder としてリクエストを所属サービスに転送する役割で、固有のドメインロジックや型加工は持たない ([ADR-036](../adr/036-gateway-passthrough-and-service-public-api.md))。Ingress / Cloud LB の path-routing 等インフラ機能には依存せず、gateway server 内で振り分ける
-- **サービス間通信は internal API**: クラスタ内のサービス間呼び出しは各サービスの `/internal/v1/*` 経由。認証フロー詳細は「内部サービス間認証」を参照
+- **サービス間通信は internal API**: サービス間の呼び出しは各サービスの `/internal/v1/*` 経由。到達は Cloud Run の呼び出し IAM で制限し、呼び出し元のサービス identity で認可する。認証フロー詳細は「内部サービス間認証」を参照
 
 ### 例外: matchmaking
 
@@ -102,7 +102,7 @@ matchmaking は REST 公開 API を持たず、上記「URL は gateway、契約
 
 - **REST API**（クライアント向け公開 API、入口は gateway）: プレイヤー管理、デッキ管理、NPC 対戦、ショップなど
 - **WebSocket API**（クライアント ↔ gateway）: PvP マッチメイキング、リアルタイム対戦、スタンプ送信など
-- **内部 REST API**（サービス間通信、クラスタ内部のみ）: gateway ↔ account / card / shop / scenario / matchmaking / battle / news / support、および battle ↔ card など。ドメインサービス間の HTTP 直叩きは原則禁止し、連携は Pub/Sub に集約する。例外として scenario の onboarding 内 name 確定と再開判定に限り scenario → account の直叩きを許容する（[ADR-025](../adr/025-onboarding-name-via-rest-and-cross-service-http.md)）
+- **内部 REST API**（サービス間通信、Cloud Run の呼び出し IAM で保護）: gateway ↔ account / card / shop / scenario / matchmaking / battle / news / support、および battle ↔ card など。ドメインサービス間の HTTP 直叩きは原則禁止し、連携は Pub/Sub に集約する。例外として scenario の onboarding 内 name 確定と再開判定に限り scenario → account の直叩きを許容する（[ADR-025](../adr/025-onboarding-name-via-rest-and-cross-service-http.md)）
 
 ### 契約と実装の分離
 
@@ -149,7 +149,7 @@ client が消費する型契約は **各サービスが直接公開** する（[
 **REST APIリクエスト認証フロー:**
 
 ```
-クライアント                    GKE Pod
+クライアント               gateway (Cloud Run)
      │                              │
      │  Authorization: <ID Token>   │
      ├─────────────────────────────>│
@@ -172,19 +172,24 @@ client が消費する型契約は **各サービスが直接公開** する（[
 
 ### 内部サービス間認証
 
-gateway は Firebase ID Token を検証して player_id を解決した後、下流サービスへの REST 呼び出しに HMAC 署名 JWT (HS256) を `X-Internal-Auth` header で付与する。各サービスは middleware で署名・有効期限・`iss` を検証し、`sub` クレームから player_id を context に書き込む。handler は context 経由で player_id を取得し、認証 header を直読しない (偽造耐性を失うため)。
+到達制御と利用者 identity の伝播は別の仕組みが担う。到達制御は Cloud Run の呼び出し IAM で行い、利用者 identity の伝播は gateway が署名する内部トークンで行う。
+
+gateway は Firebase ID Token を検証して player_id を解決した後、下流サービスへの REST 呼び出しに RS256 で署名した JWT を `X-Internal-Auth` header で付与する。各サービスは middleware で gateway の公開鍵を使って署名・有効期限・`iss` を検証し、`sub` クレームから player_id を context に書き込む。handler は context 経由で player_id を取得し、認証 header を直読しない (偽造耐性を失うため)。battle はプレイヤー identity を持たないため内部トークンを検証せず、到達制御の IAM のみを受ける。
 
 | 項目 | 内容 |
 |------|------|
 | Header | `X-Internal-Auth` |
-| 署名アルゴリズム | HS256 (対称鍵) |
-| 共有秘密鍵 | 環境変数 `INTERNAL_AUTH_SECRET` (k8s Secret) |
+| 署名アルゴリズム | RS256 (非対称鍵) |
+| 署名鍵 | gateway のみが環境変数 `INTERNAL_AUTH_PRIVATE_KEY` で受け取る。実値は Secret Manager の `internal-auth-private-key` に置き、読み取りを gateway のサービスアカウントに限る |
+| 検証鍵 | 各サービスが環境変数 `INTERNAL_AUTH_PUBLIC_KEY` で受け取る。公開鍵のため Terraform が平文で配布する |
 | 鍵 ID | JWT header の `kid` (将来のローテーション余地) |
 | TTL | 5 分 (`exp` クレーム) |
 | Subject | `sub` = player_id |
 | Issuer | `iss` = `overload-party-gateway` |
 
-設計の詳細・移行段階・検討経緯は [ADR-037](../adr/037-internal-auth-hmac-signed-jwt.md) を参照。
+鍵は環境ごとに独立させ、一つ漏れても他の環境のトークンを偽造できないようにする。
+
+設計の詳細・検討経緯は [ADR-057](../adr/057-cloudrun-service-auth-iam-and-rs256.md) を参照。
 
 ---
 
@@ -290,13 +295,13 @@ shop → account の同期呼び出しは存在しない。eventually consistent
 Apple / Google からのサーバー通知は、**shop サービスが公開エンドポイントで直接受信する**。ユーザートラフィックの入口は gateway 一本に保ちつつ、課金プラットフォーム側の制約上 gateway 経由でルーティングできないため、shop にのみ例外的に公開エンドポイントを許可する。webhook 用の受信パスは他のクライアント API と明示的に区別し、レート制限も別建てで設定する。
 
 ```
-Apple Server Notifications V2  ──>  shop (GKE Ingress)  ──>  Cloud SQL (shop スキーマ)
-Google RTDN (Pub/Sub push)     ──>  shop (GKE Ingress)  ──>  Cloud SQL (shop スキーマ)
+Apple Server Notifications V2  ──>  shop  ──>  Cloud SQL (shop スキーマ)
+Google RTDN (Pub/Sub push)     ──>  shop  ──>  Cloud SQL (shop スキーマ)
 ```
 
 | 項目 | 内容 |
 |------|------|
-| 受信先 | shop サービス（GKE Ingress 経由で外部公開） |
+| 受信先 | shop サービス |
 | ランタイム | Go |
 | 責務 | サーバー通知の受信・署名検証・`subscriptions` と `outbox_events` の同一トランザクション更新 |
 | 認証 | Apple: JWS 署名検証 / Google: Pub/Sub push トークン検証 |

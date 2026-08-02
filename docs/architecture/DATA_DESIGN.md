@@ -54,7 +54,7 @@ matchmaking は RDB スキーマを持たない（Redis + Pub/Sub のみ）。
 |---|---|---|---|---|
 | ゲーム語彙 | コンパイル時固定。switch 判定・型判別子・DB 列値としてコードにリテラル参照される | common パッケージ配信 | `overload-party-common/data/{game_design_constants,factions}.yaml` → `scripts/generate_constants.py` で Go/C#/TS に codegen | パッケージ再配信（go get / nuget / npm） |
 | 運営チューニング値 | 実行時に調整する動的値（バトル上限、経験値係数、タイムバンク等） | Cloud Firestore `game_config` コレクション | 初期値: `overload-party-common/data/game_config_defaults.yaml` / 運用中: Firestore が SSoT | 初期投入: `overload-party-ops/firestore-seed/seed_game_config.py`。運用中の変更: Google Cloud コンソール / Firestore admin SDK で即時反映（[ADR-017](../adr/017-game-config-firestore.md)） |
-| サービス固有設定 | サービス単位・環境（dev/stg/prod）単位で変わる値（DB URL、`FIRESTORE_PROJECT_ID` 等） | env var | 各サービスの `internal/config/` + `overload-party-k8s` の Deployment manifest | デプロイ |
+| サービス固有設定 | サービス単位・環境（dev/stg/prod）単位で変わる値（DB URL、`FIRESTORE_PROJECT_ID` 等） | env var | 各サービスの `internal/config/` + `overload-party-infra` が管理する Cloud Run の環境変数 | デプロイ |
 
 ### 判断の境界
 
