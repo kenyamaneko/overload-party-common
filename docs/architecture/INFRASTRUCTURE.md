@@ -50,7 +50,7 @@ overload-party 全リポジトリの CI/CD に関する横断的な設計情報�
 | ワークフロー | トリガー | 役割 |
 |---|---|---|
 | `ci.yaml` | PR | Lint + テスト + codegen-sync |
-| `deploy.yaml` | main push (dev) / `v*.*.*` タグ push (stg) / workflow_dispatch (prod) | Docker ビルド + AR push + Cloud Run への反映 |
+| `deploy.yaml` | main push (dev) / `v*.*.*` タグ push (stg) / workflow_dispatch (prod) | Docker ビルド + AR push + Cloud Run への反映（stg / prod は既存イメージの反映のみ） |
 | `publish.yaml` | main push (paths) | Go / npm パッケージの自動 tag + publish |
 
 | リポ | Lint | テスト | Docker ビルド | パッケージ publish |

@@ -149,7 +149,7 @@ client が消費する型契約は **各サービスが直接公開** する（[
 **REST APIリクエスト認証フロー:**
 
 ```
-クライアント               gateway (Cloud Run)
+クライアント                    gateway
      │                              │
      │  Authorization: <ID Token>   │
      ├─────────────────────────────>│
