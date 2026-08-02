@@ -12,8 +12,8 @@
 
 set -euo pipefail
 
-TARGET="${1:-auto}"
-BUMP="${2:-patch}"
+TARGET="$1"
+BUMP="$2"
 
 # (package_name, tag_prefix, watch_path)
 PACKAGES=(
@@ -21,6 +21,22 @@ PACKAGES=(
   "game-design-constants-dotnet:packages/game-design-constants-dotnet:packages/game-design-constants-dotnet/"
   "game-design-constants-npm:packages/game-design-constants-npm:packages/game-design-constants-npm/"
 )
+
+# 未知の対象は、どのパッケージにも一致せず何も publish せずに成功してしまうため弾く
+if [ "$TARGET" != "auto" ]; then
+  is_known_target=false
+  for entry in "${PACKAGES[@]}"; do
+    IFS=':' read -r name _ <<< "$entry"
+    if [ "$TARGET" = "$name" ]; then
+      is_known_target=true
+      break
+    fi
+  done
+  if [ "$is_known_target" = false ]; then
+    echo "unknown publish target: ${TARGET}" >&2
+    exit 1
+  fi
+fi
 
 compute_version() {
   local prefix="$1" bump="$2"
@@ -36,7 +52,8 @@ compute_version() {
   case "$bump" in
     major) echo "$((major + 1)).0.0" ;;
     minor) echo "${major}.$((minor + 1)).0" ;;
-    *)     echo "${major}.${minor}.$((patch + 1))" ;;
+    patch) echo "${major}.${minor}.$((patch + 1))" ;;
+    *)     echo "unknown bump level: ${bump}" >&2; exit 1 ;;
   esac
 }
 

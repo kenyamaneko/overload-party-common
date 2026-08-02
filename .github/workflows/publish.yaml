@@ -2,18 +2,13 @@ name: Publish Packages
 
 # game-design-constants (Go module + NuGet + npm) を publish する。
 
+# 桁は後方互換を壊すかどうかの判断であり変更内容から導けないため、人が選んで実行する。
 on:
-  push:
-    branches: [main]
-    paths:
-      - "packages/**"
-      - ".github/scripts/publish/**"
-      - ".github/workflows/publish.yaml"
   workflow_dispatch:
     inputs:
       bump:
         description: "Version bump level"
-        required: false
+        required: true
         default: "patch"
         type: choice
         options:
@@ -22,7 +17,7 @@ on:
           - major
       target:
         description: "Package to publish (auto = detect changes)"
-        required: false
+        required: true
         default: "auto"
         type: choice
         options:
@@ -64,7 +59,7 @@ jobs:
 
       - name: Detect changes and compute versions
         id: detect
-        run: bash .github/scripts/publish/detect-changes.sh "${{ inputs.target || 'auto' }}" "${{ inputs.bump || 'patch' }}"
+        run: bash .github/scripts/publish/detect-changes.sh "${{ inputs.target }}" "${{ inputs.bump }}"
 
   # ──────────────────────────────────────────────
   # 2. Build & validate before publishing
