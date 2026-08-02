@@ -59,7 +59,7 @@ gateway は **型契約と transport を分離する原則** に従う。client 
 | **battle** | 対戦ゲームエンジン | C# / .NET 10 | test → Docker push |
 | **client** | モバイル/Web フロントエンド | React 19, TypeScript, Vite, Capacitor | lint → typecheck → test |
 | **infra** | Google Cloud リソース管理 | Terraform | plan → apply（パス変更時のみ） |
-| **k8s** | GKE デプロイ・運用 | Kustomize, GitHub Actions | deploy / startup / shutdown / scale |
+| **k8s** | GKE 構成のマニフェスト。GKE 廃止（[ADR-056](../adr/056-retire-gke-gitops-return-to-cloudrun.md)）に伴い archive 済み | Kustomize | — |
 | **ops** | DB マイグレーション・監視ジョブ | Docker, Cloud Run, Python | CI + 手動 dispatch |
 | **analytics** | Spanner → BigQuery エクスポート | Go, Cloud Functions | 手動デプロイ |
 | **newsfeed** | ニュース記事収集・要約（RSS → Gemini → Pub/Sub publish） | Python 3.12, Vertex AI, Upstash Redis | CI で自動デプロイ |
@@ -68,7 +68,7 @@ gateway は **型契約と transport を分離する原則** に従う。client 
 | **assets** | ゲームアセットパイプライン（イラスト・スタンプ・SE 等の管理・配信） | GCS, Cloudflare CDN | CI でマニフェスト生成 |
 | **web** | ティザーサイト（未作成） | — | — |
 
-**サービス間通信:** Gateway 以外のサービス（account / matchmaking / shop / scenario / card / battle / news / support）はクラスタ内ネットワークに閉じ、原則 Gateway からの内部 REST 経由でのみ到達可能とする。ドメインサービス間の連携は Pub/Sub に集約し、HTTP 直叩きは行わない。例外として scenario の onboarding 内 name 入力ステップと再開判定に限り scenario → account の直叩きを許容する（[ADR-025](../adr/025-onboarding-name-via-rest-and-cross-service-http.md)）。外部公開の例外は以下:
+**サービス間通信:** Gateway 以外のサービス（account / matchmaking / shop / scenario / card / battle / news / support）は Cloud Run の呼び出し IAM で到達を制限し（[ADR-057](../adr/057-cloudrun-service-auth-iam-and-rs256.md)）、原則 Gateway からの内部 REST 経由でのみ到達可能とする。ドメインサービス間の連携は Pub/Sub に集約し、HTTP 直叩きは行わない。例外として scenario の onboarding 内 name 入力ステップと再開判定に限り scenario → account の直叩きを許容する（[ADR-025](../adr/025-onboarding-name-via-rest-and-cross-service-http.md)）。外部公開の例外は以下:
 
 - **shop** の Webhook 受信エンドポイント（Apple / Google の課金サーバー通知受信用、詳細は [APPLICATION.md](APPLICATION.md) 参照）
 - **support** の問い合わせ受付フォーム（CORS で Origin 制限）
@@ -90,8 +90,9 @@ graph TD
     common -->|"npm"| client["client (React)"]
     battle["battle (C#)"]
 
-    gosvcs -->|Docker| k8s["k8s (Kustomize deploy)"]
-    battle -->|Docker| k8s
+    gosvcs -->|"Docker イメージ"| ar["Artifact Registry"]
+    battle -->|"Docker イメージ"| ar
+    ar --> run["Cloud Run"]
 
     infra["infra (Terraform)"]
     ops["ops (migration / 監視)"]
@@ -159,7 +160,7 @@ Battle Server (C# / .NET 10)
 - Gateway (Go): 高パフォーマンスな並行処理、WebSocket 常時接続に最適
 - ドメインサービス (Go): Gateway と同じスタック (Go 1.25) で統一し、学習コスト・運用コストを抑える
 - Battle (C#): 複雑なゲームロジックの表現力、型安全性、.NET エコシステム
-- GKE Standard でゲームサーバー管理
+- Cloud Run: 全サービスを最小インスタンス数 0 で動かし、未使用時の計算資源の費用を無くす（[ADR-056](../adr/056-retire-gke-gitops-return-to-cloudrun.md), [ADR-058](../adr/058-gateway-on-cloudrun-single-instance.md)）
 
 ### データベース
 
@@ -193,13 +194,11 @@ Firebase Authentication
 ```
 Google Cloud (4プロジェクト構成)
 ├── keyandnotes-platform
-│   ├── GKE Standard (全 9 サービス相乗り — 全環境共有)
-│   │     e2-standard-2 (2 vCPU / 8 GiB) × 1 ノード
-│   ├── Artifact Registry (Docker イメージ)
-│   ├── Cloud Pub/Sub (matchmaking-events トピック)
-│   └── Ingress (GCE L7 LB, gateway と shop のみ外部公開)
+│   └── Artifact Registry (Docker イメージ、全環境共有)
 ├── overload-party-{dev,stg,prod}
+│   ├── Cloud Run (9 サービス。min 0 / max 3、gateway のみ max 1)
 │   ├── Cloud SQL PostgreSQL (Database — 環境ごと独立、スキーマ単位分割)
+│   ├── Cloud Pub/Sub (matchmaking-events 等のトピック)
 │   ├── Cloud Storage (Replays, Logs)
 │   └── Cloud Monitoring
 ```
@@ -215,10 +214,10 @@ CI: GitHub Actions
 ├── Docker イメージビルド
 └── Artifact Registry プッシュ
 
-CD: ArgoCD (GitOps)
-├── deploy.yaml が main push でイメージを AR に push
-├── ArgoCD Image Updater が k8s リポのマニフェストを更新
-└── 人が ArgoCD UI で sync して環境反映 (全環境 manual sync)
+CD: GitHub Actions (deploy.yaml → common の go-service-deploy.yaml)
+├── dev  : main push でイメージをビルドして AR に push し Cloud Run へ反映
+├── stg  : vX.Y.Z タグ push で同一コミットのイメージを Cloud Run へ反映
+└── prod : workflow_dispatch でタグを指定して Cloud Run へ反映
 ```
 
 ---
@@ -237,7 +236,7 @@ graph TD
         auth["Firebase Auth"]
     end
 
-    subgraph GKE["GKE (Application Layer)"]
+    subgraph CloudRun["Cloud Run (Application Layer)"]
         gw["gateway (Go)"]
 
         subgraph Domain Services
@@ -326,7 +325,7 @@ graph TD
 ```
 
 **サーバー間通信:**
-- サービス間は内部 REST API（クラスタ内ネットワーク）。Firebase ID Token 検証と player_id 解決は gateway が一元化し、各ドメインサービスは gateway が発行する HMAC 署名 JWT (`X-Internal-Auth`) を検証して player_id を取得する（[ADR-037](../adr/037-internal-auth-hmac-signed-jwt.md)、詳細は [APPLICATION.md §内部サービス間認証](APPLICATION.md#内部サービス間認証)）
+- サービス間は内部 REST API。到達は Cloud Run の呼び出し IAM で制限する。Firebase ID Token 検証と player_id 解決は gateway が一元化し、各ドメインサービスは gateway が RS256 で署名した JWT (`X-Internal-Auth`) を gateway の公開鍵で検証して player_id を取得する（[ADR-057](../adr/057-cloudrun-service-auth-iam-and-rs256.md)、詳細は [APPLICATION.md §内部サービス間認証](APPLICATION.md#内部サービス間認証)）
 - ドメインサービス間の連携は Pub/Sub に集約し、HTTP 直叩きは原則禁止。例外は scenario → account の onboarding 内 name 確定と再開判定のみ（[ADR-025](../adr/025-onboarding-name-via-rest-and-cross-service-http.md)）
 - 外部公開は gateway（クライアント向け WS/REST）を主とし、例外は以下:
   - **shop** の Webhook 受信（Apple / Google の課金サーバー通知）

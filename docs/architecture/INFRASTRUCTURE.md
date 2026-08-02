@@ -50,8 +50,8 @@ overload-party 全リポジトリの CI/CD に関する横断的な設計情報�
 | ワークフロー | トリガー | 役割 |
 |---|---|---|
 | `ci.yaml` | PR | Lint + テスト + codegen-sync |
-| `deploy.yaml` | main push (paths) | Docker ビルド + AR push（環境反映は ArgoCD、[ADR-041](../adr/041-ci-deploy-trigger-separation.md)） |
-| `publish.yaml` | main push (paths) | Go / npm パッケージの自動 tag + publish |
+| `deploy.yaml` | main push (dev) / `v*.*.*` タグ push (stg) / workflow_dispatch (prod) | Docker ビルド + AR push + Cloud Run への反映（stg / prod は既存イメージの反映のみ） |
+| `publish.yaml` | workflow_dispatch | Go / npm パッケージの tag + publish（桁は人が選ぶ） |
 
 | リポ | Lint | テスト | Docker ビルド | パッケージ publish |
 |------|------|--------|--------------|-------------------|
@@ -77,7 +77,7 @@ overload-party 全リポジトリの CI/CD に関する横断的な設計情報�
 | 送信側 | 受信側 | メカニズム | イベント |
 |--------|--------|-----------|---------|
 | common | ops | `repository_dispatch` | `db-migrate`（db/ 変更時） |
-| common | Go module proxy / Cloudsmith | `publish.yaml` | data/packages/ 変更時に自動 publish (patch bump) |
+| common | Go module proxy / Cloudsmith | `publish.yaml` | 手動実行時に publish（上げる桁を選ぶ） |
 | 各サービスリポ | ops | `repository_dispatch` | `db-migrate`（db/ 変更時、dev 自動） |
 
 ### 認証
@@ -94,9 +94,8 @@ Workload Identity Provider (keyandnotes-platform)
     │
     ▼
 Service Account (用途別)
-    ├─ CI_SERVICE_ACCOUNT      — イメージビルド・AR push・Cloud Run Jobs 更新・Cloud Functions deploy
-    ├─ TF_SERVICE_ACCOUNT      — Terraform plan/apply
-    └─ DEPLOY_SERVICE_ACCOUNT  — kubectl apply (GKE)
+    ├─ CI_SERVICE_ACCOUNT      — イメージビルド・AR push・Cloud Run サービス / Jobs 更新・Cloud Functions deploy
+    └─ TF_SERVICE_ACCOUNT      — Terraform plan/apply
 ```
 
 **SA の管理場所:**
@@ -105,7 +104,6 @@ Service Account (用途別)
 |----|---------|---------------|
 | `github-ci` (CI) | infra | `environments/platform/` → `modules/ci-cd/` |
 | `terraform-deployer` (TF) | infra | 同上 |
-| `github-deploy` (Deploy) | infra | 同上 |
 | WIF プール・プロバイダ | infra | 同上 |
 
 #### Cross-repo / 自動化 (GitHub App)
@@ -128,7 +126,6 @@ App 構成・permissions の詳細・既知の制約は ADR-033 を参照。
 | `WIF_PROVIDER` | Workload Identity Provider URI |
 | `CI_SERVICE_ACCOUNT` | ビルド・push 用 SA |
 | `TF_SERVICE_ACCOUNT` | Terraform 用 SA |
-| `DEPLOY_SERVICE_ACCOUNT` | K8s デプロイ用 SA |
 | `PSC_SA_LINK_DEV` | PSC ServiceAttachment リンク (dev) |
 | `PSC_SA_LINK_STG` | PSC ServiceAttachment リンク (stg) |
 | `CLOUDFLARE_ZONE_ID` | Cloudflare Zone ID |
@@ -169,11 +166,11 @@ GitHub 内のリソースへアクセスする認証情報は「Cross-repo / 自
 
 ### デプロイ先と方式
 
-GKE サービスのデプロイは CI (品質ゲート) と分離する（[ADR-041](../adr/041-ci-deploy-trigger-separation.md)）。main push で `deploy.yaml` がイメージを AR に push し、ArgoCD Image Updater がマニフェストを更新、人が ArgoCD UI で sync して環境に反映する（[ADR-018](../adr/018-argocd-gitops-and-nodepool-based-shutdown.md)）。
+デプロイ (artifact 出力と環境反映) は CI (品質ゲート) と別の workflow に分ける（[ADR-041](../adr/041-ci-deploy-trigger-separation.md)）。9 サービスは Cloud Run で動き（[ADR-056](../adr/056-retire-gke-gitops-return-to-cloudrun.md)、[ADR-058](../adr/058-gateway-on-cloudrun-single-instance.md)）、各リポの `deploy.yaml` は common の reusable workflow `go-service-deploy.yaml` を呼ぶだけの caller である（[ADR-054](../adr/054-go-service-reusable-workflows.md)）。dev はイメージをビルドして AR に push した上で反映し、stg / prod は指定されたタグが指すコミットのイメージをビルドせずそのまま反映する。
 
 | サービス | デプロイ先 | 環境反映 |
 |---------|----------|----------|
-| gateway / battle / card / account / matchmaking / shop / scenario / news / support | GKE | ArgoCD manual sync（image push は main push 自動） |
+| gateway / battle / card / account / matchmaking / shop / scenario / news / support | Cloud Run | dev: main push 自動 / stg: `v*.*.*` タグ push 自動 / prod: 手動 dispatch |
 | db-migrate | Cloud Run Job | dev 自動 / stg 手動 |
 | cost-monitor / drift-monitor | GitHub Actions schedule | schedule (Cloud Run Job ではなくランナー上で実行) |
 | newsfeed | Cloud Run Job | 手動 dispatch（lint/test green を `needs:` で待つ） |
@@ -182,13 +179,13 @@ GKE サービスのデプロイは CI (品質ゲート) と分離する（[ADR-0
 
 ### 環境戦略
 
-全サービスリポは GitHub Flow（main + feature ブランチ + PR）で運用し、環境反映はブランチではなく ArgoCD の manual sync / workflow_dispatch で制御する。
+全サービスリポは GitHub Flow（main + feature ブランチ + PR）で運用し、環境反映はブランチではなく main へのマージ・タグ・手動実行で制御する。リポごとにどのデプロイ戦略を採るかは `rules/repos.yaml` の `deploy` で解決する（[ADR-050](../adr/050-branch-and-deploy-strategy-separation.md)）。
 
 | 環境 | Google Cloud プロジェクト | 環境反映 |
 |------|-----------------|------------|
-| dev | overload-party-dev | ops ジョブ・infra は main push 自動 / GKE サービスは ArgoCD manual sync |
-| stg | overload-party-stg | ArgoCD manual sync / 手動 dispatch |
-| prod | overload-party-prod | ArgoCD manual sync / 手動 dispatch |
+| dev | overload-party-dev | 9 サービス・ops ジョブ・infra とも main push 自動 |
+| stg | overload-party-stg | 9 サービスは `v*.*.*` タグ push 自動 / ops ジョブは手動 dispatch |
+| prod | overload-party-prod | 手動 dispatch でタグを指定 |
 
 ### CI 標準設定
 
