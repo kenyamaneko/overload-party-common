@@ -15,9 +15,16 @@ Cloud Run サービスは revision が ready になるまで作成完了とみ�
 
 ## 手順
 
+apply は overload-party-infra の `terraform.yaml` を `workflow_dispatch` で実行する。`path` に対象の state root を選ぶ。Upstash の資格情報はこの workflow にしか無いため、手元では apply できない。
+
+```
+gh workflow run terraform.yaml --repo kenyamaneko/overload-party-infra \
+  -f path=google-cloud/env/<env>
+```
+
 ### 1. terraform apply
 
-`providers/google-cloud/env/<env>/` で apply する。この時点では Cloud Run サービスの作成が失敗してよい。ネットワーク・データベース・シークレットの入れ物・サービスアカウントが揃うことが目的。
+`path=google-cloud/env/<env>` で実行する。この時点では Cloud Run サービスの作成が失敗してよい。ネットワーク・データベース・シークレットの入れ物・サービスアカウントが揃うことが目的。
 
 ### 2. シークレットに値を投入する
 
@@ -28,6 +35,9 @@ terraform は値を投入しない。state と CI のログに平文が残るこ
 | `internal-auth-private-key` | gateway (署名するのは gateway だけで、下流は公開鍵で検証する) |
 | `support-slack-bot-token` / `support-sendgrid-api-key` | support |
 | `shop-apple-bundle-id` / `shop-apple-issuer-id` / `shop-apple-key-id` / `shop-apple-private-key` / `shop-google-package-name` | shop |
+| `migration-db-password` | db-migrate ジョブ (投入は手順 5) |
+| `gateway-upstash-redis-url` | gateway |
+| `matchmaking-upstash-redis-endpoint` / `matchmaking-upstash-redis-password` | matchmaking |
 
 ```
 gcloud secrets versions add <secret-id> --project <project-id> --data-file=<path>
@@ -35,12 +45,15 @@ gcloud secrets versions add <secret-id> --project <project-id> --data-file=<path
 
 shop の 5 つは App Store Connect と Google Play の資格情報が要る。取得手順は overload-party-shop の `docs/operations/IAP_SECRETS.md` にある。
 
-Upstash の接続 URL は upstash 側の state が値を持っている。先に `providers/upstash/env/<env>` を apply してから、その output を投入する。
+Upstash の値は upstash 側の state が持っている。先に overload-party-infra の `terraform.yaml` を `path=upstash/env/<env>` で実行してから、その output を投入する。`terraform output` を手元で打つには state バケットへの読み取り権限と `terraform init` が要る。
 
 ```
+terraform -chdir=providers/upstash/env/<env> init -input=false
 terraform -chdir=providers/upstash/env/<env> output -raw gateway_redis_url \
   | gcloud secrets versions add gateway-upstash-redis-url --project <project-id> --data-file=-
 ```
+
+matchmaking が読む 2 本 (`matchmaking-upstash-redis-endpoint` / `matchmaking-upstash-redis-password`) は、`upstash/env/modules/matchmaking` に output が無いため同じ方法では取れない。Upstash のコンソールから取得して投入する。
 
 投入済みかは版の数で確かめる。
 
@@ -91,28 +104,50 @@ gcloud sql instances describe overload-party-db --project <project-id> \
 
 ```
 pq: password authentication failed for user "postgres" (28P01)
-ERROR: psqldef failed — aborting before grant_iam.sql
+ERROR: psqldef failed — aborting before grant_iam.sql to avoid applying grants to a partially-migrated schema.
 ```
 
-インスタンス側をシークレットの値に合わせる。パスワードが argv に載らないよう標準入力から渡す。
+**新規環境ではシークレットにバージョンが 1 本も無い。**値を作って、シークレットとインスタンスの両方に入れる。
 
 ```
-gcloud secrets versions access latest --secret=migration-db-password --project <project-id> \
-  | gcloud sql users set-password postgres --instance=overload-party-db \
-      --project <project-id> --prompt-for-password
+openssl rand -base64 24 | tr -d '\n' > /tmp/dbpw
+gcloud secrets versions add migration-db-password --project <project-id> --data-file=/tmp/dbpw
+gcloud sql users set-password postgres --instance=overload-party-db \
+  --project <project-id> --password="$(cat /tmp/dbpw)"
+rm -f /tmp/dbpw
 ```
+
+既にバージョンがあり食い違っているだけなら、インスタンス側をシークレットに合わせる。
+
+```
+gcloud sql users set-password postgres --instance=overload-party-db \
+  --project <project-id> \
+  --password="$(gcloud secrets versions access latest --secret=migration-db-password --project <project-id>)"
+```
+
+`--prompt-for-password` にパイプで渡してはいけない。gcloud は `/dev/tty` を先に開くため、端末があるとパイプした値は捨てられ、手で打った値が設定される。gcloud にパスワードを標準入力から取る経路は無いので、`--password` で渡す。値がプロセス一覧に見える点は許容する。
+
+パスワードを揃えたら、次の手順のマイグレーションが通ることで確かめる。
 
 ### 6. データベースのスキーマとマスターデータを適用する
 
 インスタンスが起動していても、スキーマが無ければテーブルを読むサービスは起動できない。terraform が作るのは空のデータベースまで。
 
-**`db-migrate` ジョブを直接実行してはいけない。**スキーマと seed は `fetch-schemas.py` が各サービスリポから取得してイメージにビルド時に焼き込む。ジョブを再実行しても、イメージに入っている時点の SQL を流し直すだけで、各リポの最新は反映されない。
+**`db-migrate` ジョブを直接実行してはいけない。**スキーマとマスターデータは `fetch-schemas.py` が各サービスリポから取得してイメージにビルド時に焼き込む。ジョブを再実行しても、イメージに入っている時点の SQL を流し直すだけで、各リポの最新は反映されない。
 
 overload-party-ops の `db-migrate.yaml` を `workflow_dispatch` で実行する。イメージの再ビルドからジョブの更新、実行までを通す。
 
 ```
 gh workflow run db-migrate.yaml --repo kenyamaneko/overload-party-ops \
-  -f environment=<dev|stg> -f dry_run=false
+  -f environment=<dev|stg> -f dry_run=false -f bootstrap_baseline=true
+```
+
+`bootstrap_baseline` は初回だけ `true` にする。適用済みの記録が無い環境で付けないと `EXIT_NO_BASELINE` で中断し、逆に記録がある環境で付けても中断する。2 回目以降は外す。
+
+この workflow の `environment` は dev と stg しか選べない。prod は同じイメージを指すジョブを直接実行する。`db-migrate:latest` は workflow が押し出した最新と同じものになるため、dev か stg を先に回してから実行する。
+
+```
+gcloud run jobs execute db-migrate --project <project-id> --region asia-northeast1 --wait
 ```
 
 スキーマが適用されていないと card がこう落ちる。
@@ -124,11 +159,11 @@ error="load card cache: query cards: ERROR: relation \"card.card_definitions\" d
 
 card が起動しないと、起動時に card を呼ぶ battle も作成できない。
 
-### 7. card を再起動する
+### 7. card と battle を再起動する
 
-card はカードのマスターデータを起動時に一度だけデータベースから読み、メモリに保持する。再読み込みの経路は無い。seed を流しても、動いているリビジョンは古いデータを配り続ける。
+card はカードのマスターデータを起動時に一度だけデータベースから読み、メモリに保持する。battle も起動時に card から同じデータを取ってメモリに載せる。どちらも再読み込みの経路が無いため、マスターデータを流しても動いているリビジョンは古いデータを持ち続ける。card を直してから battle を直す順で再起動する。
 
-**この手順は card が既に存在する環境でのみ実行する。**`gcloud run services update` は対象が無いとサービスを作ってしまい、env が 1 つも無いサービスが terraform の管理外に生まれる。そうなると terraform は自分の state に無いサービスを作ろうとして `Error 409: Resource 'card' already exists` で止まり、以降 apply が通らなくなる。新規環境では card がまだ無いので、この手順は飛ばして次に進む。
+**この手順は対象のサービスが既に存在する環境でのみ実行する。**`gcloud run services update` は対象が無いとサービスを作ってしまい、環境変数が 1 つも設定されていないサービスが terraform の管理外に生まれる。そうなると terraform は自分の state に無いサービスを作ろうとして `Error 409: Resource 'card' already exists` で止まり、以降 apply が通らなくなる。新規環境ではまだ存在しないので、この手順は飛ばして次に進む。
 
 先に存在を確かめる。
 
@@ -137,11 +172,18 @@ gcloud run services describe card --project <project-id> --region asia-northeast
   --format="value(metadata.name)"
 ```
 
-存在する場合だけ、同じイメージを指定し直して新しいリビジョンを作る。
+存在する場合だけ、同じイメージを指定し直して新しいリビジョンを作る。battle にも同じことをする。
 
 ```
 gcloud run services update card --project <project-id> --region asia-northeast1 \
   --image asia-northeast1-docker.pkg.dev/keyandnotes-platform/overload-party/card:latest
+```
+
+新しいリビジョンが配信しているかで確かめる。
+
+```
+gcloud run revisions list --service card --project <project-id> --region asia-northeast1 \
+  --format="table(metadata.name,metadata.creationTimestamp,status.conditions[0].status)"
 ```
 
 反映されていないと battle がこう落ちる。カード定義に battle が知らない効果名が含まれている状態。
@@ -164,7 +206,7 @@ gcloud run services add-iam-policy-binding card --project <project-id> --region 
   --role="roles/run.invoker"
 ```
 
-gateway は battle / card / matchmaking / account / shop の URI を受け取るため、**このうち 1 つでも作成できないと gateway も作成されない**。同じ apply の中で gateway への付与が gateway 自身より先に走ることもあり、その場合は `Resource 'gateway' ... does not exist` で失敗する。もう一度 apply すれば通る。
+gateway は他の 8 サービス全ての URI を受け取るため、**1 つでも作成できないと gateway も作成されない**。同じ apply の中で gateway への付与が gateway 自身より先に走ることもあり、その場合は `Resource 'gateway' ... does not exist` で失敗する。もう一度 apply すれば通る。
 
 シークレットが揃っていないサービスがあると、そのサービスと gateway の 2 つが作成できない。prod は shop の課金検証シークレットが未投入のため、この状態になっている (overload-party-shop#129)。
 
