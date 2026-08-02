@@ -15,6 +15,7 @@ on:
       - "packages/game-design-constants-npm/**"
       - "packages/doc-tools/**"
       - "packages/codegen-tools/**"
+      - "packages/asyncapi-codegen-tools/**"
       - ".github/actions/test-catalog/**"
       - ".github/workflows/validate.yaml"
       - "docs/pages/**"
@@ -29,6 +30,7 @@ on:
       - "packages/game-design-constants-npm/**"
       - "packages/doc-tools/**"
       - "packages/codegen-tools/**"
+      - "packages/asyncapi-codegen-tools/**"
       - ".github/actions/test-catalog/**"
       - ".github/workflows/validate.yaml"
       - "docs/pages/**"
@@ -56,6 +58,9 @@ jobs:
         run: pip install -e packages/doc-tools
       - name: Install codegen-tools
         run: pip install -e packages/codegen-tools
+      # codegen-tools に依存し PyPI には無いため、codegen-tools を入れた後に install する。
+      - name: Install asyncapi-codegen-tools
+        run: pip install -e packages/asyncapi-codegen-tools
       # 同一起動でまとめて実行すると別パッケージの tests モジュールが衝突するため、パッケージ単位に分割する。
       - name: Run tests (scripts)
         run: python3 -m pytest scripts/ -v --junitxml=pytest-scripts.xml
@@ -81,6 +86,14 @@ jobs:
         with:
           xml-path: pytest-codegen-tools.xml
           title: codegen-tools テスト結果
+      - name: Run tests (asyncapi-codegen-tools)
+        run: python3 -m pytest packages/asyncapi-codegen-tools/tests/ -v --junitxml=pytest-asyncapi-codegen-tools.xml
+      - name: Report test results (asyncapi-codegen-tools)
+        if: ${{ !cancelled() }}
+        uses: ./.github/actions/python-test-report
+        with:
+          xml-path: pytest-asyncapi-codegen-tools.xml
+          title: asyncapi-codegen-tools テスト結果
       - name: Upload test results
         if: github.event_name == 'push'
         uses: actions/upload-artifact@v4
@@ -118,8 +131,10 @@ jobs:
             外から見た振る舞い:ゲーム定数の生成:pytest-junit:pytest-scripts.xml
             外から見た振る舞い:ドキュメント生成:pytest-junit:pytest-doc-tools.xml:tests.test_generate_api_docs,tests.test_generate_schema_doc,tests.test_generate_test_catalog
             外から見た振る舞い:コード生成:pytest-junit:pytest-codegen-tools.xml:tests.test_runner
+            外から見た振る舞い:AsyncAPI からのコード生成:pytest-junit:pytest-asyncapi-codegen-tools.xml:tests.test_runner
             内部の挙動:ドキュメント生成の内部部品:pytest-junit:pytest-doc-tools.xml:tests.test_utils
             内部の挙動:コード生成の内部部品:pytest-junit:pytest-codegen-tools.xml:tests.test_go_emitter,tests.test_yaml_loader
+            内部の挙動:AsyncAPI コード生成の内部部品:pytest-junit:pytest-asyncapi-codegen-tools.xml:tests.test_parser
       - name: Place cross-repo index page
         run: cp docs/pages/index.html _site/index.html
       - name: Upload Pages artifact
