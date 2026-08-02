@@ -8,7 +8,7 @@ overload-party の環境 (dev / stg / prod) でサービスが動く状態を作
 |---|---|---|---|
 | Secret Manager | シークレットの入れ物と `secretAccessor` | 値のバージョン | gateway / support / shop |
 | Cloud Firestore | データベースと読み取り権限 | `game_config` コレクションの値 | account / card / shop / scenario / gateway / battle |
-| Cloud SQL | インスタンス | 起動状態 (`activation_policy`) | データベースを使う全サービス |
+| Cloud SQL | インスタンスとデータベース | 起動状態 (`activation_policy`) とスキーマ | データベースを使う全サービス |
 
 Cloud Run サービスは revision が ready になるまで作成完了とみなされないため、これらが欠けているとコンテナが起動できず `terraform apply` そのものが失敗する。「apply が通らない」と「値が入っていない」は同じ原因であることが多い。
 
@@ -75,13 +75,32 @@ gcloud sql instances describe overload-party-db --project <project-id> \
 
 `activation_policy` は terraform の `ignore_changes` に入っていて、起動と停止は運用側が所有する。terraform で状態を戻そうとしないこと。コスト保護が効かなくなる。
 
-### 5. terraform apply をやり直す
+### 5. データベースのスキーマを適用する
 
-2 から 4 が揃った状態で apply すると、Cloud Run サービスが ready になり作成が完了する。
+インスタンスが起動していても、スキーマが無ければテーブルを読むサービスは起動できない。terraform が作るのは空のデータベースまで。
 
-### 6. イメージをデプロイする
+`db-migrate` ジョブを実行する。ジョブ自体は terraform (`jobs/db-migration`) が作る。
 
-CI はイメージの差し替えだけを行い、サービスを作らない。存在しないサービスに対してデプロイすると失敗する。必ず 5 を先に通す。
+```
+gcloud run jobs execute db-migrate --project <project-id> --region asia-northeast1 --wait
+```
+
+適用されていないと card がこう落ちる。
+
+```
+card fatal
+error="load card cache: query cards: ERROR: relation \"card.card_definitions\" does not exist (SQLSTATE 42P01)"
+```
+
+card が起動しないと、起動時に card を呼ぶ battle も作成できない。
+
+### 6. terraform apply をやり直す
+
+2 から 5 が揃った状態で apply すると、Cloud Run サービスが ready になり作成が完了する。
+
+### 7. イメージをデプロイする
+
+CI はイメージの差し替えだけを行い、サービスを作らない。存在しないサービスに対してデプロイすると失敗する。必ず 6 を先に通す。
 
 ## 起動しないときの切り分け
 
@@ -101,3 +120,5 @@ gcloud logging read \
 `--format=json` で読むこと。`--format="value(textPayload)"` だと構造化ログの `jsonPayload.error` が落ちて原因が消える。
 
 サービス間の呼び出しが 403 を返し、内容が Google の HTML エラーページなら、Cloud Run の呼び出し IAM で弾かれている。呼び出し元のサービスアカウントに呼び出し先の `roles/run.invoker` があるか、呼び出し元が呼び出し先の URL を audience とする ID トークンを付けているかを確かめる。
+
+matchmaking が `redis ping: ERR Your database has been temporarily rate-limited` で落ちるときは Upstash 側の制限で、この手順では解消しない。Upstash のコンソールで対象データベースの状態を確認する。
