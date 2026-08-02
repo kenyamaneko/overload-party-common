@@ -1,0 +1,34 @@
+name: Go Service Release Tag
+
+# 桁は後方互換を壊すかどうかの判断であり変更内容から導けないため、呼び出し側で人に選ばせる。
+
+on:
+  workflow_call:
+    inputs:
+      bump:
+        description: Version bump level (major / minor / patch).
+        type: string
+        required: true
+
+concurrency:
+  group: release-tag-${{ github.repository }}
+  # タグの採番が競合しないように、先行ジョブの完了を待つ
+  cancel-in-progress: false
+
+jobs:
+  create-tag:
+    runs-on: ubicloud-standard-2
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # 直近のリリースタグから次の版を決めるため、タグを含む全履歴を取得する
+          fetch-depth: 0
+
+      - name: Create release tag
+        uses: kenyamaneko/overload-party-common/.github/actions/create-release-tag@main
+        with:
+          bump: ${{ inputs.bump }}

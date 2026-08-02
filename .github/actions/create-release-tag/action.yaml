@@ -1,0 +1,16 @@
+name: Create release tag
+description: 'Compute the next vX.Y.Z release tag from the newest existing one and push it at the checked-out commit.'
+
+inputs:
+  bump:
+    description: Version bump level (major / minor / patch).
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Create and push release tag
+      shell: bash
+      env:
+        BUMP: ${{ inputs.bump }}
+      run: bash ${{ github.action_path }}/../../scripts/create-release-tag/create-tag.sh
