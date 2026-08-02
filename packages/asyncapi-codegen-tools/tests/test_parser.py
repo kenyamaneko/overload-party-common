@@ -19,7 +19,7 @@ class TestGo名への変換:
     def test_複数単語は各トークンをCamelCaseにする(self):
         assert convert_to_go_name("event_type") == "EventType"
 
-    def test_acronymトークンは全て大文字にする(self):
+    def test_頭字語のトークンは全て大文字になる(self):
         assert convert_to_go_name("event_id") == "EventID"
         assert convert_to_go_name("card_pack_id") == "CardPackID"
         assert convert_to_go_name("image_url") == "ImageURL"

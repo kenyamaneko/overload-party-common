@@ -3,8 +3,6 @@
 import sys
 from pathlib import Path
 
-import pytest
-
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from report_builder import (  # noqa: E402
@@ -20,8 +18,6 @@ from report_builder import (  # noqa: E402
 
 
 class TestJUnitXML解析:
-    """JUnit XML の集計 (parse) を確かめる。"""
-
     def test_通過失敗スキップエラーが混在するとき件数が集計される(self):
         xml = """<?xml version="1.0"?>
         <testsuites>
@@ -78,15 +74,13 @@ class TestJUnitXML解析:
 
 
 class Test失敗位置の抽出:
-    """extract_location を確かめる。"""
-
     def test_トレースバックにfile行番号があるときワークスペース相対パスと行番号を返す(self):
         file, line = extract_location("...\n/repo/tests/test_sample.py:9: AssertionError", "/repo")
 
         assert file == "tests/test_sample.py"
         assert line == 9
 
-    def test_file行番号が見つからないときfileとlineはともにNoneになる(self):
+    def test_トレースバックに失敗位置が無いとき相対パスも行番号も返さない(self):
         file, line = extract_location("予期しない例外が発生しました", "/repo")
 
         assert file is None
@@ -94,8 +88,6 @@ class Test失敗位置の抽出:
 
 
 class Testサマリ生成:
-    """build_summary を確かめる。"""
-
     def test_失敗が無いとき失敗したテストの一覧は出力されない(self):
         result = ReportResult(passed=3, failed=0, skipped=0, failures=[])
 
@@ -119,8 +111,6 @@ class Testサマリ生成:
 
 
 class Test注釈生成:
-    """build_annotations を確かめる。"""
-
     def test_失敗位置がわかるときfileとlineを伴うerrorになる(self):
         result = ReportResult(
             passed=0,
@@ -147,29 +137,19 @@ class Test注釈生成:
 
 
 class Testworkflowコマンド本文エスケープ:
-    """escape_data を確かめる。"""
+    def test_パーセント記号を含むときパーセント25に置換される(self):
+        assert escape_data("100%失敗") == "100%25失敗"
 
-    @pytest.mark.parametrize(
-        "input_, want",
-        [
-            pytest.param("100%失敗", "100%25失敗", id="パーセント記号を含む"),
-            pytest.param("1行目\r2行目", "1行目%0D2行目", id="復帰(CR)を含む"),
-            pytest.param("1行目\n2行目", "1行目%0A2行目", id="改行(LF)を含む"),
-        ],
-    )
-    def test_特殊文字が置換される(self, input_, want):
-        assert escape_data(input_) == want
+    def test_復帰文字を含むときパーセント0Dに置換される(self):
+        assert escape_data("1行目\r2行目") == "1行目%0D2行目"
+
+    def test_改行文字を含むときパーセント0Aに置換される(self):
+        assert escape_data("1行目\n2行目") == "1行目%0A2行目"
 
 
 class Testworkflowコマンドプロパティエスケープ:
-    """escape_property を確かめる。"""
+    def test_コロンを含むときパーセント3Aに置換される(self):
+        assert escape_property("tests/test_sample.py:9") == "tests/test_sample.py%3A9"
 
-    @pytest.mark.parametrize(
-        "input_, want",
-        [
-            pytest.param("tests/test_sample.py:9", "tests/test_sample.py%3A9", id="コロンを含む"),
-            pytest.param("a,b.py", "a%2Cb.py", id="カンマを含む"),
-        ],
-    )
-    def test_特殊文字が置換される(self, input_, want):
-        assert escape_property(input_) == want
+    def test_カンマを含むときパーセント2Cに置換される(self):
+        assert escape_property("a,b.py") == "a%2Cb.py"

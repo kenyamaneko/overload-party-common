@@ -132,7 +132,7 @@ class Testターゲット指定によるファイル生成:
         assert 'json:"id"' in api_text and "db:" not in api_text
         assert 'db:"id"' in dom_text and "json:" not in dom_text
 
-    def test_target未指定時はdefault_target_keyに出力する(self, tmp_path: Path) -> None:
+    def test_出力先の指定が無いとき既定の出力先に書き出す(self, tmp_path: Path) -> None:
         yaml_path = tmp_path / "models.yaml"
         _write_yaml(
             yaml_path,
@@ -265,7 +265,7 @@ class Testモデル定義の不正検出:
         with pytest.raises(ValueError, match=match):
             runner.run()
 
-    def test_nameフィールド欠落セクションはrc1とstderrで報告し出力しない(
+    def test_名前の無いセクションがあるとき終了コード1と標準エラーで報告しファイルを出力しない(
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
         yaml_path = tmp_path / "models.yaml"
@@ -300,7 +300,7 @@ class Testモデル定義の不正検出:
             pytest.param({"files": []}, id="filesが空リストのとき"),
         ],
     )
-    def test_filesセクションが無いか空のときrc1とstderrで報告し出力しない(
+    def test_生成するファイルの定義が無いか空のとき終了コード1と標準エラーで報告しファイルを出力しない(
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str], models_data: dict
     ) -> None:
         yaml_path = tmp_path / "models.yaml"
@@ -319,7 +319,7 @@ class Testモデル定義の不正検出:
 
 
 class Testpre_render_hookの適用:
-    def test_hookはsectionとtargetの組ごとに1回ずつ呼ばれる(self, tmp_path: Path) -> None:
+    def test_セクションと出力先の組ごとに前処理が1回ずつ適用される(self, tmp_path: Path) -> None:
         yaml_path = tmp_path / "models.yaml"
         _write_yaml(
             yaml_path,
