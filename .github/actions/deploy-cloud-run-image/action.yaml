@@ -1,5 +1,5 @@
 name: Deploy Cloud Run image
-description: Update a Cloud Run service to an already-pushed image tag.
+description: 'Update an existing Cloud Run service to an already-pushed image tag. The service must have been created by terraform, which owns its configuration.'
 
 inputs:
   service-name:
@@ -29,9 +29,4 @@ runs:
         IMAGE_TAG: ${{ inputs.image-tag }}
         PROJECT_ID: ${{ inputs.project-id }}
         REGION: ${{ inputs.region }}
-      run: |
-        gcloud run services update "${SERVICE_NAME}" \
-          --image "${IMAGE}:${IMAGE_TAG}" \
-          --project "${PROJECT_ID}" \
-          --region "${REGION}" \
-          --quiet
+      run: bash ${{ github.action_path }}/../../scripts/deploy-cloud-run-image/update-image.sh
