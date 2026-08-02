@@ -510,6 +510,37 @@ class Test生成の冪等性:
         assert first == second
 
 
+class TestSSoTにキーが欠けているときの停止:
+    @pytest.mark.parametrize(
+        ("generate", "dir_attr"),
+        [
+            pytest.param(gen.generate_go_game_design, "GO_GAME_DESIGN_DIR", id="Goの生成が欠けたキーを示して停止する"),
+            pytest.param(gen.generate_csharp_game_design, "DOTNET_GAME_DESIGN_DIR", id="CSharpの生成が欠けたキーを示して停止する"),
+            pytest.param(gen.generate_ts_game_design, "NPM_GAME_DESIGN_DIR", id="TypeScriptの生成が欠けたキーを示して停止する"),
+        ],
+    )
+    @pytest.mark.parametrize(
+        "missing_key",
+        [
+            pytest.param("zones", id="zones が欠けているとき"),
+            pytest.param("ranks", id="ranks が欠けているとき"),
+            pytest.param("instance_families", id="instance_families が欠けているとき"),
+            pytest.param("restriction_values", id="restriction_values が欠けているとき"),
+            pytest.param("match_types", id="match_types が欠けているとき"),
+            pytest.param("stat_types", id="stat_types が欠けているとき"),
+            pytest.param("subtypes", id="subtypes が欠けているとき"),
+        ],
+    )
+    def test_キーの欠けたSSoTから生成する(
+        self, tmp_path, monkeypatch, fixture_data, fixture_factions, missing_key, generate, dir_attr
+    ):
+        del fixture_data[missing_key]
+        monkeypatch.setattr(gen, dir_attr, tmp_path)
+
+        with pytest.raises(KeyError, match=missing_key):
+            generate(fixture_data, fixture_factions)
+
+
 class Test陣営一覧が3言語の生成物に全件現れる:
     def test_is_collectibleの真偽に関わらず全陣営がGoのFaction定数に現れる(self, generated_outputs):
         lines = _stripped_lines(generated_outputs["go"])

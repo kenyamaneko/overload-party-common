@@ -239,20 +239,17 @@ def generate_go_game_design(data, factions):
     lines.append("")
 
     for rule in ENUM_CODEGEN_RULES:
-        values = data.get(rule.yaml_key)
-        if values is None:
-            continue
-        lines.extend(build_go_const_block(rule.go_comment, rule.go_prefix, values))
+        lines.extend(
+            build_go_const_block(rule.go_comment, rule.go_prefix, data[rule.yaml_key])
+        )
 
     # CardType (3階層: Zone / CardType / Subtype のうち category 層)
     lines.extend(build_go_const_block("Card types", "CardType", data["card_types"]))
 
     # Subtype (Compute / Data 配下のみ)
-    subtypes = data.get("subtypes")
-    if subtypes:
-        for category, subs in subtypes.items():
-            prefix = f"Subtype{convert_to_pascal(category)}"
-            lines.extend(build_go_const_block(f"Card subtypes ({category})", prefix, subs))
+    for category, subs in data["subtypes"].items():
+        prefix = f"Subtype{convert_to_pascal(category)}"
+        lines.extend(build_go_const_block(f"Card subtypes ({category})", prefix, subs))
 
     copy_count = data["restriction_copy_count"]
     lines.append("// RestrictionCopyCount returns the deck investment cap per restriction value.")
@@ -407,31 +404,26 @@ def generate_csharp_game_design(data, factions):
     lines.append("")
 
     for rule in ENUM_CODEGEN_RULES:
-        values = data.get(rule.yaml_key)
-        if values is None:
-            continue
-        lines.extend(build_cs_static_class(rule.cs_class, values))
+        lines.extend(build_cs_static_class(rule.cs_class, data[rule.yaml_key]))
 
     # CardType (3階層: Zone / CardType / Subtype のうち category 層)
     lines.extend(build_cs_static_class("CardTypes", data["card_types"]))
 
     # Subtype (Compute / Data 配下のみ)
-    subtypes = data.get("subtypes")
-    if subtypes:
-        lines.append("public static class Subtypes")
-        lines.append("{")
-        is_first = True
-        for category, subs in subtypes.items():
-            if not is_first:
-                lines.append("")
-            is_first = False
-            lines.append(f"    public static class {convert_to_pascal(category)}")
-            lines.append("    {")
-            for v in subs:
-                lines.append(f'        public const string {convert_to_pascal(v)} = "{v}";')
-            lines.append("    }")
-        lines.append("}")
-        lines.append("")
+    lines.append("public static class Subtypes")
+    lines.append("{")
+    is_first = True
+    for category, subs in data["subtypes"].items():
+        if not is_first:
+            lines.append("")
+        is_first = False
+        lines.append(f"    public static class {convert_to_pascal(category)}")
+        lines.append("    {")
+        for v in subs:
+            lines.append(f'        public const string {convert_to_pascal(v)} = "{v}";')
+        lines.append("    }")
+    lines.append("}")
+    lines.append("")
 
     lines.extend(build_cs_int_static_class("GameRules", data["game_rules"]))
 
@@ -495,10 +487,7 @@ def generate_ts_game_design(data, factions):
     lines = build_ts_header()
 
     for rule in ENUM_CODEGEN_RULES:
-        values = data.get(rule.yaml_key)
-        if values is None:
-            continue
-        lines.extend(build_ts_const_array(rule.ts_const, rule.ts_type, values, extra_union=rule.ts_extra_union))
+        lines.extend(build_ts_const_array(rule.ts_const, rule.ts_type, data[rule.yaml_key], extra_union=rule.ts_extra_union))
 
     # CardType (3階層: Zone / CardType / Subtype のうち category 層)
     lines.append(f"export const CARD_TYPES = {json.dumps(data['card_types'])} as const;")
@@ -506,15 +495,13 @@ def generate_ts_game_design(data, factions):
     lines.append("")
 
     # Subtype (Compute / Data 配下のみ)
-    subtypes = data.get("subtypes")
-    if subtypes:
-        for category, subs in subtypes.items():
-            upper = convert_to_screaming_snake(category)
-            const_name = f"{upper}_SUBTYPES"
-            type_name = f"{convert_to_pascal(category)}Subtype"
-            lines.append(f"export const {const_name} = {json.dumps(subs)} as const;")
-            lines.append(f"export type {type_name} = (typeof {const_name})[number];")
-            lines.append("")
+    for category, subs in data["subtypes"].items():
+        upper = convert_to_screaming_snake(category)
+        const_name = f"{upper}_SUBTYPES"
+        type_name = f"{convert_to_pascal(category)}Subtype"
+        lines.append(f"export const {const_name} = {json.dumps(subs)} as const;")
+        lines.append(f"export type {type_name} = (typeof {const_name})[number];")
+        lines.append("")
 
     sorted_factions = sorted(factions, key=lambda f: f["sort_order"])
     all_faction_ids = [f["id"] for f in sorted_factions]
