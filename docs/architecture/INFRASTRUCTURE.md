@@ -51,7 +51,7 @@ overload-party 全リポジトリの CI/CD に関する横断的な設計情報�
 |---|---|---|
 | `ci.yaml` | PR | Lint + テスト + codegen-sync |
 | `deploy.yaml` | main push (dev) / `v*.*.*` タグ push (stg) / workflow_dispatch (prod) | Docker ビルド + AR push + Cloud Run への反映（stg / prod は既存イメージの反映のみ） |
-| `publish.yaml` | main push (paths) | Go / npm パッケージの自動 tag + publish |
+| `publish.yaml` | workflow_dispatch | Go / npm パッケージの tag + publish（桁は人が選ぶ） |
 
 | リポ | Lint | テスト | Docker ビルド | パッケージ publish |
 |------|------|--------|--------------|-------------------|
@@ -77,7 +77,7 @@ overload-party 全リポジトリの CI/CD に関する横断的な設計情報�
 | 送信側 | 受信側 | メカニズム | イベント |
 |--------|--------|-----------|---------|
 | common | ops | `repository_dispatch` | `db-migrate`（db/ 変更時） |
-| common | Go module proxy / Cloudsmith | `publish.yaml` | data/packages/ 変更時に自動 publish (patch bump) |
+| common | Go module proxy / Cloudsmith | `publish.yaml` | 手動実行時に publish（上げる桁を選ぶ） |
 | 各サービスリポ | ops | `repository_dispatch` | `db-migrate`（db/ 変更時、dev 自動） |
 
 ### 認証
