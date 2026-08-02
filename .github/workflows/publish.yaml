@@ -91,22 +91,25 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Go vet + build (game-design-constants)
-        run: |
-          cd packages/game-design-constants
-          go vet ./...
-          go build ./...
+      - name: Vet game-design-constants
+        run: go vet ./...
+        working-directory: packages/game-design-constants
+
+      - name: Build game-design-constants
+        run: go build ./...
+        working-directory: packages/game-design-constants
 
       - name: .NET build
-        run: |
-          cd packages/game-design-constants-dotnet
-          dotnet build -c Release --nologo -v quiet
+        run: dotnet build -c Release --nologo -v quiet
+        working-directory: packages/game-design-constants-dotnet
+
+      - name: Install npm dependencies
+        run: npm install
+        working-directory: packages/game-design-constants-npm
 
       - name: Build npm package
-        run: |
-          cd packages/game-design-constants-npm
-          npm install
-          npm run build
+        run: npm run build
+        working-directory: packages/game-design-constants-npm
 
   # ──────────────────────────────────────────────
   # 3. Publish Go module (tag only — go get resolves via git tag)
@@ -122,10 +125,10 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Tag Go module
-        run: |
-          tag="packages/game-design-constants/v${{ needs.detect.outputs.game_design_constants_version }}"
-          git tag "$tag"
-          git push origin "$tag"
+        env:
+          PACKAGE: game-design-constants
+          VERSION: ${{ needs.detect.outputs.game_design_constants_version }}
+        run: .github/scripts/publish/tag-package.sh
 
   # ──────────────────────────────────────────────
   # 4. Publish C# csproj (NuGet)
@@ -152,9 +155,10 @@ jobs:
           format: nuget
           package-path: packages/game-design-constants-dotnet/nupkg/OverloadParty.GameDesignConstants.${{ needs.detect.outputs.game_design_constants_dotnet_version }}.nupkg
       - name: Tag
-        run: |
-          git tag "packages/game-design-constants-dotnet/v${{ needs.detect.outputs.game_design_constants_dotnet_version }}"
-          git push origin "packages/game-design-constants-dotnet/v${{ needs.detect.outputs.game_design_constants_dotnet_version }}"
+        env:
+          PACKAGE: game-design-constants-dotnet
+          VERSION: ${{ needs.detect.outputs.game_design_constants_dotnet_version }}
+        run: .github/scripts/publish/tag-package.sh
 
   # ──────────────────────────────────────────────
   # 5. Publish npm package
@@ -174,16 +178,16 @@ jobs:
           node-version: "22"
       - name: Build & version npm package
         working-directory: packages/game-design-constants-npm
-        run: |
-          npm install
-          npm version ${{ needs.detect.outputs.game_design_constants_npm_version }} --no-git-tag-version
-          npm run build
+        env:
+          VERSION: ${{ needs.detect.outputs.game_design_constants_npm_version }}
+        run: ../../.github/scripts/publish/build-and-version-npm.sh
       - name: Publish to Cloudsmith
         uses: kenyamaneko/overload-party-common/.github/actions/publish-to-cloudsmith@main
         with:
           format: npm
           package-path: packages/game-design-constants-npm
       - name: Tag
-        run: |
-          git tag "packages/game-design-constants-npm/v${{ needs.detect.outputs.game_design_constants_npm_version }}"
-          git push origin "packages/game-design-constants-npm/v${{ needs.detect.outputs.game_design_constants_npm_version }}"
+        env:
+          PACKAGE: game-design-constants-npm
+          VERSION: ${{ needs.detect.outputs.game_design_constants_npm_version }}
+        run: .github/scripts/publish/tag-package.sh
