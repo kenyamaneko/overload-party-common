@@ -22,6 +22,22 @@ PACKAGES=(
   "game-design-constants-npm:packages/game-design-constants-npm:packages/game-design-constants-npm/"
 )
 
+# 未知の対象は、どのパッケージにも一致せず何も publish せずに成功してしまうため弾く
+if [ "$TARGET" != "auto" ]; then
+  is_known_target=false
+  for entry in "${PACKAGES[@]}"; do
+    IFS=':' read -r name _ <<< "$entry"
+    if [ "$TARGET" = "$name" ]; then
+      is_known_target=true
+      break
+    fi
+  done
+  if [ "$is_known_target" = false ]; then
+    echo "unknown publish target: ${TARGET}" >&2
+    exit 1
+  fi
+fi
+
 compute_version() {
   local prefix="$1" bump="$2"
   local last_tag
