@@ -12,8 +12,8 @@
 
 set -euo pipefail
 
-TARGET="${1:-auto}"
-BUMP="${2:-patch}"
+TARGET="$1"
+BUMP="$2"
 
 # (package_name, tag_prefix, watch_path)
 PACKAGES=(
@@ -36,7 +36,8 @@ compute_version() {
   case "$bump" in
     major) echo "$((major + 1)).0.0" ;;
     minor) echo "${major}.$((minor + 1)).0" ;;
-    *)     echo "${major}.${minor}.$((patch + 1))" ;;
+    patch) echo "${major}.${minor}.$((patch + 1))" ;;
+    *)     echo "unknown bump level: ${bump}" >&2; exit 1 ;;
   esac
 }
 
