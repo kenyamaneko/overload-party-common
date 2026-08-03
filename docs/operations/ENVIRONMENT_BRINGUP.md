@@ -9,9 +9,21 @@ overload-party の環境 (dev / stg / prod) でサービスが動く状態を作
 | Secret Manager | シークレットの入れ物と `secretAccessor` | 値のバージョン | gateway / support / shop |
 | Cloud Firestore | データベースと読み取り権限 | `game_config` コレクションの値 | account / card / shop / scenario / gateway / battle |
 | Cloud SQL | インスタンスとデータベース | 起動状態 (`activation_policy`)・`postgres` のパスワード・スキーマ | データベースを使う全サービス |
-| Upstash Redis | シークレットの入れ物 (upstash の state) | 接続 URL の値 | gateway / matchmaking |
+| Upstash Redis | シークレットの入れ物 (upstash の state) | gateway は接続 URL、matchmaking は endpoint と password | gateway / matchmaking |
 
 Cloud Run サービスは revision が ready になるまで作成完了とみなされないため、これらが欠けているとコンテナが起動できず `terraform apply` そのものが失敗する。「apply が通らない」と「値が入っていない」は同じ原因であることが多い。
+
+## 実行者に要る権限
+
+手順の大半は GitHub Actions が持つ権限で回るが、手作業の部分は実行者自身の権限で動く。対象プロジェクトに対して次が要る。
+
+- `roles/secretmanager.secretVersionAdder` (シークレットの値の投入)
+- `roles/cloudsql.admin` (インスタンスの起動停止とパスワード設定)
+- `roles/run.developer` (ジョブの実行、サービスの再起動)
+- Firestore の書き込み
+- state バケット `keyandnotes-tf-state` の読み取り (`terraform output` を手元で打つため)
+
+prod は `gh-db-migrator` サービスアカウントの対象外なので、prod のマイグレーションは実行者自身の権限で走る。
 
 ## 手順
 
@@ -94,6 +106,12 @@ gcloud sql instances describe overload-party-db --project <project-id> \
   --format="value(state,settings.activationPolicy)"
 ```
 
+prod は夜間停止の対象外で、workflow でも選べない。止まっていたら直接起動する。
+
+```
+gcloud sql instances patch overload-party-db --project <project-id> --activation-policy=ALWAYS
+```
+
 `activation_policy` は terraform の `ignore_changes` に入っていて、起動と停止は運用側が所有する。terraform で状態を戻そうとしないこと。コスト保護が効かなくなる。
 
 ### 5. postgres のパスワードを揃える
@@ -125,6 +143,8 @@ gcloud sql users set-password postgres --instance=overload-party-db \
   --password="$(gcloud secrets versions access latest --secret=migration-db-password --project <project-id>)"
 ```
 
+これでも `28P01` が消えないときは、シークレットの値に末尾改行が入っている可能性がある。ジョブはシークレットの中身をそのまま使うが、`$( )` は末尾改行を落とすため、インスタンス側だけ改行なしになる。上の「値を作る」手順でシークレットを作り直す。
+
 `--prompt-for-password` にパイプで渡してはいけない。gcloud は `/dev/tty` を先に開くため、端末があるとパイプした値は捨てられ、手で打った値が設定される。gcloud にパスワードを標準入力から取る経路は無いので、`--password` で渡す。値がプロセス一覧に見える点は許容する。
 
 パスワードを揃えたら、次の手順のマイグレーションが通ることで確かめる。
@@ -144,11 +164,13 @@ gh workflow run db-migrate.yaml --repo kenyamaneko/overload-party-ops \
 
 `bootstrap_baseline` は初回だけ `true` にする。適用済みの記録が無い環境で付けないと `EXIT_NO_BASELINE` で中断し、逆に記録がある環境で付けても中断する。2 回目以降は外す。
 
-この workflow の `environment` は dev と stg しか選べない。prod は同じイメージを指すジョブを直接実行する。`db-migrate:latest` は workflow が押し出した最新と同じものになるため、dev か stg を先に回してから実行する。
+この workflow の `environment` は dev と stg しか選べない。prod のジョブは terraform が設定した `db-migrate:latest` を指しており、Cloud Run はこのタグを実行のたびに解決する。**dev か stg を先に回して `:latest` を押し出してから**、prod のジョブを直接実行する。
 
 ```
 gcloud run jobs execute db-migrate --project <project-id> --region asia-northeast1 --wait
 ```
+
+prod のこの経路は workflow が行う破壊的変更チェックと baseline の記録を通らない。スキーマに破壊的な差分があっても止まらないため、dev と stg で同じ差分を先に通しておく。
 
 スキーマが適用されていないと card がこう落ちる。
 
@@ -172,12 +194,15 @@ gcloud run services describe card --project <project-id> --region asia-northeast
   --format="value(metadata.name)"
 ```
 
-存在する場合だけ、同じイメージを指定し直して新しいリビジョンを作る。battle にも同じことをする。
+存在する場合だけ、**今動いているイメージをそのまま指定し直して**新しいリビジョンを作る。battle にも同じことをする。
 
 ```
 gcloud run services update card --project <project-id> --region asia-northeast1 \
-  --image asia-northeast1-docker.pkg.dev/keyandnotes-platform/overload-party/card:latest
+  --image "$(gcloud run services describe card --project <project-id> --region asia-northeast1 \
+      --format='value(spec.template.spec.containers[0].image)')"
 ```
+
+`:latest` を書いてはいけない。CI は stg で確かめた物と同じ物が prod に載るようダイジェストを固定してデプロイするため、タグを指定し直すと検証済みの版から別のビルドへ黙って載せ替わる。
 
 新しいリビジョンが配信しているかで確かめる。
 
@@ -196,7 +221,7 @@ System.InvalidOperationException: Unknown custom effect: <effect-name>
 
 2 から 7 が揃った状態で apply すると、Cloud Run サービスが ready になり作成が完了する。
 
-新規環境では初回の apply が battle の作成で失敗する。`iam_grants` は付与先をサービス名の文字列で指定していて参照を持たないため `depends_on` で全サービスの作成完了を待つが、battle は起動時に card を呼ぶので card への `run.invoker` を要求する。この循環は terraform では解けない。
+新規環境では初回の apply が battle の作成で失敗する。`iam_grants` に渡す `internal_calls` は全ての呼び出し先の `module.<svc>.service_name` を参照する 1 つの map で、これを `for_each` に使うため、**付与 1 本ごとに全サービスの作成完了を待つ**。一方 battle は起動時に card を呼ぶので、作成が完了するには先に card への `run.invoker` が要る。この循環は terraform では解けない。
 
 回避するには、battle の作成が失敗した時点で呼び出し先の付与を手で作り、apply をやり直す。
 
