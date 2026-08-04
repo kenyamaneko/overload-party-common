@@ -89,7 +89,7 @@ asia-northeast1 は Tier 1 リージョン。リクエスト課金 (CPU をリ�
 | Cloud Run の外向きデータ転送 (~1 GB/月) | ~$0.12–0.15/GB | ~$0.2 |
 | **合計** | | **~$0.2** |
 
-外部からの入口は Cloudflare から gateway の Cloud Run サービスへの直結になり、ロードバランサも予約 IP も持たない。
+外部からの入口は gateway の Cloud Run サービスが払い出す URL への直接アクセスで、ロードバランサも予約 IP も持たない。
 
 ---
 
