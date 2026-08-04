@@ -112,21 +112,6 @@ slog の JSONHandler をカスタマイズして `level` → `severity` に変�
 | コンテナの CPU / メモリ | インスタンスのリソース使用率 |
 | Cloud SQL CPU / メモリ / 接続数 | DB の基本メトリクス |
 
-### カスタムメトリクス
-
-いずれも未実装で、アプリからメトリクスを出す仕組みも入っていない。残すか取り下げるかは [common#179](https://github.com/kenyamaneko/overload-party-common/issues/179) で判断する。
-
-| メトリクス名 | 種類 | ラベル | 用途 |
-|-------------|------|--------|------|
-| `game_matches_total` | Counter | `result` (win/loss/draw), `mode` (pvp/npc) | 対戦数の推移 |
-| `game_match_duration_seconds` | Histogram | `mode` | 対戦時間の分布 |
-| `matchmaking_queue_size` | Gauge | - | マッチメイキング待ちプレイヤー数 |
-| `matchmaking_wait_seconds` | Histogram | - | マッチング待ち時間の分布 |
-| `ws_connections_active` | Gauge | - | アクティブ WebSocket 接続数 |
-| `ws_reconnections_total` | Counter | - | 再接続回数 |
-| `api_request_duration_seconds` | Histogram | `method`, `path`, `status` | API レスポンスタイム |
-| `npc_battles_total` | Counter | `difficulty` | NPC 戦の回数 |
-
 ---
 
 ## アラート
