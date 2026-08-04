@@ -85,7 +85,7 @@ battle 側のインメモリキャッシュの更新戦略は以下のとおり�
 
 ### 通信原則
 
-- **URL は gateway、契約は各サービス**: client は `VITE_API_BASE_URL` (= gateway) にのみ到達するが、REST 公開仕様 (型契約) は各サービスが自リポの `data/openapi.yaml` で持つ。gateway は path-prefix forwarder としてリクエストを所属サービスに転送する役割で、固有のドメインロジックや型加工は持たない ([ADR-036](../adr/036-gateway-passthrough-and-service-public-api.md))。Ingress / Cloud LB の path-routing 等インフラ機能には依存せず、gateway server 内で振り分ける
+- **URL は gateway、契約は各サービス**: client は `VITE_API_BASE_URL` (= gateway) にのみ到達するが、REST 公開仕様 (型契約) は各サービスが自リポの `data/openapi.yaml` で持つ。gateway は path-prefix forwarder としてリクエストを所属サービスに転送する役割で、固有のドメインロジックや型加工は持たない ([ADR-036](../adr/036-gateway-passthrough-and-service-public-api.md))。ロードバランサの path-routing 等インフラ機能には依存せず、gateway server 内で振り分ける
 - **サービス間通信は internal API**: サービス間の呼び出しは各サービスの `/internal/v1/*` 経由。到達は Cloud Run の呼び出し IAM で制限し、呼び出し元のサービス identity で認可する。認証フロー詳細は「内部サービス間認証」を参照
 
 ### 例外: matchmaking
@@ -506,7 +506,7 @@ gateway リポの `docs/WS_REFERENCE.md` を参照。
 
 | 環境 | AllowOrigins |
 |------|-------------|
-| dev | 未設定（全オリジン許可） |
+| dev | `http://localhost:3000`, `capacitor://localhost`, `http://localhost` |
 | stg | `https://overloadparty-stg.keyandnotes.com`, `capacitor://localhost`, `http://localhost` |
 | prod | `https://overloadparty-prod.keyandnotes.com`, `capacitor://localhost`, `http://localhost` |
 | ローカル | 全オリジン許可 |
@@ -523,26 +523,9 @@ gateway リポの `docs/WS_REFERENCE.md` を参照。
 
 ### ドメイン / DNS / TLS
 
-| 項目 | 値 |
-|------|-----|
-| ドメイン | `keyandnotes.com`（お名前.com + Cloudflare DNS） |
-| TLS 方式 | Cloudflare SSL Flexible（Cloudflare で TLS 終端 → GKE Ingress は HTTP） |
+API の入口には独自ドメインを割り当てず、gateway の Cloud Run サービスが払い出す URL をクライアントから直接呼ぶ ([ADR-064](../adr/064-no-custom-domain-for-api.md))。この URL は HTTPS で提供され、サービスとプロジェクトとリージョンから決まるため、サービスを作り直しても変わらない。クライアントはビルド時の設定として URL を持つ。
 
-**サブドメイン構成:**
-
-| 環境 | サブドメイン | IP |
-|------|------------|-----|
-| dev | `overloadparty-dev.keyandnotes.com` | 動的（Ingress 起動時に割当） |
-| stg | `overloadparty-stg.keyandnotes.com` | 動的（Ingress 起動時に割当） |
-| prod | `overloadparty-prod.keyandnotes.com` | 未定 |
-
-- Cloudflare Universal SSL は `*.keyandnotes.com` をカバー（1 階層のみ）
-- そのため `overloadparty-dev` 形式を採用（`dev.overloadparty.keyandnotes.com` は証明書対象外）
-- Cloudflare DNS で Proxied (orange cloud) モードを使用
-- 静的 IP は使用しない（コスト削減）。代わりに GitHub Actions で Cloudflare DNS を自動更新:
-  - **起動時** (`env-lifecycle.yaml`): Ingress の外部 IP 取得後、Cloudflare API で A レコードを更新
-  - **停止時** (`nightly-shutdown.yaml`): DNS を `127.0.0.1` に変更し、予約済み IP を削除
-- Cloudflare 認証情報は `CLOUDFLARE_` プレフィックスで統一。DNS トークン (`CLOUDFLARE_DNS_API_TOKEN`) は secrets、ゾーン ID (`CLOUDFLARE_ZONE_ID`) は variables で管理
+`keyandnotes.com`（お名前.com + Cloudflare DNS）はアセット配信で引き続き使う。こちらは環境ごとのサブドメインを GCS へ CNAME で向ける構成で、配信の詳細は [INFRASTRUCTURE.md](INFRASTRUCTURE.md) を参照。
 
 ---
 
