@@ -1,0 +1,33 @@
+name: Run gremlins mutation test
+description: Run gremlins over a Go module and append the resulting score to the step summary.
+
+inputs:
+  module-dir:
+    description: Directory holding the go.mod, relative to the repository root.
+    required: true
+  target-path:
+    description: Directory gremlins mutates, relative to module-dir. gremlins appends /... to it.
+    required: true
+  exclude-files:
+    description: Comma separated filepath regexps excluded from mutation. Empty to exclude none.
+    required: false
+    default: ""
+  timeout-coefficient:
+    description: Multiplier gremlins applies to the measured suite duration when deciding how long a mutant may run.
+    required: true
+  report-path:
+    description: Absolute path the machine readable report is written to.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Run mutation test
+      shell: bash
+      env:
+        MODULE_DIR: ${{ inputs.module-dir }}
+        TARGET_PATH: ${{ inputs.target-path }}
+        EXCLUDE_FILES: ${{ inputs.exclude-files }}
+        TIMEOUT_COEFFICIENT: ${{ inputs.timeout-coefficient }}
+        REPORT_PATH: ${{ inputs.report-path }}
+      run: bash ${{ github.action_path }}/../../scripts/mutation/run-gremlins.sh
