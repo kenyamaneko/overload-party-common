@@ -70,7 +70,7 @@ func captureStdout(t *testing.T, fn func()) string {
 }
 
 func TestRun(t *testing.T) {
-	t.Run("go test -json 集計結果に基づく終了コード判定", func(t *testing.T) {
+	t.Run("go test -json集計結果に基づく終了コード判定", func(t *testing.T) {
 		cases := []struct {
 			name         string
 			jsonContent  string
@@ -137,7 +137,7 @@ func TestRunFailureOutput(t *testing.T) {
 }
 
 func TestPrefixFile(t *testing.T) {
-	t.Run("module-dir によるファイルパスの補正", func(t *testing.T) {
+	t.Run("module-dirによるファイルパスの補正", func(t *testing.T) {
 		cases := []struct {
 			name         string
 			modulePrefix string
@@ -145,19 +145,19 @@ func TestPrefixFile(t *testing.T) {
 			wantFile     string
 		}{
 			{
-				name:         "module-dir がリポジトリルート直下のとき、file はそのままになる",
+				name:         "module-dirがリポジトリルート直下のとき、fileはそのままになる",
 				modulePrefix: "",
 				file:         "internal/service/shipping_test.go",
 				wantFile:     "internal/service/shipping_test.go",
 			},
 			{
-				name:         "module-dir がサブディレクトリのとき、file の先頭に付与される",
+				name:         "module-dirがサブディレクトリのとき、fileの先頭に付与される",
 				modulePrefix: "export-function",
 				file:         "internal/service/shipping_test.go",
 				wantFile:     "export-function/internal/service/shipping_test.go",
 			},
 			{
-				name:         "file が空 (位置未特定) のとき、module-dir を付与しても空のままになる",
+				name:         "fileが空 (位置未特定)のとき、module-dirを付与しても空のままになる",
 				modulePrefix: "export-function",
 				file:         "",
 				wantFile:     "",
@@ -173,7 +173,7 @@ func TestPrefixFile(t *testing.T) {
 }
 
 func TestLeafKeys(t *testing.T) {
-	t.Run("t.Run ネストにおける葉テストの判定", func(t *testing.T) {
+	t.Run("t.Runネストにおける葉テストの判定", func(t *testing.T) {
 		t.Run("子テストが無いとき、そのテストは葉として扱われる", func(t *testing.T) {
 			order := []string{"pkg\x00TestFoo"}
 			results := map[string]*testResult{
@@ -225,7 +225,7 @@ func TestExtractLocation(t *testing.T) {
 			wantMsg    string
 		}{
 			{
-				name:       "モジュールルート直下のパッケージで file:line が見つかったとき、ディレクトリ無しのファイルパスになる",
+				name:       "モジュールルート直下のパッケージでfile:lineが見つかったとき、ディレクトリ無しのファイルパスになる",
 				output:     "    root_test.go:12: 期待値と異なる\n",
 				modulePath: "github.com/kenyamaneko/example",
 				pkg:        "github.com/kenyamaneko/example",
@@ -234,7 +234,7 @@ func TestExtractLocation(t *testing.T) {
 				wantMsg:    "期待値と異なる",
 			},
 			{
-				name:       "サブディレクトリのパッケージで file:line が見つかったとき、パッケージ相対ディレクトリを含むファイルパスになる",
+				name:       "サブディレクトリのパッケージでfile:lineが見つかったとき、パッケージ相対ディレクトリを含むファイルパスになる",
 				output:     "    shipping_test.go:34: 送料が一致しない",
 				modulePath: "github.com/kenyamaneko/example",
 				pkg:        "github.com/kenyamaneko/example/internal/service",
@@ -243,7 +243,7 @@ func TestExtractLocation(t *testing.T) {
 				wantMsg:    "送料が一致しない",
 			},
 			{
-				name:       "file:line が見つからないとき、file は空文字になり最初の非空行がメッセージになる",
+				name:       "file:lineが見つからないとき、fileは空文字になり最初の非空行がメッセージになる",
 				output:     "\n  panic: 想定外の nil 参照\n\ngoroutine 1 [running]:\n",
 				modulePath: "github.com/kenyamaneko/example",
 				pkg:        "github.com/kenyamaneko/example/internal/service",
@@ -282,7 +282,7 @@ func TestExtractBuildFailureLocation(t *testing.T) {
 				wantMsg:  "undefined: Foo",
 			},
 			{
-				name:     "file:line が見つからないとき、file は空文字になり最初の非空行がメッセージになる",
+				name:     "file:lineが見つからないとき、fileは空文字になり最初の非空行がメッセージになる",
 				output:   "\nunexpected EOF\n",
 				wantFile: "",
 				wantLine: 0,
@@ -303,15 +303,15 @@ func TestExtractBuildFailureLocation(t *testing.T) {
 }
 
 func TestEscapeData(t *testing.T) {
-	t.Run("workflow コマンドのメッセージ本文エスケープ", func(t *testing.T) {
+	t.Run("workflowコマンドのメッセージ本文エスケープ", func(t *testing.T) {
 		cases := []struct {
 			name  string
 			input string
 			want  string
 		}{
-			{name: "% を含むとき、%25 に置換される", input: "100%失敗", want: "100%25失敗"},
-			{name: "改行 (LF) を含むとき、%0A に置換される", input: "1行目\n2行目", want: "1行目%0A2行目"},
-			{name: "復帰 (CR) を含むとき、%0D に置換される", input: "1行目\r2行目", want: "1行目%0D2行目"},
+			{name: "%を含むとき、%25に置換される", input: "100%失敗", want: "100%25失敗"},
+			{name: "改行 (LF)を含むとき、%0Aに置換される", input: "1行目\n2行目", want: "1行目%0A2行目"},
+			{name: "復帰 (CR)を含むとき、%0Dに置換される", input: "1行目\r2行目", want: "1行目%0D2行目"},
 		}
 
 		for _, tc := range cases {
@@ -323,14 +323,14 @@ func TestEscapeData(t *testing.T) {
 }
 
 func TestEscapeProperty(t *testing.T) {
-	t.Run("workflow コマンドのプロパティ値エスケープ", func(t *testing.T) {
+	t.Run("workflowコマンドのプロパティ値エスケープ", func(t *testing.T) {
 		cases := []struct {
 			name  string
 			input string
 			want  string
 		}{
-			{name: "コロンを含むとき、%3A に置換される", input: "internal/service:foo", want: "internal/service%3Afoo"},
-			{name: "カンマを含むとき、%2C に置換される", input: "a,b.go", want: "a%2Cb.go"},
+			{name: "コロンを含むとき、%3Aに置換される", input: "internal/service:foo", want: "internal/service%3Afoo"},
+			{name: "カンマを含むとき、%2Cに置換される", input: "a,b.go", want: "a%2Cb.go"},
 		}
 
 		for _, tc := range cases {
@@ -342,8 +342,8 @@ func TestEscapeProperty(t *testing.T) {
 }
 
 func TestReadModulePath(t *testing.T) {
-	t.Run("go.mod からのモジュールパス取得", func(t *testing.T) {
-		t.Run("module 行があるとき、モジュールパスが返る", func(t *testing.T) {
+	t.Run("go.modからのモジュールパス取得", func(t *testing.T) {
+		t.Run("module行があるとき、モジュールパスが返る", func(t *testing.T) {
 			dir := t.TempDir()
 			writeFile(t, path.Join(dir, "go.mod"), "module github.com/kenyamaneko/example\n\ngo 1.22\n")
 
@@ -353,7 +353,7 @@ func TestReadModulePath(t *testing.T) {
 			assert.Equal(t, "github.com/kenyamaneko/example", got)
 		})
 
-		t.Run("go.mod が存在しないとき、エラーになる", func(t *testing.T) {
+		t.Run("go.modが存在しないとき、エラーになる", func(t *testing.T) {
 			dir := t.TempDir()
 
 			_, err := readModulePath(dir)
@@ -361,7 +361,7 @@ func TestReadModulePath(t *testing.T) {
 			assert.Error(t, err)
 		})
 
-		t.Run("module 行が無いとき、エラーになる", func(t *testing.T) {
+		t.Run("module行が無いとき、エラーになる", func(t *testing.T) {
 			dir := t.TempDir()
 			writeFile(t, path.Join(dir, "go.mod"), "go 1.22\n")
 
