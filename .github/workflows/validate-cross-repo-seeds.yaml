@@ -1,0 +1,82 @@
+name: Validate Cross-Repo Seeds
+
+# shop / card 両 repo の seed YAML 間の参照整合性を CI で検証する。
+# shop / card 両 seed が見えるのは共通基盤のみのため本責務を common に置く。
+#
+# trigger:
+#   - cron daily (shop / card の main 変更を common 側で受け取れないため)
+#   - workflow_dispatch (手動)
+#   - push / pull_request: 検証スクリプト自身の変更時
+on:
+  schedule:
+    # 18:00 UTC = 03:00 JST 翌日
+    - cron: "0 18 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - '.vscode/**'
+      - '.gitignore'
+      - 'LICENSE'
+      - 'rules/**'
+  pull_request:
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - '.vscode/**'
+      - '.gitignore'
+      - 'LICENSE'
+      - 'rules/**'
+
+concurrency:
+  group: validate-cross-repo-seeds-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  validate:
+    name: Validate shop/card seed cross-refs
+    runs-on: ubicloud-standard-2
+    timeout-minutes: 10
+    steps:
+      - name: Checkout common
+        uses: actions/checkout@v4
+        with:
+          path: common
+      - name: Generate Cross-Repo Deps App token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.CROSS_REPO_DEPS_APP_ID }}
+          private-key: ${{ secrets.CROSS_REPO_DEPS_APP_PRIVATE_KEY }}
+          owner: kenyamaneko
+      - name: Checkout shop main
+        uses: actions/checkout@v4
+        with:
+          repository: kenyamaneko/overload-party-shop
+          ref: main
+          path: shop
+          token: ${{ steps.app-token.outputs.token }}
+      - name: Checkout card main
+        uses: actions/checkout@v4
+        with:
+          repository: kenyamaneko/overload-party-card
+          ref: main
+          path: card
+          token: ${{ steps.app-token.outputs.token }}
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pyyaml
+        run: pip install pyyaml
+      - name: Run validation
+        run: |
+          python3 common/scripts/validate_card_pack_refs.py \
+            --shop-yaml shop/data/products.yaml \
+            --card-yaml card/data/card_packs.yaml
