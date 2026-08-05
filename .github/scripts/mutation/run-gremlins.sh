@@ -37,10 +37,11 @@ IFS=$'\t' read -r efficacy coverage killed lived not_covered not_viable < <(
   jq -r '[.test_efficacy, .mutations_coverage, .mutants_killed, .mutants_lived, .mutants_not_covered, .mutants_not_viable] | @tsv' "${REPORT_PATH}"
 )
 
-# 全ての mutant が打ち切られると killed も lived も 0 になり、検出力は 0% と報告される。
-# 計測が成立しなかった実行と、テストが 1 体も倒せなかった実行を取り違えるため落とす。
-if [[ "${killed}" -eq 0 && "${lived}" -eq 0 ]]; then
-  echo "::error::gremlins evaluated no mutant (${timed_out} timed out). Raise timeout-coefficient until mutants finish within the limit."
+# 検出力は killed と lived だけから出るため、打ち切られた mutant が多いほど少数の標本で
+# 高い値が出る。倒せた数より打ち切られた数が多い実行は、検出力ではなく上限の低さを表す。
+evaluated=$((killed + lived))
+if [[ "${timed_out}" -gt "${evaluated}" ]]; then
+  echo "::error::gremlins timed out on ${timed_out} of $((evaluated + timed_out)) mutants and judged only ${evaluated}. The score is not representative. Raise timeout-coefficient until mutants finish within the limit."
   exit 1
 fi
 
