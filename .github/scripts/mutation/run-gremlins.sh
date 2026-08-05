@@ -11,7 +11,7 @@ fi
 
 cd "${MODULE_DIR}"
 
-gremlins unleash "${TARGET_PATH}" \
+gremlins unleash "${TARGET_DIR}" \
   --output "${REPORT_PATH}" \
   --timeout-coefficient "${TIMEOUT_COEFFICIENT}" \
   ${exclude_args[@]+"${exclude_args[@]}"}
@@ -19,7 +19,7 @@ gremlins unleash "${TARGET_PATH}" \
 # 解析対象が 1 つも無いとき gremlins はレポートを書かずに終了コード 0 で終わるため、
 # 走らなかった実行が成功と区別できなくなる。ここで落として気づけるようにする。
 if [[ ! -f "${REPORT_PATH}" ]]; then
-  echo "::error::gremlins wrote no report. Either '${TARGET_PATH}' does not resolve to a package directory under '${MODULE_DIR}', or the exclude-files patterns matched every file."
+  echo "::error::gremlins wrote no report. Either '${TARGET_DIR}' does not resolve to a package directory under '${MODULE_DIR}', or the exclude-files patterns matched every file."
   exit 1
 fi
 
