@@ -7,7 +7,7 @@ on:
         description: Directory holding the go.mod, relative to the repository root.
         type: string
         default: .
-      packages:
+      target-dir:
         description: Directory gremlins mutates, relative to module-dir. gremlins appends /... to it, so package patterns such as ./... are not accepted.
         type: string
         default: .
@@ -55,7 +55,7 @@ jobs:
         uses: kenyamaneko/overload-party-common/.github/actions/run-gremlins@main
         with:
           module-dir: ${{ inputs.module-dir }}
-          target-path: ${{ inputs.packages }}
+          target-dir: ${{ inputs.target-dir }}
           exclude-files: ${{ inputs.exclude-files }}
           timeout-coefficient: ${{ inputs.timeout-coefficient }}
           report-path: ${{ github.workspace }}/gremlins-report.json

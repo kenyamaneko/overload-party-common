@@ -5,7 +5,7 @@ inputs:
   module-dir:
     description: Directory holding the go.mod, relative to the repository root.
     required: true
-  target-path:
+  target-dir:
     description: Directory gremlins mutates, relative to module-dir. gremlins appends /... to it.
     required: true
   exclude-files:
@@ -26,7 +26,7 @@ runs:
       shell: bash
       env:
         MODULE_DIR: ${{ inputs.module-dir }}
-        TARGET_PATH: ${{ inputs.target-path }}
+        TARGET_DIR: ${{ inputs.target-dir }}
         EXCLUDE_FILES: ${{ inputs.exclude-files }}
         TIMEOUT_COEFFICIENT: ${{ inputs.timeout-coefficient }}
         REPORT_PATH: ${{ inputs.report-path }}
