@@ -507,8 +507,8 @@ gateway リポの `docs/WS_REFERENCE.md` を参照。
 | 環境 | AllowOrigins |
 |------|-------------|
 | dev | `http://localhost:3000`, `capacitor://localhost`, `http://localhost` |
-| stg | `https://overloadparty-stg.keyandnotes.com`, `capacitor://localhost`, `http://localhost` |
-| prod | `https://overloadparty-prod.keyandnotes.com`, `capacitor://localhost`, `http://localhost` |
+| stg | `capacitor://localhost`, `http://localhost` |
+| prod | `capacitor://localhost`, `http://localhost` |
 | ローカル | 全オリジン許可 |
 
 - REST: `middleware.CORS()` で HTTP レスポンスヘッダを設定
