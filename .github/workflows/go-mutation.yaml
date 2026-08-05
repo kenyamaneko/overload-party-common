@@ -1,0 +1,62 @@
+name: Go Mutation Test
+
+on:
+  workflow_call:
+    inputs:
+      module-dir:
+        description: Directory holding the go.mod, relative to the repository root.
+        type: string
+        default: .
+      packages:
+        description: Directory gremlins mutates, relative to module-dir. gremlins appends /... to it, so package patterns such as ./... are not accepted.
+        type: string
+        default: .
+      exclude-files:
+        description: Comma separated filepath regexps excluded from mutation (e.g. _gen\.go$).
+        type: string
+        default: ""
+      needs-private-modules:
+        description: Authenticate to private kenyamaneko repositories before the Go steps. Set it false for repositories that depend on none.
+        type: boolean
+        default: true
+
+concurrency:
+  group: go-mutation-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  mutation:
+    # mutant 1 体ごとにテストスイートを 1 回実行するため CI より上の規格を使う
+    runs-on: ubicloud-standard-4
+    timeout-minutes: 120
+    env:
+      GOPRIVATE: github.com/kenyamaneko/*
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: ${{ inputs.module-dir }}/go.mod
+      - name: Configure Go private modules
+        if: inputs.needs-private-modules
+        uses: kenyamaneko/overload-party-common/.github/actions/setup-go-private-modules@main
+        with:
+          app-id: ${{ vars.CROSS_REPO_DEPS_APP_ID }}
+          private-key: ${{ secrets.CROSS_REPO_DEPS_APP_PRIVATE_KEY }}
+      # スコアの変動がツール更新由来かテスト変化由来かを切り分けられるよう版を固定する
+      - name: Install gremlins
+        run: go install github.com/go-gremlins/gremlins/cmd/gremlins@v0.6.0
+      - name: Run mutation test
+        uses: kenyamaneko/overload-party-common/.github/actions/run-gremlins@main
+        with:
+          module-dir: ${{ inputs.module-dir }}
+          target-path: ${{ inputs.packages }}
+          exclude-files: ${{ inputs.exclude-files }}
+          report-path: ${{ github.workspace }}/gremlins-report.json
+      - name: Upload mutation report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: gremlins-report
+          path: gremlins-report.json
