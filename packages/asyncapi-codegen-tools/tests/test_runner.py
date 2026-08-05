@@ -8,6 +8,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from asyncapi_codegen_tools.runner import generate
+from codegen_tools.go_format import format_go_source
 
 
 SAMPLE_SPEC = """\
@@ -44,6 +45,39 @@ components:
           type: integer
 """
 
+TWO_EVENT_SPEC = """\
+asyncapi: 3.0.0
+info:
+  title: sample
+  version: 0.1.0
+channels:
+  Foo:
+    address: foo
+operations:
+  publishFoo:
+    action: send
+    channel:
+      $ref: "#/channels/Foo"
+components:
+  schemas:
+    ShortEvent:
+      type: object
+      description: 名前の短い業務事実。
+      required: [event_type]
+      properties:
+        event_type:
+          type: string
+          const: short_event
+    MuchLongerNamedEvent:
+      type: object
+      description: 名前の長い業務事実。
+      required: [event_type]
+      properties:
+        event_type:
+          type: string
+          const: much_longer_named_event
+"""
+
 
 class Testasyncapiスペックからのコード生成:
     def test_整形されたGoファイルを生成する(self, tmp_path: Path) -> None:
@@ -69,6 +103,18 @@ class Testasyncapiスペックからのコード生成:
         assert 'Timestamp ' in body and 'time.Time' in body and '`json:"timestamp"`' in body
         assert 'PlayerID ' in body and '`json:"player_id"`' in body
         assert 'OptionalCount ' in body and '*int64' in body and '`json:"optional_count,omitempty"`' in body
+
+    def test_名前の長さが異なる定数が並ぶとき出力はgofmtの整形結果と一致する(
+        self, tmp_path: Path
+    ) -> None:
+        spec_path = tmp_path / "asyncapi.yaml"
+        spec_path.write_text(TWO_EVENT_SPEC)
+        out_path = tmp_path / "asyncapi_gen.go"
+
+        generate(spec_path=spec_path, output_path=out_path, package="apifoo")
+
+        body = out_path.read_text()
+        assert body == format_go_source(body)
 
     def test_出力先の親ディレクトリを自動生成する(self, tmp_path: Path) -> None:
         spec_path = tmp_path / "asyncapi.yaml"

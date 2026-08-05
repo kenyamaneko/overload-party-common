@@ -291,14 +291,14 @@ class TestGoファイルの生成:
         )
         assert '"context"' in out
 
-    def test_末尾に空行を足す指定のとき生成ファイルの最後が空行になる(self) -> None:
+    def test_生成ファイルの末尾は改行1つで終わる(self) -> None:
         out = render_go_file(
             package="foo",
             types=[{"name": "X", "fields": [{"name": "S", "type": "string"}]}],
             style=GoStyle(),
-            has_trailing_blank_line=True,
         )
-        assert out.endswith("}\n\n")
+        assert out.endswith("}\n")
+        assert not out.endswith("\n\n")
 
     def test_constantsとtype_aliasesをファイルに含める(self) -> None:
         out = render_go_file(

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "overload-party-asyncapi-codegen-tools"
-version = "0.2.0"
+version = "0.3.0"
 description = "AsyncAPI 3.0 spec から Go 型を生成する共通 codegen ライブラリ"
 requires-python = ">=3.11"
 dependencies = [

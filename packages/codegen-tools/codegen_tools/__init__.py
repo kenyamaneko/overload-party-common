@@ -10,16 +10,18 @@ from .go_emitter import (
     render_type_aliases,
     resolve_auto_imports,
 )
+from .go_format import format_go_source
 from .runner import CodegenRunner, GoTarget
 from .yaml_loader import load_yaml
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     "CodegenRunner",
     "GoConstStyle",
     "GoStyle",
     "GoTarget",
+    "format_go_source",
     "load_yaml",
     "render_const_block",
     "render_go_file",
