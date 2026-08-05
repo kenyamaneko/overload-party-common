@@ -49,6 +49,17 @@ subtypes:
   - ObjectStorage
   - CacheDB
 
+# カードテキストが使うリソースの括り。カード定義には subtype を列挙させず
+# この名前で指定させることで、subtype が増えたときの取りこぼしを防ぐ。
+# card_type と一致する括りは card_type で、部分集合になる括りは subtypes で表す。
+resource_groups:
+  compute:
+    card_type: Compute
+  db:
+    subtypes:
+    - Database
+    - CacheDB
+
 restriction_values:
 - unlimited
 - limited
