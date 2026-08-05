@@ -179,7 +179,10 @@ while IFS= read -r f; do
   [ -z "$f" ] && continue
   content=$(git show ":$f" 2>/dev/null || cat "$f" 2>/dev/null || true)
   if [ -n "$content" ]; then
-    if ! printf '%s' "$content" | grep -qE '^[[:space:]]*timeout-minutes[[:space:]]*:'; then
+    # cicd.md は timeout-minutes を runs-on を持つジョブに設定すると定める。reusable workflow を
+    # 呼ぶだけのジョブには GitHub 側が設定を許さないため、runs-on の無い workflow は対象外とする。
+    if printf '%s' "$content" | grep -qE '^[[:space:]]*runs-on[[:space:]]*:' \
+      && ! printf '%s' "$content" | grep -qE '^[[:space:]]*timeout-minutes[[:space:]]*:'; then
       hard_violations+=("$f  [新規 workflow に timeout-minutes が必要 — principles.md CI方針 / ADR-038]")
     fi
     if ! printf '%s' "$content" | grep -qE '^concurrency[[:space:]]*:'; then
