@@ -15,6 +15,10 @@ on:
         description: Comma separated filepath regexps excluded from mutation (e.g. _gen\.go$).
         type: string
         default: ""
+      timeout-coefficient:
+        description: Multiplier gremlins applies to the measured suite duration when deciding how long a mutant may run. The default derives the limit from a fast suite, which times out most mutants and leaves the score unmeasured.
+        type: number
+        default: 30
       needs-private-modules:
         description: Authenticate to private kenyamaneko repositories before the Go steps. Set it false for repositories that depend on none.
         type: boolean
@@ -53,6 +57,7 @@ jobs:
           module-dir: ${{ inputs.module-dir }}
           target-path: ${{ inputs.packages }}
           exclude-files: ${{ inputs.exclude-files }}
+          timeout-coefficient: ${{ inputs.timeout-coefficient }}
           report-path: ${{ github.workspace }}/gremlins-report.json
       - name: Upload mutation report
         if: ${{ !cancelled() }}

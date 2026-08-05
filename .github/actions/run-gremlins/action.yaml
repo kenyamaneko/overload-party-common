@@ -12,6 +12,9 @@ inputs:
     description: Comma separated filepath regexps excluded from mutation. Empty to exclude none.
     required: false
     default: ""
+  timeout-coefficient:
+    description: Multiplier gremlins applies to the measured suite duration when deciding how long a mutant may run.
+    required: true
   report-path:
     description: Absolute path the machine readable report is written to.
     required: true
@@ -25,5 +28,6 @@ runs:
         MODULE_DIR: ${{ inputs.module-dir }}
         TARGET_PATH: ${{ inputs.target-path }}
         EXCLUDE_FILES: ${{ inputs.exclude-files }}
+        TIMEOUT_COEFFICIENT: ${{ inputs.timeout-coefficient }}
         REPORT_PATH: ${{ inputs.report-path }}
       run: bash ${{ github.action_path }}/../../scripts/mutation/run-gremlins.sh
