@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from .go_emitter import GoStyle, render_go_file
+from .go_format import format_go_source
 from .yaml_loader import load_yaml
 
 
@@ -51,10 +52,6 @@ class CodegenRunner:
     section_name_field: str = "name"
     """セクションのファイル名解決に使うキー (`{name}_gen.go`)."""
     file_suffix: str = "_gen.go"
-
-    # ── ファイル末尾 ──
-    has_trailing_blank_line: bool = False
-    """末尾に空行を残すか. 既存スクリプトに合わせて互換用."""
 
     # ── プラグイン ──
     pre_render_hook: Callable[[dict[str, Any], str], dict[str, Any]] | None = None
@@ -132,12 +129,11 @@ class CodegenRunner:
             type_aliases=type_aliases,
             extra_imports=extra_imports,
             emit_tags=target.emit_tags,
-            has_trailing_blank_line=self.has_trailing_blank_line,
         )
 
         out_path = target.out_dir / f"{section[self.section_name_field]}{self.file_suffix}"
         out_path.parent.mkdir(parents=True, exist_ok=True)
-        out_path.write_text(body, encoding="utf-8")
+        out_path.write_text(format_go_source(body), encoding="utf-8")
         return out_path
 
     def run(self) -> int:

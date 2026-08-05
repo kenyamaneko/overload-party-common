@@ -13,6 +13,7 @@ from typing import Any
 
 import yaml
 from codegen_tools.go_emitter import GoConstStyle, GoStyle, render_go_file
+from codegen_tools.go_format import format_go_source
 
 from .parser import parse_spec
 
@@ -43,11 +44,10 @@ def generate(
         style=style,
         constants=parsed["constants"],
         emit_tags=("json",),
-        has_trailing_blank_line=True,
     )
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(body)
+    output_path.write_text(format_go_source(body))
 
 
 def cli(argv: list[str] | None = None) -> int:

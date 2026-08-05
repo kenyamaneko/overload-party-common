@@ -244,14 +244,11 @@ def render_go_file(
     type_aliases: list[dict[str, Any]] | None = None,
     extra_imports: set[str] | None = None,
     emit_tags: tuple[str, ...] | None = None,
-    has_trailing_blank_line: bool = False,
 ) -> str:
     """1 Go ファイル分の最終出力文字列を組み立てる.
 
     - `extra_imports`: YAML の `imports:` セクションなど、自動検出に加えて常に出すもの。
     - `emit_tags`: 個々の struct field でどの YAML キーをタグ化するか (target 別に切替)。
-    - `has_trailing_blank_line`: 末尾に余計な空行を残すか。多くのリポは "rstrip + \\n" で末尾整形するが、
-       一部 (shop/support/account/scenario/card) は末尾空行ありの実装になっているので互換用。
     """
     lines: list[str] = [style.header, "", f"package {package}", ""]
 
@@ -270,6 +267,4 @@ def render_go_file(
         lines.extend(render_struct(td, style, emit_tags=emit_tags))
 
     body = "\n".join(lines)
-    if has_trailing_blank_line:
-        return body + "\n"
     return body.rstrip() + "\n"
