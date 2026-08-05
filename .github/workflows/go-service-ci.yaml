@@ -98,6 +98,16 @@ jobs:
       - name: Run lint
         working-directory: ${{ inputs.module-dir }}
         run: golangci-lint run --timeout 5m ./...
+      # golangci-lint の既定の linter は gofmt を含まないため、別に検査する。
+      # リポ内に go.mod が複数あっても見落とさないよう、module-dir でなくリポ全体を対象にする。
+      - name: Check gofmt
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "gofmt の整形結果と食い違うファイルがある。gofmt -w を掛けること:" >&2
+            echo "$unformatted" >&2
+            exit 1
+          fi
       - name: Install govulncheck
         run: go install golang.org/x/vuln/cmd/govulncheck@latest
       - name: Run govulncheck
