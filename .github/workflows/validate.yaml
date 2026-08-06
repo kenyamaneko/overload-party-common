@@ -43,7 +43,7 @@ concurrency:
 jobs:
   unit-tests:
     name: Unit tests (Python)
-    runs-on: ubicloud-standard-2
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - name: Checkout
@@ -106,7 +106,7 @@ jobs:
     name: Publish test viewpoint catalog
     needs: unit-tests
     if: github.event_name == 'push'
-    runs-on: ubicloud-standard-2
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: read
@@ -148,7 +148,7 @@ jobs:
   codegen-sync:
     name: Codegen sync check
     needs: unit-tests
-    runs-on: ubicloud-standard-2
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Checkout

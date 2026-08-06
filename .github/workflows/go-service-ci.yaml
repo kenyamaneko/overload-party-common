@@ -58,7 +58,7 @@ on:
 
 jobs:
   changes:
-    runs-on: ubicloud-standard-2
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
       code: ${{ steps.detect.outputs.changed }}
@@ -74,7 +74,7 @@ jobs:
   lint:
     needs: changes
     if: needs.changes.outputs.code == 'true'
-    runs-on: ubicloud-standard-2
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
       GOPRIVATE: ${{ inputs.goprivate }}
@@ -117,7 +117,7 @@ jobs:
   test-unit:
     needs: changes
     if: needs.changes.outputs.code == 'true'
-    runs-on: ubicloud-standard-2
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
       GOPRIVATE: ${{ inputs.goprivate }}
@@ -182,7 +182,7 @@ jobs:
   test-integration:
     needs: changes
     if: needs.changes.outputs.code == 'true' && inputs.has-integration-tests
-    runs-on: ubicloud-standard-2
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
       GOPRIVATE: ${{ inputs.goprivate }}
@@ -240,7 +240,7 @@ jobs:
   image-scan:
     needs: changes
     if: needs.changes.outputs.code == 'true' && inputs.has-image-scan
-    runs-on: ubicloud-standard-2
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - name: Checkout
@@ -267,7 +267,7 @@ jobs:
   codegen-sync:
     needs: changes
     if: needs.changes.outputs.code == 'true'
-    runs-on: ubicloud-standard-2
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
       GOPRIVATE: ${{ inputs.goprivate }}
@@ -318,7 +318,7 @@ jobs:
   test-python:
     needs: changes
     if: needs.changes.outputs.code == 'true' && inputs.has-python-tests
-    runs-on: ubicloud-standard-2
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Checkout
