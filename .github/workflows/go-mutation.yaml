@@ -30,8 +30,7 @@ concurrency:
 
 jobs:
   mutation:
-    # mutant 1 体ごとにテストスイートを 1 回実行するため CI より上の規格を使う
-    runs-on: ubicloud-standard-4
+    runs-on: ubuntu-latest
     # account パイロットの実測が係数 100 で 3 分程度であり、他リポへの fan-out 分の余裕を加えるため 30 分にする
     timeout-minutes: 30
     env:

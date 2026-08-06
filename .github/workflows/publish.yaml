@@ -41,7 +41,7 @@ jobs:
   # ──────────────────────────────────────────────
   detect:
     name: Detect changes
-    runs-on: ubicloud-standard-2
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
       any_changed: ${{ steps.detect.outputs.any_changed }}
@@ -68,7 +68,7 @@ jobs:
     name: Build & validate
     needs: detect
     if: needs.detect.outputs.any_changed == 'true'
-    runs-on: ubicloud-standard-2
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
       GOWORK: "off"
@@ -118,7 +118,7 @@ jobs:
     name: Publish game-design-constants (Go)
     needs: [detect, build]
     if: needs.detect.outputs.game_design_constants == 'true'
-    runs-on: ubicloud-standard-2
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Checkout
@@ -137,7 +137,7 @@ jobs:
     name: Publish game-design-constants-dotnet
     needs: [detect, build]
     if: needs.detect.outputs.game_design_constants_dotnet == 'true'
-    runs-on: ubicloud-standard-2
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Checkout
@@ -167,7 +167,7 @@ jobs:
     name: Publish game-design-constants-npm
     needs: [detect, build]
     if: needs.detect.outputs.game_design_constants_npm == 'true'
-    runs-on: ubicloud-standard-2
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Checkout

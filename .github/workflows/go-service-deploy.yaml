@@ -35,7 +35,7 @@ on:
 jobs:
   deploy-dev:
     if: inputs.target == 'dev'
-    runs-on: ubicloud-standard-2
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
       PROJECT_ID: keyandnotes-platform
@@ -100,7 +100,7 @@ jobs:
 
   promote:
     if: inputs.target == 'stg' || inputs.target == 'prod'
-    runs-on: ubicloud-standard-2
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
       PROJECT_ID: keyandnotes-platform
