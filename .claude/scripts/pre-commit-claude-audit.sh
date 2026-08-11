@@ -12,7 +12,7 @@
 #   - obvious かつ safe の違反あり → permissionDecision=deny で worker に差し戻し自律修正させる
 #   - それ以外の違反のみ (interpretive / harmful を含む) → permissionDecision=ask で user に判断委譲
 #   - violations 0 件 → exit 0
-#   - audit 不能 (入力欠落 / auditor 起動失敗 / API エラー / 出力欠落 / 単一ファイル超過) → exit 2 で fail-closed block
+#   - audit 不能 (入力欠落 / 対象リポ未登録 / auditor 起動失敗 / API エラー / 出力欠落 / 単一ファイル超過) → exit 2 で fail-closed block
 #   - staged diff が auditor の context に収まらない場合はファイル単位でチャンク分割し全グループを監査
 
 set -uo pipefail
@@ -87,15 +87,26 @@ COMMON_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 # 共通ルールは keyandnotes-rules に集約 (兄弟リポとして配置)。repos.yaml / GLOSSARY / prereq_docs は common に残る。
 RULES_DIR="${COMMON_DIR}/../../keyandnotes-rules/rules"
 
-resolved=$(python3 - "$COMMON_DIR" "$target_cwd" <<'PY'
+# worktree は作成場所に規則性が無く (/tmp 配下や任意のディレクトリ名がありうる) target_cwd を
+# repos.yaml のパスへ直接一致させられないため、git の共通 .git dir から実チェックアウトパスを逆引きし
+# 照合候補に加える。
+git_common_dir=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)
+main_worktree_root=""
+if [ -n "$git_common_dir" ]; then
+  main_worktree_root=$(dirname "$git_common_dir")
+fi
+
+resolved=$(python3 - "$COMMON_DIR" "$target_cwd" "$main_worktree_root" <<'PY'
 import sys, os, json, yaml
-common_dir, target_cwd = sys.argv[1], sys.argv[2]
+common_dir, target_cwd, main_worktree_root = sys.argv[1], sys.argv[2], sys.argv[3]
 with open(os.path.join(common_dir, "rules/repos.yaml")) as f:
     data = yaml.safe_load(f)
-target_abs = os.path.realpath(target_cwd)
+candidates = {os.path.realpath(target_cwd)}
+if main_worktree_root:
+    candidates.add(os.path.realpath(main_worktree_root))
 for r in data.get("repos", []):
     repo_abs = os.path.realpath(os.path.join(common_dir, r["path"]))
-    if target_abs == repo_abs:
+    if repo_abs in candidates:
         print(json.dumps({
             "name": r["name"],
             "lang": r.get("lang", "none"),
@@ -106,7 +117,8 @@ PY
 )
 
 if [ -z "$resolved" ]; then
-  exit 0
+  printf '⚠️  pre-commit-claude-audit: commit 対象リポ (%s) が rules/repos.yaml に未登録のため解決不能。audit 不能のため fail-safe で commit ブロック。登録が必要な場合は rules/repos.yaml への追記を人間に提案してください (Claude は rules/ 配下を書き換えない)。\n' "${main_worktree_root:-$target_cwd}" >&2
+  exit 2
 fi
 
 repo_name=$(printf '%s' "$resolved" | jq -r '.name')
