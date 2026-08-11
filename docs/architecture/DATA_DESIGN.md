@@ -75,7 +75,7 @@ matchmaking は RDB スキーマを持たない（Redis + Pub/Sub のみ）。
 
 | スキーマ | 所有サービス | テーブル |
 |---|---|---|
-| `account` | account | `players`, `player_daily_battle`, `player_factions`, `user_settings`, `processed_events` |
+| `account` | account | `players`, `player_progression`, `player_daily_battle`, `battle_count_reversals`, `player_factions`, `player_settings`, `processed_events` |
 | `card` | card | `card_definitions`, `player_cards`, `decks`, `deck_cards`, `processed_events` |
 | `shop` | shop | `products`, `subscriptions`, `one_time_purchases`, `cosmetic_items`, `player_items`, `player_owned_factions` |
 | `scenario` | scenario | `scenario_episodes`, `episode_required_factions`, `player_story_progress` |
