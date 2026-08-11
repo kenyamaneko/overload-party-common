@@ -24,8 +24,10 @@
 
 `../../keyandnotes-rules/rules/principles.md` (共通ベース) と `rules/principles.md` (overload-party overlay) は本ファイルから @import 済みなので全リポに共通適用される。
 
+## ユーザーとの会話
+
+- ユーザーとの会話は簡潔で平易な日本語で行う
+
 ## [common] SSoT と生成コード
 
 - `data/game_design_constants.yaml` または `data/factions.yaml` を変更したら `python3 scripts/generate_constants.py` を実行する
-- `db/schema_postgres.sql` を変更したら `python3 scripts/generate_schema_doc.py` を実行する
-- `packages/doc-tools/` を変更したら `cd packages/doc-tools && pip install -e . && python -m pytest tests/ -v` でテストを実行する
