@@ -14,6 +14,7 @@ from doc_tools.generate_test_catalog import (
     parse_go_test_json,
     parse_pytest_junit,
     parse_section_arg,
+    parse_subgroup_arg,
     parse_vitest_json,
     render_html,
     render_markdown,
@@ -548,3 +549,99 @@ class Testセクション引数のパース:
     def test_未対応の形式のときエラーになる(self):
         with pytest.raises(argparse.ArgumentTypeError):
             parse_section_arg("外:svc:unknown-fmt:results/svc.json")
+
+
+class Testサブグループ引数のパース:
+    def test_カテゴリとラベルとサブグループ名と形式とパスに分解される(self):
+        spec = parse_subgroup_arg("外:svc:APIパッケージ:go-json:results/svc-api.json")
+        assert (spec.category, spec.label, spec.subgroup, spec.fmt, spec.path) == (
+            "外", "svc", "APIパッケージ", "go-json", Path("results/svc-api.json")
+        )
+        assert spec.prefixes is None
+
+    def test_プレフィクスをカンマ区切りで受け取る(self):
+        spec = parse_subgroup_arg(
+            "外:svc:APIパッケージ:go-json:results/svc-api.json:pkg/handler,pkg/usecase"
+        )
+        assert spec.prefixes == ("pkg/handler", "pkg/usecase")
+
+    def test_項目が5つ未満のときエラーになる(self):
+        with pytest.raises(argparse.ArgumentTypeError, match="の形式で指定してください"):
+            parse_subgroup_arg("外:svc:APIパッケージ:go-json")
+
+    def test_未対応の形式のときエラーになる(self):
+        with pytest.raises(argparse.ArgumentTypeError, match="未対応の形式です"):
+            parse_subgroup_arg("外:svc:APIパッケージ:unknown-fmt:results/svc-api.json")
+
+    def test_プレフィクスを空文字で指定するとエラーになる(self):
+        with pytest.raises(argparse.ArgumentTypeError, match="プレフィクスが空です"):
+            parse_subgroup_arg("外:svc:APIパッケージ:go-json:results/svc-api.json:")
+
+    def test_セクション引数の指定はサブグループを持たない(self):
+        spec = parse_section_arg("外:svc:go-json:results/svc.json")
+        assert spec.subgroup is None
+
+
+class Testセクションの組み立てへのサブグループ統合:
+    def test_サブグループ名を持つ指定のケース群は対応するセクションのグループ木に下位グループとして追加される(
+        self, tmp_path: Path
+    ):
+        root_result = _write(
+            tmp_path / "root.json",
+            json.dumps({"Action": "pass", "Package": "pkg", "Test": "TestX/対象/親のケース"}),
+        )
+        other_root_result = _write(
+            tmp_path / "other-root.json",
+            json.dumps({"Action": "pass", "Package": "pkg", "Test": "TestW/対象/他ラベルのケース"}),
+        )
+        sub_result = _write(
+            tmp_path / "sub.json",
+            json.dumps({"Action": "pass", "Package": "pkg", "Test": "TestY/子のケース"}),
+        )
+        root_spec = SectionSpec("外", "svc", "go-json", root_result, None)
+        other_root_spec = SectionSpec("外", "other-svc", "go-json", other_root_result, None)
+        sub_spec = SectionSpec("外", "svc", "go-json", sub_result, None, "APIパッケージ")
+        sections = build_sections([root_spec, other_root_spec, sub_spec])
+        target_tree = next(tree for cat, label, tree in sections if label == "svc")
+        other_tree = next(tree for cat, label, tree in sections if label == "other-svc")
+        assert [c.case_name for c in target_tree.subgroups["APIパッケージ"].cases] == ["子のケース"]
+        assert "APIパッケージ" not in other_tree.subgroups
+
+    def test_対応するセクションの指定が無いときエラーになる(self, tmp_path: Path):
+        sub_result = _write(
+            tmp_path / "sub.json",
+            json.dumps({"Action": "pass", "Package": "pkg", "Test": "TestY/子のケース"}),
+        )
+        sub_spec = SectionSpec("外", "svc", "go-json", sub_result, None, "APIパッケージ")
+        with pytest.raises(ValueError, match="--subgroup に対応する --section がありません"):
+            build_sections([sub_spec])
+
+    def test_サブグループ名が統合先の既存グループ名と重複するときエラーになる(self, tmp_path: Path):
+        root_result = _write(
+            tmp_path / "root.json",
+            json.dumps(
+                {"Action": "pass", "Package": "pkg", "Test": "TestX/[APIパッケージ]何か/親のケース"}
+            ),
+        )
+        sub_result = _write(
+            tmp_path / "sub.json",
+            json.dumps({"Action": "pass", "Package": "pkg", "Test": "TestY/子のケース"}),
+        )
+        root_spec = SectionSpec("外", "svc", "go-json", root_result, None)
+        sub_spec = SectionSpec("外", "svc", "go-json", sub_result, None, "APIパッケージ")
+        with pytest.raises(ValueError, match="グループ名が既存のグループ名と衝突しています"):
+            build_sections([root_spec, sub_spec])
+
+    def test_サブグループ名を持つ指定は出力の一覧に独立した要素として現れない(self, tmp_path: Path):
+        root_result = _write(
+            tmp_path / "root.json",
+            json.dumps({"Action": "pass", "Package": "pkg", "Test": "TestX/対象/親のケース"}),
+        )
+        sub_result = _write(
+            tmp_path / "sub.json",
+            json.dumps({"Action": "pass", "Package": "pkg", "Test": "TestY/子のケース"}),
+        )
+        root_spec = SectionSpec("外", "svc", "go-json", root_result, None)
+        sub_spec = SectionSpec("外", "svc", "go-json", sub_result, None, "APIパッケージ")
+        sections = build_sections([root_spec, sub_spec])
+        assert [(cat, label) for cat, label, _ in sections] == [("外", "svc")]

@@ -17,11 +17,16 @@
   (対象要素を表す ``[Trait("対象", ...)]`` が TRX にも JUnit XML にも出力されないため、
   battle 側で抽出した中間形式を読む)
 
+--subgroup は、対応する --section (同じカテゴリ・ラベル) のツリーへ、別の結果ファイルの内容を
+指定した名前のサブグループとして統合する。テストの種別 (単体テスト・結合テスト等) を表す
+--section と、対象パッケージ名を表すラベルが同じ見出しレベルに混在するのを避けるために使う。
+
 Usage::
 
     python -m doc_tools.generate_test_catalog \\
         --section '外から見た振る舞い:shop:go-json:results/shop.json:github.com/kenyamaneko/overload-party-shop/internal/handler' \\
         --section '内部の挙動:shop:go-json:results/shop.json:github.com/kenyamaneko/overload-party-shop/internal/repository' \\
+        --subgroup '外から見た振る舞い:shop:API パッケージ:go-json:results/shop-api.json' \\
         --format html --title "shop テスト観点カタログ" --commit "$SHA"
 """
 
@@ -99,7 +104,7 @@ class GroupNode:
 
 @dataclass(frozen=True)
 class SectionSpec:
-    """--section 引数 1 件分の指定。
+    """--section / --subgroup 引数 1 件分の指定。
 
     Args:
         category: セクションの上位カテゴリ名 (「外から見た振る舞い」「内部の挙動」等)。
@@ -107,6 +112,8 @@ class SectionSpec:
         fmt: テスト結果の形式 (PARSERS のキー)。
         path: テスト結果ファイルのパス。
         prefixes: このセクションに含める由来のプレフィクス群。None なら結果全体を含める。
+        subgroup: 指定があるとき、このケース群を同じ category・label を持つ --section の
+            ツリーへ、この名前のサブグループとして統合する。None なら独立した見出しになる。
     """
 
     category: str
@@ -114,6 +121,7 @@ class SectionSpec:
     fmt: str
     path: Path
     prefixes: "tuple[str, ...] | None"
+    subgroup: "str | None" = None
 
 
 def parse_go_test_json(path: Path) -> list[BehaviorCase]:
@@ -346,10 +354,12 @@ def route_cases_to_specs(
 
 
 def build_sections(specs: list[SectionSpec]) -> list[tuple[str, str, GroupNode]]:
-    """--section 引数群から (カテゴリ, セクション名, グループ木) のリストを組み立てる。
+    """--section / --subgroup 引数群から (カテゴリ, セクション名, グループ木) のリストを組み立てる。
 
-    同じ結果ファイルを参照する SectionSpec は由来のプレフィクスで振り分ける。出力は
-    --section の指定順によらず、カテゴリの初出順にまとめる。
+    同じ結果ファイルを参照する SectionSpec は由来のプレフィクスで振り分ける。subgroup を持つ
+    SectionSpec (--subgroup 由来) は独立した見出しにせず、同じ category・label を持つ
+    subgroup 無しの SectionSpec (--section 由来) のツリーへ、その名前のサブグループとして
+    統合する。出力は指定順によらず、カテゴリの初出順にまとめる。
 
     Args:
         specs: コマンドラインで指定された SectionSpec のリスト。
@@ -358,7 +368,8 @@ def build_sections(specs: list[SectionSpec]) -> list[tuple[str, str, GroupNode]]
         カテゴリごとにまとめた (カテゴリ, セクション名, グループ木) のリスト。
 
     Raises:
-        ValueError: 同じ結果ファイルに異なる形式が指定されたとき。
+        ValueError: 同じ結果ファイルに異なる形式が指定されたとき、--subgroup に対応する
+            --section が無いとき、または挿入先のグループ名が既存のグループ名と衝突するとき。
     """
     specs_by_path: dict[Path, list[SectionSpec]] = {}
     for spec in specs:
@@ -372,12 +383,27 @@ def build_sections(specs: list[SectionSpec]) -> list[tuple[str, str, GroupNode]]
         cases = PARSERS[path_specs[0].fmt](path)
         assigned.update(route_cases_to_specs(path_specs, cases))
 
-    specs_by_category: dict[str, list[SectionSpec]] = {}
+    roots = [spec for spec in specs if spec.subgroup is None]
+    trees: dict[SectionSpec, GroupNode] = {spec: build_group_tree(assigned[spec]) for spec in roots}
+
+    root_by_key = {(spec.category, spec.label): spec for spec in roots}
     for spec in specs:
+        if spec.subgroup is None:
+            continue
+        key = (spec.category, spec.label)
+        if key not in root_by_key:
+            raise ValueError(f"--subgroup に対応する --section がありません: {spec.category}:{spec.label}")
+        root_tree = trees[root_by_key[key]]
+        if spec.subgroup in root_tree.subgroups:
+            raise ValueError(f"グループ名が既存のグループ名と衝突しています: {spec.subgroup}")
+        root_tree.subgroups[spec.subgroup] = build_group_tree(assigned[spec])
+
+    specs_by_category: dict[str, list[SectionSpec]] = {}
+    for spec in roots:
         specs_by_category.setdefault(spec.category, []).append(spec)
 
     return [
-        (spec.category, spec.label, build_group_tree(assigned[spec]))
+        (spec.category, spec.label, trees[spec])
         for category_specs in specs_by_category.values()
         for spec in category_specs
     ]
@@ -605,6 +631,35 @@ def render_html(
     return "\n".join(parts) + "\n"
 
 
+def parse_result_ref(
+    value: str, fmt: str, path_text: str, prefix_text: "str | None"
+) -> "tuple[str, Path, tuple[str, ...] | None]":
+    """--section・--subgroup に共通する形式・パス・プレフィクスの部分を検証する。
+
+    Args:
+        value: エラーメッセージに使う、コマンドラインで渡された値全体。
+        fmt: テスト結果の形式。
+        path_text: テスト結果ファイルのパス。
+        prefix_text: カンマ区切りのプレフィクス指定。無指定なら None。
+
+    Returns:
+        (検証済みの形式, パス, プレフィクスの組) の組。
+
+    Raises:
+        argparse.ArgumentTypeError: 未対応の形式を指定したとき、またはプレフィクスが空のとき。
+    """
+    if fmt not in PARSERS:
+        raise argparse.ArgumentTypeError(
+            f"未対応の形式です: {fmt!r} (対応: {', '.join(sorted(PARSERS))})"
+        )
+    prefixes = None
+    if prefix_text is not None:
+        prefixes = tuple(prefix for prefix in prefix_text.split(",") if prefix)
+        if not prefixes:
+            raise argparse.ArgumentTypeError(f"プレフィクスが空です: {value!r}")
+    return fmt, Path(path_text), prefixes
+
+
 def parse_section_arg(value: str) -> SectionSpec:
     """--section の「カテゴリ:ラベル:形式:パス[:プレフィクス]」形式を分解する。
 
@@ -622,17 +677,33 @@ def parse_section_arg(value: str) -> SectionSpec:
         raise argparse.ArgumentTypeError(
             f"「カテゴリ:ラベル:形式:パス」または「…:プレフィクス」の形式で指定してください: {value!r}"
         )
-    category, label, fmt, path = parts[0], parts[1], parts[2], parts[3]
-    if fmt not in PARSERS:
+    category, label = parts[0], parts[1]
+    fmt, path, prefixes = parse_result_ref(value, parts[2], parts[3], parts[4] if len(parts) == 5 else None)
+    return SectionSpec(category, label, fmt, path, prefixes)
+
+
+def parse_subgroup_arg(value: str) -> SectionSpec:
+    """--subgroup の「カテゴリ:ラベル:サブグループ名:形式:パス[:プレフィクス]」形式を分解する。
+
+    カテゴリ・ラベルは、この結果をサブグループとして統合する先の --section を指す。
+
+    Args:
+        value: コマンドラインで渡された値。
+
+    Returns:
+        分解済みの SectionSpec (subgroup 付き)。
+
+    Raises:
+        argparse.ArgumentTypeError: 形式が不正、または未対応の形式を指定したとき。
+    """
+    parts = value.split(":", 5)
+    if len(parts) < 5 or not all(parts[:5]):
         raise argparse.ArgumentTypeError(
-            f"未対応の形式です: {fmt!r} (対応: {', '.join(sorted(PARSERS))})"
+            f"「カテゴリ:ラベル:サブグループ名:形式:パス」または「…:プレフィクス」の形式で指定してください: {value!r}"
         )
-    prefixes = None
-    if len(parts) == 5:
-        prefixes = tuple(prefix for prefix in parts[4].split(",") if prefix)
-        if not prefixes:
-            raise argparse.ArgumentTypeError(f"プレフィクスが空です: {value!r}")
-    return SectionSpec(category, label, fmt, Path(path), prefixes)
+    category, label, subgroup = parts[0], parts[1], parts[2]
+    fmt, path, prefixes = parse_result_ref(value, parts[3], parts[4], parts[5] if len(parts) == 6 else None)
+    return SectionSpec(category, label, fmt, path, prefixes, subgroup)
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -645,17 +716,27 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument(
         "--section",
         action="append",
-        required=True,
+        default=[],
         type=parse_section_arg,
         metavar="CATEGORY:LABEL:FORMAT:PATH[:PREFIXES]",
         help="カテゴリ名・セクション名・形式・結果ファイルのパス・振り分けプレフィクス (複数指定可)",
+    )
+    parser.add_argument(
+        "--subgroup",
+        action="append",
+        default=[],
+        type=parse_subgroup_arg,
+        metavar="CATEGORY:LABEL:SUBGROUP:FORMAT:PATH[:PREFIXES]",
+        help="対応する --section のツリーへサブグループとして統合する結果の指定 (複数指定可)",
     )
     parser.add_argument("--format", choices=("markdown", "html"), required=True, help="出力形式")
     parser.add_argument("--title", required=True, help="ページの表題")
     parser.add_argument("--commit", default=None, help="生成元 commit の SHA (省略可)")
     args = parser.parse_args(argv)
+    if not args.section:
+        parser.error("--section を1件以上指定してください")
 
-    sections = build_sections(args.section)
+    sections = build_sections(args.section + args.subgroup)
     renderer = render_markdown if args.format == "markdown" else render_html
     sys.stdout.write(renderer(sections, args.commit, args.title))
 
