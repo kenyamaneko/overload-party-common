@@ -5,6 +5,10 @@ inputs:
   sections:
     description: 'One --section spec per line (カテゴリ:ラベル:形式:パス[:プレフィクス]). Paths are relative to the repository root.'
     required: true
+  subgroups:
+    description: 'One --subgroup spec per line (カテゴリ:ラベル:サブグループ名:形式:パス[:プレフィクス]). カテゴリ・ラベルは統合先の sections 内の指定を指す。Paths are relative to the repository root.'
+    required: false
+    default: ''
   title:
     description: Page heading, shown in the browser tab (e.g. shop テスト観点カタログ).
     required: true
@@ -31,6 +35,7 @@ runs:
       shell: bash
       env:
         SECTIONS: ${{ inputs.sections }}
+        SUBGROUPS: ${{ inputs.subgroups }}
         TITLE: ${{ inputs.title }}
         OUTPUT_DIR: ${{ inputs.output-dir }}
         COMMIT: ${{ inputs.commit }}
