@@ -10,6 +10,8 @@ Overload Party の **横断的な共有リソース** を管理するリポジ�
 
 [テスト観点カタログ](https://kenyamaneko.github.io/overload-party-common/): 各リポのテスト名から生成した、テスト済みの観点の一覧。
 
+![overload-party システム構成図](docs/architecture/overload-party-architecture.png)
+
 ## 構成
 
 ```
