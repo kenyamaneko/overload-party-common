@@ -1,89 +1,44 @@
 # overload-party-common
 
-Overload Party の **横断的な共有リソース** を管理するリポジトリ。
+## Overload Party とは
 
-所有するもの:
+Overload Party は、クラウドインフラをテーマにした対戦型デジタルカードゲーム。2 人のプレイヤーがリアルタイムで対戦し、相手の Budget を 0 以下にすることを目指す。
 
-- **ゲームデザイン定数** (faction / card_type / restriction / zone 等。全リポ共通)
-- **アーキテクチャ / ゲームデザイン / ビジネスドキュメント**
-- **Claude Code 開発ルールの overload-party 固有 overlay とリポ・レジストリ** (共通 base ルールは keyandnotes-rules リポが SSoT)
+React (Capacitor) 製のモバイル / Web クライアントと、9 個のバックエンドサービス (Go 8 + C# 1、Google Cloud 上で稼働) で構成するマルチリポジトリのシステム。
 
-[テスト観点カタログ](https://kenyamaneko.github.io/overload-party-common/): 各リポのテスト名から生成した、テスト済みの観点の一覧。
+## このリポジトリの役割
+
+overload-party-common は、全リポジトリを横断する共有リソースの SSoT。
+
+- **ゲームデザイン定数** (faction / card_type / restriction / zone 等) を YAML で管理し、Go / C# / npm の各パッケージとして配信する
+- **アーキテクチャ・ゲームデザイン・ビジネスドキュメント**を一元管理する
+- **Claude Code 開発ルールの overload-party 固有 overlay とリポジトリ・レジストリ**を管理する
+
+## 関連リポジトリ
+
+| リポジトリ | 役割 | 技術 |
+|---|---|---|
+| [gateway](https://github.com/kenyamaneko/overload-party-gateway) | 認証・WS hub・各ドメインサービスへのパススルー・集約 API (クライアント単一入口) | Go, Gin, gorilla/websocket |
+| [account](https://github.com/kenyamaneko/overload-party-account) | ユーザー登録・設定・パスワードリセット | Go |
+| [matchmaking](https://github.com/kenyamaneko/overload-party-matchmaking) | マッチキュー管理・マッチロジック・バトル引き渡し | Go |
+| [shop](https://github.com/kenyamaneko/overload-party-shop) | 課金連携 (Apple / Google)・購入管理・Webhook 受信 | Go |
+| [scenario](https://github.com/kenyamaneko/overload-party-scenario) | シナリオ解放判定・シナリオファイル配信 | Go |
+| [card](https://github.com/kenyamaneko/overload-party-card) | カードマスターデータ管理・デッキバリデーション | Go |
+| [battle](https://github.com/kenyamaneko/overload-party-battle) | 対戦ゲームエンジン | C# / .NET |
+| [news](https://github.com/kenyamaneko/overload-party-news) | 収集記事の校閲・配信 | Go, HTMX |
+| [support](https://github.com/kenyamaneko/overload-party-support) | お知らせ配信 | Go |
+| [client](https://github.com/kenyamaneko/overload-party-client) | モバイル / Web フロントエンド | React, TypeScript, Capacitor |
+| [infra](https://github.com/kenyamaneko/overload-party-infra) | Google Cloud リソース管理 | Terraform |
+| [ops](https://github.com/kenyamaneko/overload-party-ops) | DB マイグレーション・監視ジョブ | Python, Cloud Run |
+| [analytics](https://github.com/kenyamaneko/overload-party-analytics) | Spanner → BigQuery エクスポート | Go, Cloud Functions |
+| [newsfeed](https://github.com/kenyamaneko/overload-party-newsfeed) | ニュース記事収集・要約 | Python, Vertex AI |
+| [assets](https://github.com/kenyamaneko/overload-party-assets) | ゲームアセットパイプライン | GCS, Cloudflare CDN |
+| [e2e](https://github.com/kenyamaneko/overload-party-e2e) | サービス横断の E2E テスト | TypeScript, Playwright |
+
+## テスト観点カタログ
+
+各リポのテスト名から生成した、テスト済みの観点の一覧。[kenyamaneko.github.io/overload-party-common](https://kenyamaneko.github.io/overload-party-common/)
+
+## システム構成図
 
 ![overload-party システム構成図](docs/architecture/overload-party-architecture.png)
-
-## 構成
-
-```
-data/
-  game_design_constants.yaml      # ゲームデザイン定数 SSoT
-  factions.yaml                   # ファクションマスター SSoT
-  game_config_defaults.yaml       # game_config の初期値 (Firestore 投入元)
-packages/
-  game-design-constants/          # Go module
-  game-design-constants-dotnet/   # NuGet csproj
-  game-design-constants-npm/      # npm package
-  codegen-tools/                  # codegen 共通ライブラリ (Python)
-  asyncapi-codegen-tools/         # AsyncAPI 用 codegen ツール (Python)
-  doc-tools/                      # ドキュメント生成ツール (Python)
-rules/
-  principles.md                   # overload-party 固有 overlay (共通 base は keyandnotes-rules)
-  testing.md                       # テスト方針の overload-party 固有 overlay
-  lang/                            # 言語別ルールの overload-party 固有 overlay
-  repos.yaml                       # リポ・レジストリ (path / lang / flow)
-scripts/
-  generate_constants.py            # game-design constants 生成 (Go + C# + npm)
-  test_generate_constants.py       # 上記のテスト
-.claude/
-  skills/                          # Claude Code 用 skill
-.github/
-  workflows/                       # validate / publish
-  actions/                         # publish / Cloudsmith 認証 / テスト観点カタログ用 composite action
-  scripts/                         # 上記 action / workflow のスクリプト
-docs/
-  architecture/                    # システム設計ドキュメント
-  game_design/                     # ゲームデザイン (ルール, カード, UI 等)
-  business/                        # ビジネス・法務
-  notes/                           # 補助メモ
-  adr/                             # ADR (アーキテクチャ決定記録)
-  pages/                           # GitHub Pages で公開する静的ページ
-```
-
-## パッケージ
-
-| パッケージ | 形式 | 利用リポ |
-|-----------|------|---------|
-| `packages/game-design-constants` | Go module | 全 Go サービス |
-| `packages/game-design-constants-dotnet` (`OverloadParty.GameDesignConstants`) | NuGet | battle |
-| `packages/game-design-constants-npm` (`@kenyamaneko/overload-party-game-design-constants`) | npm | client |
-
-## コード生成
-
-`game-design-constants` 系の 3 パッケージは `data/*.yaml` から自動生成する。
-
-```
-data/game_design_constants.yaml ┐
-data/factions.yaml              ┼─► scripts/generate_constants.py ─► packages/game-design-constants{,-dotnet,-npm}/ の *_gen.* ファイル
-```
-
-YAML を編集したら `python3 scripts/generate_constants.py` を実行してコミットする。前提: Python 3.8+ と `pip install pyyaml`。
-
-## 配信 (CI publish)
-
-main への push で [.github/workflows/publish.yaml](.github/workflows/publish.yaml) が走り、変更のあったパッケージだけを publish する。
-
-- **変更検知**: [.github/scripts/publish/detect-changes.sh](.github/scripts/publish/detect-changes.sh) が前回タグとの diff を見てどのパッケージを bump するか決める。デフォルトは patch。
-- **バージョン bump**: 手動で minor/major にしたい場合は Actions から `workflow_dispatch` で `bump` と `target` を指定して実行。
-- **タグ規約**: `packages/<name>/v<semver>` (例: `packages/game-design-constants/v1.2.3`)
-- **レジストリ**: Go は git tag のみ (`go get` が解決)、NuGet / npm は Cloudsmith (`nuget.cloudsmith.io/keyandnotes/overload-party-nuget` / `npm.cloudsmith.io/keyandnotes/overload-party-npm`)
-
-## 定数を変更するとき
-
-1. `data/game_design_constants.yaml` もしくは `data/factions.yaml` を編集
-2. `python3 scripts/generate_constants.py` を実行
-3. main に push → CI が自動で patch bump で publish
-4. 各リポでパッケージを更新:
-   - Go サービス: `go get github.com/kenyamaneko/overload-party-common/packages/game-design-constants@latest`
-   - battle: `dotnet add package OverloadParty.GameDesignConstants`
-   - client: `npm install @kenyamaneko/overload-party-game-design-constants@latest`
-
