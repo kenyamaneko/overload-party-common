@@ -19,6 +19,10 @@ on:
         description: Package pattern passed to go test.
         type: string
         default: ./...
+      integration-test-packages:
+        description: Package pattern passed to the tagged integration test run. Defaults to test-packages. Narrow it when only some packages carry `//go:build integration` files, since -tags=integration compiles tagged files in addition to untagged ones rather than restricting to them, so the untagged packages would otherwise rerun their unit tests a second time under this job.
+        type: string
+        default: ""
       has-image-scan:
         description: Skip the image-scan job when false. Set it for repositories without a Dockerfile.
         type: boolean
@@ -221,7 +225,7 @@ jobs:
         # パイプの終了ステータスが go test のものになるよう、pipefail が付く bash を明示する
         shell: bash
         working-directory: ${{ inputs.module-dir }}
-        run: go test -race -count=1 -tags=integration ${{ inputs.test-packages }} -json | tee "${GITHUB_WORKSPACE}/go-test-integration.json"
+        run: go test -race -count=1 -tags=integration ${{ inputs.integration-test-packages != '' && inputs.integration-test-packages || inputs.test-packages }} -json | tee "${GITHUB_WORKSPACE}/go-test-integration.json"
       - name: Report test results
         if: ${{ !cancelled() }}
         uses: kenyamaneko/overload-party-common/.github/actions/go-test-report@main
