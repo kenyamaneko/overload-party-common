@@ -2,17 +2,17 @@
 
 ## Overload Party とは
 
-Overload Party は、クラウドインフラをテーマにした対戦型デジタルカードゲーム。2 人のプレイヤーがリアルタイムで対戦し、相手の Budget を 0 以下にすることを目指す。
+Overload Party は、クラウドインフラをテーマにした対戦型デジタルカードゲーム。2 人のプレイヤーがリアルタイムで対戦する。現在開発中である。
 
-React (Capacitor) 製のモバイル / Web クライアントと、9 個のバックエンドサービス (Go 8 + C# 1、Google Cloud 上で稼働) で構成するマルチリポジトリのシステム。
+モバイルのクライアントと、複数サービスのバックエンドで構成される。
 
 ## このリポジトリの役割
 
 overload-party-common は、全リポジトリを横断する共有リソースの SSoT。
 
-- **ゲームデザイン定数** (faction / card_type / restriction / zone 等) を YAML で管理し、Go / C# / npm の各パッケージとして配信する
-- **アーキテクチャ・ゲームデザイン・ビジネスドキュメント**を一元管理する
-- **Claude Code 開発ルールの overload-party 固有 overlay とリポジトリ・レジストリ**を管理する
+- **ゲームに関する定数**を YAML で管理し、Go / C# / npm の各パッケージとして配信する
+- **システム全体に関するドキュメント**を一元管理する
+- **overload-party 共通で参照する Claude Code 開発ルール**を管理する
 
 ## 関連リポジトリ
 
@@ -25,19 +25,19 @@ overload-party-common は、全リポジトリを横断する共有リソース�
 | [scenario](https://github.com/kenyamaneko/overload-party-scenario) | シナリオ解放判定・シナリオファイル配信 | Go |
 | [card](https://github.com/kenyamaneko/overload-party-card) | カードマスターデータ管理・デッキバリデーション | Go |
 | [battle](https://github.com/kenyamaneko/overload-party-battle) | 対戦ゲームエンジン | C# / .NET |
-| [news](https://github.com/kenyamaneko/overload-party-news) | 収集記事の校閲・配信 | Go, HTMX |
+| [news](https://github.com/kenyamaneko/overload-party-news) | 収集記事の校閲・配信 | Go |
 | [support](https://github.com/kenyamaneko/overload-party-support) | お知らせ配信 | Go |
 | [client](https://github.com/kenyamaneko/overload-party-client) | モバイル / Web フロントエンド | React, TypeScript, Capacitor |
 | [infra](https://github.com/kenyamaneko/overload-party-infra) | Google Cloud リソース管理 | Terraform |
-| [ops](https://github.com/kenyamaneko/overload-party-ops) | DB マイグレーション・監視ジョブ | Python, Cloud Run |
-| [analytics](https://github.com/kenyamaneko/overload-party-analytics) | Spanner → BigQuery エクスポート | Go, Cloud Functions |
-| [newsfeed](https://github.com/kenyamaneko/overload-party-newsfeed) | ニュース記事収集・要約 | Python, Vertex AI |
-| [assets](https://github.com/kenyamaneko/overload-party-assets) | ゲームアセットパイプライン | GCS, Cloudflare CDN |
+| [ops](https://github.com/kenyamaneko/overload-party-ops) | DB マイグレーション・監視ジョブ | Python |
+| [analytics](https://github.com/kenyamaneko/overload-party-analytics) | Spanner → BigQuery エクスポート | Go |
+| [newsfeed](https://github.com/kenyamaneko/overload-party-newsfeed) | ニュース記事収集・要約 | Python |
+| assets | ゲームアセットパイプライン（未公開著作物を含むため非公開） | Node.js |
 | [e2e](https://github.com/kenyamaneko/overload-party-e2e) | サービス横断の E2E テスト | TypeScript, Playwright |
 
 ## テスト観点カタログ
 
-各リポのテスト名から生成した、テスト済みの観点の一覧。[kenyamaneko.github.io/overload-party-common](https://kenyamaneko.github.io/overload-party-common/)
+各リポのテスト名から生成した、テスト済みの観点の一覧を[公開している](https://kenyamaneko.github.io/overload-party-common/)。
 
 ## システム構成図
 
