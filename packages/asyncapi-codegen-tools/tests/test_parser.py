@@ -181,7 +181,6 @@ class TestAsyncAPIスペックのパース:
         assert len(out["types"]) == 1
         t = out["types"][0]
         assert t["name"] == "FooEvent"
-        # godoc 規約に合わせて型名が先頭に付く
         assert t["comment"] == "FooEvent は Foo の説明"
         assert t["fields"] == [
             {"name": "Bar", "type": "string", "json": "bar"},
@@ -235,11 +234,9 @@ class TestAsyncAPIスペックのパース:
         }
         out = parse_spec(spec)
 
-        # struct field は普通の string として残る
         fields = out["types"][0]["fields"]
         assert fields[0] == {"name": "EventType", "type": "string", "json": "event_type"}
 
-        # 定数として "EventType{StripEventSuffix(SchemaName)}" が出る
         assert out["constants"] == [
             {
                 "type": "string",
@@ -262,7 +259,6 @@ class TestAsyncAPIスペックのパース:
             }
         }
         out = parse_spec(spec)
-        # 定数名は "{SchemaShort}{FieldGoName}{ValueGoName}" で PremiumUpdatedSourceShop
         names = [v["name"] for v in out["constants"][0]["values"]]
         assert names == ["PremiumUpdatedSourceShop"]
         assert out["constants"][0]["values"][0]["value"] == "shop"

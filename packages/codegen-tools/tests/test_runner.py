@@ -283,14 +283,12 @@ class Testモデル定義の不正検出:
             repo_root=tmp_path,
             targets={"wire": GoTarget(tmp_path / "out", "p")},
         )
-        # 深部の不透明な KeyError ではなく run() 入口で明示メッセージにして報告する。
         rc = runner.run()
         assert rc == 1
         err = capsys.readouterr().err
         assert "models.yaml" in err
         assert "section #2" in err
         assert "`name`" in err
-        # fail-fast: 出力ファイルは 1 件も書かれない
         assert not (tmp_path / "out").exists()
 
     @pytest.mark.parametrize(
@@ -372,7 +370,6 @@ class Testpre_render_hookの適用:
         assert "type InjectedB struct" in (out_dir / "b_gen.go").read_text()
 
     def test_hookがNoneを返すとTypeErrorでsection名付きで止める(self, tmp_path: Path) -> None:
-        # 不透明な AttributeError で落とさず、壊れた section を名指しする TypeError にする。
         yaml_path = tmp_path / "models.yaml"
         _two_section_yaml(yaml_path)
         runner = CodegenRunner(

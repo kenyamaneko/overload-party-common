@@ -630,14 +630,12 @@ class Testキー集合整合性の検証:
         )
 
     def test_マッピングに未マップの宣言値があればValueError(self):
-        # silent に 0 や undefined を返さず、SSoT 違反として早期検出する。
         with pytest.raises(ValueError, match="missing.*c"):
             gen._validate_key_set_matches(
                 "copy_count", {"a": 0, "b": 1}, "values", ["a", "b", "c"]
             )
 
     def test_マッピングに宣言値外のキーがあればValueError(self):
-        # typo や削除漏れによる SSoT 不整合を防ぐ。
         with pytest.raises(ValueError, match="extra.*ghost"):
             gen._validate_key_set_matches(
                 "copy_count", {"a": 0, "b": 1, "ghost": 9}, "values", ["a", "b"]

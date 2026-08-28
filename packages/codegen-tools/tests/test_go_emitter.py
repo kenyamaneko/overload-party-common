@@ -187,7 +187,6 @@ class Test構造体の生成:
             ],
         }
         out = render_struct(td, style)
-        # max name=6, max type=6; Foo gets pad to align type column
         assert out == [
             "type X struct {",
             "\tFoo    int64",
