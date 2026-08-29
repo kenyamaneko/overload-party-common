@@ -83,6 +83,22 @@ def generated_outputs(tmp_path, monkeypatch, fixture_data, fixture_factions):
     }
 
 
+@pytest.fixture
+def generate_from_ssot(tmp_path, monkeypatch, fixture_factions):
+    def _run(game_design):
+        game_design_path = tmp_path / "game_design_constants.yaml"
+        factions_path = tmp_path / "factions.yaml"
+        game_design_path.write_text(yaml.safe_dump(game_design), encoding="utf-8")
+        factions_path.write_text(yaml.safe_dump({"factions": fixture_factions}), encoding="utf-8")
+        monkeypatch.setattr(gen, "GAME_DESIGN_YAML", game_design_path)
+        monkeypatch.setattr(gen, "FACTIONS_YAML", factions_path)
+        monkeypatch.setattr(gen, "GO_GAME_DESIGN_DIR", tmp_path / "go")
+        monkeypatch.setattr(gen, "DOTNET_GAME_DESIGN_DIR", tmp_path / "dotnet")
+        monkeypatch.setattr(gen, "NPM_GAME_DESIGN_DIR", tmp_path / "npm")
+        gen.main()
+    return _run
+
+
 def _stripped_lines(text):
     """生成テキストを行ごとに前後空白を除いたリストに変換します。"""
     return [line.strip() for line in text.splitlines()]
@@ -623,76 +639,42 @@ class TestRestrictionCopyCountのキー集合がrestriction_valuesと一致す�
         assert block == {"forbidden: 0,", "limited: 1,"}
 
 
-class Testキー集合整合性の検証:
-    def test_宣言値の集合とマッピングのキー集合が一致していれば例外なし(self):
-        gen._validate_key_set_matches(
-            "copy_count", {"a": 0, "b": 1, "c": 3}, "values", ["a", "b", "c"]
-        )
+class TestSSoT整合性検証:
+    def test_restriction_copy_count_rank_multipliers_family_multipliersの全キー集合が宣言値と一致するとき生成が完了する(
+        self, generate_from_ssot, fixture_data, tmp_path
+    ):
+        generate_from_ssot(fixture_data)
+        assert (tmp_path / "go" / "constants_gen.go").exists()
+        assert (tmp_path / "dotnet" / "GameDesignConstants_gen.cs").exists()
+        assert (tmp_path / "npm" / "src" / "index.ts").exists()
 
-    def test_マッピングに未マップの宣言値があればValueError(self):
-        with pytest.raises(ValueError, match="missing.*c"):
-            gen._validate_key_set_matches(
-                "copy_count", {"a": 0, "b": 1}, "values", ["a", "b", "c"]
-            )
+    def test_restriction_copy_countに宣言値が未マップのときValueError(self, generate_from_ssot, fixture_data):
+        del fixture_data["restriction_copy_count"]["limited"]
+        with pytest.raises(ValueError, match="missing.*limited"):
+            generate_from_ssot(fixture_data)
 
-    def test_マッピングに宣言値外のキーがあればValueError(self):
+    def test_restriction_copy_countに宣言値外のキーがあるときValueError(self, generate_from_ssot, fixture_data):
+        fixture_data["restriction_copy_count"]["ghost"] = 9
         with pytest.raises(ValueError, match="extra.*ghost"):
-            gen._validate_key_set_matches(
-                "copy_count", {"a": 0, "b": 1, "ghost": 9}, "values", ["a", "b"]
-            )
+            generate_from_ssot(fixture_data)
 
-    def test_不足と余剰が同時にあればValueErrorに両方の内容を含む(self):
-        with pytest.raises(ValueError, match=r"missing.*b.*extra.*ghost"):
-            gen._validate_key_set_matches(
-                "copy_count", {"a": 0, "ghost": 9}, "values", ["a", "b"]
-            )
-
-
-class Test全体検証の配線:
-    def test_restriction_rankmultiplier_familymultiplierの全整合性が取れていれば例外なし(self):
-        gen._validate({
-            "restriction_values": ["forbidden", "limited"],
-            "restriction_copy_count": {"forbidden": 0, "limited": 1},
-            "ranks": ["small", "medium"],
-            "rank_multipliers": {"small": 1, "medium": 2},
-            "instance_families": ["M", "C"],
-            "family_multipliers": {
-                "M": {"stat": 1.0, "av": 1.0},
-                "C": {"stat": 1.3, "av": 0.7},
-            },
-        })
-
-    def test_rank_multipliersがranksと不整合のときValueError(self):
-        with pytest.raises(ValueError, match="rank_multipliers keys must match ranks"):
-            gen._validate({
-                "restriction_values": ["forbidden", "limited"],
-                "restriction_copy_count": {"forbidden": 0, "limited": 1},
-                "ranks": ["small", "medium"],
-                "rank_multipliers": {"small": 1},
-                "instance_families": ["M", "C"],
-                "family_multipliers": {
-                    "M": {"stat": 1.0, "av": 1.0},
-                    "C": {"stat": 1.3, "av": 0.7},
-                },
-            })
-
-    def test_family_multipliersがinstance_familiesと不整合のときValueError(self):
-        with pytest.raises(ValueError, match="family_multipliers keys must match instance_families"):
-            gen._validate({
-                "restriction_values": ["forbidden", "limited"],
-                "restriction_copy_count": {"forbidden": 0, "limited": 1},
-                "ranks": ["small", "medium"],
-                "rank_multipliers": {"small": 1, "medium": 2},
-                "instance_families": ["M", "C"],
-                "family_multipliers": {"M": {"stat": 1.0, "av": 1.0}},
-            })
-
-    def test_不足と余剰が同時にあればValueErrorに両方の内容を含む(self):
+    def test_restriction_copy_countに不足と余剰が同時にあるときValueErrorに両方の内容を含む(
+        self, generate_from_ssot, fixture_data
+    ):
+        del fixture_data["restriction_copy_count"]["limited"]
+        fixture_data["restriction_copy_count"]["ghost"] = 9
         with pytest.raises(ValueError, match=r"missing.*limited.*extra.*ghost"):
-            gen._validate({
-                "restriction_values": ["forbidden", "limited"],
-                "restriction_copy_count": {"forbidden": 0, "ghost": 9},
-            })
+            generate_from_ssot(fixture_data)
+
+    def test_rank_multipliersがranksと不整合のときValueError(self, generate_from_ssot, fixture_data):
+        del fixture_data["rank_multipliers"]["medium"]
+        with pytest.raises(ValueError, match="rank_multipliers keys must match ranks"):
+            generate_from_ssot(fixture_data)
+
+    def test_family_multipliersがinstance_familiesと不整合のときValueError(self, generate_from_ssot, fixture_data):
+        del fixture_data["family_multipliers"]["C"]
+        with pytest.raises(ValueError, match="family_multipliers keys must match instance_families"):
+            generate_from_ssot(fixture_data)
 
 
 class TestPascalCaseへの変換:
