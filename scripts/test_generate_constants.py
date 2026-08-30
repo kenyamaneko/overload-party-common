@@ -640,7 +640,7 @@ class TestRestrictionCopyCountのキー集合がrestriction_valuesと一致す�
 
 
 class TestSSoT整合性検証:
-    def test_restriction_copy_count_rank_multipliers_family_multipliersの全キー集合が宣言値と一致するとき生成が完了する(
+    def test_宣言値とマッピングの全キー集合が一致するときGo_Cシャープ_npm向けの定数ファイルが生成される(
         self, generate_from_ssot, fixture_data, tmp_path
     ):
         generate_from_ssot(fixture_data)
