@@ -79,7 +79,7 @@ class TestGoのテスト結果のパース:
 
     def test_JSONとして読めない行があるときValueErrorになる(self, tmp_path: Path):
         path = _write(tmp_path / "go.json", "これはJSONではない")
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="は JSON として読めません"):
             parse_go_test_json(path)
 
 
@@ -122,13 +122,13 @@ class TestpytestのJUnitXMLのパース:
     def test_name属性の無いケースがあるときValueErrorになる(self, tmp_path: Path):
         xml = self._junit('<testcase classname="tests.test_shop.Test送料計算"/>')
         path = _write(tmp_path / "junit.xml", xml)
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="testcase に name 属性がありません"):
             parse_pytest_junit(path)
 
     def test_classname属性の無いケースがあるときValueErrorになる(self, tmp_path: Path):
         xml = self._junit('<testcase name="test_無料になる"/>')
         path = _write(tmp_path / "junit.xml", xml)
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="classname 属性がありません"):
             parse_pytest_junit(path)
 
 
@@ -192,7 +192,7 @@ class TestvitestのJSONのパース:
     def test_titleの無いケースがあるときValueErrorになる(self, tmp_path: Path):
         report = self._report("src/x.test.ts", [{"ancestorTitles": [], "status": "passed"}])
         path = _write(tmp_path / "vitest.json", json.dumps(report))
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="assertionResult に title / status がありません"):
             parse_vitest_json(path)
 
 
@@ -351,7 +351,7 @@ class Test由来によるセクション振り分け:
 
     def test_どのプレフィクスにも前方一致しない由来があるときValueErrorになる(self):
         outer = SectionSpec("外", "svc", "go-json", Path("r.json"), ("pkg/handler",))
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="どのセクションにも振り分けられない由来です"):
             route_cases_to_specs([outer], [BehaviorCase((), "x", False, "pkg/other")])
 
     def test_複数のプレフィクスに前方一致する由来はより長いプレフィクスのセクションに入る(self):
@@ -400,7 +400,7 @@ class Testセクションの組み立て:
             SectionSpec("外", "a", "go-json", path, ("x",)),
             SectionSpec("内", "a", "vitest-json", path, ("y",)),
         ]
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="同じ結果ファイルに複数の形式が指定されています"):
             build_sections(specs)
 
 
