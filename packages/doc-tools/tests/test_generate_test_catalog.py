@@ -105,6 +105,24 @@ class TestpytestのJUnitXMLのパース:
             BehaviorCase(("送料計算", "国際便"), "割増になる", False, "tests.test_shop"),
         ]
 
+    def test_最も外側のクラス名のタグと本体の区切りは角括弧のタグに直る(self, tmp_path: Path):
+        xml = self._junit(
+            '<testcase classname="tests.test_shop.Test注文__送料計算" name="test_無料になる"/>'
+        )
+        path = _write(tmp_path / "junit.xml", xml)
+        assert parse_pytest_junit(path) == [
+            BehaviorCase(("[注文] 送料計算",), "無料になる", False, "tests.test_shop"),
+        ]
+
+    def test_入れ子のクラス名の区切りはタグに直らない(self, tmp_path: Path):
+        xml = self._junit(
+            '<testcase classname="tests.test_shop.Test送料計算.Test国際便__航空" name="test_割増になる"/>'
+        )
+        path = _write(tmp_path / "junit.xml", xml)
+        assert parse_pytest_junit(path) == [
+            BehaviorCase(("送料計算", "国際便__航空"), "割増になる", False, "tests.test_shop"),
+        ]
+
     def test_クラスの無い関数テストはグループ連鎖が空になる(self, tmp_path: Path):
         xml = self._junit('<testcase classname="tests.test_shop" name="test_起動する"/>')
         path = _write(tmp_path / "junit.xml", xml)
