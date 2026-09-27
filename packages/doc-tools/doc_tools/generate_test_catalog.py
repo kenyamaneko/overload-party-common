@@ -51,6 +51,9 @@ PYTEST_CLASS_PREFIX = "Test"
 # pytest のテストメソッド名は test_ で始まる
 PYTEST_METHOD_PREFIX = "test_"
 
+# クラス名に [ ] を使えないため、最も外側のテストクラス名ではタグと本体をこの文字列で区切る
+PYTEST_TAG_SEPARATOR = "__"
+
 # vitest ``--reporter=json`` が skip 扱いとする status 値
 VITEST_SKIPPED_STATUSES = frozenset({"skipped", "pending", "todo"})
 
@@ -182,7 +185,8 @@ def parse_pytest_junit(path: Path) -> list[BehaviorCase]:
 
     ``classname`` を module 部分とテストクラス連鎖に分ける。テストクラスは ``Test`` で始まる
     ため、最初に ``Test`` で始まるセグメント以降をグループ連鎖 (``Test`` 接頭辞を除く)、
-    それより前を由来の module とする。ケース名は ``test_`` 接頭辞を除いたメソッド名。
+    それより前を由来の module とする。最も外側のテストクラス名の ``タグ__本体`` は
+    ``[タグ] 本体`` に直す。ケース名は ``test_`` 接頭辞を除いたメソッド名。
 
     Args:
         path: pytest の JUnit XML ファイル。
@@ -211,6 +215,9 @@ def parse_pytest_junit(path: Path) -> list[BehaviorCase]:
         group_chain = tuple(
             seg[len(PYTEST_CLASS_PREFIX):] for seg in segments[class_start:]
         )
+        if group_chain and PYTEST_TAG_SEPARATOR in group_chain[0]:
+            tag, body = group_chain[0].split(PYTEST_TAG_SEPARATOR, 1)
+            group_chain = (f"[{tag}] {body}", *group_chain[1:])
         case_name = name
         if case_name.startswith(PYTEST_METHOD_PREFIX):
             case_name = case_name[len(PYTEST_METHOD_PREFIX):]
