@@ -13,9 +13,10 @@
 - ``go-json``: ``go test -json`` の JSON Lines
 - ``pytest-junit``: pytest の JUnit XML
 - ``vitest-json``: vitest ``--reporter=json`` の JSON
-- ``csharp-json``: battle が抽出した ``{target, case, skipped, source}`` の JSON 配列
-  (対象要素を表す ``[Trait("対象", ...)]`` が TRX にも JUnit XML にも出力されないため、
-  battle 側で抽出した中間形式を読む)
+- ``csharp-json``: battle が抽出した ``{target, case, skipped, source}`` (``groups`` は
+  小分類・正常異常があるときのみ追加される文字列配列) の JSON 配列 (対象要素を表す
+  ``[Trait("対象", ...)]`` が TRX にも JUnit XML にも出力されないため、battle 側で
+  抽出した中間形式を読む)
 
 --subgroup は、対応する --section (同じカテゴリ・ラベル) のツリーへ、別の結果ファイルの内容を
 指定した名前のサブグループとして統合する。テストの種別 (単体テスト・結合テスト等) を表す
@@ -282,9 +283,11 @@ def parse_vitest_json(path: Path) -> list[BehaviorCase]:
 def parse_csharp_catalog_json(path: Path) -> list[BehaviorCase]:
     """battle が抽出した中間 JSON を BehaviorCase の列に変換する。
 
-    ``[Trait("対象", ...)]`` の値 (``target``) をグループ、``DisplayName`` (``case``) を
+    ``[Trait("対象", ...)]`` の値 (``target``) を大分類、``groups`` (祖先クラスの
+    ``[Trait("小分類", ...)]`` / ``[Trait("正常異常", ...)]`` を外側から内側の順に
+    並べた配列。無ければ空配列) をそれに続くグループ、``DisplayName`` (``case``) を
     ケース名とする。対象要素が TRX にも JUnit XML にも出力されないため、battle 側で
-    ``[Theory]`` を各行に展開しつつ抽出した ``{target, case, skipped, source}`` を読む。
+    ``[Theory]`` を各行に展開しつつ抽出した中間形式を読む。
 
     Args:
         path: battle が出力した中間 JSON ファイル (レコードの配列)。
@@ -293,16 +296,17 @@ def parse_csharp_catalog_json(path: Path) -> list[BehaviorCase]:
         配列順の BehaviorCase のリスト。
 
     Raises:
-        ValueError: レコードに target / case / skipped / source が無いとき。
+        ValueError: レコードに target / groups / case / skipped / source が無いとき。
     """
     records = json.loads(path.read_text(encoding="utf-8"))
     cases = []
     for record in records:
-        for key in ("target", "case", "skipped", "source"):
+        for key in ("target", "groups", "case", "skipped", "source"):
             if key not in record:
                 raise ValueError(f"レコードに {key} がありません: {path}: {record}")
         target = record["target"]
-        group_chain = (target,) if target else ()
+        groups = tuple(record["groups"])
+        group_chain = (target, *groups) if target else groups
         cases.append(
             BehaviorCase(
                 group_chain, record["case"], bool(record["skipped"]), record["source"]
