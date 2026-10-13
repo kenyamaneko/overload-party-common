@@ -7,7 +7,7 @@ overload-party の環境 (dev / stg / prod) でサービスが動く状態を作
 | 対象 | terraform が作るもの | 別途入れるもの | 欠けると起動しないサービス |
 |---|---|---|---|
 | Secret Manager | シークレットの入れ物と `secretAccessor` | 値のバージョン | gateway / support / shop |
-| Cloud Firestore | データベースと読み取り権限 | `game_config` コレクションの値 | account / card / shop / scenario / gateway / battle |
+| Cloud Firestore | データベースと読み取り権限 | `game_config` コレクションの値 | account / card / scenario / gateway / battle |
 | Cloud SQL | インスタンスとデータベース | 起動状態 (`activation_policy`)・`postgres` のパスワード・スキーマ | データベースを使う全サービス |
 | Upstash Redis | シークレットの入れ物 (upstash の state) | gateway は接続 URL、matchmaking は endpoint と password | gateway / matchmaking |
 
