@@ -278,7 +278,7 @@ shop → account の同期呼び出しは存在しない。eventually consistent
 
 | プラットフォーム | 検証方式 | エンドポイント |
 |----------------|---------|---------------|
-| Apple | App Store Server API v2 | `GET /inApps/v2/history/{transactionId}` |
+| Apple | App Store Server API | `GET /inApps/v1/transactions/{transactionId}` |
 | Google | Google Play Developer API | `GET /androidpublisher/v3/.../purchases/products/{productId}/tokens/{token}` |
 
 **サブスク（プレミアムプラン）の状態管理:**
