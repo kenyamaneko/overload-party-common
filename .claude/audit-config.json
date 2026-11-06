@@ -1,34 +1,30 @@
 {
   "name": "overload-party-common",
-  "conditions": {},
   "rules": [
     {
-      "rule": "testing.md",
-      "when": "always"
+      "rule": "testing.md"
     },
     {
       "rule": "lang/go.md",
-      "when": "lang:go"
+      "lang": "go"
     },
     {
       "rule": "lang/python.md",
-      "when": "lang:python"
+      "lang": "python"
     },
     {
       "rule": "lang/csharp.md",
-      "when": "lang:csharp"
+      "lang": "csharp"
     },
     {
       "rule": "lang/typescript.md",
-      "when": "lang:typescript"
+      "lang": "typescript"
     },
     {
       "rule": "lang/iac.md",
-      "when": "lang:iac"
+      "lang": "iac"
     }
   ],
-  "overlay_names": {},
-  "replace_overlay": [],
   "exempt_overlays": [],
   "exclude_pathspecs": [],
   "fleet": {
