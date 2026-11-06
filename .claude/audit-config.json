@@ -1,0 +1,40 @@
+{
+  "name": "overload-party-common",
+  "conditions": {},
+  "rules": [
+    {
+      "rule": "testing.md",
+      "when": "always"
+    },
+    {
+      "rule": "lang/go.md",
+      "when": "lang:go"
+    },
+    {
+      "rule": "lang/python.md",
+      "when": "lang:python"
+    },
+    {
+      "rule": "lang/csharp.md",
+      "when": "lang:csharp"
+    },
+    {
+      "rule": "lang/typescript.md",
+      "when": "lang:typescript"
+    },
+    {
+      "rule": "lang/iac.md",
+      "when": "lang:iac"
+    }
+  ],
+  "overlay_names": {},
+  "replace_overlay": [],
+  "exempt_overlays": [],
+  "exclude_pathspecs": [],
+  "fleet": {
+    "registry": "rules/repos.yaml",
+    "extra_docs": [
+      "docs/game_design/GLOSSARY.md"
+    ]
+  }
+}
