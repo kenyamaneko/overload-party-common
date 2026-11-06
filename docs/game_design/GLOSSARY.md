@@ -188,9 +188,3 @@
 - 概念の包含関係に変更が生じたら備考列を必ず更新する（例: サポートカード ⊃ リアクティブ）。
 - RULEBOOK が更新されたら、この表との差分を確認する。
 - 「コード識別子」列が空欄の概念は、まだコード化されていないか命名が未確定。コード化時にこの表で命名を確定させる。
-
-## ローカル hook 連携
-
-`overload-party-battle/` または `overload-party-battle.wt/` 配下を Edit / Write する際、Claude Code が本ファイルと RULEBOOK の参照を強制されるよう、common の `.claude/settings.json` に PreToolUse hook を仕込むことを想定している（`.claude/scripts/battle-glossary-reminder.txt` がリマインダー本文）。
-
-`.claude/settings.json` は `.gitignore` 対象なので hook 設定はローカル管理。チームで揃えたい場合は各自で同等の hook を設定する。
