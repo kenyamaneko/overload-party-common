@@ -14,7 +14,3 @@ dependencies = [
 
 [project.scripts]
 asyncapi-codegen = "asyncapi_codegen_tools.runner:cli"
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-disable_test_id_escaping_and_forfeit_all_rights_to_community_support = true

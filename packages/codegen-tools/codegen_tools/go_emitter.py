@@ -1,7 +1,7 @@
 """Go ソース生成用の純粋関数群.
 
 `GoStyle` で出力スタイル (パディング/コメントキー/import 形式など) をスイッチし、
-個々の `render_*` 関数は副作用なく行のリストを返す。Runner はこれらを組み合わせて
+個々の `render_*` 関数は副作用なく行のリストを返す。`render_go_file` はこれらを組み合わせて
 1 ファイル分の文字列を組み立てる。
 """
 
@@ -65,7 +65,7 @@ class GoStyle:
 
     # ── タグ ──
     tag_keys: tuple[str, ...] = ("json",)
-    """フィールドの YAML キー → struct tag に転写する順. emit_tags は GoTarget 側で上書き可能."""
+    """フィールドの YAML キー → 構造体のタグに転写する順."""
 
     # ── 定数 ──
     const_style: GoConstStyle = field(default_factory=GoConstStyle)
@@ -136,15 +136,6 @@ def render_const_block(const_def: dict[str, Any], style: GoConstStyle) -> list[s
             else:
                 lines.append(f"\t{name} = {value}")
     lines.append(")")
-    lines.append("")
-    return lines
-
-
-def render_type_aliases(aliases: list[dict[str, Any]]) -> list[str]:
-    """`type Alias = Base` を一塊で並べる."""
-    if not aliases:
-        return []
-    lines = [f"type {a['name']} = {a['base']}" for a in aliases]
     lines.append("")
     return lines
 
@@ -241,23 +232,17 @@ def render_go_file(
     types: list[dict[str, Any]],
     style: GoStyle,
     constants: list[dict[str, Any]] | None = None,
-    type_aliases: list[dict[str, Any]] | None = None,
-    extra_imports: set[str] | None = None,
     emit_tags: tuple[str, ...] | None = None,
 ) -> str:
     """1 Go ファイル分の最終出力文字列を組み立てる.
 
-    - `extra_imports`: YAML の `imports:` セクションなど、自動検出に加えて常に出すもの。
-    - `emit_tags`: 個々の struct field でどの YAML キーをタグ化するか (target 別に切替)。
+    Args:
+        emit_tags: 構造体の各フィールドでタグにする YAML キー。None のときは `style.tag_keys` を使う。
     """
     lines: list[str] = [style.header, "", f"package {package}", ""]
 
-    auto = resolve_auto_imports(types, style.import_patterns)
-    imports = (extra_imports or set()) | auto
+    imports = resolve_auto_imports(types, style.import_patterns)
     lines.extend(render_import_block(imports, style))
-
-    if type_aliases:
-        lines.extend(render_type_aliases(type_aliases))
 
     if constants:
         for const_def in constants:

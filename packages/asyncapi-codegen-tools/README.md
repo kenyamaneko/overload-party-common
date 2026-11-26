@@ -139,5 +139,4 @@ spec の誤りが型なしフィールドとして本番の wire に届かない
 ```bash
 pip install -e .
 pip install -e ../codegen-tools  # 依存
-pytest
 ```
