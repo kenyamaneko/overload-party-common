@@ -21,7 +21,6 @@ rules/
   repos.yaml                       # リポ・レジストリ (path / lang / flow)
 scripts/
   generate_constants.py            # game-design constants 生成 (Go + C# + npm)
-  test_generate_constants.py       # 上記のテスト
 .claude/
   skills/                          # Claude Code 用 skill
 .github/
