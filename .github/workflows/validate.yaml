@@ -8,8 +8,7 @@ on:
     paths:
       - "data/game_design_constants.yaml"
       - "data/factions.yaml"
-      - "scripts/generate_constants.py"
-      - "scripts/test_generate_constants.py"
+      - "scripts/**"
       - "packages/game-design-constants/**"
       - "packages/game-design-constants-dotnet/**"
       - "packages/game-design-constants-npm/**"
@@ -23,8 +22,7 @@ on:
     paths:
       - "data/game_design_constants.yaml"
       - "data/factions.yaml"
-      - "scripts/generate_constants.py"
-      - "scripts/test_generate_constants.py"
+      - "scripts/**"
       - "packages/game-design-constants/**"
       - "packages/game-design-constants-dotnet/**"
       - "packages/game-design-constants-npm/**"
