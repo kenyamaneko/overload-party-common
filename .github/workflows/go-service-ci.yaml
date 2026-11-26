@@ -31,10 +31,6 @@ on:
         description: Authenticate to private kenyamaneko repositories before the Go steps. Set it false for repositories that depend on none.
         type: boolean
         default: true
-      has-python-tests:
-        description: Run .github/scripts/ci/test-python.sh. Set it for repositories that carry tests outside Go.
-        type: boolean
-        default: false
       collect-unit-coverage:
         description: Collect unit test coverage and append a summary line to $GITHUB_STEP_SUMMARY.
         type: boolean
@@ -318,32 +314,3 @@ jobs:
       - name: Check for drift
         if: steps.hook.outputs.exists == 'true'
         run: .github/scripts/ci/check-codegen-drift.sh
-
-  test-python:
-    needs: changes
-    if: needs.changes.outputs.code == 'true' && inputs.has-python-tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      # フックは pytest-report.xml を書き出す
-      - name: Run Python tests
-        run: .github/scripts/ci/test-python.sh
-      - name: Report test results
-        if: ${{ !cancelled() }}
-        uses: kenyamaneko/overload-party-common/.github/actions/python-test-report@main
-        with:
-          xml-path: pytest-report.xml
-          title: Python テスト結果
-      # 同一 run 内でテスト観点カタログを組むためだけに使うので保持は最短にする
-      - name: Upload test results
-        uses: actions/upload-artifact@v4
-        with:
-          name: pytest-report
-          path: pytest-report.xml
-          retention-days: 1
